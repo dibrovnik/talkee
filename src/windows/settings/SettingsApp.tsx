@@ -38,7 +38,6 @@ import {
 } from "../../lib/store";
 import { checkAllPermissions } from "../../lib/permissions";
 import { logError } from "../../lib/logger";
-import { UserPanel } from "../../components/UserPanel";
 import { watchThemePreference } from "../../lib/theme";
 import { syncWindowsTitlebarTheme } from "../../lib/windowsTitlebar";
 import {
@@ -413,10 +412,6 @@ export function SettingsApp() {
                 />
               ))}
             </nav>
-
-            <div style={{ display: "grid", gap: 4, marginTop: "auto" }}>
-              <UserPanel />
-            </div>
           </aside>
 
           <main

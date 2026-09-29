@@ -10,10 +10,10 @@
 
 ## 2. Удаление аккаунта и подписки (UI)
 
-- [ ] 2.1 Удалить файлы `src/lib/cloudAuth.ts`, `src/lib/cloudTokenFormat.ts`, `src/lib/cloudTokenFormat.test.ts`, `src/components/UserPanel.tsx`
-- [ ] 2.2 `src/windows/settings/SettingsApp.tsx`: удалить импорт и рендер `UserPanel` (~47, ~614), ссылку на GitHub (~183)
-- [ ] 2.3 `src/windows/settings/tabs/SettingsTabs.tsx`: удалить `CloudSubscriptionAccountCard` (~877), блок баланса (~1080-1280), состояние auth-flow и polling (~2004-2506, 2236-2239, 2321, 2357), импорт `@tauri-apps/plugin-deep-link`; `type ModelMode` → `"api" | "local"`; удалить вкладку/сегмент «Облако»
-- [ ] 2.4 `src/windows/settings/tabs/SettingsTab.tsx:399`: убрать `isCloudMode` и зависящие ветки
+- [x] 2.1 Удалить файлы `src/lib/cloudAuth.ts`, `src/lib/cloudTokenFormat.ts`, `src/lib/cloudTokenFormat.test.ts`, `src/components/UserPanel.tsx`
+- [x] 2.2 `src/windows/settings/SettingsApp.tsx`: удалить импорт и рендер `UserPanel` (~47, ~614), ссылку на GitHub (~183)
+- [x] 2.3 `src/windows/settings/tabs/SettingsTabs.tsx`: удалить `CloudSubscriptionAccountCard` (~877), блок баланса (~1080-1280), состояние auth-flow и polling (~2004-2506, 2236-2239, 2321, 2357), импорт `@tauri-apps/plugin-deep-link`; `type ModelMode` → `"api" | "local"`; удалить вкладку/сегмент «Облако»
+- [x] 2.4 `src/windows/settings/tabs/SettingsTab.tsx:399`: убрать `isCloudMode` и зависящие ветки
 - [ ] 2.5 Проверка: `bunx tsc --noEmit`
 
 ## 3. Удаление облачных веток в сценариях (frontend)

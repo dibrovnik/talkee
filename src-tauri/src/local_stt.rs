@@ -1,24 +1,20 @@
 use crate::logger;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::fs;
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 #[cfg(any(unix, windows))]
 use std::process::Command as StdCommand;
-use std::process::Stdio;
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 use tokio::io::AsyncWriteExt;
-use tokio::process::Command as TokioCommand;
 
 const WHISPER_RUNTIME_NAME: &str = "talkis-stt";
 const DIARIZATION_RUNTIME_NAME: &str = "talkis-diarize";
 const WHISPER_RUNTIME_API_VERSION: u32 = 3;
-const DEFAULT_RUNTIME_MANIFEST_URL: &str = "https://talkis.ru/downloads/talkis-stt/manifest.json";
 pub const MODEL_DOWNLOAD_PROGRESS_EVENT: &str = "local-stt-model-download-progress";
 pub const LOCAL_DIARIZATION_MODEL_ID: &str = "sherpa-diarization-pyannote-titanet-int8";
 const MODEL_DOWNLOAD_MAX_ATTEMPTS: usize = 3;
@@ -120,21 +116,6 @@ fn forget_runtime_endpoint(kind: LocalRuntimeKind) {
             LocalRuntimeKind::Diarization => endpoints.diarization = None,
         }
     }
-}
-
-#[derive(Deserialize)]
-struct RuntimeManifest {
-    version: String,
-    #[serde(rename = "macos-aarch64")]
-    macos_aarch64: Option<RuntimeAsset>,
-    #[serde(rename = "macos-x86_64")]
-    macos_x86_64: Option<RuntimeAsset>,
-}
-
-#[derive(Deserialize)]
-struct RuntimeAsset {
-    url: String,
-    sha256: String,
 }
 
 #[derive(Deserialize)]
@@ -801,122 +782,6 @@ fn resolve_installed_whisper_model(
         .map(|model| model.id.to_string())
 }
 
-fn runtime_executable_path(app: &AppHandle) -> Result<PathBuf, String> {
-    Ok(runtime_dir(app)?.join(WHISPER_RUNTIME_NAME))
-}
-
-fn runtime_manifest_url() -> String {
-    std::env::var("TALKIS_STT_RUNTIME_MANIFEST")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_RUNTIME_MANIFEST_URL.to_string())
-}
-
-fn platform_asset(manifest: &RuntimeManifest) -> Option<&RuntimeAsset> {
-    match (std::env::consts::OS, std::env::consts::ARCH) {
-        ("macos", "aarch64") => manifest.macos_aarch64.as_ref(),
-        ("macos", "x86_64") => manifest.macos_x86_64.as_ref(),
-        _ => None,
-    }
-}
-
-fn verify_sha256(bytes: &[u8], expected: &str) -> Result<(), String> {
-    let actual = hex::encode(Sha256::digest(bytes));
-    if actual.eq_ignore_ascii_case(expected.trim()) {
-        Ok(())
-    } else {
-        Err("Загруженный локальный STT runtime не прошел проверку целостности.".to_string())
-    }
-}
-
-#[cfg(unix)]
-fn make_executable(path: &Path) -> Result<(), String> {
-    use std::os::unix::fs::PermissionsExt;
-
-    let mut permissions = fs::metadata(path)
-        .map_err(|err| format!("Не удалось прочитать права runtime: {}", err))?
-        .permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(path, permissions)
-        .map_err(|err| format!("Не удалось сделать runtime исполняемым: {}", err))
-}
-
-#[cfg(not(unix))]
-fn make_executable(_path: &Path) -> Result<(), String> {
-    Ok(())
-}
-
-async fn download_runtime(app: &AppHandle, client: &reqwest::Client) -> Result<PathBuf, String> {
-    let manifest_url = runtime_manifest_url();
-    logger::log_info(
-        "LOCAL_STT",
-        &format!("Downloading local STT runtime manifest: {}", manifest_url),
-    );
-
-    let manifest = client
-        .get(&manifest_url)
-        .send()
-        .await
-        .map_err(|err| {
-            format!(
-                "Не удалось скачать manifest локального STT runtime: {}",
-                err
-            )
-        })?
-        .error_for_status()
-        .map_err(|err| format!("Manifest локального STT runtime вернул ошибку: {}", err))?
-        .json::<RuntimeManifest>()
-        .await
-        .map_err(|err| format!("Manifest локального STT runtime некорректен: {}", err))?;
-
-    let asset = platform_asset(&manifest).ok_or_else(|| {
-        format!(
-            "Для этой платформы нет локального STT runtime: {}-{}.",
-            std::env::consts::OS,
-            std::env::consts::ARCH
-        )
-    })?;
-
-    logger::log_info(
-        "LOCAL_STT",
-        &format!(
-            "Downloading local STT runtime version {}: {}",
-            manifest.version, asset.url
-        ),
-    );
-
-    let bytes = client
-        .get(&asset.url)
-        .send()
-        .await
-        .map_err(|err| format!("Не удалось скачать локальный STT runtime: {}", err))?
-        .error_for_status()
-        .map_err(|err| format!("Скачивание локального STT runtime вернуло ошибку: {}", err))?
-        .bytes()
-        .await
-        .map_err(|err| format!("Не удалось прочитать локальный STT runtime: {}", err))?;
-
-    verify_sha256(&bytes, &asset.sha256)?;
-
-    let dir = runtime_dir(app)?;
-    fs::create_dir_all(&dir).map_err(|err| {
-        format!(
-            "Не удалось подготовить папку локального STT runtime: {}",
-            err
-        )
-    })?;
-
-    let executable_path = runtime_executable_path(app)?;
-    let temp_path = executable_path.with_extension("download");
-    fs::write(&temp_path, &bytes)
-        .map_err(|err| format!("Не удалось сохранить локальный STT runtime: {}", err))?;
-    make_executable(&temp_path)?;
-    fs::rename(&temp_path, &executable_path)
-        .map_err(|err| format!("Не удалось установить локальный STT runtime: {}", err))?;
-
-    Ok(executable_path)
-}
-
 fn is_expected_runtime_health(health: &HealthResponse, kind: LocalRuntimeKind) -> bool {
     let identity_matches = health
         .status
@@ -1337,46 +1202,9 @@ fn drain_bundled_runtime_events(
     });
 }
 
-async fn start_downloaded_runtime(
-    app: &AppHandle,
-    client: &reqwest::Client,
-    port: u16,
-    models_dir: &Path,
-) -> Result<(), String> {
-    let data_dir = runtime_dir(app)?;
-    let executable_path = match runtime_executable_path(app) {
-        Ok(path) if path.is_file() => path,
-        Ok(_) => download_runtime(app, client).await?,
-        Err(err) => return Err(err),
-    };
-
-    TokioCommand::new(&executable_path)
-        .args([
-            "--host",
-            "127.0.0.1",
-            "--port",
-            &port.to_string(),
-            "--data-dir",
-            &data_dir.to_string_lossy(),
-            "--models-dir",
-            &models_dir.to_string_lossy(),
-        ])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map(|_| ())
-        .map_err(|err| {
-            format!(
-                "Не удалось запустить локальный STT runtime {}: {}",
-                executable_path.display(),
-                err
-            )
-        })
-}
-
 pub async fn ensure_runtime(
     app: &AppHandle,
-    client: &reqwest::Client,
+    _client: &reqwest::Client,
     models_url: &str,
     custom_models_dir: Option<&str>,
 ) -> Result<String, String> {
@@ -1467,14 +1295,7 @@ pub async fn ensure_runtime(
             "LOCAL_STT",
             &format!("Bundled local STT runtime unavailable: {}", err),
         );
-        if kind == LocalRuntimeKind::Whisper {
-            start_downloaded_runtime(app, client, runtime_port, &models_dir).await?;
-        } else {
-            return Err(format!(
-                "Встроенный {} runtime пока не подключен в сборку Talkis.",
-                kind.label()
-            ));
-        }
+        return Err("Локальный STT runtime не найден в сборке приложения".to_string());
     }
 
     if wait_for_local_stt(

@@ -40,7 +40,7 @@
 
 ## 5. Rust: STT runtime download
 
-- [ ] 5.1 `src-tauri/src/local_stt.rs`: удалить `DEFAULT_RUNTIME_MANIFEST_URL`, `runtime_manifest_url`, `platform_asset`, `RuntimeManifest`/`RuntimeAsset`, `download_runtime`, `start_downloaded_runtime` и env `TALKIS_STT_RUNTIME_MANIFEST`; запуск только встроенного sidecar'а; ошибка из спеки при отсутствии
+- [x] 5.1 `src-tauri/src/local_stt.rs`: удалить `DEFAULT_RUNTIME_MANIFEST_URL`, `runtime_manifest_url`, `platform_asset`, `RuntimeManifest`/`RuntimeAsset`, `download_runtime`, `start_downloaded_runtime` и env `TALKIS_STT_RUNTIME_MANIFEST`; запуск только встроенного sidecar'а; ошибка из спеки при отсутствии
 - [ ] 5.2 Проверка: `cargo check` + ручной запуск `bun run tauri dev` → локальная диктовка работает
 
 ## 6. Deep link

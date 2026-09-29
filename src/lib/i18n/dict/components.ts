@@ -1,4 +1,4 @@
-// i18n strings for src/components: PermissionScreen, TranscriptionStatsPanel, TitleBar, UserPanel.
+// i18n strings for src/components: PermissionScreen, TranscriptionStatsPanel, TitleBar.
 export const components = {
   // ── PermissionScreen ──────────────────────────────────────
   // PermissionRow status badges (not granted yet)

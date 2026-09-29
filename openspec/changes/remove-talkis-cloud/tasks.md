@@ -31,12 +31,12 @@
 
 ## 4. Rust: облачные вызовы
 
-- [ ] 4.1 `src-tauri/src/ai.rs`: удалить поле `device_token` (~192), `transcribe_file_chunk_via_proxy` (~1140), `transcribe_file_via_proxy_diarized` (~1191) и их вызовы (~1583-1712), строку «Разделяем говорящих в Talkis Cloud»
-- [ ] 4.2 `src-tauri/src/live_dictation.rs`: удалить `resolve_cloud_live_dictation_connection` и константы (~19-20, 43, 377-520) и тест (~803)
-- [ ] 4.3 `src-tauri/src/live_translation.rs`: удалить облачное подключение (~31-32, 60, 501-591) и тест (~882)
-- [ ] 4.4 `src-tauri/src/realtime.rs`: удалить `TalkisCloudRealtimeAdapter` (~380-391) и тест (~2106)
-- [ ] 4.5 Синхронизировать сигнатуры Tauri-команд с frontend (убрать аргументы `deviceToken` в `invoke(...)`)
-- [ ] 4.6 Проверка: `cargo check --manifest-path src-tauri/Cargo.toml && cargo test --manifest-path src-tauri/Cargo.toml`
+- [x] 4.1 `src-tauri/src/ai.rs`: удалить поле `device_token` (~192), `transcribe_file_chunk_via_proxy` (~1140), `transcribe_file_via_proxy_diarized` (~1191) и их вызовы (~1583-1712), строку «Разделяем говорящих в Talkis Cloud»
+- [x] 4.2 `src-tauri/src/live_dictation.rs`: удалить `resolve_cloud_live_dictation_connection` и константы (~19-20, 43, 377-520) и тест (~803)
+- [x] 4.3 `src-tauri/src/live_translation.rs`: удалить облачное подключение (~31-32, 60, 501-591) и тест (~882)
+- [x] 4.4 `src-tauri/src/realtime.rs`: удалить `TalkisCloudRealtimeAdapter` (~380-391) и тест (~2106)
+- [x] 4.5 Синхронизировать сигнатуры Tauri-команд с frontend (убрать аргументы `deviceToken` в `invoke(...)`)
+- [x] 4.6 Проверка: `cargo check --manifest-path src-tauri/Cargo.toml && cargo test --manifest-path src-tauri/Cargo.toml`
 
 ## 5. Rust: STT runtime download
 

@@ -7,12 +7,9 @@ mod types;
 
 pub use file_prep::{
     prepare_media_file_chunks_for_transcription, prepare_media_file_for_diarization,
-    prepare_media_file_for_proxy_transcription,
 };
 pub use local_stt::convert_audio_to_local_stt_wav;
-pub use types::{
-    PrepareMediaRequest, PrepareMediaResponse, PreparedMediaChunk, PreparedProxyMedia,
-};
+pub use types::{PrepareMediaRequest, PrepareMediaResponse};
 
 const MAX_TRANSCRIPTION_BYTES: u64 = 25 * 1024 * 1024;
 pub const MAX_FILE_TRANSCRIPTION_INPUT_BYTES: u64 = 8 * 1024 * 1024 * 1024;

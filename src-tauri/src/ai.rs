@@ -189,7 +189,6 @@ pub struct FilePathTranscriptionRequest {
     pub local_models_dir: Option<String>,
     pub whisper_model: Option<String>,
     pub use_own_key: bool,
-    pub device_token: Option<String>,
     #[serde(default)]
     pub speaker_diarization: bool,
 }
@@ -1137,101 +1136,6 @@ fn emit_file_progress(
     );
 }
 
-async fn transcribe_file_chunk_via_proxy(
-    req: &FilePathTranscriptionRequest,
-    chunk: &media::PreparedMediaChunk,
-) -> Result<TranscribeResponse, String> {
-    let token = req
-        .device_token
-        .as_deref()
-        .filter(|value| !value.trim().is_empty())
-        .ok_or_else(|| "Talkis Cloud session missing".to_string())?;
-    let bytes = fs::read(&chunk.path)
-        .map_err(|err| format!("Не удалось прочитать фрагмент аудио: {}", err))?;
-    let file_part = multipart::Part::bytes(bytes)
-        .file_name(chunk.file_name.clone())
-        .mime_str(&chunk.mime_type)
-        .map_err(|err| format!("MIME error: {}", err))?;
-    let form = multipart::Form::new()
-        .part("file", file_part)
-        .text("language", req.language.clone())
-        .text("style", req.style.clone());
-    let response = long_http_client()
-        .post("https://proxy.talkis.ru/api/transcribe-only")
-        .bearer_auth(token)
-        .multipart(form)
-        .send()
-        .await
-        .map_err(|err| format!("Proxy request failed: {}", err))?;
-    let status = response.status();
-    let body = response
-        .text()
-        .await
-        .map_err(|err| format!("Proxy response read failed: {}", err))?;
-
-    if !status.is_success() {
-        return Err(format!("Proxy error ({}): {}", status, body));
-    }
-
-    #[derive(Deserialize)]
-    struct ProxyTranscribeResponse {
-        raw: Option<String>,
-        cleaned: Option<String>,
-    }
-
-    let parsed = serde_json::from_str::<ProxyTranscribeResponse>(&body)
-        .map_err(|err| format!("Talkis Cloud returned an invalid response: {}", err))?;
-    let raw = parsed.raw.unwrap_or_default();
-    Ok(plain_transcribe_response(
-        raw.clone(),
-        parsed.cleaned.unwrap_or(raw),
-    ))
-}
-
-async fn transcribe_file_via_proxy_diarized(
-    req: &FilePathTranscriptionRequest,
-    prepared: &media::PreparedProxyMedia,
-) -> Result<TranscribeResponse, String> {
-    let token = req
-        .device_token
-        .as_deref()
-        .filter(|value| !value.trim().is_empty())
-        .ok_or_else(|| "Talkis Cloud session missing".to_string())?;
-    let bytes = fs::read(&prepared.path)
-        .map_err(|err| format!("Не удалось прочитать аудио для разметки: {}", err))?;
-    let file_part = multipart::Part::bytes(bytes)
-        .file_name(prepared.file_name.clone())
-        .mime_str(&prepared.mime_type)
-        .map_err(|err| format!("MIME error: {}", err))?;
-    let form = multipart::Form::new()
-        .part("file", file_part)
-        .text("language", req.language.clone())
-        .text("style", req.style.clone());
-    let response = long_http_client()
-        .post("https://proxy.talkis.ru/api/transcribe-diarized")
-        .bearer_auth(token)
-        .multipart(form)
-        .send()
-        .await
-        .map_err(|err| format!("Proxy diarized request failed: {}", err))?;
-    let status = response.status();
-    let body = response
-        .text()
-        .await
-        .map_err(|err| format!("Proxy diarized response read failed: {}", err))?;
-
-    if !status.is_success() {
-        return Err(format!("Proxy diarized error ({}): {}", status, body));
-    }
-
-    serde_json::from_str::<TranscribeResponse>(&body).map_err(|err| {
-        format!(
-            "Talkis Cloud returned an invalid diarized response: {}",
-            err
-        )
-    })
-}
-
 #[derive(Deserialize)]
 struct DiarizationResponse {
     #[serde(default)]
@@ -1579,27 +1483,6 @@ pub async fn transcribe_file_path(
     }
 
     emit_file_progress(&app, &req.request_id, "preparing", 0, 0, "Готовим файл");
-    if req.speaker_diarization && !effective_use_own_key {
-        let prepared = media::prepare_media_file_for_proxy_transcription(&app, &input_path).await?;
-        emit_file_progress(
-            &app,
-            &req.request_id,
-            "diarizing",
-            0,
-            0,
-            "Разделяем говорящих в Talkis Cloud",
-        );
-        logger::log_info(
-            "FILE_TRANSCRIPTION",
-            &format!(
-                "Sending diarized cloud file, size={} bytes",
-                prepared.size_bytes
-            ),
-        );
-        let result = transcribe_file_via_proxy_diarized(&req, &prepared).await;
-        let _ = fs::remove_dir_all(&prepared.temp_dir);
-        return result;
-    }
 
     let mut diarization_audio = None;
     let diarization_segments = if req.speaker_diarization {
@@ -1708,24 +1591,7 @@ pub async fn transcribe_file_path(
             ),
         );
 
-        let text = if !effective_use_own_key {
-            let result = transcribe_file_chunk_via_proxy(&req, chunk).await;
-            let result = match result {
-                Ok(result) => result,
-                Err(err) => {
-                    let _ = fs::remove_dir_all(&prepared.temp_dir);
-                    if let Some(audio) = &diarization_audio {
-                        let _ = fs::remove_dir_all(&audio.temp_dir);
-                    }
-                    return Err(err);
-                }
-            };
-            if result.raw.trim().is_empty() {
-                result.cleaned
-            } else {
-                result.raw
-            }
-        } else {
+        let text = {
             match fs::read(&chunk.path) {
                 Ok(bytes) => match transcribe_audio_bytes_internal(
                     app.clone(),
@@ -2886,7 +2752,6 @@ mod tests {
             local_models_dir: None,
             whisper_model: Some("whisper-large-v3-turbo".to_string()),
             use_own_key,
-            device_token: Some("stale-cloud-token".to_string()),
             speaker_diarization: true,
         }
     }

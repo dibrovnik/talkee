@@ -23,8 +23,7 @@ mod tray;
 mod windows_titlebar;
 
 use commands::{accessibility, runtime_info, settings_window, widget};
-use tauri::{Emitter, Manager};
-use tauri_plugin_deep_link::DeepLinkExt;
+use tauri::Manager;
 
 /// Bring the already-running instance to front when a second launch is blocked
 /// by the single-instance plugin (Windows/Linux only).
@@ -53,8 +52,8 @@ pub fn run() {
 
     // The single-instance plugin must be registered first. macOS enforces one
     // app instance natively (so the duplicate-widget bug never happens there);
-    // on Windows/Linux a second launch — autostart, deep link, or re-open —
-    // would otherwise start another process with its own floating widget.
+    // on Windows/Linux a second launch — autostart or re-open — would otherwise
+    // start another process with its own floating widget.
     #[cfg(any(windows, target_os = "linux"))]
     {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
@@ -81,7 +80,6 @@ pub fn run() {
                 }
             }
         })
-        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
@@ -128,28 +126,6 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 let _ = settings_window::open_settings(handle).await;
-            });
-
-            // ── Deep link handling ──────────────────────────
-            // Check if app was launched via deep link
-            if let Ok(Some(urls)) = app.deep_link().get_current() {
-                for url in &urls {
-                    logger::log_info("DEEP_LINK", &format!("Startup deep link: {}", url));
-                    if let Some(token) = extract_auth_token(url.as_str()) {
-                        let _ = app.emit("deep-link-auth", token);
-                    }
-                }
-            }
-
-            // Listen for deep links while running
-            let handle_for_dl = app.handle().clone();
-            app.deep_link().on_open_url(move |event| {
-                for url in event.urls() {
-                    logger::log_info("DEEP_LINK", &format!("Runtime deep link: {}", url));
-                    if let Some(token) = extract_auth_token(url.as_str()) {
-                        let _ = handle_for_dl.emit("deep-link-auth", token.clone());
-                    }
-                }
             });
 
             Ok(())
@@ -264,17 +240,4 @@ fn stop_native_hotkey_capture(
     target: String,
 ) -> Result<(), String> {
     hotkey_capture::stop_capture(&window, request_id, target)
-}
-
-/// Extract token from `talkis://auth?token=<jwt>` URLs.
-fn extract_auth_token(url_str: &str) -> Option<String> {
-    // Parse talkis://auth?token=xxx or talkis://auth/callback?token=xxx
-    if let Ok(url) = url::Url::parse(url_str) {
-        for (key, value) in url.query_pairs() {
-            if key == "token" && !value.is_empty() {
-                return Some(value.into_owned());
-            }
-        }
-    }
-    None
 }

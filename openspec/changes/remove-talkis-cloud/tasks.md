@@ -45,10 +45,10 @@
 
 ## 6. Deep link
 
-- [ ] 6.1 `src-tauri/src/lib.rs`: удалить регистрацию deep-link плагина (~84), обработчик `deep-link-auth` (~136-151), парсер токена (~270-272)
-- [ ] 6.2 `src-tauri/Cargo.toml`: удалить `tauri-plugin-deep-link`; убрать feature `deep-link` у `tauri-plugin-single-instance` (если крейт ещё не удалён)
-- [ ] 6.3 `tauri.conf.json`: удалить `plugins.deep-link`; `Info.plist`: удалить `CFBundleURLTypes` (~13-23); `capabilities/default.json`: удалить `deep-link:default`; `package.json`: удалить `@tauri-apps/plugin-deep-link`, `bun install`
-- [ ] 6.4 Проверка: `cargo check` и `bunx tsc --noEmit`
+- [x] 6.1 `src-tauri/src/lib.rs`: удалить регистрацию deep-link плагина (~84), обработчик `deep-link-auth` (~136-151), парсер токена (~270-272)
+- [x] 6.2 `src-tauri/Cargo.toml`: удалить `tauri-plugin-deep-link`; убрать feature `deep-link` у `tauri-plugin-single-instance` (если крейт ещё не удалён)
+- [x] 6.3 `tauri.conf.json`: удалить `plugins.deep-link`; `Info.plist`: удалить `CFBundleURLTypes` (~13-23); `capabilities/default.json`: удалить `deep-link:default`; `package.json`: удалить `@tauri-apps/plugin-deep-link`, `bun install`
+- [x] 6.4 Проверка: `cargo check` и `bunx tsc --noEmit`
 
 ## 7. Ссылки и трей
 

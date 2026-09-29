@@ -10,16 +10,5 @@
   <string>Предоставьте доступ к микрофону, чтобы Talkis мог записывать ваш голос для перевода в текст.</string>
   <key>NSAudioCaptureUsageDescription</key>
   <string>Предоставьте доступ к звуку системы для синхронного перевода и транскрибации созвонов.</string>
-  <key>CFBundleURLTypes</key>
-  <array>
-    <dict>
-      <key>CFBundleURLName</key>
-      <string>com.trixter.talkis</string>
-      <key>CFBundleURLSchemes</key>
-      <array>
-        <string>talkis</string>
-      </array>
-    </dict>
-  </array>
 </dict>
 </plist>

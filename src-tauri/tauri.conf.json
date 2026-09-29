@@ -1,0 +1,73 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Talkis",
+  "mainBinaryName": "Talkis",
+  "version": "0.4.8",
+  "identifier": "com.trixter.talkis",
+  "build": {
+    "beforeDevCommand": "bun scripts/run-vite.mjs --talkis-check-dev-port && bun run dev",
+    "devUrl": "http://localhost:14320",
+    "beforeBuildCommand": "bun scripts/before-tauri-build.mjs",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "widget",
+        "title": "Talkis",
+        "url": "index.html?window=widget",
+        "width": 129,
+        "height": 54,
+        "minWidth": 18,
+        "minHeight": 18,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "acceptFirstMouse": true,
+        "shadow": false,
+        "x": 682,
+        "y": 800
+      }
+    ],
+    "macOSPrivateApi": true,
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "externalBin": [
+      "binaries/talkis-ffmpeg",
+      "binaries/talkis-stt",
+      "binaries/talkis-diarize",
+      "binaries/talkis-llm"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "entitlements": "entitlements.plist",
+      "infoPlist": "Info.plist",
+      "minimumSystemVersion": "11.0"
+    },
+    "windows": {
+      "nsis": {
+        "installerHooks": "windows/installer-hooks.nsh"
+      }
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["talkis"]
+      }
+    }
+  }
+}

@@ -1,0 +1,458 @@
+# Talkis - AGENTS.md
+
+Talkis is a macOS voice-to-text application built with Tauri v2 (Rust backend) and React (TypeScript frontend), with a companion cloud platform (Next.js).
+
+## Project Rules
+
+All reusable project rules are connected from this root `AGENTS.md`.
+
+- For website or landing-page style work, follow `rules/style.rule.md`.
+- For reusable Talkis-inspired product UI work in this repo or other apps, use `skills/talkis-product-ui-style/`; keep it aligned with `rules/style.rule.md`.
+- For release work, follow `rules/release.rule.md`.
+- Keep `skills/` for reusable Codex skills that may be installed outside this repo.
+- Keep `site/` for actual website files only; do not store agent rules there.
+- Keep `docs/release/` for release review artifacts and templates only; do not store the release workflow rule there.
+
+## Project Structure
+
+```
+talkis/
+├── src/                      # Frontend (React/TypeScript)
+│   ├── windows/
+│   │   ├── widget/           # Small floating widget window
+│   │   └── settings/         # Settings window with tabs
+│   ├── components/           # Shared React components
+│   ├── lib/
+│   │   ├── store.ts          # Persistent settings (tauri-plugin-store)
+│   │   ├── logger.ts         # Logging utilities
+│   │   ├── permissions.ts    # OS permission checks
+│   │   ├── cloudAuth.ts      # Cloud auth client (talkis.ru API)
+│   │   └── utils.ts          # Helper functions
+│   └── main.tsx              # Entry point (routes to widget/settings)
+├── src-tauri/
+│   ├── src/
+│   │   ├── lib.rs            # Tauri commands, window management
+│   │   ├── ai.rs             # Whisper + LLM API calls
+│   │   ├── paste.rs          # Clipboard paste simulation
+│   │   └── logger.rs         # File logging
+│   └── Cargo.toml
+├── rules/                   # Agent-facing project rules
+│   ├── style.rule.md        # Website style rule
+│   └── release.rule.md      # Release workflow rule
+├── skills/                  # Reusable Codex skills sourced from this repo
+│   └── talkis-product-ui-style/ # Portable Talkis product UI style skill
+├── site/                    # Static website files
+├── talkis-web/              # Cloud platform (Next.js 15)
+│   ├── src/app/              # Pages: landing, auth, dashboard
+│   ├── src/components/       # Landing, dashboard, shared components
+│   ├── src/lib/              # Auth, Prisma, email
+│   ├── prisma/schema.prisma  # DB schema (7 models)
+│   └── .env.example          # Environment variables template
+└── package.json
+```
+
+## Build Commands
+
+```bash
+# Development (hot reload)
+bun run tauri dev
+
+# Build for production
+bun run tauri build
+
+# Build signed local macOS release artifact
+bun run build:release:macos
+
+# TypeScript check
+bunx tsc --noEmit
+
+# Rust check
+cd src-tauri && cargo check
+
+# Release checks
+bun run check:release
+
+# View logs
+bun run logs          # tail -f ~/.talkis/talkis.log
+bun run logs:clear    # rm ~/.talkis/talkis.log
+
+# ── talkis-web ──
+cd talkis-web && bun run dev       # Next.js dev server
+cd talkis-web && bunx tsc --noEmit # TS check
+cd talkis-web && bunx prisma migrate dev --name <name>  # DB migration
+```
+
+## Design System
+
+### Fonts
+
+| Token | Font | Usage |
+|-------|------|-------|
+| `--font` / `--font-main` | Inter | Body text, UI elements |
+| `--font-accent` | Manrope 800 | **All headings** — bold, sans-serif, `letter-spacing: -0.04em` |
+| `--font-brand` | Manrope 800 | Logo wordmark, `letter-spacing: -0.06em`, uppercase |
+
+> **Rule:** Headings are NEVER italic. Both the Tauri app and web use Manrope for headings — not Playfair Display.
+
+### Color Palette (Cappuccino Theme)
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--bg` / `--bg-cappuccino` | `#faf9f6` | Page background |
+| `--text-hi` | `#000000` | Primary text |
+| `--text-mid` | `#39342d` / `#666` | Secondary text |
+| `--text-low` | `#5d564d` / `#999` | Tertiary / hint text |
+| `--border` | `rgba(0,0,0,0.09)` | Subtle borders |
+
+### Interactive Elements Style
+
+Nav items, cards, and interactive elements follow a **soft** style:
+- **Border radius:** `10px` for nav items, cards, buttons in sidebar
+- **Active state:** `background: rgba(0,0,0,0.04)` + `font-weight: 600` + `color: var(--text-hi)` — never inverted black
+- **Hover:** `background: rgba(0,0,0,0.04)`
+- **Icons:** `size={18}`, `strokeWidth` active `2.2`, inactive `1.6`
+- **Reuse first:** before adding or changing product UI cards, rows, forms, tabs, or controls, inspect the existing screen for the closest matching pattern and reuse that structure/classes/styles. Do not invent one-off card layouts when an API/model/settings card already exists.
+
+### Buttons
+
+| Class | Style | Usage |
+|-------|-------|-------|
+| `btn-black` | Black bg, white text, uppercase, rounded-full | Primary CTA |
+| `btn-outline` | Transparent, black border, uppercase, rounded-full | Secondary CTA |
+
+### CTA Subscription Block
+
+The sidebar CTA is a **light card** (not inverted black):
+- `background: rgba(0,0,0,0.03)`, `border: 1px solid rgba(0,0,0,0.06)`
+- Dark text, dark icons
+- Button inside is `btn-black` style (black bg, white text)
+
+## Code Style
+
+## Modularity and AI Context Discipline
+
+Treat module boundaries as part of maintainability. The goal is not just fewer
+lines per file, but fewer reasons to read an entire file before making a safe
+change.
+
+- Prefer small modules with a clear responsibility, public API, and contract.
+- Keep unrelated workflows separated. A diarization change should not require
+  reading the whole STT pipeline, settings UI, and media conversion layer.
+- When a file grows because it owns multiple responsibilities, extract along
+  stable boundaries: parsing/probing, conversion, chunking, runtime lifecycle,
+  request routing, error mapping, and UI state/view composition.
+- Do not create abstractions only to reduce line count. Extract when it reduces
+  coupling, makes behavior easier to test, or limits the context needed for
+  future changes.
+- For frontend code, split large tabs/views into container state, command/data
+  hooks, pure UI sections, and small reusable controls.
+- For Rust code, keep Tauri commands thin where practical and move pipeline
+  logic into focused modules with explicit input/output structs.
+- Preserve behavior during extraction. Prefer small, test-backed refactors over
+  broad rewrites.
+- When touching a large file, consider whether the current change can leave
+  behind a clearer boundary without expanding the task scope.
+
+### TypeScript/React
+
+**Imports:** Group by external → internal, use explicit file extensions for clarity when needed.
+
+```typescript
+// External
+import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+
+// Internal - use relative paths
+import { getSettings } from "../../lib/store";
+import { logInfo } from "../../lib/logger";
+```
+
+**Components:** Use function components with explicit return types.
+
+```typescript
+export function MyComponent({ prop }: { prop: string }): JSX.Element {
+  // hooks at the top
+  const [state, setState] = useState<string>("");
+  
+  // early returns for loading/error states
+  if (!state) return null;
+  
+  // main render
+  return <div>{prop}</div>;
+}
+```
+
+**Styles:** Use inline styles with CSS variables. No CSS modules or styled-components.
+
+```typescript
+// Good
+<div style={{
+  display: "flex",
+  padding: "16px 20px",
+  background: "var(--surface)",
+}}>
+```
+
+**Types:** Prefer explicit interfaces over type aliases. Use union types for finite states.
+
+```typescript
+type WidgetState = "idle" | "recording" | "processing" | "error";
+
+interface AppSettings {
+  apiKey: string;
+  hotkey: string;
+  // ...
+}
+```
+
+**Error handling:** Always handle errors gracefully, show user-friendly messages.
+
+```typescript
+try {
+  await someAsyncOperation();
+} catch (e) {
+  const msg = e instanceof Error ? e.message : "Unknown error";
+  showError(`Операция не удалась: ${msg}`);
+}
+```
+
+**Logging:** Use the logger utility for important events.
+
+```typescript
+import { logInfo, logError } from "../../lib/logger";
+
+logInfo("HOTKEY", "Registered successfully");
+logError("API", `Failed: ${e}`);
+```
+
+### Rust
+
+**Commands:** Use `#[tauri::command]` with async when needed.
+
+```rust
+#[tauri::command]
+pub async fn my_command(param: String) -> Result<MyResponse, String> {
+    // implementation
+}
+```
+
+**Error handling:** Use `Result<T, String>` for commands, convert errors with `.map_err(|e| e.to_string())`.
+
+```rust
+let result = some_operation()
+    .map_err(|e| format!("Operation failed: {}", e))?;
+```
+
+**Logging:** Use the logger module.
+
+```rust
+logger::log_info("TAG", "message");
+logger::log_error("TAG", &format!("error: {}", e));
+```
+
+## Architecture Notes
+
+- **Two windows:** Widget (50x18px floating) and Settings (separate window)
+- **Global shortcuts:** Use `tauri-plugin-global-shortcut` for hotkey registration
+- **Persistent storage:** Use `tauri-plugin-store` with JSON file
+- **Permissions:** Check microphone via `getUserMedia()`, accessibility via system dialog
+- **API calls:** Whisper for transcription, GPT-4o-mini for text cleanup
+- **Cloud platform:** `talkis-web/` — Next.js 15, Auth.js v5, Prisma, PostgreSQL
+- **Auth flow:** Email OTP + Yandex OAuth → deep link `talkis://auth?token=xxx`
+- **Subscription:** Free (own API key) or paid (cloud, 390₽/mo)
+
+## Audio Pipeline Rules
+
+For any audio, transcription, local STT, file transcription, or call-capture work, read
+`docs/audio-pipeline-principles.md` before editing code.
+
+Key source files:
+
+- Voice widget recording: `src/windows/widget/hooks/useWidgetRecording.ts`, `src/windows/widget/services/recordingRuntime.ts`
+- Native voice recording: `src-tauri/src/native_voice_recorder.rs`
+- STT request orchestration and hallucination filtering: `src-tauri/src/ai.rs`
+- Media conversion and chunking: `src-tauri/src/media.rs`
+- Managed local Whisper runtime: `src-tauri/src/bin/talkis-stt.rs`
+- Call capture and call transcript assembly: `src-tauri/src/call_capture.rs`, `src/lib/callCapture.ts`
+
+Stable principles:
+
+- Ordinary voice dictation should avoid ffmpeg in the hot path. Prefer native microphone capture that returns `audio/wav`, `16 kHz`, mono, PCM16.
+- Keep WebView `MediaRecorder` as a fallback, especially when a selected microphone can only be addressed reliably by WebView `deviceId`.
+- Local STT input must be `WAV 16 kHz mono PCM16`; skip ffmpeg when audio already matches that format.
+- Keep ffmpeg for arbitrary files, video, unsupported formats, diarization preparation, and file chunking.
+- Long local Whisper jobs can hallucinate repeated caption-like text on silence. Preserve the no-context local runtime settings and the repetitive-text filters unless a replacement is tested against long silent recordings.
+- Call system-audio capture is implemented on all three desktop platforms: macOS via Core Audio (process/system tap), Windows via WASAPI loopback on the default output device (cpal), and Linux via a PipeWire monitor stream. Linux requires a running PipeWire daemon with an active output device; on PipeWire-less (pure PulseAudio) systems capture fails fast with a user-facing error by design.
+- Every audio path needs structured logs with enough evidence to debug runtime behavior: recorder stats, ffmpeg timing, STT endpoint, chunk index/size, and call-capture levels.
+
+## Release Workflow
+
+- Follow `rules/release.rule.md` for every release
+- Always update `README.md` before publishing a release
+- Create a per-release review file from `docs/release/review-template.md`
+- Push release work to `release/vX.Y.Z` first, then to `main`, then push tag `vX.Y.Z`
+- Treat `.github/workflows/release.yml` as the release automation source of truth
+
+## Key Conventions
+
+1. **Language:** UI text in Russian, code/comments in English
+2. **Hotkeys:** Format is `Modifier+Key` (e.g., `Ctrl+Alt+Space`), always validate with `validateHotkey()`
+3. **Settings:** Load once at startup via `getSettings()`, save immediately on change
+4. **Window sizes:** Widget is 50x18 in its compact state; keep window sizing in sync with `src/windows/widget/widgetConstants.ts`
+5. **Logs location:** `~/.talkis/talkis.log`
+6. **Package manager:** Use `bun` everywhere (not npm/yarn)
+7. **Dev-only features:** Gate behind `import.meta.env.DEV` (e.g., Prompt Preview)
+
+
+<!-- BEGIN BEADS INTEGRATION v:1 profile:full hash:f65d5d33 -->
+## Issue Tracking with bd (beads)
+
+**IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods.
+
+### Why bd?
+
+- Dependency-aware: Track blockers and relationships between issues
+- Git-friendly: Dolt-powered version control with native sync
+- Agent-optimized: JSON output, ready work detection, discovered-from links
+- Prevents duplicate tracking systems and confusion
+
+### Quick Start
+
+**Check for ready work:**
+
+```bash
+bd ready --json
+```
+
+**Create new issues:**
+
+```bash
+bd create "Issue title" --description="Detailed context" -t bug|feature|task -p 0-4 --json
+bd create "Issue title" --description="What this issue is about" -p 1 --deps discovered-from:bd-123 --json
+```
+
+**Claim and update:**
+
+```bash
+bd update <id> --claim --json
+bd update bd-42 --priority 1 --json
+```
+
+**Complete work:**
+
+```bash
+bd close bd-42 --reason "Completed" --json
+```
+
+### Issue Types
+
+- `bug` - Something broken
+- `feature` - New functionality
+- `task` - Work item (tests, docs, refactoring)
+- `epic` - Large feature with subtasks
+- `chore` - Maintenance (dependencies, tooling)
+
+### Priorities
+
+- `0` - Critical (security, data loss, broken builds)
+- `1` - High (major features, important bugs)
+- `2` - Medium (default, nice-to-have)
+- `3` - Low (polish, optimization)
+- `4` - Backlog (future ideas)
+
+### Workflow for AI Agents
+
+1. **Check ready work**: `bd ready` shows unblocked issues
+2. **Claim your task atomically**: `bd update <id> --claim`
+3. **Work on it**: Implement, test, document
+4. **Discover new work?** Create linked issue:
+   - `bd create "Found bug" --description="Details about what was found" -p 1 --deps discovered-from:<parent-id>`
+5. **Complete**: `bd close <id> --reason "Done"`
+
+### Quality
+- Use `--acceptance` and `--design` fields when creating issues
+- Use `--validate` to check description completeness
+
+### Lifecycle
+- `bd defer <id>` / `bd supersede <id>` for issue management
+- `bd stale` / `bd orphans` / `bd lint` for hygiene
+- `bd human <id>` to flag for human decisions
+- `bd formula list` / `bd mol pour <name>` for structured workflows
+
+### Auto-Sync
+
+bd automatically syncs via Dolt:
+
+- Each write auto-commits to Dolt history
+- Use `bd dolt push`/`bd dolt pull` for remote sync
+- No manual export/import needed!
+
+### Important Rules
+
+- ✅ Use bd for ALL task tracking
+- ✅ Always use `--json` flag for programmatic use
+- ✅ Link discovered work with `discovered-from` dependencies
+- ✅ Check `bd ready` before asking "what should I work on?"
+- ❌ Do NOT create markdown TODO lists
+- ❌ Do NOT use external issue trackers
+- ❌ Do NOT duplicate tracking systems
+
+For more details, see README.md and docs/QUICKSTART.md.
+
+## Session Completion
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd dolt push
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
+
+<!-- END BEADS INTEGRATION -->
+
+<!-- BEGIN BEADS CODEX SETUP: generated by bd setup codex -->
+## Beads Issue Tracker
+
+Use Beads (`bd`) for durable task tracking in repositories that include it. Use the `beads` skill at `.agents/skills/beads/SKILL.md` (project install) or `~/.agents/skills/beads/SKILL.md` (global install) for Beads workflow guidance, then use the `bd` CLI for issue operations.
+
+### Quick Reference
+
+```bash
+bd ready                # Find available work
+bd show <id>            # View issue details
+bd update <id> --claim  # Claim work
+bd close <id>           # Complete work
+bd prime                # Refresh Beads context
+```
+
+### Rules
+
+- Use `bd` for all task tracking; do not create markdown TODO lists.
+- Run `bd prime` when Beads context is missing or stale. Codex 0.129.0+ can load Beads context automatically through native hooks; use `/hooks` to inspect or toggle them.
+- Keep persistent project memory in Beads via `bd remember`; do not create ad hoc memory files.
+
+**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+<!-- END BEADS CODEX SETUP -->
+
+## Talkis Beads storage safety
+
+- The repository may live on a removable volume. On macOS, keep `.beads` as a symlink to `~/Library/Application Support/Beads/talkis-pc/workspace`; do not replace it with a directory on the external volume.
+- Before copying or backing up the Dolt data directory, stop the project server with `bd dolt stop`. Copying a live Dolt journal can produce an inconsistent backup.
+- Use the Homebrew `bd` and `dolt` installations and keep them current. Do not reinstall the legacy global `@beads/bd` npm wrapper.

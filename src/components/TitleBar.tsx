@@ -1,0 +1,74 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
+
+import { useI18n } from "../lib/i18n";
+
+function TrafficLight({ color, onClick, title }: { color: string; onClick: () => void; title: string }) {
+  return (
+    <button
+      title={title}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      style={{
+        width: 12,
+        height: 12,
+        borderRadius: 999,
+        background: color,
+        border: "none",
+        padding: 0,
+        cursor: "pointer",
+        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
+      }}
+    />
+  );
+}
+
+export function TitleBar() {
+  const { t } = useI18n();
+  const win = getCurrentWindow();
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "stretch",
+        height: 48,
+        background: "var(--titlebar-bg)",
+        borderBottom: "1px solid var(--titlebar-border)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        userSelect: "none",
+        flexShrink: 0,
+        position: "relative",
+        zIndex: 2,
+      }}
+    >
+      <div
+        data-tauri-drag-region
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          padding: "0 14px 0 14px",
+          cursor: "default",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, width: 56 }}>
+          <TrafficLight color="#ff5f57" title={t("titleBar.close")} onClick={() => win.close()} />
+          <TrafficLight color="#febc2e" title={t("titleBar.minimize")} onClick={() => win.minimize()} />
+          <TrafficLight color="#28c840" title={t("titleBar.maximize")} onClick={() => win.toggleMaximize()} />
+        </div>
+
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--titlebar-text)", letterSpacing: "-0.02em" }}>
+          Talkis
+        </div>
+
+        <div style={{ width: 56 }} />
+      </div>
+    </div>
+  );
+}

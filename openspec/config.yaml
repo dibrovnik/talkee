@@ -1,0 +1,52 @@
+schema: spec-driven
+
+context: |
+  Language: ru
+  All artifacts must be written in ru.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  Project: talkee (formerly "Talkis") — macOS-only voice-to-text app.
+  Stack: Tauri v2 (Rust, src-tauri/) + React 19 / TypeScript (src/), bun as package manager.
+  Target hardware: Apple Silicon (primary dev machine: MacBook with Apple M5), macOS only.
+  Processing modes after cleanup: "API" (user keys/endpoints) and "Локально" (managed localhost sidecars).
+  There is NO vendor cloud, NO accounts, NO telemetry. Network calls happen only to endpoints the user configured
+  or to explicitly user-initiated downloads (models).
+
+  Conventions (see AGENTS.md):
+  - UI text in Russian, code/comments in English.
+  - Audio work: read docs/audio-pipeline-principles.md first.
+  - Keep Tauri commands thin; pipeline logic in focused modules.
+
+  Before the first change: the directory must be a git repository with an initial commit
+  (see task group 1 of repo-cleanup-for-agents: .gitignore first, then `git init -b main`, then commit).
+  Each change is implemented on its own branch `change/<name>` and merged into main after `openspec archive`.
+
+  Change execution order (dependencies between changes in openspec/changes/):
+    1. remove-telemetry
+    2. remove-talkis-cloud
+    3. rename-to-talkee
+    4. drop-windows-linux-support
+    5. repo-cleanup-for-agents
+    6. versioning-with-pvs
+    7. quality-gates
+    8. optimize-apple-silicon
+    9. new-app-icons
+    10. native-macos-ui
+    11. quick-ai-cleanup-toggle
+    12. notch-island-mode
+  Do not start a change before all changes it lists under "Depends on" in its proposal are archived.
+
+rules:
+  tasks:
+    - Each task must be small enough for a single focused edit session and name the concrete files to touch.
+    - Every task group ends with a verification task naming the exact command(s) to run.
+    - Never mark a task done without running its verification.
+  design:
+    - List concrete file paths that change, with the reason for each.
+
+operations:
+  apply:
+    guidance:
+      - Work task by task, in order; do not batch unrelated tasks in one edit.
+      - Preserve behavior outside the scope of the change.
+      - If a task turns out to be wrong or impossible, stop and update the change artifacts instead of improvising.

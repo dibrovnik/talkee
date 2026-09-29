@@ -1,0 +1,47 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+!.env.example
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+._*
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+target/*
+src-tauri/target/
+
+# Build artifacts: sidecar binaries are produced by `bun run prepare:sidecars`
+src-tauri/binaries/*
+!src-tauri/binaries/.gitkeep
+
+# Large demo media (to be moved to GitHub Releases, see repo-cleanup-for-agents)
+docs/demo/
+
+.nanocoder/
+
+# Local-only Cargo config (contains absolute target-dir for external drive)
+.cargo/config.toml
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

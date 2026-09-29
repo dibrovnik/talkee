@@ -14,19 +14,19 @@
 - [x] 2.2 `src/windows/settings/SettingsApp.tsx`: удалить импорт и рендер `UserPanel` (~47, ~614), ссылку на GitHub (~183)
 - [x] 2.3 `src/windows/settings/tabs/SettingsTabs.tsx`: удалить `CloudSubscriptionAccountCard` (~877), блок баланса (~1080-1280), состояние auth-flow и polling (~2004-2506, 2236-2239, 2321, 2357), импорт `@tauri-apps/plugin-deep-link`; `type ModelMode` → `"api" | "local"`; удалить вкладку/сегмент «Облако»
 - [x] 2.4 `src/windows/settings/tabs/SettingsTab.tsx:399`: убрать `isCloudMode` и зависящие ветки
-- [ ] 2.5 Проверка: `bunx tsc --noEmit`
+- [x] 2.5 Проверка: `bunx tsc --noEmit`
 
 ## 3. Удаление облачных веток в сценариях (frontend)
 
-- [ ] 3.1 `src/windows/widget/services/transcriptionPipeline.ts`: удалить `transcribeViaProxy` и ветку «Subscription mode» (~413-537)
-- [ ] 3.2 `src/windows/widget/hooks/useWidgetRecording.ts:291-294`: заменить проверку `deviceToken` на проверку «режим настроен» (есть ключ/endpoint для API или установлена модель для Локально); при ненастроенном режиме — сообщение из спеки «Диктовка без модели»
-- [ ] 3.3 `src/windows/widget/services/dictationStreamOverlay.ts`: удалить `isCloudSttStreamingEnabled` и облачный streaming
-- [ ] 3.4 `src/lib/fileTranscription.ts`: удалить `/api/capabilities`, `/api/transcribe-only`, облачную диаризацию
-- [ ] 3.5 `src/lib/cloudTextProcessing.ts` удалить; `src/lib/summarize.ts`: `SummaryBackendKind = "custom" | "local"`, убрать cloud-ветку в `resolveSummaryBackend`
-- [ ] 3.6 `src/lib/realtimeModels.ts`: удалить `TALKIS_CLOUD_REALTIME_ENDPOINT`; `src/windows/widget/services/liveTranslation.ts`: удалить провайдер `"talkis-cloud"`
-- [ ] 3.7 Остальные файлы из `grep -rln "useOwnKey\|deviceToken\|talkis-cloud\|proxy.talkis" src` — исправить по одному (`onboarding.ts`, `historyEmbeddings.ts`, `transcriptionReconciliation.ts`, `FileTranscriptionTab.tsx`, `TranslationTab.tsx`)
-- [ ] 3.8 Обновить тесты, которые проверяли облачные ветки: удалить облачные кейсы, не удаляя остальные (`summarize.test.ts`, `onboarding.test.ts`, `fileTranscription.test.ts`, `dictationStreamOverlay.test.ts`, `liveTranslation.test.ts`, `transcriptionReconciliation.test.ts`)
-- [ ] 3.9 Отображение старых записей истории с `provider: "cloud"`/`"talkis-cloud"` — нейтральная подпись (spec «Legacy history compatibility»)
+- [x] 3.1 `src/windows/widget/services/transcriptionPipeline.ts`: удалить `transcribeViaProxy` и ветку «Subscription mode» (~413-537)
+- [x] 3.2 `src/windows/widget/hooks/useWidgetRecording.ts:291-294`: заменить проверку `deviceToken` на проверку «режим настроен» (есть ключ/endpoint для API или установлена модель для Локально); при ненастроенном режиме — сообщение из спеки «Диктовка без модели»
+- [x] 3.3 `src/windows/widget/services/dictationStreamOverlay.ts`: удалить `isCloudSttStreamingEnabled` и облачный streaming
+- [x] 3.4 `src/lib/fileTranscription.ts`: удалить `/api/capabilities`, `/api/transcribe-only`, облачную диаризацию
+- [x] 3.5 `src/lib/cloudTextProcessing.ts` удалить; `src/lib/summarize.ts`: `SummaryBackendKind = "custom" | "local"`, убрать cloud-ветку в `resolveSummaryBackend`
+- [x] 3.6 `src/lib/realtimeModels.ts`: удалить `TALKIS_CLOUD_REALTIME_ENDPOINT`; `src/windows/widget/services/liveTranslation.ts`: удалить провайдер `"talkis-cloud"`
+- [x] 3.7 Остальные файлы из `grep -rln "useOwnKey\|deviceToken\|talkis-cloud\|proxy.talkis" src` — исправить по одному (`onboarding.ts`, `historyEmbeddings.ts`, `transcriptionReconciliation.ts`, `FileTranscriptionTab.tsx`, `TranslationTab.tsx`)
+- [x] 3.8 Обновить тесты, которые проверяли облачные ветки: удалить облачные кейсы, не удаляя остальные (`summarize.test.ts`, `onboarding.test.ts`, `fileTranscription.test.ts`, `dictationStreamOverlay.test.ts`, `liveTranslation.test.ts`, `transcriptionReconciliation.test.ts`)
+- [x] 3.9 Отображение старых записей истории с `provider: "cloud"`/`"talkis-cloud"` — нейтральная подпись (spec «Legacy history compatibility»)
 - [ ] 3.10 Проверка: `bunx tsc --noEmit && bun test`; `grep -rn "useOwnKey\|deviceToken\|talkis.ru" src` пуст
 
 ## 4. Rust: облачные вызовы

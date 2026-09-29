@@ -5,7 +5,6 @@ import {
   createNativeLiveDictationOptions,
   createDictationOverlayState,
   dictationOverlayStateFromStreamUpdate,
-  isCloudSttStreamingEnabled,
   isLocalSttStreamingEnabled,
   isSttStreamingEnabled,
   resolveLiveDictationRuntimeEndpoint,
@@ -68,7 +67,6 @@ describe("dictation stream overlay state", () => {
 
   test("enables native live dictation only for local streaming models", () => {
     const settings = {
-      useOwnKey: true,
       whisperEndpoint: "http://127.0.0.1:15223/v1/audio/transcriptions",
       whisperModel: "nvidia/nemotron-3.5-asr-streaming-0.6b",
       language: "ru",
@@ -101,7 +99,6 @@ describe("dictation stream overlay state", () => {
       createNativeLiveDictationOptions(
         {
           ...settings,
-          useOwnKey: false,
           whisperEndpoint: "https://api.openai.com/v1/audio/transcriptions",
         } as AppSettings,
         "req-3",
@@ -124,7 +121,6 @@ describe("dictation stream overlay state", () => {
       defaultEndpoint: adapter.defaultEndpoint,
     });
     const settings = {
-      useOwnKey: true,
       whisperEndpoint: "http://127.0.0.1:8000",
       whisperModel: "whisper-large-v3-turbo",
       realtimeTranscriptionEnabled: true,
@@ -145,7 +141,6 @@ describe("dictation stream overlay state", () => {
 
   test("uses an installed streaming model for call preview when the final local model is batch-only", () => {
     const settings = {
-      useOwnKey: true,
       whisperEndpoint: "http://127.0.0.1:8000",
       whisperModel: "ai-sage/GigaAM-v3",
       language: "ru",
@@ -197,7 +192,6 @@ describe("dictation stream overlay state", () => {
     expect(
       createNativeLiveDictationOptions(
         {
-          useOwnKey: true,
           selectedApiAdapter: "openai",
           realtimeTranscriptionEnabled: true,
           language: "ru",
@@ -208,7 +202,6 @@ describe("dictation stream overlay state", () => {
     ).toBeNull();
 
     const settings = {
-      useOwnKey: true,
       selectedApiAdapter: "openai",
       realtimeTranscriptionEnabled: true,
       language: "ru",
@@ -233,22 +226,4 @@ describe("dictation stream overlay state", () => {
     );
   });
 
-  test("keeps Talkis Cloud dictation batch-only", () => {
-    const settings = {
-      useOwnKey: false,
-      deviceToken: "device-jwt",
-      realtimeTranscriptionEnabled: true,
-      language: "ru",
-    } as AppSettings;
-
-    expect(isCloudSttStreamingEnabled(settings)).toBe(false);
-    expect(createNativeLiveDictationOptions(settings, "req-cloud")).toBeNull();
-
-    expect(
-      isCloudSttStreamingEnabled({
-        ...settings,
-        realtimeTranscriptionEnabled: false,
-      } as AppSettings),
-    ).toBe(false);
-  });
 });

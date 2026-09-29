@@ -55,7 +55,7 @@ function resolveHistoryEmbeddingBackend(settings: AppSettings): HistoryEmbedding
     };
   }
 
-  if (settings.useOwnKey && apiKey) {
+  if (apiKey) {
     return {
       endpoint: "",
       model: DEFAULT_HISTORY_EMBEDDING_MODEL,

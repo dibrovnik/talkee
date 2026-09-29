@@ -1,14 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import { AppSettings, HistoryEntry } from "./store";
-import { processTextWithCloudPrompt } from "./cloudTextProcessing";
 import { tn } from "./i18n";
 
 /**
  * Long transcripts (videos / hour-long calls) don't fit a model's context, so
  * we map-reduce: split the text, summarize each part (map), then merge the
  * partial summaries in one final pass (reduce). The same logic is reused across
- * backends (Talkis Cloud, a bundled local runtime, or a custom endpoint).
+ * backends (a bundled local runtime or a custom endpoint).
  */
 const DIRECT_LIMIT_CHARS = 16000;
 const MAX_CHUNK_CHARS = 12000;
@@ -24,7 +23,7 @@ export const LOCAL_TEXT_PROCESSING_LIMITS = {
 } as const;
 
 export type SummaryPromptInput = { prompt: string; temperature?: number };
-export type SummaryBackendKind = "cloud" | "custom" | "local";
+export type SummaryBackendKind = "custom" | "local";
 
 export interface SummarizeProgress {
   phase: "map" | "reduce" | "single";
@@ -133,11 +132,6 @@ interface ProcessTextResponse {
   result: string;
 }
 
-function cloudRunner(settings: AppSettings): RunOnce {
-  return ({ text, prompt, temperature, signal }) =>
-    processTextWithCloudPrompt({ text, prompt, settings, temperature, signal });
-}
-
 function llmRunner(endpoint: string, model: string, apiKey: string): RunOnce {
   return async ({ text, prompt, temperature, maxTokens }) => {
     const response = await invoke<ProcessTextResponse>("process_text", {
@@ -215,7 +209,7 @@ function localLlmRunner(
         : String(lastRestartableError);
     throw new Error(
       `Локальная текстовая модель не смогла обработать фрагмент после нескольких перезапусков runtime. ` +
-        `Попробуйте выбрать модель крупнее или облачный режим для длинных записей. Детали: ${message}`,
+        `Попробуйте выбрать модель крупнее или свой API-endpoint для длинных записей. Детали: ${message}`,
     );
   };
 }
@@ -260,19 +254,12 @@ function isBundledLocalRuntime(endpoint: string): boolean {
 }
 
 /**
- * Pick the summary backend from settings: Talkis Cloud subscription, a custom
- * OpenAI-compatible endpoint, or a local runtime (127.0.0.1). Returns null when
- * nothing is configured yet.
+ * Pick the summary backend from settings: a custom [OI]-compatible endpoint,
+ * or a local runtime (127.0.0.1). Returns null when nothing is configured yet.
  */
 export function resolveSummaryBackend(
   settings: AppSettings,
 ): ResolvedSummaryBackend | null {
-  const cloudReady =
-    !settings.useOwnKey && Boolean(settings.deviceToken?.trim());
-  if (cloudReady) {
-    return { kind: "cloud", label: "Talkis Cloud", run: cloudRunner(settings) };
-  }
-
   const endpoint = settings.llmEndpoint?.trim() ?? "";
   const model = settings.llmModel?.trim() ?? "";
   const apiKey = (settings.llmApiKey?.trim() || settings.apiKey?.trim()) ?? "";
@@ -302,7 +289,7 @@ export function resolveSummaryBackend(
   }
 
   // Own OpenAI key without a custom endpoint.
-  if (settings.useOwnKey && apiKey) {
+  if (apiKey) {
     return {
       kind: "custom",
       label: "OpenAI",
@@ -315,7 +302,7 @@ export function resolveSummaryBackend(
 
 /**
  * True when summarization can run with the current settings — i.e. a text
- * backend is resolvable (cloud sign-in, a custom API, or a local runtime).
+ * backend is resolvable (a custom API or a local runtime).
  * When false, summary triggers should be disabled and the user pointed at the
  * «Models» tab to pick a text model.
  */
@@ -342,7 +329,7 @@ const GENERATE_PROMPT_INSTRUCTION =
 
 /**
  * Generate a prompt instruction from its title and/or draft body using whichever
- * text backend is configured (cloud / local runtime / custom endpoint). The title
+ * text backend is configured (local runtime or custom endpoint). The title
  * feeds the generation (it states the prompt's goal). Used by the «Сгенерировать
  * промпт» button; requires a backend ({@link isSummaryAvailable}).
  */
@@ -525,7 +512,7 @@ export async function processLongTextWithPrompt({
 
 /**
  * Summarize/process a transcript with the given prompt through whichever backend
- * is configured (cloud, custom endpoint, or local runtime). Long transcripts use
+ * is configured (custom endpoint or local runtime). Long transcripts use
  * map-reduce automatically.
  */
 export async function summarizeTranscript({

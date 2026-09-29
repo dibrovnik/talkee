@@ -226,8 +226,8 @@ export const widget = {
     en: "Sign in to Talkis Cloud again to use cloud mode.",
   },
   "widget.recording.noModelConfigured": {
-    ru: "Сначала установите модель в «Настройки → Модели»: облако, локальная модель или свой API-ключ.",
-    en: "First set up a model in “Settings → Models”: cloud, a local model, or your own API key.",
+    ru: "Сначала настройте модель: откройте «Настройки → Модели» и выберите локальную модель или свой API-ключ.",
+    en: "First set up a model: open “Settings → Models” and choose a local model or your own API key.",
   },
   "widget.recording.micAccessDenied": {
     ru: "Нет доступа к микрофону. Разрешите доступ в системных настройках.",

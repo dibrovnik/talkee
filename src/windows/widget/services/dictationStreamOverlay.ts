@@ -56,10 +56,7 @@ const STREAMING_LOCAL_STT_MODELS = new Set<string>(
 );
 
 function isLocalSttSettings(settings: AppSettings): boolean {
-  return (
-    settings.useOwnKey &&
-    /127\.0\.0\.1|localhost/i.test(settings.whisperEndpoint || "")
-  );
+  return /127\.0\.0\.1|localhost/i.test(settings.whisperEndpoint || "");
 }
 
 function isManagedLocalSttEndpoint(endpoint: string): boolean {
@@ -179,8 +176,7 @@ export function createCallLiveDictationOptions(
 }
 
 export function isApiSttStreamingEnabled(settings: AppSettings): boolean {
-  if (!settings.realtimeTranscriptionEnabled || !settings.useOwnKey)
-    return false;
+  if (!settings.realtimeTranscriptionEnabled) return false;
   if (isLocalSttSettings(settings)) return false;
   const adapter = STREAMING_STT_ADAPTERS.find(
     (candidate) => candidate.id === settings.selectedApiAdapter,
@@ -190,12 +186,6 @@ export function isApiSttStreamingEnabled(settings: AppSettings): boolean {
     adapter,
     settings.apiAdapters[settings.selectedApiAdapter],
   );
-}
-
-export function isCloudSttStreamingEnabled(_settings: AppSettings): boolean {
-  // Talkis Cloud dictation is deliberately batch-only. Its full-audio result is
-  // more accurate than the realtime draft and is the only text shown/pasted.
-  return false;
 }
 
 export function isSttStreamingEnabled(settings: AppSettings): boolean {

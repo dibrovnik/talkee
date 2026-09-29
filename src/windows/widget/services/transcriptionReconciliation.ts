@@ -3,10 +3,10 @@ import type { AppSettings } from "../../../lib/store";
 export type LiveTranscriptionReconciliationMode = "openai";
 
 export function shouldAcceptLiveTranscription(
-  settings: AppSettings,
+  _settings: AppSettings,
   hasLiveTranscription: boolean,
 ): boolean {
-  return hasLiveTranscription && settings.useOwnKey;
+  return hasLiveTranscription;
 }
 
 export function resolveLiveTranscriptionReconciliationMode(

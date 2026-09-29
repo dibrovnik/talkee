@@ -9,8 +9,6 @@ import {
 
 function settings(overrides: Partial<AppSettings>): AppSettings {
   return {
-    useOwnKey: false,
-    deviceToken: "cloud-device-token",
     realtimeTranscriptionEnabled: true,
     selectedApiAdapter: "openai",
     apiAdapters: {},
@@ -20,13 +18,6 @@ function settings(overrides: Partial<AppSettings>): AppSettings {
 }
 
 describe("live transcription reconciliation", () => {
-  test("rejects live transcription in Talkis Cloud mode", () => {
-    expect(shouldAcceptLiveTranscription(settings({}), true)).toBe(false);
-    expect(
-      resolveLiveTranscriptionReconciliationMode(settings({}), true),
-    ).toBeNull();
-  });
-
   test("does not reconcile when realtime produced no result", () => {
     expect(
       resolveLiveTranscriptionReconciliationMode(settings({}), false),
@@ -35,8 +26,6 @@ describe("live transcription reconciliation", () => {
 
   test("preserves reconciliation for the legacy own-key OpenAI realtime model", () => {
     const ownKeySettings = settings({
-      useOwnKey: true,
-      deviceToken: "",
       apiAdapters: {
         openai: {
           apiKey: "openai-key",
@@ -59,8 +48,6 @@ describe("live transcription reconciliation", () => {
     expect(
       resolveLiveTranscriptionReconciliationMode(
         settings({
-          useOwnKey: true,
-          deviceToken: "",
           selectedApiAdapter: "deepgram",
         }),
         true,
@@ -69,8 +56,6 @@ describe("live transcription reconciliation", () => {
     expect(
       resolveLiveTranscriptionReconciliationMode(
         settings({
-          useOwnKey: true,
-          deviceToken: "",
           selectedApiAdapter: "openai",
           apiAdapters: {
             openai: {

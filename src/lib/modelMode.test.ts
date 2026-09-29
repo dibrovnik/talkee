@@ -3,32 +3,37 @@ import { describe, expect, it } from "bun:test";
 import {
   apiModelModeSettingsPatch,
   localModelModeSettingsPatch,
-  talkisCloudModeSettingsPatch,
+  resolveProcessingMode,
 } from "./modelMode";
 import { normalizeSavedSettings } from "./store";
 
-describe("model mode settings", () => {
-  it("clears local STT state so settings normalization keeps Cloud selected", () => {
-    const patch = talkisCloudModeSettingsPatch({
-      deviceToken: "device-jwt",
-      whisperEndpoint: "http://127.0.0.1:8000",
-      whisperApiKey: "stale-local-key",
-    });
-
-    expect(patch).toMatchObject({
-      deviceToken: "device-jwt",
-      useOwnKey: false,
-      provider: "openai",
-      whisperApiKey: "",
-      whisperEndpoint: "",
-      whisperModel: "gpt-4o-transcribe",
-    });
-
-    const normalized = normalizeSavedSettings(patch);
-    expect(normalized.useOwnKey).toBe(false);
-    expect(normalized.whisperEndpoint).toBe("");
+describe("resolveProcessingMode", () => {
+  it("detects localhost endpoint as local mode", () => {
+    expect(
+      resolveProcessingMode({ whisperEndpoint: "http://localhost:8000" }),
+    ).toBe("local");
   });
 
+  it("detects 127.0.0.1 endpoint as local mode", () => {
+    expect(
+      resolveProcessingMode({ whisperEndpoint: "http://127.0.0.1:8000" }),
+    ).toBe("local");
+  });
+
+  it("detects remote URL as api mode", () => {
+    expect(
+      resolveProcessingMode({ whisperEndpoint: "https://api.openai.com" }),
+    ).toBe("api");
+  });
+
+  it("treats empty endpoint as api mode", () => {
+    expect(resolveProcessingMode({ whisperEndpoint: "" })).toBe("api");
+    expect(resolveProcessingMode({})).toBe("api");
+    expect(resolveProcessingMode({ whisperEndpoint: null })).toBe("api");
+  });
+});
+
+describe("model mode settings", () => {
   it("commits Local mode with a managed endpoint and local model", () => {
     const patch = localModelModeSettingsPatch(
       {
@@ -42,7 +47,6 @@ describe("model mode settings", () => {
     );
 
     expect(patch).toMatchObject({
-      useOwnKey: true,
       provider: "custom",
       whisperApiKey: "",
       whisperEndpoint: "http://127.0.0.1:8000",
@@ -50,7 +54,6 @@ describe("model mode settings", () => {
     });
 
     const normalized = normalizeSavedSettings(patch);
-    expect(normalized.useOwnKey).toBe(true);
     expect(normalized.provider).toBe("custom");
     expect(normalized.whisperEndpoint).toBe("http://127.0.0.1:8000");
   });
@@ -70,7 +73,6 @@ describe("model mode settings", () => {
     );
 
     expect(patch).toMatchObject({
-      useOwnKey: true,
       provider: "openai",
       selectedApiAdapter: "openai",
       apiKey: "api-key",

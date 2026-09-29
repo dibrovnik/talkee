@@ -2,11 +2,11 @@
 
 ## 1. Модель режимов и миграция настроек
 
-- [ ] 1.1 `src/lib/modelMode.ts`: удалить `TALKIS_CLOUD_STT_MODEL`, `talkisCloudModeSettingsPatch`; добавить чистую функцию `resolveProcessingMode(settings): "api" | "local"` (localhost/127.0.0.1 в STT endpoint → `"local"`)
-- [ ] 1.2 `src/lib/modelMode.test.ts`: тесты на `resolveProcessingMode` (localhost, 127.0.0.1, удалённый URL, пустой endpoint)
-- [ ] 1.3 `src/lib/store.ts`: удалить `useOwnKey`, `deviceToken` из интерфейса настроек и дефолтов (строки ~258-261, 788-789, 1325-1327, 1360, 1619); добавить миграцию из design.md, решение 2
-- [ ] 1.4 Тесты миграции (сценарии из spec `processing-modes` → «Migration from legacy cloud mode»): облако+локальная модель, облако без модели, `deviceToken` удалён, прочие поля сохранены
-- [ ] 1.5 Проверка: `bun test src/lib/modelMode.test.ts src/lib/store` зелёный
+- [x] 1.1 `src/lib/modelMode.ts`: удалить `TALKIS_CLOUD_STT_MODEL`, `talkisCloudModeSettingsPatch`; добавить чистую функцию `resolveProcessingMode(settings): "api" | "local"` (localhost/127.0.0.1 в STT endpoint → `"local"`)
+- [x] 1.2 `src/lib/modelMode.test.ts`: тесты на `resolveProcessingMode` (localhost, 127.0.0.1, удалённый URL, пустой endpoint)
+- [x] 1.3 `src/lib/store.ts`: удалить `useOwnKey`, `deviceToken` из интерфейса настроек и дефолтов (строки ~258-261, 788-789, 1325-1327, 1360, 1619); добавить миграцию из design.md, решение 2
+- [x] 1.4 Тесты миграции (сценарии из spec `processing-modes` → «Migration from legacy cloud mode»): облако+локальная модель, облако без модели, `deviceToken` удалён, прочие поля сохранены
+- [x] 1.5 Проверка: `bun test src/lib/modelMode.test.ts src/lib/store` зелёный
 
 ## 2. Удаление аккаунта и подписки (UI)
 

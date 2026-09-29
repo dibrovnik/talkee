@@ -60,22 +60,6 @@ export const libMessages = {
     ru: "Не удалось прочитать аудио из этого файла. Попробуйте MP3, WAV, M4A, MP4, MOV, WEBM или OGG.",
     en: "Could not read audio from this file. Try MP3, WAV, M4A, MP4, MOV, WEBM, or OGG.",
   },
-  "fileTranscription.errCloudSessionMissing": {
-    ru: "Войдите в Talkis Cloud заново, чтобы использовать облачный режим.",
-    en: "Sign in to Talkis Cloud again to use cloud mode.",
-  },
-  "fileTranscription.errCloudDiarizationNotConfigured": {
-    ru: "Облачная разметка говорящих пока недоступна. Используйте локальную подготовку в блоке транскрибации файла.",
-    en: "Cloud speaker labeling is not available yet. Use local preparation in the file transcription section.",
-  },
-  "fileTranscription.errCloudDiarizationUnavailable": {
-    ru: "Облачное разделение по говорящим сейчас недоступно. Проверьте баланс или переключитесь на локальный режим.",
-    en: "Cloud speaker separation is currently unavailable. Check your balance or switch to local mode.",
-  },
-  "fileTranscription.errSubscriptionInactive": {
-    ru: "Облачный баланс закончился. Пополните его или переключитесь на локальный режим.",
-    en: "Your cloud balance is empty. Top it up or switch to local mode.",
-  },
   "fileTranscription.errCannotPrepareDiarization": {
     ru: "Не удалось подготовить аудио для разметки говорящих. Попробуйте другой аудио- или видеофайл.",
     en: "Could not prepare audio for speaker labeling. Try a different audio or video file.",
@@ -111,14 +95,6 @@ export const libMessages = {
   "fileTranscription.errRateLimit": {
     ru: "Превышен лимит запросов или закончилась квота API. Попробуйте позже.",
     en: "The request limit was exceeded or the API quota ran out. Try again later.",
-  },
-  "fileTranscription.errCloudDiarizationTimeout": {
-    ru: "Обработка записи с разделением по говорящим заняла больше 10 минут. Повторите попытку или временно отключите «Разделение по говорящим».",
-    en: "Processing the recording with speaker separation took more than 10 minutes. Try again or temporarily turn off “Speaker separation.”",
-  },
-  "fileTranscription.errCloudDiarizationFailed": {
-    ru: "Облаку не удалось разделить запись по говорящим. Повторите попытку; если ошибка сохранится, временно отключите «Разделение по говорящим».",
-    en: "The cloud could not separate the recording by speaker. Try again; if the error persists, temporarily turn off “Speaker separation.”",
   },
   "fileTranscription.errNetwork": {
     ru: "Не удалось связаться с сервером. Проверьте интернет и попробуйте снова.",
@@ -189,8 +165,8 @@ export const libMessages = {
     en: "The prompt is empty",
   },
   "summarize.errNoModel": {
-    ru: "Нет доступной модели для саммари: войдите в Talkis Cloud или укажите текстовую модель во вкладке «Модели».",
-    en: "No model available for summary: sign in to Talkis Cloud or set a text model in the “Models” tab.",
+    ru: "Нет доступной модели для саммари: укажите текстовую модель во вкладке «Модели».",
+    en: "No model available for summary: set a text model in the “Models” tab.",
   },
 
   // ── processingControl.ts ──────────────────────────────────────────────────

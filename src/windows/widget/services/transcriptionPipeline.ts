@@ -319,50 +319,12 @@ function toUserFacingErrorMessage(
     return tn("widget.error.regionUnsupported");
   }
 
-  if (
-    normalized.includes("402") ||
-    normalized.includes("insufficient_cloud_tokens")
-  ) {
-    return tn("widget.error.subscriptionRequired");
-  }
-
   if (normalized.includes("403") || normalized.includes("forbidden")) {
     if (isLocalStt) {
       return tn("widget.error.localRuntimeRejected");
     }
 
-    if (
-      normalized.includes("subscription inactive") ||
-      normalized.includes("активная подписка") ||
-      normalized.includes("cloud mode")
-    ) {
-      return tn("widget.error.subscriptionRequired");
-    }
-
     return tn("widget.error.requestRejected");
-  }
-
-  if (
-    normalized.includes("invalid or expired token") ||
-    normalized.includes("token expired") ||
-    normalized.includes("token missing user id")
-  ) {
-    return tn("widget.error.cloudSessionExpired");
-  }
-
-  if (normalized.includes("talkis cloud session missing")) {
-    return tn("widget.error.cloudSignInRequired");
-  }
-
-  if (normalized.includes("talkis cloud returned an invalid response")) {
-    return tn("widget.error.cloudInvalidResponse");
-  }
-
-  if (
-    normalized.includes("subscription check failed") ||
-    normalized.includes("cloud auth unavailable")
-  ) {
-    return tn("widget.error.cloudUnavailable");
   }
 
   if (normalized.includes("translation text model unavailable")) {

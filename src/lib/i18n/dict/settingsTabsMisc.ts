@@ -200,8 +200,8 @@ export const settingsTabsMisc = {
   },
   "translation.title": { ru: "Переводчик", en: "Translator" },
   "translation.view.live": {
-    ru: "Синхронный перевод (Облако/API)",
-    en: "Live translation (Cloud/API)",
+    ru: "Синхронный перевод (API)",
+    en: "Live translation (API)",
   },
   "translation.view.other": { ru: "Остальное", en: "Other" },
   "translation.source.title": { ru: "Распознавать с", en: "Recognize from" },
@@ -268,16 +268,16 @@ export const settingsTabsMisc = {
     en: "Translation is played immediately in short chunks. Talkis excludes its own audio from capture to prevent a translation feedback loop.",
   },
   "translation.live.voiceOpenAiOnly": {
-    ru: "Озвучка доступна в облаке Talkis или через проверенное подключение OpenAI Realtime.",
-    en: "Voice playback is available through Talkis Cloud or a verified OpenAI Realtime connection.",
+    ru: "Озвучка доступна через проверенное подключение к Realtime API.",
+    en: "Voice playback is available through a verified Realtime API connection.",
   },
   "translation.live.voiceMacOnly": {
     ru: "Озвучка сейчас доступна на macOS. Для Windows и Linux нужна безопасная защита от повторного захвата звука Talkis.",
     en: "Voice playback is currently available on macOS. Windows and Linux still need safe Talkis self-audio exclusion.",
   },
   "translation.live.desc": {
-    ru: "Системный звук переводится напрямую через облачную Realtime-модель или подключённый API. Локальные модели остаются доступны для обычной диктовки и перевода выделенного текста.",
-    en: "System audio is translated through a cloud Realtime model or connected API. Local models remain available for ordinary dictation and selected-text translation.",
+    ru: "Системный звук переводится через подключённый API. Локальные модели остаются доступны для обычной диктовки и перевода выделенного текста.",
+    en: "System audio is translated through a connected API. Local models remain available for ordinary dictation and selected-text translation.",
   },
   "translation.selection.title": {
     ru: "Перевод выделенного текста",

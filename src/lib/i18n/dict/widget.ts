@@ -135,29 +135,9 @@ export const widget = {
     ru: "Сервис распознавания сейчас недоступен в вашем регионе. Попробуйте другой endpoint или VPN.",
     en: "The recognition service is currently unavailable in your region. Try a different endpoint or a VPN.",
   },
-  "widget.error.subscriptionRequired": {
-    ru: "Облачный баланс закончился. Пополните его в личном кабинете Talkis.",
-    en: "Your cloud balance is empty. Top it up in your Talkis account.",
-  },
   "widget.error.requestRejected": {
     ru: "Сервис отклонил запрос. Проверьте API-ключ, регион доступа или настройки endpoint.",
     en: "The service rejected the request. Check the API key, access region, or endpoint settings.",
-  },
-  "widget.error.cloudSessionExpired": {
-    ru: "Сессия Talkis Cloud истекла. Войдите в облако заново.",
-    en: "Your Talkis Cloud session has expired. Sign in to the cloud again.",
-  },
-  "widget.error.cloudSignInRequired": {
-    ru: "Войдите в Talkis Cloud заново, чтобы использовать облачный режим.",
-    en: "Sign in to Talkis Cloud again to use cloud mode.",
-  },
-  "widget.error.cloudInvalidResponse": {
-    ru: "Talkis Cloud вернул некорректный ответ. Попробуйте отправить запись ещё раз.",
-    en: "Talkis Cloud returned an invalid response. Try submitting the recording again.",
-  },
-  "widget.error.cloudUnavailable": {
-    ru: "Talkis Cloud временно недоступен. Попробуйте ещё раз через несколько секунд.",
-    en: "Talkis Cloud is temporarily unavailable. Try again in a few seconds.",
   },
   "widget.error.authFailed": {
     ru: "Не удалось авторизоваться в API. Проверьте ваш ключ доступа.",
@@ -188,16 +168,16 @@ export const widget = {
     en: "No speech recognized. Try submitting the recording again.",
   },
   "widget.error.translationModelUnavailable": {
-    ru: "Для перевода нужна текстовая модель. Выберите облако, локальную текстовую модель или LLM endpoint в «Настройки → Модели».",
-    en: "Translation needs a text model. Choose cloud, a local text model, or an LLM endpoint in “Settings → Models”.",
+    ru: "Для перевода нужна текстовая модель. Выберите локальную текстовую модель или LLM endpoint в «Настройки → Модели».",
+    en: "Translation needs a text model. Choose a local text model or an LLM endpoint in “Settings → Models”.",
   },
   "widget.selectionTranslation.noSelection": {
     ru: "Выделенный текст не найден.",
     en: "No selected text found.",
   },
   "widget.selectionTranslation.noModel": {
-    ru: "Для перевода нужна текстовая модель. Выберите облако, локальную текстовую модель или LLM endpoint в «Настройки → Модели».",
-    en: "Translation needs a text model. Choose cloud, a local text model, or an LLM endpoint in “Settings → Models”.",
+    ru: "Для перевода нужна текстовая модель. Выберите локальную текстовую модель или LLM endpoint в «Настройки → Модели».",
+    en: "Translation needs a text model. Choose a local text model or an LLM endpoint in “Settings → Models”.",
   },
   "widget.selectionTranslation.copyFailed": {
     ru: "Не удалось прочитать выделенный текст через буфер обмена.",
@@ -220,10 +200,6 @@ export const widget = {
   "widget.recording.settingsNotLoaded": {
     ru: "Настройки не загружены. Перезапустите приложение.",
     en: "Settings aren't loaded. Restart the app.",
-  },
-  "widget.recording.cloudSignInRequired": {
-    ru: "Войдите в Talkis Cloud заново, чтобы использовать облачный режим.",
-    en: "Sign in to Talkis Cloud again to use cloud mode.",
   },
   "widget.recording.noModelConfigured": {
     ru: "Сначала настройте модель: откройте «Настройки → Модели» и выберите локальную модель или свой API-ключ.",

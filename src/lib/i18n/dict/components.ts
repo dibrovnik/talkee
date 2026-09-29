@@ -165,28 +165,4 @@ export const components = {
   "titleBar.minimize": { ru: "Свернуть", en: "Minimize" },
   "titleBar.maximize": { ru: "Развернуть", en: "Maximize" },
 
-  // ── UserPanel ─────────────────────────────────────────────
-  "userPanel.subscriptionActive": {
-    ru: "Облако доступно",
-    en: "Cloud is available",
-  },
-  "userPanel.balance": {
-    ru: "Баланс: {tokens} токенов",
-    en: "Balance: {tokens} tokens",
-  },
-  "userPanel.upgradeToPro": { ru: "Перейти на PRO", en: "Go PRO" },
-  "userPanel.logout": { ru: "Выйти", en: "Log out" },
-  "userPanel.cta.title": { ru: "Облако Talkis", en: "Talkis Cloud" },
-  "userPanel.cta.feature.unlimited": {
-    ru: "Без подписки и автоплатежей",
-    en: "No subscription or recurring charges",
-  },
-  "userPanel.cta.feature.noVpn": {
-    ru: "Без VPN и Прокси",
-    en: "No VPN or proxy",
-  },
-  "userPanel.cta.feature.deviceSync": {
-    ru: "Токены не сгорают",
-    en: "Tokens do not expire",
-  },
 } as const;

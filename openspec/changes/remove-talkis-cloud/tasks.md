@@ -52,9 +52,9 @@
 
 ## 7. Ссылки и трей
 
-- [ ] 7.1 `src-tauri/src/tray.rs`: удалить константы `TALKIS_WEBSITE_URL`, GitHub, privacy, mailto (~29-32), пункты меню «Поддержка», «GitHub», «Приватность» и их обработчики; `AboutMetadata` без website
-- [ ] 7.2 Удалить из i18n-словарей все ключи про облако/подписку/баланс/вход (`grep -rni "cloud\|облак\|подпис\|баланс\|subscription" src/i18n`), которые больше не используются
-- [ ] 7.3 Проверка: `cargo check`, `bunx tsc --noEmit`
+- [x] 7.1 `src-tauri/src/tray.rs`: удалить константы `TALKIS_WEBSITE_URL`, GitHub, privacy, mailto (~29-32), пункты меню «Поддержка», «GitHub», «Приватность» и их обработчики; `AboutMetadata` без website
+- [x] 7.2 Удалить из i18n-словарей все ключи про облако/подписку/баланс/вход (`grep -rni "cloud\|облак\|подпис\|баланс\|subscription" src/i18n`), которые больше не используются
+- [x] 7.3 Проверка: `cargo check`, `bunx tsc --noEmit`
 
 ## 8. Allowlist и документация
 

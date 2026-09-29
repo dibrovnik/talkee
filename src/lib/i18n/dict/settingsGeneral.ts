@@ -134,10 +134,6 @@ export const settingsGeneral = {
     ru: "Использовать streaming автоматически для всех моделей, которые его поддерживают.",
     en: "Automatically use streaming for every model that supports it.",
   },
-  "settings.realtimeTranscription.cloudDesc": {
-    ru: "В режиме Talkis Cloud используется более точная транскрибация после остановки записи.",
-    en: "Talkis Cloud uses more accurate transcription after recording stops.",
-  },
 
   // Recording audio
   "settings.recordingAudio.title": {

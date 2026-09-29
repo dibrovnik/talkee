@@ -47,20 +47,16 @@ function normalizeHost(hostname) {
 
 export function parseAllowlist(raw) {
   const hosts = new Set();
-  const pending = new Set();
   const suffixes = [];
 
   for (const entry of raw?.hosts ?? []) {
     if (entry?.host) hosts.add(normalizeHost(entry.host));
   }
-  for (const entry of raw?.pendingRemoval ?? []) {
-    if (entry?.host) pending.add(normalizeHost(entry.host));
-  }
   for (const entry of raw?.hostSuffixes ?? []) {
     if (entry?.suffix) suffixes.push(normalizeHost(entry.suffix));
   }
 
-  return { hosts, pending, suffixes };
+  return { hosts, suffixes };
 }
 
 export function isAlwaysAllowedHost(hostname) {
@@ -75,7 +71,6 @@ export function classifyHost(hostname, allowlist) {
   if (allowlist.suffixes.some((suffix) => host === suffix || host.endsWith(`.${suffix}`))) {
     return "allowed";
   }
-  if (allowlist.pending.has(host)) return "pending";
 
   return "blocked";
 }
@@ -178,12 +173,7 @@ export function run({
   const allowlist = parseAllowlist(JSON.parse(readFileSync(allowlistPath, "utf8")));
   const findings = scanRepository(rootDir, allowlist);
 
-  const pending = findings.filter((finding) => finding.status === "pending");
   const blocked = findings.filter((finding) => finding.status === "blocked");
-
-  for (const finding of pending) {
-    stderr.write(`warning: ${finding.file}:${finding.line} ${finding.host} is pending removal\n`);
-  }
 
   if (blocked.length > 0) {
     stderr.write(
@@ -193,9 +183,7 @@ export function run({
     return 1;
   }
 
-  stdout.write(
-    `Network host check passed (${findings.length - pending.length} allowlisted, ${pending.length} pending removal).\n`,
-  );
+  stdout.write(`Network host check passed (${findings.length} allowlisted).\n`);
   return 0;
 }
 

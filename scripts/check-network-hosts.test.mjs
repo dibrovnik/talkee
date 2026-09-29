@@ -49,7 +49,6 @@ describe("classifyHost", () => {
   const allowlist = parseAllowlist({
     hosts: [{ host: "api.openai.com", reason: "test" }],
     hostSuffixes: [{ suffix: "corp.example", reason: "test" }],
-    pendingRemoval: [{ host: "talkis.ru", reason: "test" }],
   });
 
   test("classifies allowlisted host as allowed", () => {
@@ -64,10 +63,6 @@ describe("classifyHost", () => {
 
   test("classifies host suffix as allowed", () => {
     expect(classifyHost("sub.corp.example", allowlist)).toBe("allowed");
-  });
-
-  test("classifies pending removal host", () => {
-    expect(classifyHost("talkis.ru", allowlist)).toBe("pending");
   });
 
   test("classifies unknown host as blocked", () => {
@@ -136,23 +131,6 @@ describe("run", () => {
 
     expect(code).toBe(1);
     expect(stderr.text()).toContain("src/nested/b.ts:2 evil.example.com");
-  });
-
-  test("warns about pending removal hosts without failing", () => {
-    const root = makeFixture({
-      "src/c.ts": 'const cloud = "https://talkis.ru/api";\n',
-    });
-    const allowlistPath = writeAllowlist({
-      hosts: [],
-      pendingRemoval: [{ host: "talkis.ru", reason: "remove-talkis-cloud" }],
-    });
-    const stdout = capture();
-    const stderr = capture();
-
-    const code = run({ rootDir: root, allowlistPath, stdout: stdout.stream, stderr: stderr.stream });
-
-    expect(code).toBe(0);
-    expect(stderr.text()).toContain("src/c.ts:1 talkis.ru is pending removal");
   });
 
   test("skips test files", () => {

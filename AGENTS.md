@@ -257,9 +257,7 @@ logger::log_error("TAG", &format!("error: {}", e));
 - **Persistent storage:** Use `tauri-plugin-store` with JSON file
 - **Permissions:** Check microphone via `getUserMedia()`, accessibility via system dialog
 - **API calls:** Whisper for transcription, GPT-4o-mini for text cleanup
-- **Cloud platform:** `talkis-web/` — Next.js 15, Auth.js v5, Prisma, PostgreSQL
-- **Auth flow:** Email OTP + Yandex OAuth → deep link `talkis://auth?token=xxx`
-- **Subscription:** Free (own API key) or paid (cloud, 390₽/mo)
+- **Processing modes:** API (own key) or Local (managed sidecars); no cloud account or subscription
 
 ## Audio Pipeline Rules
 

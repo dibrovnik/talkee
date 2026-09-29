@@ -34,22 +34,12 @@
     },
     {
       "host": "github.com",
-      "reason": "User-initiated runtime downloads (python-build-standalone, sherpa-onnx models) and help/about links opened in the browser"
+      "reason": "User-initiated runtime downloads (python-build-standalone, sherpa-onnx models)"
     },
     {
       "host": "api.example.com",
       "reason": "Reserved example domain (RFC 2606, non-routable) used only as UI placeholder text for the custom endpoint field"
     }
   ],
-  "hostSuffixes": [],
-  "pendingRemoval": [
-    {
-      "host": "talkis.ru",
-      "reason": "Talkis cloud API / website; to be removed by the remove-talkis-cloud change"
-    },
-    {
-      "host": "proxy.talkis.ru",
-      "reason": "Talkis cloud proxy for transcription; to be removed by the remove-talkis-cloud change"
-    }
-  ]
+  "hostSuffixes": []
 }

@@ -58,7 +58,7 @@
 
 ## 8. Allowlist и документация
 
-- [ ] 8.1 `scripts/network-allowlist.json`: удалить секцию `pendingRemoval`; `scripts/check-network-hosts.mjs`: удалить поддержку `pendingRemoval`, обновить тест
-- [ ] 8.2 `docs/architecture/processing-modes.md`: переписать под два режима (удалить столбец «Облако» из матрицы, раздел 2 — новое правило)
-- [ ] 8.3 `docs/business-requirements.md`, `README.md`, `README.ru.md`: удалить описание облака, подписки, 390₽/мес
-- [ ] 8.4 Проверка: `bun run check:network`, `bun test`, `openspec validate remove-talkis-cloud --strict`
+- [x] 8.1 `scripts/network-allowlist.json`: удалить секцию `pendingRemoval`; `scripts/check-network-hosts.mjs`: удалить поддержку `pendingRemoval`, обновить тест
+- [x] 8.2 `docs/architecture/processing-modes.md`: переписать под два режима (удалить столбец «Облако» из матрицы, раздел 2 — новое правило)
+- [x] 8.3 `docs/business-requirements.md`, `README.md`, `README.ru.md`: удалить описание облака, подписки, 390₽/мес
+- [x] 8.4 Проверка: `bun run check:network`, `bun test`, `openspec validate remove-talkis-cloud --strict`

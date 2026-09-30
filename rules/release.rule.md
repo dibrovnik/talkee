@@ -8,59 +8,43 @@ This file defines the mandatory release workflow for Talkee. Follow it for every
 - Release review file: `docs/release/review-vX.Y.Z.md`
 - Git tag: `vX.Y.Z`
 - Release preflight workflow: `.github/workflows/release-preflight.yml`
+- `package.json` is the single version source; `@dibrovnik/pvs` propagates it to the
+  other manifests through `pvs.config.json`.
 
 ## Mandatory sequence
 
-1. Collect all local changes and push them to the release branch first.
-2. Update version numbers consistently in:
-   - `package.json`
-   - `src-tauri/Cargo.toml`
-   - `src-tauri/tauri.conf.json`
-3. Refresh `README.md` before every release so the documented behavior, supported platforms, commands, and release notes are current.
-4. Run the release checks locally:
+1. Make sure everything is committed and the quality gate is green:
    - `bun run check:release`
-   - `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkee-updater.key bun run build:release:macos`
-   - If the updater private key is password-protected, also set `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
-5. Perform a detailed self-review of the full release diff.
-6. Write the review results to `docs/release/review-vX.Y.Z.md` using the review template.
-7. Run GitHub Actions release preflight on the release branch before merging or tagging:
-   - Push `release/vX.Y.Z` and wait for `.github/workflows/release-preflight.yml`.
-   - Required green check on the exact release commit: `Preflight macos`.
-   - If preflight fails, fix the same release branch and rerun preflight. Do not create a tag just to test CI.
-8. If there are blockers, risks, or recommendations that need a decision, ask the user before merging to `main`.
-9. Only after review is complete, questions are resolved, and all preflight checks are green, merge or push the approved changes to `main`.
-10. Create and push the release tag `vX.Y.Z` from `main`.
-11. Let GitHub Actions build and publish the macOS release.
-
-## Hard release gate
-
-- Do not create or push `vX.Y.Z` until release preflight has succeeded for macOS on the exact commit that will be tagged.
-- The release workflow verifies those preflight check-runs before building. A tag without green preflight must fail before publishing artifacts.
-- Failed release preflight runs are fixed on the release branch. Failed tag-triggered release runs are exceptional and should not be used as the normal validation loop.
-
-## Review checklist
-
-- Working tree is clean and the release branch diff is intentional.
-- README reflects the current product behavior and release process.
-- Hotkey flow works, including capture, apply-without-restart, and onboarding interactions.
-- Widget position, notices, and onboarding permissions behave correctly.
-- Short or noisy recordings do not paste obvious hallucinated text.
-- `bun run check:release` passes.
-- Local production build passes via `bun run build:release:macos`.
-- Release preflight is green for `Preflight macos` on the exact release commit.
-- Version numbers and release tag match.
-- The GitHub Actions release workflow still matches the documented process.
-- GitHub repository secrets include `TAURI_SIGNING_PRIVATE_KEY` and, if the key is password-protected, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
-- GitHub Release includes the macOS DMG, the signed macOS app archive, and matching `.sig` files.
+2. Learn the next version without writing anything:
+   - `bunx pvs bump <patch|minor|major> --dry-run` → `X.Y.Z`
+3. Update `CHANGELOG.md`: rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`
+   and add a new empty `## [Unreleased]` above it. Commit `docs: changelog for vX.Y.Z`.
+4. Raise the version everywhere and create the release commit and tag:
+   - `bun run version:<patch|minor|major>` (runs `pvs bump <level> --commit --tag`)
+   - This writes `package.json`, both `version` lines of `src-tauri/Cargo.toml` and the
+     `talkee`/`talkee-llm` entries of `src-tauri/Cargo.lock`, then commits
+     `chore: release vX.Y.Z` and tags `vX.Y.Z`.
+5. Verify the changelog matches the new version:
+   - `bun run check:changelog`
+6. Build the signed macOS release artifact:
+   - `bun run build:release:macos`
 
 ## GitHub Actions release source of truth
 
 - Workflow file: `.github/workflows/release.yml`
-- Preflight workflow file: `.github/workflows/release-preflight.yml`
-- Tag push is the canonical release trigger.
-- Release preflight is the canonical build validation before tag push.
-- The updater metadata endpoint is `https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/latest.json`.
+- Tag push is the canonical release trigger; release preflight is the canonical build
+  validation before tag push.
+- Run release preflight on `release/vX.Y.Z` and do not push the `vX.Y.Z` tag until
+  `Preflight macos` is green on the exact commit that will be tagged.
 - Build the macOS release in the workflow. Do not claim unsupported platforms in release notes.
+
+## Review checklist
+
+- Working tree is clean and the version commit diff is intentional.
+- `bun run version:check` and `bun run check:changelog` pass.
+- Local production build passes via `bun run build:release:macos`.
+- Version numbers and the release tag match.
+- GitHub Release includes the macOS DMG and the signed macOS app archive.
 
 ## Output expectations
 
@@ -68,9 +52,7 @@ For each release, produce:
 
 - release branch `release/vX.Y.Z`
 - review file `docs/release/review-vX.Y.Z.md`
-- updated `README.md`
-- updated version files
+- updated `CHANGELOG.md`
+- release commit `chore: release vX.Y.Z` and tag `vX.Y.Z`
 - green release preflight on the release commit
-- pushed `main`
-- pushed tag `vX.Y.Z`
 - GitHub Release artifacts created by Actions

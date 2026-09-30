@@ -57,6 +57,12 @@ bun test scripts
 bun run check:naming
 bun run check:release
 
+# Versioning and changelog
+bun run version:current
+bun run version:check
+bun run version:patch     # bumps, commits and tags
+bun run check:changelog
+
 # Logs
 bun run logs          # tail -f ~/.talkee/talkee.log
 bun run logs:clear

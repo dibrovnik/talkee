@@ -23,7 +23,7 @@
 
 ## 4. Документация
 
-- [ ] 4.1 Переписать `rules/release.rule.md` (design.md, решение 5)
-- [ ] 4.2 `AGENTS.md`: в «Команды» добавить `version:*`, `check:changelog`; убрать `check:versions`
-- [ ] 4.3 `CHANGELOG.md`: убедиться, что есть `## [Unreleased]` и `## [0.4.8]`
-- [ ] 4.4 Проверка: `bun run check:agents-docs`; `openspec validate versioning-with-pvs --strict`
+- [x] 4.1 Переписать `rules/release.rule.md` (design.md, решение 5)
+- [x] 4.2 `AGENTS.md`: в «Команды» добавить `version:*`, `check:changelog`; убрать `check:versions`
+- [x] 4.3 `CHANGELOG.md`: убедиться, что есть `## [Unreleased]` и `## [0.4.8]`
+- [x] 4.4 Проверка: `bun run check:agents-docs`; `openspec validate versioning-with-pvs --strict`

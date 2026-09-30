@@ -41,7 +41,7 @@ Talkee — macOS-приложение (Apple Silicon): Rust-бэкенд Tauri v
 | `prompt_config.rs` | Конфигурация промптов и стилей транскрибации. | загрузка промптов |
 | `logger.rs` | Файловое логирование (`~/.talkee/talkee.log`). | `log_event`, `get_log_path_cmd`, `clear_logs` |
 | `download_cancel.rs` | Отмена активных загрузок моделей. | `cancel_local_model_download` |
-| `legacy_migration.rs` | Одноразовая миграция данных из старой идентичности Talkis. | `migrate_app_data_layout` |
+| `legacy_migration.rs` | Одноразовая миграция данных из прежней идентичности приложения. | `migrate_app_data_layout` |
 | `shutdown.rs` | Корректное завершение управляемых sidecar-процессов. | завершение runtime |
 | `tray.rs` | Постоянный системный трей (Open Talkee / Quit). | инициализация трея |
 | `commands/widget.rs` | Команды окна виджета: размеры, уведомления, текстовая плашка. | `widget_resize`, `show_widget_notice`, `hide_widget_notice`, `show_widget_text_overlay`, `hide_widget_text_overlay` |

@@ -33,8 +33,8 @@
 
 ## 5. Скрипты проверок
 
-- [ ] 5.1 `scripts/check-agents-docs.mjs` (design.md, решение 5) + тест
-- [ ] 5.2 `scripts/check-repo.mjs` (design.md, решение 6) + тест
-- [ ] 5.3 `package.json`: `check:agents-docs`, `check:repo`
-- [ ] 5.4 Проверка: `bun run check:agents-docs && bun run check:repo && bun test scripts`
-- [ ] 5.5 Проверка: `openspec validate repo-cleanup-for-agents --strict`; коммит `chore: add repo hygiene checks`
+- [x] 5.1 `scripts/check-agents-docs.mjs` (design.md, решение 5) + тест
+- [x] 5.2 `scripts/check-repo.mjs` (design.md, решение 6) + тест
+- [x] 5.3 `package.json`: `check:agents-docs`, `check:repo`
+- [x] 5.4 Проверка: `bun run check:agents-docs && bun run check:repo && bun test scripts`
+- [x] 5.5 Проверка: `openspec validate repo-cleanup-for-agents --strict`; коммит `chore: add repo hygiene checks`

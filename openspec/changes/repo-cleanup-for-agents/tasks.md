@@ -8,13 +8,13 @@
 
 ## 2. Удаление мусора
 
-- [ ] 2.1 Удалить `.nanocoder/`, `.agent/`, `compose.yaml`, `compose.cpu.yaml`, `site/`, `public/vite.svg`, `public/tauri.svg` (если `public/` опустел — удалить и его, проверив `vite.config.ts`), все `.DS_Store`
-- [ ] 2.2 `.env.example`: удалить, если в нём только комментарии
-- [ ] 2.3 Удалить `docs/demo/`; убрать/заменить ссылки на GIF в `README.md`, `README.ru.md`
-- [ ] 2.4 `docs/release/`: оставить `review-template.md`, `trust-and-signing.md` и последний `review-v*.md`, остальные удалить
-- [ ] 2.5 Перенести `testing_plan.md` → `docs/testing/manual-style-test-plan.md`
-- [ ] 2.6 `docs/business-requirements.md`: удалить, если он описывает только облачный бизнес; иначе очистить от устаревшего
-- [ ] 2.7 Коммит `chore: remove junk and stale artifacts`
+- [x] 2.1 Удалить `.nanocoder/`, `.agent/`, `compose.yaml`, `compose.cpu.yaml`, `site/`, `public/vite.svg`, `public/tauri.svg` (если `public/` опустел — удалить и его, проверив `vite.config.ts`), все `.DS_Store`
+- [x] 2.2 `.env.example`: удалить, если в нём только комментарии
+- [x] 2.3 Удалить `docs/demo/`; убрать/заменить ссылки на GIF в `README.md`, `README.ru.md`
+- [x] 2.4 `docs/release/`: оставить `review-template.md`, `trust-and-signing.md` и последний `review-v*.md`, остальные удалить
+- [x] 2.5 Перенести `testing_plan.md` → `docs/testing/manual-style-test-plan.md`
+- [x] 2.6 `docs/business-requirements.md`: удалить, если он описывает только облачный бизнес; иначе очистить от устаревшего (документ общий, не облачный; удалены устаревшие упоминания Windows/Linux)
+- [x] 2.7 Коммит `chore: remove junk and stale artifacts`
 
 ## 3. Удаление Beads
 

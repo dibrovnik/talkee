@@ -14,10 +14,6 @@
   <a href="https://github.com/SerTimBerrners-Lee/talkee/releases/latest">Latest release</a>
 </p>
 
-<p align="center">
-  <img src="docs/demo/demo-1.gif" alt="Talkee dictating a development request into a code editor" width="860">
-</p>
-
 ## What Is Talkee?
 
 Talkee is a desktop voice-to-text app built with Tauri, React, TypeScript, and Rust. It stays as a small floating widget, records while you hold a hotkey, transcribes your speech, optionally cleans the text with an LLM, and pastes the final result into the app you were using.
@@ -168,44 +164,6 @@ It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, 
 
 - Fixed repeated permission prompts after restarting macOS: startup checks no longer trigger a microphone request, and Accessibility is not reset before re-requesting access.
 - Updated the transcription statistics card to show words today, words this month, and words per minute instead of the less useful all-time words metric.
-
-## Demo
-
-The repository includes the same GIF demos used on the Talkee website.
-
-| Demo | What it shows |
-| --- | --- |
-| [Dictating code](docs/demo/demo-1.gif) | A short development request inserted into an editor |
-| [Dictating an email](docs/demo/demo-2.gif) | Business-style speech-to-email flow |
-| [Dictating a note](docs/demo/demo-3.gif) | Everyday notes and task capture |
-| [Recording a call](docs/demo/demo-4.gif) | Separate call-recording flow from the widget |
-| [Transcribing a file](docs/demo/demo-5.gif) | Audio/video file transcription |
-| [Choosing models](docs/demo/demo-6.gif) | Local models and own API configuration |
-
-<details>
-<summary>Show more demos inline</summary>
-
-### Email Dictation
-
-<img src="docs/demo/demo-2.gif" alt="Talkee dictating an email" width="860">
-
-### Notes
-
-<img src="docs/demo/demo-3.gif" alt="Talkee dictating a note" width="860">
-
-### Call Recording
-
-<img src="docs/demo/demo-4.gif" alt="Talkee recording a call transcript" width="860">
-
-### File Transcription
-
-<img src="docs/demo/demo-5.gif" alt="Talkee transcribing an audio or video file" width="860">
-
-### Local Models And API Keys
-
-<img src="docs/demo/demo-6.gif" alt="Talkee choosing a local model or own API key" width="860">
-
-</details>
 
 ## How It Works
 
@@ -389,7 +347,7 @@ src/windows/settings/ Settings window and tabs
 src/lib/              Store, auth, permissions, logging, shared clients
 src-tauri/src/        Rust backend, Tauri commands, audio, paste, STT
 src-tauri/icons/      App icons
-docs/                 Architecture, business requirements, release docs, audio rules, demo media
+docs/                 Architecture, business requirements, release docs, audio rules
 scripts/              Release and sidecar preparation scripts
 ```
 

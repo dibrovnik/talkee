@@ -14,10 +14,6 @@
   <a href="https://github.com/SerTimBerrners-Lee/talkee/releases/latest">Последний релиз</a>
 </p>
 
-<p align="center">
-  <img src="docs/demo/demo-1.gif" alt="Talkee диктует запрос для разработки в редакторе кода" width="860">
-</p>
-
 ## Что такое Talkee?
 
 Talkee - десктопное приложение для преобразования речи в текст на Tauri, React, TypeScript и Rust. Оно работает как маленький плавающий виджет: записывает голос по горячей клавише, распознает речь, при необходимости улучшает текст через LLM и вставляет результат в активное приложение.
@@ -134,44 +130,6 @@ Talkee сделан для повседневной работы: IDE, чаты,
 
 - Исправлена Windows release-сборка: Vite wrapper теперь вычисляет корень проекта через `fileURLToPath`, без некорректных путей вида `/D:/...` на GitHub Actions Windows runners.
 - Повторно публикуются изменения v0.3.8 с исправлением Windows bundle, чтобы release workflow собрал артефакты для macOS, Windows и Linux.
-
-## Демонстрация
-
-В репозиторий добавлены те же GIF-демо, которые используются на сайте Talkee.
-
-| Демо | Что показывает |
-| --- | --- |
-| [Диктовка кода](docs/demo/demo-1.gif) | Короткий запрос для разработки, вставленный в редактор |
-| [Диктовка письма](docs/demo/demo-2.gif) | Превращение речи в деловое письмо |
-| [Диктовка заметки](docs/demo/demo-3.gif) | Быстрые заметки и задачи |
-| [Запись созвона](docs/demo/demo-4.gif) | Отдельный сценарий записи разговора из виджета |
-| [Транскрибация файла](docs/demo/demo-5.gif) | Обработка аудио или видеофайла |
-| [Выбор моделей](docs/demo/demo-6.gif) | Локальные модели и собственный API |
-
-<details>
-<summary>Показать остальные демо прямо здесь</summary>
-
-### Диктовка письма
-
-<img src="docs/demo/demo-2.gif" alt="Talkee диктует письмо" width="860">
-
-### Заметки
-
-<img src="docs/demo/demo-3.gif" alt="Talkee диктует заметку" width="860">
-
-### Запись созвона
-
-<img src="docs/demo/demo-4.gif" alt="Talkee записывает транскрипт созвона" width="860">
-
-### Транскрибация файла
-
-<img src="docs/demo/demo-5.gif" alt="Talkee транскрибирует аудио или видеофайл" width="860">
-
-### Локальные модели и API-ключи
-
-<img src="docs/demo/demo-6.gif" alt="Talkee выбирает локальную модель или собственный API-ключ" width="860">
-
-</details>
 
 ## Как это работает
 
@@ -351,7 +309,7 @@ src/windows/settings/ Окно настроек и вкладки
 src/lib/              Store, auth, permissions, logging, shared clients
 src-tauri/src/        Rust backend, Tauri commands, audio, paste, STT
 src-tauri/icons/      Иконки приложения
-docs/                 Архитектура, бизнес-требования, release docs, audio rules, demo media
+docs/                 Архитектура, бизнес-требования, release docs, audio rules
 scripts/              Release и sidecar preparation scripts
 ```
 

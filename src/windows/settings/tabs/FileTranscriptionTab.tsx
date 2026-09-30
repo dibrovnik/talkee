@@ -28,7 +28,6 @@ import {
   IconClipboard,
   IconFileMusic,
   IconListCheck,
-  IconLoader2,
   IconSquare,
   IconX,
 } from "../../../lib/icons";
@@ -44,6 +43,10 @@ import {
 } from "../../../lib/store";
 import { isSummaryAvailable } from "../../../lib/summarize";
 import { formatErrorMessage } from "../../../lib/utils";
+import { Button } from "../../../ui/Button";
+import { ProgressBar } from "../../../ui/ProgressBar";
+import { Spinner } from "../../../ui/Spinner";
+import { Toggle } from "../../../ui/Toggle";
 
 type ProcessingState = "idle" | FileTranscriptionStatus | "error";
 type SpeakerSetupIntent = "toggle" | "process";
@@ -168,10 +171,6 @@ function resultSourceLabel(entry: HistoryEntry, t: TFunc): string {
   if (entry.source === "call") return t("fileTab.source.call");
   if (entry.source === "file") return t("fileTab.source.file");
   return t("fileTab.source.voice");
-}
-
-function requirementStatusColor(isReady: boolean): string {
-  return isReady ? "var(--success)" : "var(--text-low)";
 }
 
 function isSpeakerSetupReady(settings: AppSettings): boolean {
@@ -1050,25 +1049,11 @@ export function FileTranscriptionTab({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <section style={{ display: "grid", gap: 4 }}>
-        <div style={{ display: "grid", gap: 4 }}>
-          <h2
-            style={{
-              fontSize: 18,
-              fontWeight: 700,
-              color: "var(--text-hi)",
-              margin: "0 0 4px",
-              letterSpacing: "-0.03em",
-            }}
-          >
-            {t("fileTab.heading")}
-          </h2>
-          <div style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}>
-            {t("fileTab.subheading")}
-          </div>
-        </div>
-      </section>
+    <div className="ui-tab">
+      <div className="ui-page-header">
+        <h2 className="ui-page-header__title">{t("fileTab.heading")}</h2>
+        <div className="ui-page-header__desc">{t("fileTab.subheading")}</div>
+      </div>
 
       <input
         ref={inputRef}
@@ -1085,6 +1070,9 @@ export function FileTranscriptionTab({
             // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: the drop zone intentionally exposes button semantics on a <section>.
             role="button"
             tabIndex={isProcessing ? -1 : 0}
+            className={`ui-dropzone${isDragOver ? " ui-dropzone--over" : ""}${
+              isProcessing ? " ui-dropzone--busy" : ""
+            }`}
             onClick={() => {
               if (!isProcessing) {
                 void openFileDialog();
@@ -1104,236 +1092,90 @@ export function FileTranscriptionTab({
             }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleDrop}
-            className="card"
-            style={{
-              display: "grid",
-              placeItems: "center",
-              minHeight: 220,
-              padding: 24,
-              borderWidth: 2,
-              borderStyle: "dashed",
-              borderColor: isDragOver ? "var(--border-strong)" : "var(--border-dashed)",
-              background: isDragOver ? "var(--surface-hi)" : "var(--surface)",
-              cursor: isProcessing ? "default" : "pointer",
-              transition: "background 0.18s ease, border-color 0.18s ease",
-            }}
           >
-            <div
-              style={{
-                display: "grid",
-                justifyItems: "center",
-                gap: 14,
-                maxWidth: 520,
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: 54,
-                  height: 54,
-                  borderRadius: 14,
-                  display: "grid",
-                  placeItems: "center",
-                  color: "var(--text-hi)",
-                  background: "var(--icon-soft-bg)",
-                  border: "1px solid var(--border-subtle)",
-                }}
-              >
+            <div className="ui-dropzone__content">
+              <div className="ui-dropzone__icon">
                 {isProcessing ? (
-                  <IconLoader2 className="loading-soft-icon" size={24} stroke={1.8} />
+                  <Spinner size={24} label={t("fileTab.heading")} />
                 ) : (
                   <IconFileMusic size={25} stroke={1.8} />
                 )}
               </div>
 
-              <div style={{ display: "grid", gap: 4 }}>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: "var(--text-hi)",
-                  }}
-                >
+              <div className="ui-dropzone__text">
+                <div className="ui-dropzone__name">
                   {selectedFile ? selectedFile.name : t("fileTab.dropzone.title")}
                 </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "var(--text-mid)",
-                    lineHeight: 1.6,
-                  }}
-                >
+                <div className="ui-dropzone__status">
                   {selectedFile
                     ? `${selectedFile.size !== null ? `${formatFileSize(selectedFile.size)} · ` : ""}${statusLabel(status, progress, t)}${isProcessing ? ` · ${progressPercent}%` : ""}`
                     : t("fileTab.dropzone.hint")}
                 </div>
-                {convertedInfo && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "var(--text-low)",
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {convertedInfo}
-                  </div>
-                )}
+                {convertedInfo && <div className="ui-dropzone__converted">{convertedInfo}</div>}
               </div>
 
               {isProcessing && (
-                <div
-                  style={{
-                    width: "min(320px, 100%)",
-                    height: 4,
-                    borderRadius: 999,
-                    overflow: "hidden",
-                    background: "var(--progress-track)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: `${progressPercent}%`,
-                      height: "100%",
-                      borderRadius: 999,
-                      background: "var(--accent)",
-                      transition: "width 0.24s ease",
-                    }}
-                  />
+                <div className="ui-dropzone__progress">
+                  <ProgressBar value={progressPercent / 100} ariaLabel={t("fileTab.heading")} />
                 </div>
               )}
 
               {error && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 8,
-                    color: "var(--danger)",
-                    fontSize: 13,
-                    lineHeight: 1.5,
-                    textAlign: "left",
-                  }}
-                >
-                  <IconAlertCircle size={16} stroke={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                <div className="ui-inline-error">
+                  <IconAlertCircle size={16} stroke={2} />
                   <span>{error}</span>
                 </div>
               )}
             </div>
           </section>
 
-          <section
-            className="card"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 14,
-              background: "var(--surface)",
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  marginBottom: 3,
-                }}
-              >
-                {t("fileTab.speaker.toggleTitle")}
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--text-mid)",
-                  lineHeight: 1.5,
-                }}
-              >
-                {t("fileTab.speaker.toggleDesc")}
-              </div>
+          <section className="ui-form-group ui-section-row">
+            <div>
+              <div className="ui-section-row__title">{t("fileTab.speaker.toggleTitle")}</div>
+              <div className="ui-section-row__desc">{t("fileTab.speaker.toggleDesc")}</div>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={speakerDiarization}
-              onClick={() => {
+            <Toggle
+              size="large"
+              checked={speakerDiarization}
+              disabled={isProcessing}
+              ariaLabel={t("fileTab.speaker.toggleTitle")}
+              onChange={() => {
                 void toggleSpeakerDiarization();
               }}
-              disabled={isProcessing}
-              style={{
-                width: 44,
-                height: 26,
-                borderRadius: 999,
-                border: "none",
-                background: speakerDiarization ? "var(--accent)" : "var(--switch-track)",
-                padding: 3,
-                cursor: isProcessing ? "not-allowed" : "pointer",
-                flexShrink: 0,
-                position: "relative",
-              }}
-            >
-              <span
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  top: 3,
-                  left: 3,
-                  width: 20,
-                  height: 20,
-                  borderRadius: "50%",
-                  background: "var(--accent-contrast)",
-                  transform: speakerDiarization ? "translateX(18px)" : "translateX(0)",
-                  transition: "transform 0.16s ease",
-                }}
-              />
-            </button>
+            />
           </section>
         </>
       ) : null}
 
-      <section ref={resultSectionRef} style={{ display: "grid", gap: 10 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        >
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-hi)" }}>
-            {t("fileTab.result.title")}
-          </div>
+      <section ref={resultSectionRef} className="ui-result">
+        <div className="ui-result__header">
+          <div className="ui-result__title">{t("fileTab.result.title")}</div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="ui-result__actions">
             {liveCallEntry ? (
-              <button
-                type="button"
-                className="btn btn-danger"
+              <Button
+                variant="destructive"
+                disabled={callStopRequested || liveCallEntry.callCapturePhase === "finalizing"}
                 onClick={() => {
                   void requestStopLiveCall();
                 }}
-                disabled={callStopRequested || liveCallEntry.callCapturePhase === "finalizing"}
-                style={{ minHeight: 32, padding: "0 12px" }}
               >
                 {callStopRequested || liveCallEntry.callCapturePhase === "finalizing" ? (
-                  <IconLoader2 className="loading-soft-icon" size={13} stroke={2} />
+                  <Spinner size={13} label={t("fileTab.live.stopping")} />
                 ) : (
                   <IconSquare size={11} stroke={2} fill="currentColor" />
                 )}
                 {callStopRequested || liveCallEntry.callCapturePhase === "finalizing"
                   ? t("fileTab.live.stopping")
                   : t("fileTab.live.stop")}
-              </button>
+              </Button>
             ) : null}
 
             {!liveCallEntry && resultEntry && (
-              <button
-                type="button"
-                className="btn"
+              <Button
                 onClick={() => {
                   void copyResult();
                 }}
-                style={{ minHeight: 32, padding: "0 12px" }}
               >
                 {copied ? (
                   <IconCheck size={13} stroke={2.2} />
@@ -1341,63 +1183,39 @@ export function FileTranscriptionTab({
                   <IconClipboard size={13} stroke={2} />
                 )}
                 {copied ? t("fileTab.result.copied") : t("fileTab.result.copy")}
-              </button>
+              </Button>
             )}
 
             {!liveCallEntry && resultEntry && (
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setSummaryOpen(true)}
+              <Button
                 disabled={!summaryAvailable}
                 title={summaryAvailable ? undefined : t("summary.unavailable.tooltip")}
-                style={{
-                  minHeight: 32,
-                  padding: "0 12px",
-                  gap: 6,
-                  opacity: summaryAvailable ? 1 : 0.5,
-                  cursor: summaryAvailable ? "pointer" : "not-allowed",
-                }}
+                onClick={() => setSummaryOpen(true)}
               >
                 <IconListCheck size={13} stroke={2} />
                 {t("summary.button")}
-              </button>
+              </Button>
             )}
 
             {!liveCallEntry && (resultEntry || error || selectedFile) && !isProcessing && (
-              <button
-                type="button"
-                className="btn"
+              <Button
+                aria-label={t("fileTab.result.clear")}
+                title={t("fileTab.result.clear")}
                 onClick={() => {
                   setSelectedFile(null);
                   setStatus("idle");
                   resetResult();
                 }}
-                style={{ width: 32, minWidth: 32, minHeight: 32, padding: 0 }}
-                title={t("fileTab.result.clear")}
               >
                 <IconX size={14} stroke={2} />
-              </button>
+              </Button>
             )}
           </div>
         </div>
 
         {!liveCallEntry && resultEntry && !summaryAvailable && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 8,
-              fontSize: 12,
-              lineHeight: 1.55,
-              color: "var(--text-mid)",
-            }}
-          >
-            <IconAlertCircle
-              size={14}
-              stroke={2}
-              style={{ flexShrink: 0, marginTop: 1, color: "var(--accent)" }}
-            />
+          <div className="ui-inline-note">
+            <IconAlertCircle size={14} stroke={2} />
             <span>{t("summary.unavailable.note")}</span>
           </div>
         )}
@@ -1413,9 +1231,9 @@ export function FileTranscriptionTab({
         {displayedResultEntry ? (
           displayedResultEntry.mode === "speakers" &&
           (liveCallEntry || displayedResultEntry.segments?.length) ? (
-            <div style={{ display: "grid", gap: 12 }}>
+            <div className="ui-result__speakers">
               {displayedResultEntry.speakers?.length ? (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div className="ui-speaker-list">
                   {displayedResultEntry.speakers.map((speaker) => (
                     <SpeakerNameInput
                       key={speaker.id}
@@ -1431,63 +1249,25 @@ export function FileTranscriptionTab({
               ) : null}
               <div
                 ref={liveCallEntry ? liveResultContentRef : undefined}
-                style={{
-                  display: "grid",
-                  gap: 8,
-                  maxHeight: liveCallEntry ? 320 : undefined,
-                  overflowY: liveCallEntry ? "auto" : undefined,
-                }}
+                className={`ui-transcript${liveCallEntry ? " ui-transcript--scroll" : ""}`}
               >
                 {displayedResultEntry.segments?.map((segment, index) => (
                   <div
                     // biome-ignore lint/suspicious/noArrayIndexKey: segments can share speaker and start time; the index keeps the key unique.
                     key={`${segment.speakerId}-${segment.start}-${index}`}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "84px minmax(0, 1fr)",
-                      gap: 10,
-                      alignItems: "start",
-                      padding: "10px 0",
-                      borderBottom: "1px solid var(--border-subtle)",
-                    }}
+                    className="ui-transcript__segment"
                   >
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "var(--text-low)",
-                        fontFamily:
-                          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                      }}
-                    >
-                      {formatTimestamp(segment.start)}
-                    </div>
-                    <div style={{ display: "grid", gap: 3 }}>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 800,
-                          color: "var(--text-hi)",
-                        }}
-                      >
-                        {segment.speakerLabel}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "var(--text-mid)",
-                          lineHeight: 1.65,
-                          overflowWrap: "anywhere",
-                        }}
-                      >
-                        {segment.text}
-                      </div>
+                    <div className="ui-transcript__time">{formatTimestamp(segment.start)}</div>
+                    <div className="ui-transcript__body">
+                      <div className="ui-transcript__speaker">{segment.speakerLabel}</div>
+                      <div className="ui-transcript__text">{segment.text}</div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <table className="b-table" style={{ background: "transparent" }}>
+            <table className="b-table">
               <thead>
                 <tr>
                   <th style={{ width: 92 }}>{t("fileTab.table.time")}</th>
@@ -1496,69 +1276,32 @@ export function FileTranscriptionTab({
               </thead>
               <tbody>
                 <tr>
-                  <td
-                    style={{
-                      whiteSpace: "nowrap",
-                      verticalAlign: "top",
-                      color: "var(--text-low)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 3,
-                      }}
-                    >
+                  <td className="ui-result__time-cell">
+                    <div className="ui-history__time">
                       <span>
                         {new Date(displayedResultEntry.timestamp).toLocaleTimeString("ru-RU", {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
                       </span>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          opacity: 0.55,
-                          letterSpacing: "0.02em",
-                        }}
-                      >
+                      <span className="ui-history__time-meta">
                         {resultSourceLabel(displayedResultEntry, t)}
                       </span>
                     </div>
                   </td>
-                  <td style={{ verticalAlign: "top", paddingLeft: 8 }}>
+                  <td className="ui-history__text-cell">
                     <div
                       ref={liveCallEntry ? liveResultContentRef : undefined}
-                      style={{
-                        display: "grid",
-                        gap: 2,
-                        color: "var(--text-mid)",
-                        lineHeight: 1.7,
-                        overflowWrap: "anywhere",
-                        wordBreak: "break-word",
-                        maxHeight: liveCallEntry ? 320 : undefined,
-                        overflowY: liveCallEntry ? "auto" : undefined,
-                        whiteSpace: liveCallEntry ? "pre-wrap" : undefined,
-                      }}
+                      className={`ui-expandable-text${
+                        liveCallEntry ? " ui-expandable-text--scroll" : ""
+                      }`}
                     >
                       <span>{visibleResult || t("fileTab.result.empty")}</span>
                       {shouldCollapseResult && (
                         <button
                           type="button"
+                          className="ui-disclosure-link"
                           onClick={() => setResultExpanded((current) => !current)}
-                          style={{
-                            marginLeft: 0,
-                            padding: 0,
-                            border: "none",
-                            background: "transparent",
-                            color: "var(--text-hi)",
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            textDecoration: "none",
-                            justifySelf: "start",
-                          }}
                         >
                           {resultExpanded
                             ? t("fileTab.result.collapse")
@@ -1572,17 +1315,7 @@ export function FileTranscriptionTab({
             </table>
           )
         ) : (
-          <div
-            style={{
-              padding: "22px 16px",
-              borderRadius: 12,
-              border: "1px dashed var(--border-dashed)",
-              color: "var(--text-low)",
-              fontSize: 13,
-            }}
-          >
-            {t("fileTab.result.empty")}
-          </div>
+          <div className="ui-result__empty">{t("fileTab.result.empty")}</div>
         )}
       </section>
 
@@ -1592,49 +1325,16 @@ export function FileTranscriptionTab({
           role="dialog"
           aria-modal="true"
           aria-labelledby="speaker-setup-title"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1000,
-            background: "var(--modal-scrim)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 20,
-          }}
+          className="ui-modal-scrim"
           onClick={closeSpeakerSetupModal}
         >
           {/* biome-ignore lint/a11y/useKeyWithClickEvents: the click handler only stops propagation so clicks inside the dialog do not close it. */}
           {/* biome-ignore lint/a11y/noStaticElementInteractions: the click handler only stops propagation so clicks inside the dialog do not close it. */}
-          <div
-            className="card"
-            style={{
-              width: "min(420px, 100%)",
-              background: "var(--bg)",
-              padding: 18,
-              boxShadow: "var(--shadow-modal)",
-            }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div
-              id="speaker-setup-title"
-              style={{
-                fontSize: 17,
-                fontWeight: 750,
-                color: "var(--text-hi)",
-                marginBottom: 8,
-              }}
-            >
+          <div className="ui-modal" onClick={(event) => event.stopPropagation()}>
+            <div id="speaker-setup-title" className="ui-modal__title">
               {t("fileTab.modal.title")}
             </div>
-            <div
-              style={{
-                fontSize: 13,
-                lineHeight: 1.6,
-                color: "var(--text-mid)",
-                marginBottom: 16,
-              }}
-            >
+            <div className="ui-modal__body">
               {localWhisperDownloaded
                 ? t("fileTab.modal.descDownloaded", { name: localWhisperLabel })
                 : t("fileTab.modal.descNeedDownload", {
@@ -1642,16 +1342,9 @@ export function FileTranscriptionTab({
                   })}
             </div>
 
-            <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+            <div className="ui-modal__requirements">
               <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontSize: 12,
-                  color: requirementStatusColor(localWhisperDownloaded),
-                  lineHeight: 1.45,
-                }}
+                className={`ui-requirement${localWhisperDownloaded ? " ui-requirement--ready" : ""}`}
               >
                 {localWhisperDownloaded ? (
                   <IconCheck size={15} stroke={2.2} />
@@ -1669,14 +1362,7 @@ export function FileTranscriptionTab({
                 </span>
               </div>
               <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontSize: 12,
-                  color: requirementStatusColor(diarizationInstalled),
-                  lineHeight: 1.45,
-                }}
+                className={`ui-requirement${diarizationInstalled ? " ui-requirement--ready" : ""}`}
               >
                 {diarizationInstalled ? (
                   <IconCheck size={15} stroke={2.2} />
@@ -1693,73 +1379,28 @@ export function FileTranscriptionTab({
 
             {(speakerSetupMessage || speakerSetupError) && (
               <div
-                style={{
-                  fontSize: 12,
-                  lineHeight: 1.6,
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  background: speakerSetupError ? "var(--danger-soft)" : "var(--control-muted)",
-                  color: speakerSetupError ? "var(--error-bright)" : "var(--text-mid)",
-                  border: `1px solid ${speakerSetupError ? "var(--danger-border)" : "var(--border-subtle)"}`,
-                  marginBottom: 16,
-                }}
+                className={`ui-modal__message${
+                  speakerSetupError ? " ui-modal__message--error" : ""
+                }`}
               >
                 {speakerSetupError || speakerSetupMessage}
               </div>
             )}
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 8,
-                flexWrap: "wrap",
-              }}
-            >
-              <button
-                type="button"
-                disabled={speakerSetupInstalling}
-                onClick={closeSpeakerSetupModal}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: "1px solid var(--border-dashed)",
-                  background: "var(--control-muted)",
-                  color: "var(--text-hi)",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  fontFamily: "var(--font-main)",
-                  cursor: speakerSetupInstalling ? "not-allowed" : "pointer",
-                }}
-              >
+            <div className="ui-modal__actions">
+              <Button disabled={speakerSetupInstalling} onClick={closeSpeakerSetupModal}>
                 {t("common.cancel")}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="primary"
                 disabled={speakerSetupInstalling}
                 onClick={() => {
                   void installSpeakerSetup();
                 }}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: "1px solid var(--border-dashed)",
-                  background: "var(--accent)",
-                  color: "var(--accent-contrast)",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  fontFamily: "var(--font-main)",
-                  cursor: speakerSetupInstalling ? "not-allowed" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
               >
-                {speakerSetupInstalling ? (
-                  <IconLoader2 className="loading-soft-icon" size={15} stroke={2} />
-                ) : null}
+                {speakerSetupInstalling ? <Spinner size={14} /> : null}
                 {speakerSetupActionLabel}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

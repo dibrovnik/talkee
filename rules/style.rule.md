@@ -1,136 +1,122 @@
 # Talkee Product UI Style Rule
 
-Use this rule when creating or editing Talkee product UI: the desktop app, settings windows,
-dashboard screens, auth pages, product landing sections, and reusable UI patterns inspired by
-Talkee. The goal is one visual language across `talkee-pc` and `talkee-web`, not a one-off
-landing-page prompt.
+Use this rule whenever you create or edit Talkee UI: the settings window, onboarding, modals,
+the widget overlays, and shared components. Talkee is a macOS utility, so its UI follows the
+Apple Human Interface Guidelines and should read as a native macOS app, not as a web page.
 
-## Design Direction
+This file is the single source of truth for the product style. `src/index.css` implements it,
+and `src/ui/` holds the primitives. `skills/talkee-product-ui-style/` only links here.
 
-- Core idea: Pure Thought - calm, precise, premium, and low-noise.
-- Visual model: warm paper-like product surfaces, Swiss restraint, black-and-white clarity.
-- Product feel: utility first, quietly polished, fast to scan, no decorative clutter.
-- Prefer real controls and states over marketing composition when building app or dashboard UI.
+## Principles (Apple HIG for macOS)
 
-## Typography
+- **Native first.** Use system fonts, system colors, the system accent color, and native window
+  chrome. The UI must follow the system light/dark appearance and accent without a restart.
+- **Clarity over decoration.** Hierarchy comes from type size, weight, and grouping, not from
+  color, shadows, or ornament.
+- **Deference.** Content and controls come first. Materials (vibrancy) appear only where macOS
+  uses them: the sidebar and the HUD overlays.
+- **Consistency.** Build every screen from the primitives below. The same control looks and
+  behaves the same everywhere.
+- **Density for repeat use.** Use compact 13 pt body text, 22 pt controls, and grouped forms like
+  System Settings. Avoid oversized empty cards and marketing layouts.
+- **Accessibility.** Every control is keyboard-reachable with a visible focus ring. Respect
+  Reduce Motion and Reduce Transparency, and keep text contrast at system levels.
+- **Language.** UI text is Russian, sentence case, and ends with an ellipsis («Настройки…») when
+  a command opens a window or needs more input.
 
-- UI/body font: `Inter`, fallback `system-ui, sans-serif`.
-- Brand/headline font: `Manrope` 700-800 when available; otherwise a bold neutral sans.
-- Brand wordmark: uppercase, bold, tight but controlled tracking, usually `letter-spacing: -0.06em`.
-- Product headings: bold sans, compact line height, usually `letter-spacing: -0.04em` in the app.
-- Web text can use `letter-spacing: 0` where that is already the local convention.
-- Do not base the identity on serif display faces, script faces, or decorative headline styles.
+## Tokens
 
-Reference tokens from `src/index.css`:
+Tokens live in the `:root` block of `src/index.css`. Theme switching sets `color-scheme`
+(`light`, `dark`, or `light dark`) through `src/lib/theme.ts`; there are no hand-made palettes.
 
 ```css
---font: "Inter", system-ui, sans-serif;
---font-main: "Inter", system-ui, sans-serif;
---font-accent: "Manrope", "Inter", system-ui, sans-serif;
---font-brand: "Manrope", "Inter", system-ui, sans-serif;
+:root {
+  color-scheme: light dark;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  --fs-large-title: 26px; --fs-title1: 22px; --fs-title2: 17px; --fs-title3: 15px;
+  --fs-body: 13px; --fs-callout: 12px; --fs-subhead: 11px; --fs-caption: 10px;
+  --label: -apple-system-label;
+  --label-2: -apple-system-secondary-label;
+  --label-3: -apple-system-tertiary-label;
+  --separator: -apple-system-separator;
+  --control-bg: -apple-system-control-background;
+  --window-bg: -apple-system-window-background;
+  --accent: -apple-system-control-accent;
+  --selected-bg: -apple-system-selected-content-background;
+  --radius-control: 6px; --radius-group: 10px; --radius-window: 10px;
+}
 ```
 
-## Color Tokens
+- New markup uses these semantic tokens only. Legacy names in `src/index.css` (`--text-hi`,
+  `--border`, `--surface`, ...) are aliases kept for older markup; do not use them in new code.
+- Status colors: `--danger` and `--success` (system red and green). Use them for state only,
+  never as decoration.
+- If a `-apple-system-*` keyword is unsupported, fall back to the nearest CSS Color 4 system
+  color (`Canvas`, `CanvasText`, `AccentColor`, `AccentColorText`, `GrayText`).
+- Radii: controls `--radius-control`, grouped sections `--radius-group`, and HUD overlays 12 px
+  (matching the native material radius).
 
-- Main background: `#faf9f6`.
-- Soft background: `#f4f1eb`.
-- Primary text: `#000000`.
-- Secondary text: `#39342d` in desktop UI, `#666666` in web surfaces.
-- Tertiary text: `#5d564d`, `#847d73`, or `#999999` depending on local tokens.
-- Primary accent: black foreground/action with white contrast.
-- Danger: `#8f2d20`.
-- Success: restrained green, for example `#1f5130`.
+## Primitives
 
-Surfaces:
+Import from `src/ui` (`src/ui/index.ts`). A dev-only gallery (`src/ui/Gallery.tsx`, behind
+`import.meta.env.DEV`) shows every primitive for visual checks.
 
-- `--surface: rgba(255, 255, 255, 0.72)`.
-- `--surface-hi: rgba(255, 255, 255, 0.88)`.
-- `--surface-solid: #f8f5ef`.
-- Borders: `rgba(0, 0, 0, 0.06)` to `rgba(0, 0, 0, 0.16)`.
-- Use blur for floating surfaces and sticky nav, not heavy shadows.
+| Primitive | Use for | Notes |
+|---|---|---|
+| `Button` | Commands | `variant`: `default`, `primary` (accent), `destructive`; `size`: `regular` (22 px), `large` (28 px). No hover lift |
+| `Toggle` | On/off settings | NSSwitch look; `size` regular or large; accent when on |
+| `PopUpButton` | Choosing one of several text options | Native `<select>`; WKWebView renders it as NSPopUpButton |
+| `SelectMenu` | Choices that need icons or descriptions | Custom list with full keyboard support |
+| `SegmentedControl` | Switching views or modes (2–5 options) | `radiogroup`; optional `needsAttention` marker |
+| `Slider` | Continuous values | NSSlider look; `onCommit` for saving on release |
+| `TextField`, `SecureField` | Text and secret input | 22 px, accent focus ring |
+| `FormSection` | Grouping settings | Title above, rounded `--control-bg` group, optional footer below |
+| `FormRow` | One setting in a group | Label left, control right, separators between rows |
+| `SidebarItem` | Settings sidebar navigation | 28 px, 16 px icon, `--selected-bg` when active |
+| `Badge` | Short status labels | `variant`: `neutral`, `success`, `danger` |
+| `ProgressBar` | Determinate progress | `value` from 0 to 1 |
+| `Spinner` | Indeterminate progress | 12-stroke NSProgressIndicator look |
 
-## Shape, Spacing, And Density
+Shared CSS classes in `src/index.css` cover layouts that are not components: `ui-page-header`,
+`ui-form-group`, `ui-choice` (radio-card lists), `ui-modal`, `ui-slide-over`, `ui-menu`,
+`ui-icon-button`, `ui-callout`, `ui-disclosure-link`. Reuse them before adding a new class.
 
-- Standard radii: `8px`, `10px`, `12px`, `16px`.
-- App/window radius: `16px`.
-- Pill controls: `999px`.
-- Message bubble radius: `22px 22px 0 22px` in app patterns.
-- App and dashboard surfaces should feel dense enough for repeat use. Avoid oversized empty cards.
-- Use clear grid and table alignment for settings, billing, users, history, logs, and admin flows.
+## Windows, Menus, and Materials
 
-## Components
+- Settings window: native decorations with an overlay title bar and system traffic lights. The
+  `Sidebar` vibrancy fills the window, and the content area paints an opaque `--window-bg`.
+- Widget overlays (`widget-notice`, `widget-text`): the native `HudWindow` material with a
+  12 px radius. Their components draw no background of their own and use `--label` text in the
+  dark color scheme.
+- App menu and tray menu: native `tauri::menu` with Russian labels, standard grouping with
+  separators, and standard shortcuts (⌘, for settings, ⌘Q to quit).
+- Icons: Phosphor through `src/lib/icons.ts`, `regular` weight, 16 px. SF Symbols cannot be
+  embedded in a WebView.
 
-Buttons:
+## Motion and Accessibility
 
-- Primary CTA: black pill, white text, uppercase when the local UI uses uppercase buttons.
-- Secondary CTA: transparent or light background with a thin black border.
-- Product app buttons: use `.btn`, `.btn-primary`, `.btn-danger` patterns from `src/index.css`.
-- Keep transitions subtle: background, border, color, small translate on hover.
-
-Navigation:
-
-- Web navigation: sticky top bar, `rgba(250, 249, 246, 0.8)`, `backdrop-filter: blur(20px)`,
-  thin bottom border.
-- App sidebar/dashboard nav: light background, 10px radius, active state `rgba(0, 0, 0, 0.04)`,
-  never inverted black for ordinary active nav.
-- Icons: lucide-style line icons, 18px default, slightly stronger stroke for active states.
-
-Cards and panels:
-
-- Use light panels with subtle borders and little or no shadow.
-- Do not put large page sections inside floating cards.
-- Use cards for repeated items, settings groups, modals, profile/billing summaries, and tables.
-- Subscription/sidebar CTA blocks are light cards with black CTA buttons, not inverted black blocks.
-
-Forms and tables:
-
-- Inputs are quiet: transparent or white-tinted controls, thin borders, strong focus rings.
-- Settings forms should be stacked, readable, and explicit about saved/default values.
-- Tables use small uppercase headers, thin row borders, hover tint, and horizontal scroll on mobile.
-
-## Layout Patterns
-
-Desktop app:
-
-- Preserve the compact app frame, warm background, subtle grid texture, and blurred surfaces.
-- Keep window and widget sizing conventions from the existing app instead of inventing new chrome.
-- Settings views should optimize repeated work: sidebar navigation, readable panels, inline status,
-  clear destructive states, and restrained empty states.
-
-Web landing:
-
-- First viewport should immediately signal Talkee and the product.
-- Use strong product screenshots, real UI, voice/widget visuals, or product-specific motion.
-- Keep hero text direct. Supporting copy carries the value proposition.
-- Avoid generic SaaS gradient heroes and stock-like decoration.
-
-Dashboard:
-
-- Use a sticky header, fixed-width sidebar on desktop, compact nav links, and a focused main column.
-- Keep billing, users, profile, and admin flows work-focused: tables, forms, summaries, and clear CTAs.
-- On mobile, collapse to a single column and keep header actions reachable without overflow.
-
-## Motion
-
-- Motion must support comprehension: reveal, voice pulse, cleanup flow, loading/progress, hover feedback.
-- Use short timings and standard easing such as `cubic-bezier(0.22, 1, 0.36, 1)`.
-- Avoid decorative effects that compete with text, controls, or product screenshots.
+- Motion is short and functional: state changes, reveals, progress. No decorative animation.
+- Every animation or transition must be turned off under `@media (prefers-reduced-motion:
+  reduce)`.
+- Reduce Transparency: the sidebar switches to `--window-bg` through
+  `@media (prefers-reduced-transparency: reduce)` and the `reduce-transparency` class on
+  `<html>`, which `src/lib/reduceTransparency.ts` mirrors from macOS. Native materials become
+  opaque on their own.
 
 ## Implementation Rules
 
-- Prefer existing local tokens and classes before adding new styling primitives.
-- In `talkee-pc`, use inline styles with CSS variables for React components unless the file already
-  uses shared CSS classes.
-- In `talkee-web`, reuse `globals.css` utility classes such as `btn-black`, `btn-outline`,
-  `sticky-nav`, dashboard classes, and type classes before adding custom variants.
-- Keep UI text Russian in product surfaces unless a specific screen is intentionally English.
-- Test responsive text fit. Buttons, nav links, tables, and cards must not overflow their containers.
-- Do not change unrelated layout systems when applying this style to one screen or component.
+- React components use inline styles with CSS variables, or the shared classes in
+  `src/index.css`. No CSS modules or styled-components.
+- Check both the light and dark appearance for every UI change.
+- Do not change layout systems that are unrelated to the screen you are editing.
 
-## Anti-Patterns
+## Prohibited
 
-- Purple/blue neon palettes, glassmorphism-heavy dashboards, or generic AI gradients.
-- Heavy drop shadows, deep card stacks, nested cards, and decorative blobs.
-- Random fonts or mixed visual systems in one screen.
-- Black inverted nav/sidebar active states for ordinary product navigation.
-- Marketing-only sections when the requested output is an app, dashboard, or tool.
+- Web fonts (Inter, Manrope, or any other bundled font).
+- `text-transform: uppercase` and all-caps labels, headers, or buttons.
+- Custom or drawn traffic lights and custom title bars.
+- CSS `backdrop-filter` and blur; use native window materials instead.
+- One-off cards: glass panels, gradients, grid textures, decorative shadows, nested cards.
+- Hard-coded colors for text, backgrounds, or borders where a system token exists.
+- Custom-drawn replacements for controls that exist as primitives.

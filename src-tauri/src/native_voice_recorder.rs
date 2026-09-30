@@ -9,9 +9,11 @@ use std::env;
 use std::fs;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc, Mutex, OnceLock};
+use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 
 const TARGET_SAMPLE_RATE: u32 = 16_000;
 const TARGET_CHANNELS: u16 = 1;
@@ -20,6 +22,8 @@ const PCM_NORMALIZE_BELOW_PEAK: f32 = 0.35;
 const PCM_MIN_SIGNAL_PEAK: f32 = 0.001;
 const PCM_MAX_GAIN: f32 = 8.0;
 const MAX_NATIVE_RECORDING_SECONDS: usize = 5 * 60;
+pub const VOICE_LEVEL_EVENT: &str = "native-voice-level";
+const VOICE_LEVEL_INTERVAL_MS: u64 = 50;
 
 static RECORDER: OnceLock<Mutex<Option<NativeVoiceRecorder>>> = OnceLock::new();
 static RECORDER_RUNTIME: OnceLock<Result<NativeRecorderRuntime, String>> = OnceLock::new();
@@ -51,6 +55,64 @@ struct NativeVoiceRecorder {
     source_channels: u16,
     device_name: String,
     live_session: Option<LiveDictationSession>,
+    level_emitter: VoiceLevelEmitter,
+}
+
+#[derive(Clone, Serialize)]
+struct NativeVoiceLevel {
+    rms: f32,
+    peak: f32,
+}
+
+/// Emits `native-voice-level` at ~20 Hz from a dedicated thread, reading the
+/// window accumulated by the audio callback. The audio callback never emits.
+struct VoiceLevelEmitter {
+    stop: Arc<AtomicBool>,
+    handle: Option<JoinHandle<()>>,
+}
+
+impl VoiceLevelEmitter {
+    fn spawn(app: AppHandle, state: Arc<Mutex<NativeRecorderState>>) -> Self {
+        let stop = Arc::new(AtomicBool::new(false));
+        let handle = {
+            let stop = Arc::clone(&stop);
+            std::thread::Builder::new()
+                .name("talkee-voice-level".to_string())
+                .spawn(move || {
+                    while !stop.load(Ordering::Relaxed) {
+                        std::thread::sleep(Duration::from_millis(VOICE_LEVEL_INTERVAL_MS));
+
+                        let level = {
+                            let mut guard = match state.lock() {
+                                Ok(guard) => guard,
+                                Err(err) => err.into_inner(),
+                            };
+                            guard.take_level()
+                        };
+
+                        if let Some(level) = level {
+                            let _ = app.emit(VOICE_LEVEL_EVENT, level);
+                        }
+                    }
+                })
+                .ok()
+        };
+
+        Self { stop, handle }
+    }
+
+    fn stop(&mut self) {
+        self.stop.store(true, Ordering::Relaxed);
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
+        }
+    }
+}
+
+impl Drop for VoiceLevelEmitter {
+    fn drop(&mut self) {
+        self.stop();
+    }
 }
 
 struct NativeRecorderRuntime {
@@ -96,6 +158,35 @@ struct NativeRecorderState {
     paused: bool,
     max_samples: Option<usize>,
     limit_reached: bool,
+    level_peak: f32,
+    level_sum_squares: f64,
+    level_count: usize,
+}
+
+impl NativeRecorderState {
+    fn record_level(&mut self, sample: f32) {
+        self.level_peak = self.level_peak.max(sample.abs());
+        self.level_sum_squares += (sample as f64) * (sample as f64);
+        self.level_count = self.level_count.saturating_add(1);
+    }
+
+    fn take_level(&mut self) -> Option<NativeVoiceLevel> {
+        if self.level_count == 0 {
+            return None;
+        }
+
+        let rms = (self.level_sum_squares / self.level_count as f64).sqrt() as f32;
+        let level = NativeVoiceLevel {
+            rms: rms.clamp(0.0, 1.0),
+            peak: self.level_peak.clamp(0.0, 1.0),
+        };
+
+        self.level_peak = 0.0;
+        self.level_sum_squares = 0.0;
+        self.level_count = 0;
+
+        Some(level)
+    }
 }
 
 struct PcmStats {
@@ -235,6 +326,7 @@ fn append_samples(
             }
             let mono = sum / frame.len().max(1) as f32;
             guard.samples.push(mono);
+            guard.record_level(mono);
             live_samples.push(mono);
         }
     }
@@ -302,6 +394,7 @@ fn append_i16_samples(
             }
             let mono = sum / frame.len().max(1) as f32;
             guard.samples.push(mono);
+            guard.record_level(mono);
             live_samples.push(mono);
         }
     }
@@ -360,6 +453,7 @@ fn append_u16_samples(
             }
             let mono = sum / frame.len().max(1) as f32;
             guard.samples.push(mono);
+            guard.record_level(mono);
             live_samples.push(mono);
         }
     }
@@ -808,7 +902,10 @@ pub fn start_native_voice_recording(
     }
 
     let state = Arc::new(Mutex::new(NativeRecorderState::default()));
+    let level_app = app.clone();
     let info = recorder_runtime()?.start(app, req, Arc::clone(&state))?;
+
+    let level_emitter = VoiceLevelEmitter::spawn(level_app, Arc::clone(&state));
 
     *guard = Some(NativeVoiceRecorder {
         state,
@@ -816,6 +913,7 @@ pub fn start_native_voice_recording(
         source_channels: info.source_channels,
         device_name: info.device_name,
         live_session: info.live_session,
+        level_emitter,
     });
 
     Ok(())
@@ -857,7 +955,7 @@ pub fn resume_native_voice_recording() -> Result<(), String> {
 
 #[tauri::command]
 pub fn stop_native_voice_recording() -> Result<NativeVoiceRecordingResult, String> {
-    let recorder = recorder_slot()
+    let mut recorder = recorder_slot()
         .lock()
         .map_err(|_| "Не удалось заблокировать нативную запись.".to_string())?
         .take()
@@ -868,6 +966,7 @@ pub fn stop_native_voice_recording() -> Result<NativeVoiceRecordingResult, Strin
     let device_name = recorder.device_name.clone();
     let live_session = recorder.live_session;
     let state = Arc::clone(&recorder.state);
+    recorder.level_emitter.stop();
     recorder_runtime()?.stop()?;
 
     let (source_samples, limit_reached) = {

@@ -2,19 +2,20 @@
 compile_error!("talkee supports macOS only");
 
 use hound::WavReader;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::{Cursor, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::path::PathBuf;
-use std::sync::Once;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, Once, OnceLock};
+use std::time::{Duration, Instant, SystemTime};
 use transcribe_cpp::{
     CommitPolicy, ExtSlot, Model, MoonshineStreamingOptions, ParakeetBufferedStreamOptions,
-    ParakeetStreamOptions, RunExtension, RunOptions, Stream, StreamExtension, StreamOptions,
-    TimestampKind, VoxtralRealtimeStreamOptions, WhisperRunOptions,
+    ParakeetStreamOptions, RunExtension, RunOptions, SessionOptions, Stream, StreamExtension,
+    StreamOptions, TimestampKind, VoxtralRealtimeStreamOptions, WhisperRunOptions,
 };
 
 const SERVER_NAME: &str = "talkee-stt";
@@ -25,6 +26,8 @@ const PARAKEET_STREAM_EXT_KIND: u32 = 0x54534B50;
 const PARAKEET_BUFFERED_STREAM_EXT_KIND: u32 = 0x53424B50;
 const MOONSHINE_STREAMING_EXT_KIND: u32 = 0x5453534D;
 const VOXTRAL_REALTIME_EXT_KIND: u32 = 0x54535256;
+const IDLE_UNLOAD_DEFAULT_SECS: u64 = 600;
+const IDLE_UNLOAD_CHECK_INTERVAL_SECS: u64 = 30;
 static INIT_TRANSCRIBE_CPP: Once = Once::new();
 
 #[derive(Clone)]
@@ -33,6 +36,7 @@ struct RuntimeConfig {
     port: u16,
     data_dir: PathBuf,
     models_dir: PathBuf,
+    idle_unload_secs: u64,
 }
 
 struct HttpRequest {
@@ -258,6 +262,7 @@ fn main() {
     });
 
     eprintln!("{} listening on {}", SERVER_NAME, bind_addr);
+    spawn_idle_model_unloader(Duration::from_secs(config.idle_unload_secs));
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
@@ -279,6 +284,7 @@ fn parse_args() -> RuntimeConfig {
     let mut port = 8000;
     let mut data_dir = default_data_dir();
     let mut custom_models_dir: Option<PathBuf> = None;
+    let mut idle_unload_secs = IDLE_UNLOAD_DEFAULT_SECS;
 
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -303,6 +309,11 @@ fn parse_args() -> RuntimeConfig {
                     custom_models_dir = Some(PathBuf::from(value));
                 }
             }
+            "--idle-unload-secs" => {
+                if let Some(value) = args.next() {
+                    idle_unload_secs = value.parse().unwrap_or(idle_unload_secs);
+                }
+            }
             _ => {}
         }
     }
@@ -314,6 +325,7 @@ fn parse_args() -> RuntimeConfig {
         port,
         data_dir,
         models_dir,
+        idle_unload_secs,
     }
 }
 
@@ -484,6 +496,31 @@ fn route_request(request: &HttpRequest, config: &RuntimeConfig) -> (u16, String)
                 json!({ "error": { "message": message, "type": "local_stt_error" } }).to_string(),
             ),
         },
+        ("POST", "/v1/warmup") => match warmup_model(request, config) {
+            Ok(body) => (200, body),
+            Err((status, message)) => (
+                status,
+                json!({ "error": { "message": message, "type": "local_stt_error" } }).to_string(),
+            ),
+        },
+        ("GET", "/v1/status") => {
+            let cache = model_cache()
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            let (loaded_model, last_used_secs) = match cache.status() {
+                Some((label, secs)) => (json!(label), json!(secs)),
+                None => (json!(null), json!(null)),
+            };
+            (
+                200,
+                json!({
+                    "runtime": SERVER_NAME,
+                    "loaded_model": loaded_model,
+                    "last_used_secs": last_used_secs
+                })
+                .to_string(),
+            )
+        }
         _ if request.method == "POST" && path.starts_with("/v1/models/") => {
             let encoded_model = path.trim_start_matches("/v1/models/");
             let model = percent_decode(encoded_model);
@@ -711,6 +748,249 @@ fn installed_models(config: &RuntimeConfig) -> Vec<String> {
     models
 }
 
+#[derive(Deserialize)]
+struct WarmupRequest {
+    model: String,
+}
+
+/// Cache key: the model file path plus its modification time, so a re-downloaded
+/// model file invalidates the cached handle.
+#[derive(Clone, PartialEq, Eq)]
+struct ModelCacheKey {
+    path: PathBuf,
+    modified: Option<SystemTime>,
+}
+
+/// Single-slot cache that keeps the most recently used model loaded.
+struct ModelCache<T> {
+    key: Option<ModelCacheKey>,
+    label: Option<String>,
+    model: Option<Arc<T>>,
+    last_used: Instant,
+}
+
+impl<T> Default for ModelCache<T> {
+    fn default() -> Self {
+        Self {
+            key: None,
+            label: None,
+            model: None,
+            last_used: Instant::now(),
+        }
+    }
+}
+
+impl<T> ModelCache<T> {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    /// Return the cached model when it matches `path`/mtime, otherwise load a new
+    /// one through `loader` and replace the cache entry.
+    fn get_or_load<F>(
+        &mut self,
+        path: &Path,
+        label: &str,
+        loader: F,
+    ) -> Result<CachedModel<T>, String>
+    where
+        F: FnOnce(&Path) -> Result<T, String>,
+    {
+        let key = ModelCacheKey {
+            path: path.to_path_buf(),
+            modified: fs::metadata(path)
+                .and_then(|metadata| metadata.modified())
+                .ok(),
+        };
+
+        if self.key.as_ref() == Some(&key) {
+            if let Some(model) = &self.model {
+                self.last_used = Instant::now();
+                return Ok(CachedModel {
+                    model: Arc::clone(model),
+                    load_ms: 0,
+                    from_cache: true,
+                });
+            }
+        }
+
+        let started = Instant::now();
+        let loaded = loader(path)?;
+        let load_ms = started.elapsed().as_millis();
+
+        let model = Arc::new(loaded);
+        self.key = Some(key);
+        self.label = Some(label.to_string());
+        self.model = Some(Arc::clone(&model));
+        self.last_used = Instant::now();
+
+        Ok(CachedModel {
+            model,
+            load_ms,
+            from_cache: false,
+        })
+    }
+
+    /// `(loaded_model, last_used_secs)` for the loaded model, or `None` when idle.
+    fn status(&self) -> Option<(String, u64)> {
+        let label = self.label.as_ref()?;
+        self.model.as_ref()?;
+        Some((label.clone(), self.last_used.elapsed().as_secs()))
+    }
+
+    /// Drop the model when it has been idle for at least `max_idle`, returning
+    /// the path of the unloaded model.
+    fn unload_if_idle(&mut self, max_idle: Duration) -> Option<PathBuf> {
+        self.model.as_ref()?;
+        if self.last_used.elapsed() < max_idle {
+            return None;
+        }
+
+        let path = self.key.as_ref().map(|key| key.path.clone());
+        self.model = None;
+        self.key = None;
+        self.label = None;
+        path
+    }
+}
+
+struct CachedModel<T> {
+    model: Arc<T>,
+    load_ms: u128,
+    from_cache: bool,
+}
+
+static MODEL_CACHE: OnceLock<Mutex<ModelCache<Model>>> = OnceLock::new();
+
+fn model_cache() -> &'static Mutex<ModelCache<Model>> {
+    MODEL_CACHE.get_or_init(|| Mutex::new(ModelCache::new()))
+}
+
+fn load_model_cached(path: &Path, label: &str) -> Result<CachedModel<Model>, String> {
+    let mut cache = model_cache()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    cache.get_or_load(path, label, |path| {
+        Model::load(path).map_err(|err| err.to_string())
+    })
+}
+
+fn log_transcription_timings(model_id: &str, cached: &CachedModel<Model>, inference_ms: u128) {
+    eprintln!(
+        "{} transcribe model_load_ms={} inference_ms={} from_cache={} model={}",
+        SERVER_NAME, cached.load_ms, inference_ms, cached.from_cache, model_id
+    );
+}
+
+fn perf_core_count() -> usize {
+    static CORES: OnceLock<usize> = OnceLock::new();
+    *CORES.get_or_init(|| {
+        #[cfg(target_os = "macos")]
+        if let Some(count) = sysctl_perflevel0_physicalcpu() {
+            return count;
+        }
+
+        std::thread::available_parallelism()
+            .map(|count| count.get())
+            .unwrap_or(0)
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn sysctl_perflevel0_physicalcpu() -> Option<usize> {
+    use std::ffi::CString;
+
+    let name = CString::new("hw.perflevel0.physicalcpu").ok()?;
+    let mut value: i32 = 0;
+    let mut size = std::mem::size_of::<i32>();
+    let result = unsafe {
+        libc::sysctlbyname(
+            name.as_ptr(),
+            &mut value as *mut i32 as *mut libc::c_void,
+            &mut size,
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+
+    (result == 0 && value > 0).then_some(value as usize)
+}
+
+fn session_options() -> SessionOptions {
+    SessionOptions {
+        n_threads: perf_core_count() as i32,
+        ..Default::default()
+    }
+}
+
+fn warmup_model(request: &HttpRequest, config: &RuntimeConfig) -> Result<String, (u16, String)> {
+    let payload: WarmupRequest = serde_json::from_slice(&request.body)
+        .map_err(|err| (400, format!("Некорректное тело warmup-запроса: {}", err)))?;
+    let model = find_model(&payload.model).ok_or_else(|| {
+        (
+            404,
+            format!(
+                "Модель «{}» не поддерживается встроенным transcribe.cpp runtime.",
+                payload.model
+            ),
+        )
+    })?;
+
+    let path = model_path(config, model);
+    if !path.is_file() {
+        return Err((404, format!("Модель «{}» ещё не скачана.", model.id)));
+    }
+
+    let cached = load_model_cached(&path, model.id).map_err(|err| {
+        (
+            500,
+            format!(
+                "Не удалось загрузить модель «{}» через transcribe.cpp: {}",
+                model.id, err
+            ),
+        )
+    })?;
+
+    eprintln!(
+        "{} warmup model_load_ms={} from_cache={} model={}",
+        SERVER_NAME, cached.load_ms, cached.from_cache, model.id
+    );
+
+    Ok(json!({
+        "status": "ok",
+        "model": model.id,
+        "model_load_ms": cached.load_ms as u64,
+        "from_cache": cached.from_cache
+    })
+    .to_string())
+}
+
+fn spawn_idle_model_unloader(max_idle: Duration) {
+    let build = std::thread::Builder::new()
+        .name("talkee-stt-idle-unload".to_string())
+        .spawn(move || loop {
+            std::thread::sleep(Duration::from_secs(IDLE_UNLOAD_CHECK_INTERVAL_SECS));
+            let mut cache = model_cache()
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if let Some(path) = cache.unload_if_idle(max_idle) {
+                eprintln!(
+                    "{} unloaded idle model after {}s: {}",
+                    SERVER_NAME,
+                    max_idle.as_secs(),
+                    path.display()
+                );
+            }
+        });
+
+    if let Err(err) = build {
+        eprintln!(
+            "{} failed to spawn idle model unloader: {}",
+            SERVER_NAME, err
+        );
+    }
+}
+
 fn transcribe(request: &HttpRequest, config: &RuntimeConfig) -> Result<String, (u16, String)> {
     let multipart = parse_multipart(request)?;
     let requested_model = multipart
@@ -738,7 +1018,7 @@ fn transcribe(request: &HttpRequest, config: &RuntimeConfig) -> Result<String, (
         return transcription_response(String::new(), Vec::new(), &multipart.fields);
     }
 
-    let loaded_model = Model::load(&path).map_err(|err| {
+    let cached_model = load_model_cached(&path, model.id).map_err(|err| {
         (
             500,
             format!(
@@ -747,14 +1027,17 @@ fn transcribe(request: &HttpRequest, config: &RuntimeConfig) -> Result<String, (
             ),
         )
     })?;
+    let loaded_model = &cached_model.model;
     let capabilities = loaded_model.capabilities();
     let supports_whisper_options = loaded_model.accepts_ext(ExtSlot::Run, WHISPER_RUN_EXT_KIND);
-    let mut session = loaded_model.session().map_err(|err| {
-        (
-            500,
-            format!("Не удалось создать transcribe.cpp session: {}", err),
-        )
-    })?;
+    let mut session = loaded_model
+        .session_with(&session_options())
+        .map_err(|err| {
+            (
+                500,
+                format!("Не удалось создать transcribe.cpp session: {}", err),
+            )
+        })?;
     let streaming_requested = streaming_requested_from_fields(&multipart.fields);
     let mut options = if streaming_requested {
         run_options_from_fields_with_auto(
@@ -779,7 +1062,7 @@ fn transcribe(request: &HttpRequest, config: &RuntimeConfig) -> Result<String, (
             ));
         }
 
-        let Some(stream_extension) = stream_extension_for_model(&loaded_model) else {
+        let Some(stream_extension) = stream_extension_for_model(loaded_model) else {
             return Err((
                 400,
                 format!(
@@ -788,16 +1071,28 @@ fn transcribe(request: &HttpRequest, config: &RuntimeConfig) -> Result<String, (
                 ),
             ));
         };
+        let inference_started = Instant::now();
         let text = run_streaming_transcription(&mut session, &audio, &options, stream_extension)?;
+        log_transcription_timings(
+            model.id,
+            &cached_model,
+            inference_started.elapsed().as_millis(),
+        );
         return transcription_response(text, Vec::new(), &multipart.fields);
     }
 
+    let inference_started = Instant::now();
     let transcript = session.run(&audio, &options).map_err(|err| {
         (
             500,
             format!("transcribe.cpp не смог распознать аудио: {}", err),
         )
     })?;
+    log_transcription_timings(
+        model.id,
+        &cached_model,
+        inference_started.elapsed().as_millis(),
+    );
 
     let segments = transcript
         .segments
@@ -848,7 +1143,7 @@ fn transcribe_streaming(
         return Ok(());
     }
 
-    let loaded_model = Model::load(&path).map_err(|err| {
+    let cached_model = load_model_cached(&path, model.id).map_err(|err| {
         (
             500,
             format!(
@@ -857,14 +1152,17 @@ fn transcribe_streaming(
             ),
         )
     })?;
+    let loaded_model = &cached_model.model;
     let capabilities = loaded_model.capabilities();
     let supports_whisper_options = loaded_model.accepts_ext(ExtSlot::Run, WHISPER_RUN_EXT_KIND);
-    let mut session = loaded_model.session().map_err(|err| {
-        (
-            500,
-            format!("Не удалось создать transcribe.cpp session: {}", err),
-        )
-    })?;
+    let mut session = loaded_model
+        .session_with(&session_options())
+        .map_err(|err| {
+            (
+                500,
+                format!("Не удалось создать transcribe.cpp session: {}", err),
+            )
+        })?;
     let mut options = run_options_from_fields_with_auto(
         &multipart.fields,
         capabilities.max_timestamp_kind,
@@ -880,7 +1178,7 @@ fn transcribe_streaming(
         ));
     }
 
-    let Some(stream_extension) = stream_extension_for_model(&loaded_model) else {
+    let Some(stream_extension) = stream_extension_for_model(loaded_model) else {
         return Err((
             400,
             format!(
@@ -893,13 +1191,21 @@ fn transcribe_streaming(
     write_ndjson_headers(writer)?;
     write_streaming_event(writer, "started", "", None)?;
 
-    if let Err((_, message)) = run_streaming_transcription_with_events(
+    let inference_started = Instant::now();
+    let streaming_result = run_streaming_transcription_with_events(
         &mut session,
         &audio,
         &options,
         stream_extension,
         writer,
-    ) {
+    );
+    log_transcription_timings(
+        model.id,
+        &cached_model,
+        inference_started.elapsed().as_millis(),
+    );
+
+    if let Err((_, message)) = streaming_result {
         let _ = write_streaming_event(writer, "error", "", Some(&message));
     }
 
@@ -941,7 +1247,7 @@ fn transcribe_live(
         return Err((404, format!("Модель «{}» ещё не скачана.", model.id)));
     }
 
-    let loaded_model = Model::load(&path).map_err(|err| {
+    let cached_model = load_model_cached(&path, model.id).map_err(|err| {
         (
             500,
             format!(
@@ -950,14 +1256,17 @@ fn transcribe_live(
             ),
         )
     })?;
+    let loaded_model = &cached_model.model;
     let capabilities = loaded_model.capabilities();
     let supports_whisper_options = loaded_model.accepts_ext(ExtSlot::Run, WHISPER_RUN_EXT_KIND);
-    let mut session = loaded_model.session().map_err(|err| {
-        (
-            500,
-            format!("Не удалось создать transcribe.cpp session: {}", err),
-        )
-    })?;
+    let mut session = loaded_model
+        .session_with(&session_options())
+        .map_err(|err| {
+            (
+                500,
+                format!("Не удалось создать transcribe.cpp session: {}", err),
+            )
+        })?;
     let mut options = run_options_from_fields_with_auto(
         &fields,
         capabilities.max_timestamp_kind,
@@ -966,7 +1275,7 @@ fn transcribe_live(
     );
     options.language = normalize_streaming_language(model, options.language.as_deref());
 
-    let Some(stream_extension) = stream_extension_for_model(&loaded_model) else {
+    let Some(stream_extension) = stream_extension_for_model(loaded_model) else {
         return Err((
             400,
             format!(
@@ -993,6 +1302,7 @@ fn transcribe_live(
 
     let mut last_text = String::new();
     let mut pending_pcm = Vec::new();
+    let inference_started = Instant::now();
     let initial_audio = take_live_pcm16_samples(&mut pending_pcm, &request.body);
     if !initial_audio.is_empty() {
         feed_live_audio(
@@ -1035,6 +1345,11 @@ fn transcribe_live(
         write_streaming_partial_if_changed(connection, &mut last_text, &final_text)?;
     }
     write_streaming_event(connection, "final", &final_text, None)?;
+    log_transcription_timings(
+        model.id,
+        &cached_model,
+        inference_started.elapsed().as_millis(),
+    );
 
     Ok(())
 }
@@ -1113,6 +1428,7 @@ fn init_transcribe_cpp() {
             transcribe_cpp::version(),
             devices
         );
+        eprintln!("{} threads={}", SERVER_NAME, perf_core_count());
     });
 }
 
@@ -1663,6 +1979,7 @@ mod tests {
             port: 0,
             data_dir: root.clone(),
             models_dir: root.join("models"),
+            idle_unload_secs: IDLE_UNLOAD_DEFAULT_SECS,
         };
 
         for path in [
@@ -1750,6 +2067,7 @@ mod tests {
             port: 0,
             data_dir: root.clone(),
             models_dir: root.join("models"),
+            idle_unload_secs: IDLE_UNLOAD_DEFAULT_SECS,
         };
         let model = find_model("nvidia/nemotron-3.5-asr-streaming-0.6b").expect("model");
 
@@ -1769,6 +2087,7 @@ mod tests {
             port: 0,
             data_dir: root.clone(),
             models_dir: root.join("models"),
+            idle_unload_secs: IDLE_UNLOAD_DEFAULT_SECS,
         };
         let cases = [
             (
@@ -1871,11 +2190,95 @@ mod tests {
             port: 0,
             data_dir: root.clone(),
             models_dir,
+            idle_unload_secs: IDLE_UNLOAD_DEFAULT_SECS,
         };
 
         assert_eq!(model_path(&config, model), gguf_path);
         assert_eq!(download_model_path(&config, model), gguf_path);
 
         let _ = fs::remove_dir_all(root);
+    }
+
+    fn unique_cache_path(name: &str) -> PathBuf {
+        env::temp_dir().join(format!(
+            "talkee-stt-cache-{}-{}",
+            name,
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("time")
+                .as_nanos()
+        ))
+    }
+
+    #[test]
+    fn model_cache_hits_after_first_load() {
+        let path = unique_cache_path("hit");
+        fs::write(&path, b"model").expect("write");
+        let mut cache = ModelCache::<u32>::new();
+        let mut loads = 0;
+
+        let first = cache
+            .get_or_load(&path, "m", |_| {
+                loads += 1;
+                Ok(7u32)
+            })
+            .expect("first load");
+        assert!(!first.from_cache);
+        assert_eq!(*first.model, 7);
+
+        let second = cache
+            .get_or_load(&path, "m", |_| {
+                loads += 1;
+                Ok(9u32)
+            })
+            .expect("second load");
+        assert!(second.from_cache);
+        assert_eq!(*second.model, 7);
+        assert_eq!(loads, 1);
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn model_cache_reloads_when_the_path_changes() {
+        let first_path = unique_cache_path("first");
+        let second_path = unique_cache_path("second");
+        fs::write(&first_path, b"a").expect("write first");
+        fs::write(&second_path, b"b").expect("write second");
+
+        let mut cache = ModelCache::<u32>::new();
+        let first = cache
+            .get_or_load(&first_path, "a", |_| Ok(1u32))
+            .expect("first load");
+        assert!(!first.from_cache);
+
+        let second = cache
+            .get_or_load(&second_path, "b", |_| Ok(2u32))
+            .expect("second load");
+        assert!(!second.from_cache);
+        assert_eq!(*second.model, 2);
+        assert_eq!(cache.status().map(|(label, _)| label).as_deref(), Some("b"));
+
+        let _ = fs::remove_file(&first_path);
+        let _ = fs::remove_file(&second_path);
+    }
+
+    #[test]
+    fn model_cache_unloads_after_idle_timeout() {
+        let path = unique_cache_path("idle");
+        fs::write(&path, b"model").expect("write");
+
+        let mut cache = ModelCache::<u32>::new();
+        cache.get_or_load(&path, "m", |_| Ok(3u32)).expect("load");
+        assert!(cache.status().is_some());
+
+        assert!(cache.unload_if_idle(Duration::from_secs(3600)).is_none());
+        assert!(cache.status().is_some());
+
+        let unloaded = cache.unload_if_idle(Duration::ZERO);
+        assert_eq!(unloaded, Some(path.clone()));
+        assert!(cache.status().is_none());
+
+        let _ = fs::remove_file(&path);
     }
 }

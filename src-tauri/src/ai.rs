@@ -2172,6 +2172,7 @@ pub struct ListSttModelsRequest {
     pub whisper_api_key: Option<String>,
     pub whisper_endpoint: Option<String>,
     pub local_models_dir: Option<String>,
+    pub whisper_model: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -2294,6 +2295,66 @@ pub async fn warm_up_local_stt_runtime(
     let runtime_base_url =
         local_stt::ensure_runtime(&app, client, &models_url, req.local_models_dir.as_deref())
             .await?;
+
+    let warm_model = req
+        .whisper_model
+        .as_deref()
+        .map(str::trim)
+        .filter(|model| !model.is_empty())
+        .and_then(|model| {
+            local_stt::resolve_installed_model_for_runtime(
+                &app,
+                local_stt::LocalRuntimeKind::Whisper,
+                req.local_models_dir.as_deref(),
+                model,
+            )
+            .ok()
+            .flatten()
+        })
+        .or_else(|| {
+            local_stt::resolve_installed_model_for_runtime(
+                &app,
+                local_stt::LocalRuntimeKind::Whisper,
+                req.local_models_dir.as_deref(),
+                "",
+            )
+            .ok()
+            .flatten()
+        });
+
+    if let Some(model) = warm_model {
+        let warmup_url = format!("{}/v1/warmup", runtime_base_url.trim_end_matches('/'));
+        match client
+            .post(&warmup_url)
+            .json(&serde_json::json!({ "model": model }))
+            .send()
+            .await
+        {
+            Ok(response) if response.status().is_success() => {
+                logger::log_info(
+                    "LOCAL_STT",
+                    &format!("Requested local STT model warm-up: model={}", model),
+                );
+            }
+            Ok(response) => {
+                logger::log_info(
+                    "LOCAL_STT",
+                    &format!(
+                        "Local STT warm-up returned status {} for model={}",
+                        response.status(),
+                        model
+                    ),
+                );
+            }
+            Err(err) => {
+                logger::log_info(
+                    "LOCAL_STT",
+                    &format!("Local STT warm-up request failed: {}", err),
+                );
+            }
+        }
+    }
+
     let mut models = local_stt::installed_model_ids(&app, req.local_models_dir.as_deref())?;
     models.sort();
 

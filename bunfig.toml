@@ -1,0 +1,6 @@
+# The Rust build output under `src-tauri/target` contains tens of thousands of
+# files (Cargo artifacts and the cached FFmpeg source build). Keep the JS test
+# runner from discovering and opening them, which exhausts file descriptors and
+# makes `bun test` fail before running any test.
+[test]
+pathIgnorePatterns = ["**/src-tauri/target/**", "**/node_modules/**"]

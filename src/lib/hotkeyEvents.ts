@@ -16,6 +16,7 @@ export const SELECTION_TEXT_REQUEST_EVENT = "selection-text-request";
 export const SELECTION_TEXT_RESPONSE_EVENT = "selection-text-response";
 export const DICTATION_STREAM_UPDATE_EVENT = "dictation-stream:update";
 export const APP_DATA_MIGRATION_ERROR_EVENT = "app-data-migration-error";
+export const NATIVE_VOICE_LEVEL_EVENT = "native-voice-level";
 
 export type HotkeyTarget = "dictation" | "selection";
 

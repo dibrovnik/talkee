@@ -286,6 +286,9 @@ export function useWidgetRecording({
     }
 
     try {
+      await invoke("begin_work_activity").catch((error) => {
+        logError("APP_NAP", `Failed to begin work activity: ${formatErrorMessage(error)}`);
+      });
       onRecordingStart?.();
       // Update widget state to recording (via dispatch)
       machineRef.current = { ...machineRef.current, widgetState: "recording" };
@@ -333,6 +336,11 @@ export function useWidgetRecording({
 
       let dictationStreamPromise: Promise<DictationStreamOverlaySession | null> | null = null;
       const liveWarmUpPromise = localLiveStreamingEnabled ? warmUpLiveRuntime() : null;
+      if (!localLiveStreamingEnabled && isLocalSttMode) {
+        // Batch local dictation: warm the model in the background so the model
+        // load overlaps with the user speaking. Never block recording start.
+        void warmUpLiveRuntime();
+      }
       if (liveStreamingEnabled && !activeSettings.micId) {
         dictationStreamPromise = startLiveOverlay();
       }
@@ -483,6 +491,7 @@ export function useWidgetRecording({
       void clearDictationStreamSession(true);
       recordingSettingsRef.current = null;
       setStream(null);
+      await invoke("end_work_activity").catch(() => {});
       logError("RECORDING", `Start error: ${error instanceof Error ? error.message : "unknown"}`);
       showError(
         t("widget.recording.startError", {
@@ -610,6 +619,10 @@ export function useWidgetRecording({
       runtimeRef.current.reset();
       await clearDictationStreamSession(true);
       showError(message);
+    } finally {
+      await invoke("end_work_activity").catch((error) => {
+        logError("APP_NAP", `Failed to end work activity: ${formatErrorMessage(error)}`);
+      });
     }
   }, [
     clearDictationStreamSession,

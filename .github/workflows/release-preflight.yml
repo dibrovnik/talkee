@@ -23,9 +23,11 @@ jobs:
     runs-on: macos-latest
 
     env:
-      MACOSX_DEPLOYMENT_TARGET: "11.0"
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
       TALKEE_STT_RELEASE: "1"
       TALKEE_SKIP_BEFORE_BUILD: "1"
+      TALKEE_TARGET_CPU: "apple-m1"
+      RUSTFLAGS: "-C target-cpu=apple-m1"
       RELEASE_LABEL: ${{ github.event.inputs.release_tag || github.ref_name }}
 
     steps:

@@ -16,6 +16,40 @@ const OPUS_EN_RU_TRANSLATOR_PROVIDER: &str = "opus-mt-en-ru";
 const LEGACY_TRAD_PROVIDER: &str = "trad";
 const FAST_TRANSLATION_BEAM_SIZE: usize = 1;
 
+fn perf_core_count() -> usize {
+    static CORES: OnceLock<usize> = OnceLock::new();
+    *CORES.get_or_init(|| {
+        #[cfg(target_os = "macos")]
+        if let Some(count) = sysctl_perflevel0_physicalcpu() {
+            return count;
+        }
+
+        std::thread::available_parallelism()
+            .map(|count| count.get())
+            .unwrap_or(0)
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn sysctl_perflevel0_physicalcpu() -> Option<usize> {
+    use std::ffi::CString;
+
+    let name = CString::new("hw.perflevel0.physicalcpu").ok()?;
+    let mut value: i32 = 0;
+    let mut size = std::mem::size_of::<i32>();
+    let result = unsafe {
+        libc::sysctlbyname(
+            name.as_ptr(),
+            &mut value as *mut i32 as *mut libc::c_void,
+            &mut size,
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+
+    (result == 0 && value > 0).then_some(value as usize)
+}
+
 const NLLB_MODEL_FILES: &[&str] = &[
     "config.json",
     "model.bin",
@@ -484,6 +518,7 @@ fn load_translator(
     let config = Config {
         device: Device::CPU,
         compute_type: ComputeType::AUTO,
+        num_threads_per_replica: perf_core_count(),
         ..Default::default()
     };
     let translator = Arc::new(

@@ -23,13 +23,13 @@
 
 ## 4. Документация для агентов
 
-- [ ] 4.1 Написать `docs/architecture/overview.md` (design.md, решение 4)
-- [ ] 4.2 Переписать `AGENTS.md` по структуре из design.md, решение 3 (≤ 200 строк)
-- [ ] 4.3 Создать `CLAUDE.md` с содержимым `@AGENTS.md`
-- [ ] 4.4 `skills/talkee-product-ui-style/SKILL.md` и `references/*`: удалить дубли токенов/цветов, заменить ссылкой на `rules/style.rule.md`
-- [ ] 4.5 Добавить в `AGENTS.md` примечание: `.claude/skills/openspec-*` и `.agents/skills/openspec-*` генерируются `openspec update`, руками не править
-- [ ] 4.6 `CHANGELOG.md`: перенести историю версий из `README.md`/`README.ru.md` (design.md, решение 7); в README оставить ссылку
-- [ ] 4.7 Коммит `docs: rewrite agent entry point`
+- [x] 4.1 Написать `docs/architecture/overview.md` (design.md, решение 4)
+- [x] 4.2 Переписать `AGENTS.md` по структуре из design.md, решение 3 (≤ 200 строк)
+- [x] 4.3 Создать `CLAUDE.md` с содержимым `@AGENTS.md`
+- [x] 4.4 `skills/talkee-product-ui-style/SKILL.md` и `references/*`: удалить дубли токенов/цветов, заменить ссылкой на `rules/style.rule.md`
+- [x] 4.5 Добавить в `AGENTS.md` примечание: `.claude/skills/openspec-*` и `.agents/skills/openspec-*` генерируются `openspec update`, руками не править
+- [x] 4.6 `CHANGELOG.md`: перенести историю версий из `README.md`/`README.ru.md` (design.md, решение 7); в README оставить ссылку
+- [x] 4.7 Коммит `docs: rewrite agent entry point`
 
 ## 5. Скрипты проверок
 

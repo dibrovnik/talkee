@@ -623,6 +623,10 @@ select {
   }
 }
 
+.widget-overlay-enter {
+  animation: widget-notice-in 0.22s var(--ease-standard);
+}
+
 @keyframes widget-file-drop-in {
   from {
     opacity: 0;
@@ -2946,11 +2950,35 @@ details summary:focus {
   .ui-toggle,
   .ui-toggle::after,
   .ui-progress__bar,
-  .ui-button {
+  .ui-button,
+  .ui-dropzone,
+  .ui-slide-over,
+  .ui-slide-over__panel,
+  .ui-onboarding__progress-bar {
     transition: none;
   }
 
   .ui-spinner {
     animation-duration: 1.6s;
   }
+
+  .widget-overlay-enter {
+    animation: none;
+  }
+}
+
+/* Reduce Transparency: the media query where WebKit supports it, and the
+   `reduce-transparency` class set from the macOS accessibility setting. */
+.app-sidebar {
+  background: var(--sidebar-bg);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .app-sidebar {
+    background: var(--window-bg);
+  }
+}
+
+.reduce-transparency .app-sidebar {
+  background: var(--window-bg);
 }

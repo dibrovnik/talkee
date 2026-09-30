@@ -25,6 +25,7 @@ import {
 } from "../../lib/icons";
 import { logError } from "../../lib/logger";
 import { checkAllPermissions } from "../../lib/permissions";
+import { watchReduceTransparency } from "../../lib/reduceTransparency";
 import {
   getHistoryIndex,
   getPermissionsPassed,
@@ -185,6 +186,10 @@ export function SettingsApp() {
   }, [themePreference]);
 
   useEffect(() => {
+    return watchReduceTransparency();
+  }, []);
+
+  useEffect(() => {
     Promise.all([getPermissionsPassed(), checkAllPermissions()])
       .then(async ([passed, permissions]) => {
         const hasRequiredStartupPermissions =
@@ -309,6 +314,7 @@ export function SettingsApp() {
       >
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           <aside
+            className="app-sidebar"
             style={{
               width: 220,
               // Leave room for the native macOS traffic lights, which float over
@@ -317,7 +323,6 @@ export function SettingsApp() {
               display: "flex",
               flexDirection: "column",
               gap: 10,
-              background: "var(--sidebar-bg)",
               overflowY: "auto",
               flexShrink: 0,
             }}

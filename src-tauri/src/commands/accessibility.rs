@@ -111,6 +111,23 @@ pub async fn check_microphone_permission() -> Result<String, String> {
     Ok(microphone_permission_status(status).to_string())
 }
 
+/// Reads System Settings > Accessibility > Display > Reduce transparency.
+/// WKWebView does not reliably expose `prefers-reduced-transparency`, so the
+/// frontend mirrors this value as a class on `<html>`.
+#[tauri::command]
+pub async fn check_reduce_transparency() -> Result<bool, String> {
+    let reduce: objc2::runtime::Bool = unsafe {
+        let workspace: *mut objc2::runtime::AnyObject =
+            objc2::msg_send![objc2::class!(NSWorkspace), sharedWorkspace];
+        if workspace.is_null() {
+            return Err("NSWorkspace is unavailable".to_string());
+        }
+        objc2::msg_send![workspace, accessibilityDisplayShouldReduceTransparency]
+    };
+
+    Ok(reduce.as_bool())
+}
+
 #[cfg(test)]
 mod tests {
     use super::microphone_permission_status;

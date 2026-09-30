@@ -242,6 +242,7 @@ pub fn run() {
             accessibility::reset_accessibility_permission,
             accessibility::check_accessibility_permission,
             accessibility::check_microphone_permission,
+            accessibility::check_reduce_transparency,
             runtime_info::get_app_runtime_info,
             get_cleanup_prompt_preview,
             start_native_hotkey_capture,

@@ -1,4 +1,12 @@
-export type SettingsTab = "main" | "file" | "interpreter" | "chat" | "settings" | "model" | "style";
+export type SettingsTab =
+  | "main"
+  | "file"
+  | "interpreter"
+  | "chat"
+  | "settings"
+  | "model"
+  | "style"
+  | "ui";
 
 const SETTINGS_TABS = new Set<SettingsTab>([
   "main",
@@ -8,6 +16,7 @@ const SETTINGS_TABS = new Set<SettingsTab>([
   "settings",
   "model",
   "style",
+  "ui",
 ]);
 
 export function isSettingsTab(value: unknown): value is SettingsTab {

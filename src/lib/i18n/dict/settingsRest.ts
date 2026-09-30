@@ -115,6 +115,7 @@ export const settingsRest = {
   "settingsApp.tab.settings": { ru: "Настройки", en: "Settings" },
   "settingsApp.tab.model": { ru: "Модели", en: "Models" },
   "settingsApp.tab.style": { ru: "Стиль и Промпты", en: "Style and Prompts" },
+  "settingsApp.tab.ui": { ru: "Примитивы (DEV)", en: "Primitives (DEV)" },
   "settingsApp.loadError": {
     ru: "Не удалось загрузить состояние приложения. Некоторые данные могут быть недоступны.",
     en: "Failed to load the app state. Some data may be unavailable.",

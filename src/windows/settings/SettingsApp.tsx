@@ -16,6 +16,7 @@ import {
   type Icon,
   IconAdjustmentsHorizontal,
   IconCpu,
+  IconDeviceDesktopCog,
   IconFileMusic,
   IconHome,
   IconLanguage,
@@ -32,6 +33,7 @@ import {
   type ThemePreference,
 } from "../../lib/store";
 import { watchThemePreference } from "../../lib/theme";
+import { Gallery } from "../../ui/Gallery";
 import {
   isSettingsTab,
   resolveInitialSettingsTab,
@@ -91,6 +93,16 @@ const TABS: { id: Tab; labelKey: MsgKey; icon: Icon; note: string }[] = [
     icon: IconAdjustmentsHorizontal,
     note: "Язык, микрофон и горячая клавиша",
   },
+  ...(import.meta.env.DEV
+    ? [
+        {
+          id: "ui" as Tab,
+          labelKey: "settingsApp.tab.ui" as MsgKey,
+          icon: IconDeviceDesktopCog,
+          note: "Витрина примитивов",
+        },
+      ]
+    : []),
 ];
 
 function TabButton({
@@ -467,6 +479,7 @@ export function SettingsApp() {
                   {activeTab === "model" && <SettingsTabs type="model" />}
                   {activeTab === "style" && <SettingsTabs type="style" />}
                   {activeTab === "interpreter" && <TranslationTab />}
+                  {import.meta.env.DEV && activeTab === "ui" && <Gallery />}
                 </div>
               </div>
             </main>

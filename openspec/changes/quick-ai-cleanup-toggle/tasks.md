@@ -13,10 +13,9 @@
 
 ## 2. Пайплайн
 
-- [ ] 2.1 `src/windows/widget/services/transcriptionPipeline.ts`: вызов `cleanupDictation` после STT, уведомления при откате, логи (design.md, решение 4)
-- [ ] 2.2 `src-tauri/src/ai.rs`: удалить лог «disabled by policy» и неиспользуемые `llm_*` поля запроса (design.md, решение 1); синхронизировать `invoke`
-- [ ] 2.3 `sidecars/talkee-llm`: `enable_thinking=false` для шаблонов с поддержкой (design.md, решение 5)
-- [ ] 2.4 Проверка: `cargo test --workspace`; вручную — локальная LLM, очистка включена → вставлен очищенный текст; отключить LLM runtime → вставлен исходный текст + уведомление
+- [x] 2.1 `src/windows/widget/services/transcriptionPipeline.ts`: вызов `cleanupDictation` после STT, уведомления при откате, логи (design.md, решение 4)
+- [x] 2.2 `src-tauri/src/ai.rs`: удалить лог «disabled by policy» и неиспользуемые `llm_*` поля запроса (design.md, решение 1); синхронизировать `invoke`
+- [x] 2.3 `src-tauri/sidecars/talkee-llm`: ветка `enable_thinking=false` для шаблонов с поддержкой (design.md, решение 5)
 
 ## 3. Переключение (после пайплайна)
 
@@ -39,3 +38,7 @@
 - [ ] 5.3 История: сохранение исходного текста и переключатель «Очищенный | Исходный» (design.md, решение 12) + тест совместимости старых записей
 - [ ] 5.4 Прогрев локальной LLM при включении очистки
 - [ ] 5.5 Проверка: `bun run gate`; `openspec validate quick-ai-cleanup-toggle --strict`
+
+## 2. Итоговая проверка пайплайна (после настроек/UI)
+
+- [ ] 2.4 Проверка: `cargo test --workspace`; вручную — локальная LLM, очистка включена → вставлен очищенный текст; отключить LLM runtime → вставлен исходный текст + уведомление

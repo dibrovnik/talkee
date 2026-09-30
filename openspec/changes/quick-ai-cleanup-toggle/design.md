@@ -52,7 +52,7 @@
    - При `reason ∈ {timeout, error, rejected}` — уведомление из спеки.
    - В лог: `cleanup_ms`, `cleanup_applied`, `cleanup_reason`.
 5. **Thinking-модели.**
-   - В `sidecars/talkee-llm` при построении chat template передавать `enable_thinking=false`, если шаблон модели его поддерживает (Qwen3).
+   - В `sidecars/talkee-llm` при построении chat template реализовать ветку `enable_thinking=false`, если шаблон модели её поддерживает (Qwen3). У установленного `llama-cpp-2` legacy API нет Jinja kwargs: добавить пустой закрытый assistant-блок `<think>\n\n</think>\n\n` только для шаблонов с `enable_thinking`, не меняя прочие шаблоны.
    - Независимо от этого `stripThinking` на клиенте вырезает `<think>[\s\S]*?</think>` и ведущие пробелы.
 6. **Настройки** (`store.ts`, выполнить исходную задачу 3.1 до ядра 1.2):
    - `Control+Option` запрещён существующим `validateHotkey` из-за VoiceOver; безопасный дефолт — `Control+Shift+C`.

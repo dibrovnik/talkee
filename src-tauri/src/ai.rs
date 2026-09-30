@@ -82,13 +82,10 @@ pub struct TranscribeRequest {
     pub language: String,
     pub api_key: String,
     pub whisper_api_key: Option<String>,
-    pub llm_api_key: Option<String>,
     pub style: String,
     pub whisper_endpoint: Option<String>,
     pub local_models_dir: Option<String>,
-    pub llm_endpoint: Option<String>,
     pub whisper_model: Option<String>,
-    pub llm_model: Option<String>,
     pub file_name: Option<String>,
     pub mime_type: Option<String>,
     pub mode: Option<String>,
@@ -719,8 +716,8 @@ pub async fn transcribe_and_clean(
     logger::log_info(
         "API",
         &format!(
-            "Starting transcription... style={}, language={}, whisper_model={:?}, llm_model={:?}",
-            req.style, req.language, req.whisper_model, req.llm_model
+            "Starting transcription... style={}, language={}, whisper_model={:?}",
+            req.style, req.language, req.whisper_model
         ),
     );
 
@@ -1057,10 +1054,6 @@ async fn transcribe_audio_bytes_internal(
         });
     }
 
-    logger::log_info(
-        "LLM",
-        "Own API/local transcription mode: style cleanup is disabled by policy",
-    );
     logger::log_info("API", "Transcription complete");
 
     let raw_segments = whisper_body
@@ -1569,13 +1562,10 @@ pub async fn transcribe_file_path(
         language: req.language.clone(),
         api_key: req.api_key.clone(),
         whisper_api_key: req.whisper_api_key.clone(),
-        llm_api_key: None,
         style: req.style.clone(),
         whisper_endpoint: req.whisper_endpoint.clone(),
         local_models_dir: req.local_models_dir.clone(),
-        llm_endpoint: None,
         whisper_model: req.whisper_model.clone(),
-        llm_model: Some("none".to_string()),
         file_name: None,
         mime_type: None,
         mode: Some("transcribe_only".to_string()),
@@ -1782,7 +1772,7 @@ pub struct EmbedTextResponse {
 /// Run an explicit, user-initiated text-processing prompt (e.g. summary) against
 /// any OpenAI-compatible chat endpoint: a bundled local
 /// runtime (127.0.0.1), or a user-provided endpoint. This is a deliberate user
-/// action, not the automatic transcription cleanup that stays disabled by policy.
+/// action, including optional dictation cleanup.
 #[tauri::command]
 pub async fn process_text(req: ProcessTextRequest) -> Result<ProcessTextResponse, String> {
     let text = req.text.trim();

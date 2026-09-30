@@ -5,7 +5,8 @@
     "README.md",
     "README.ru.md",
     "scripts/check-naming.mjs",
-    "scripts/check-naming.test.mjs"
+    "scripts/check-naming.test.mjs",
+    "openspec/specs/app-identity/spec.md"
   ],
   "temporaryAllow": [
     "scripts/verify-windows-release.mjs",

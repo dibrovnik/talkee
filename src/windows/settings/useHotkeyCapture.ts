@@ -8,12 +8,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 
 import {
-  cancelHotkeyCapture,
-  createHotkeyCaptureMachineState,
-  hotkeyCaptureKeyDown,
-  hotkeyCaptureKeyUp,
-} from "../../lib/hotkeyCaptureMachine";
-import {
   HOTKEY_CAPTURE_STATE_EVENT,
   HOTKEY_CHANGE_REQUEST_EVENT,
   HOTKEY_REGISTRATION_RESULT_EVENT,
@@ -22,7 +16,7 @@ import {
   type HotkeyTarget,
   type NativeHotkeyCapturePayload,
 } from "../../lib/hotkeyEvents";
-import { isMacPlatform, normalizeHotkey } from "../../lib/store";
+import { normalizeHotkey } from "../../lib/store";
 import { logError } from "../../lib/logger";
 
 export type HotkeyFeedbackTone = "idle" | "success" | "error";
@@ -81,9 +75,7 @@ export function useHotkeyCapture({
   onApplied,
   logTag,
 }: UseHotkeyCaptureOptions): UseHotkeyCaptureResult {
-  const usesNativeCapture = isMacPlatform();
   const surfaceRef = useRef<HTMLDivElement>(null);
-  const machineRef = useRef(createHotkeyCaptureMachineState());
   const activeRef = useRef(false);
   const captureRequestIdRef = useRef<string | null>(null);
   const pendingRequestIdRef = useRef<string | null>(null);
@@ -117,7 +109,6 @@ export function useHotkeyCapture({
     async (message?: string): Promise<void> => {
       const requestId = captureRequestIdRef.current;
       captureRequestIdRef.current = null;
-      machineRef.current = createHotkeyCaptureMachineState();
       setActiveValue(false);
       setDraft(null);
       if (requestId) {
@@ -127,7 +118,7 @@ export function useHotkeyCapture({
           active: false,
         }).catch(() => null);
       }
-      if (usesNativeCapture && requestId) {
+      if (requestId) {
         await invoke("stop_native_hotkey_capture", { requestId, target }).catch(
           (error) => {
             void logError(
@@ -142,7 +133,7 @@ export function useHotkeyCapture({
         setFeedback(message);
       }
     },
-    [logTag, setActiveValue, target, usesNativeCapture],
+    [logTag, setActiveValue, target],
   );
 
   const submit = useCallback(
@@ -198,15 +189,10 @@ export function useHotkeyCapture({
     clearFeedbackTimer();
     const requestId = createRequestId(target);
     captureRequestIdRef.current = requestId;
-    machineRef.current = createHotkeyCaptureMachineState();
     setActiveValue(true);
     setDraft(null);
     setTone("idle");
-    setFeedback(
-      usesNativeCapture
-        ? messagesRef.current.startingCapture
-        : messagesRef.current.pressNewCombo,
-    );
+    setFeedback(messagesRef.current.startingCapture);
     await emit(HOTKEY_CAPTURE_STATE_EVENT, {
       requestId,
       target,
@@ -214,11 +200,7 @@ export function useHotkeyCapture({
     }).catch(() => null);
 
     try {
-      if (usesNativeCapture) {
-        await invoke("start_native_hotkey_capture", { requestId, target });
-      } else {
-        window.setTimeout(() => surfaceRef.current?.focus(), 0);
-      }
+      await invoke("start_native_hotkey_capture", { requestId, target });
     } catch (error) {
       captureRequestIdRef.current = null;
       setActiveValue(false);
@@ -235,7 +217,7 @@ export function useHotkeyCapture({
         `Failed to start native hotkey capture requestId=${requestId} target=${target}: ${String(error)}`,
       );
     }
-  }, [clearFeedbackTimer, logTag, setActiveValue, target, usesNativeCapture]);
+  }, [clearFeedbackTimer, logTag, setActiveValue, target]);
 
   useEffect(() => {
     const resultListener = listen<HotkeyRegistrationResultPayload>(
@@ -303,58 +285,8 @@ export function useHotkeyCapture({
   }, [clearFeedbackTimer, stop, submit, target]);
 
   useEffect(() => {
-    if (!active || usesNativeCapture) return;
-
-    const handleEffect = (
-      effect: ReturnType<typeof hotkeyCaptureKeyDown>["effect"],
-    ): void => {
-      if (effect.type === "preview") {
-        setDraft(effect.hotkey);
-        setTone("idle");
-        setFeedback(
-          effect.hotkey
-            ? messagesRef.current.releaseToApply
-            : messagesRef.current.needMainKey,
-        );
-      } else if (effect.type === "completed") {
-        void submit(effect.hotkey);
-      } else if (effect.type === "rejected") {
-        setDraft(effect.hotkey);
-        setTone("error");
-        setFeedback(messagesRef.current.needMainKey);
-      } else if (effect.type === "cancelled") {
-        void stop(messagesRef.current.cancelledKept);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent): void => {
-      event.preventDefault();
-      event.stopPropagation();
-      const transition = hotkeyCaptureKeyDown(machineRef.current, event);
-      machineRef.current = transition.state;
-      handleEffect(transition.effect);
-    };
-    const handleKeyUp = (event: KeyboardEvent): void => {
-      event.preventDefault();
-      event.stopPropagation();
-      const transition = hotkeyCaptureKeyUp(machineRef.current, event);
-      machineRef.current = transition.state;
-      handleEffect(transition.effect);
-    };
-
-    window.addEventListener("keydown", handleKeyDown, true);
-    window.addEventListener("keyup", handleKeyUp, true);
-    window.setTimeout(() => surfaceRef.current?.focus(), 0);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown, true);
-      window.removeEventListener("keyup", handleKeyUp, true);
-    };
-  }, [active, stop, submit, usesNativeCapture]);
-
-  useEffect(() => {
     if (!active) return;
     const cancel = (): void => {
-      machineRef.current = cancelHotkeyCapture().state;
       void stop(messagesRef.current.cancelledKept);
     };
     const handleVisibility = (): void => {

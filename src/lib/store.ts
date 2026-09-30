@@ -305,7 +305,6 @@ const MAIN_KEY_ALIASES: Record<string, string> = {
 };
 const FUNCTION_KEY_PATTERN = /^F(?:[1-9]|1[0-2])$/;
 const DEFAULT_MAC_HOTKEY = "Command+Shift+Space";
-const DEFAULT_DESKTOP_HOTKEY = "Control+Alt+Space";
 const DEFAULT_LANGUAGE = "ru";
 const LEGACY_SELECTION_TRANSLATION_HOTKEYS = [
   "Command+Alt+Y",
@@ -318,7 +317,6 @@ const SELECTION_TARGET_MIGRATION_VERSION = 1;
 const LEGACY_SELECTION_LOCAL_TRANSLATOR_PROVIDER = "trad";
 const DEFAULT_SELECTION_LOCAL_TRANSLATOR_PROVIDER = "nllb-200";
 const DEFAULT_MAC_SELECTION_TRANSLATION_HOTKEY = "Control+Shift+Y";
-const DEFAULT_DESKTOP_SELECTION_TRANSLATION_HOTKEY = "Control+Shift+Y";
 const RESERVED_MAC_SYSTEM_HOTKEYS = new Set(["Command+Z", "Shift+Command+Z"]);
 const BUNDLED_LOCAL_LLM_PORTS = new Set([8011]);
 const BUNDLED_LOCAL_LLM_MODEL_IDS = new Set([
@@ -333,21 +331,14 @@ const BUNDLED_LOCAL_LLM_MODEL_IDS = new Set([
   "qwen2.5-7b-instruct-q4",
 ]);
 
-export function isMacPlatform(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Mac|iPhone|iPad|iPod/.test(navigator.platform);
-}
-
 export function getDefaultHotkey(): string {
-  return isMacPlatform() ? DEFAULT_MAC_HOTKEY : DEFAULT_DESKTOP_HOTKEY;
+  return DEFAULT_MAC_HOTKEY;
 }
 
 export const DEFAULT_HOTKEY = getDefaultHotkey();
 
 export function getDefaultSelectionTranslationHotkey(): string {
-  return isMacPlatform()
-    ? DEFAULT_MAC_SELECTION_TRANSLATION_HOTKEY
-    : DEFAULT_DESKTOP_SELECTION_TRANSLATION_HOTKEY;
+  return DEFAULT_MAC_SELECTION_TRANSLATION_HOTKEY;
 }
 
 export const DEFAULT_SELECTION_TRANSLATION_HOTKEY =
@@ -355,21 +346,20 @@ export const DEFAULT_SELECTION_TRANSLATION_HOTKEY =
 
 export function formatHotkeyLabel(hotkey: string): string {
   const parts = hotkey.split("+").map((part) => part.trim());
-  const isMac = isMacPlatform();
 
   const formatted = parts.map((part) => {
     const lower = part.toLowerCase();
 
     if (lower === "ctrl" || lower === "control") {
-      return isMac ? "Control" : "Ctrl";
+      return "Control";
     }
 
     if (lower === "alt" || lower === "option") {
-      return isMac ? "Option" : "Alt";
+      return "Option";
     }
 
     if (lower === "cmd" || lower === "command" || lower === "meta") {
-      return isMac ? "Command" : "Cmd";
+      return "Command";
     }
 
     return part;
@@ -435,7 +425,7 @@ function isCommandShiftLetterHotkey(parts: string[]): boolean {
 
 export function isReservedMacSystemHotkey(
   hotkey: string | null | undefined,
-  macPlatform: boolean = isMacPlatform(),
+  macPlatform: boolean = true,
 ): boolean {
   if (!hotkey || !macPlatform) return false;
 
@@ -449,7 +439,7 @@ export function isReservedMacSystemHotkey(
 
 export function isUnsafeMacGlobalHotkey(
   hotkey: string | null | undefined,
-  macPlatform: boolean = isMacPlatform(),
+  macPlatform: boolean = true,
 ): boolean {
   if (!hotkey || !macPlatform) return false;
 
@@ -512,7 +502,6 @@ export function validateHotkey(hotkey: string): {
   const normalizedHotkey = normalizedHotkeyFromParts(normalizedParts);
   if (
     normalizedHotkey &&
-    isMacPlatform() &&
     RESERVED_MAC_SYSTEM_HOTKEYS.has(normalizedHotkey)
   ) {
     return {
@@ -522,7 +511,7 @@ export function validateHotkey(hotkey: string): {
     };
   }
 
-  if (isMacPlatform() && isCommandShiftLetterHotkey(normalizedParts)) {
+  if (isCommandShiftLetterHotkey(normalizedParts)) {
     return {
       valid: false,
       error:
@@ -531,7 +520,6 @@ export function validateHotkey(hotkey: string): {
   }
 
   if (
-    isMacPlatform() &&
     modifiers.includes("Control") &&
     modifiers.includes("Alt")
   ) {
@@ -988,9 +976,10 @@ function nonConflictingSelectionHotkey(voiceHotkey?: string): string {
   const voice = voiceHotkey
     ? normalizeHotkey(voiceHotkey).normalized
     : undefined;
-  const candidates = isMacPlatform()
-    ? [DEFAULT_MAC_SELECTION_TRANSLATION_HOTKEY, "Control+Shift+U"]
-    : [DEFAULT_DESKTOP_SELECTION_TRANSLATION_HOTKEY, "Control+Alt+T"];
+  const candidates = [
+    DEFAULT_MAC_SELECTION_TRANSLATION_HOTKEY,
+    "Control+Shift+U",
+  ];
   return (
     candidates
       .map((candidate) => normalizeHotkey(candidate).normalized || candidate)
@@ -1252,10 +1241,7 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
     typeof raw.hotkey === "string"
       ? normalizeHotkey(raw.hotkey).normalized
       : undefined;
-  const hotkey =
-    !isMacPlatform() && normalizedHotkey === DEFAULT_MAC_HOTKEY
-      ? DEFAULT_DESKTOP_HOTKEY
-      : normalizedHotkey;
+  const hotkey = normalizedHotkey;
 
   const normalized: Partial<AppSettings> = {
     apiKey: typeof raw.apiKey === "string" ? raw.apiKey : undefined,

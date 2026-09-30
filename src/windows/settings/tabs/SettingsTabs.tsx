@@ -73,21 +73,6 @@ const LocalLlmModels = lazy(() =>
 const IS_DEV = import.meta.env.DEV;
 type LocalRuntimeKind = "whisper" | "diarization";
 type LocalModelKind = "transcription" | "text" | "other";
-type DesktopPlatform = "macos" | "windows" | "linux" | "unknown";
-
-function detectDesktopPlatform(): DesktopPlatform {
-  if (typeof navigator === "undefined") {
-    return "unknown";
-  }
-
-  const value = `${navigator.platform} ${navigator.userAgent}`.toLowerCase();
-
-  if (value.includes("mac")) return "macos";
-  if (value.includes("win")) return "windows";
-  if (value.includes("linux") || value.includes("x11")) return "linux";
-
-  return "unknown";
-}
 
 const LOCAL_RUNTIME_ENDPOINTS: Record<LocalRuntimeKind, string> = {
   whisper: DEFAULT_LOCAL_STT_ENDPOINT,
@@ -1866,7 +1851,6 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
   };
 
   if (type === "model") {
-    const desktopPlatform = detectDesktopPlatform();
     const activeModelMode: ModelMode = resolveProcessingMode(settings);
     const visibleModelMode = modelModeView ?? activeModelMode;
     const isApiMode = visibleModelMode === "api";
@@ -2557,11 +2541,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
     const getLocalModelStatus = (model: LocalModelOption) => {
       const actionState = localModelActionStates[model.id];
       const cachedState = settings.localModels?.[model.id];
-      const isPlatformSupported =
-        model.runtimeKind === "whisper" ||
-        model.runtimeKind === "diarization" ||
-        desktopPlatform === "macos";
-      const isRuntimeReady = model.runtimeReady === true && isPlatformSupported;
+      const isRuntimeReady = model.runtimeReady === true;
       const isInstalled =
         isRuntimeReady && localInstalledModelSet.has(model.model);
       const isSelected =
@@ -2584,10 +2564,9 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
             : t("models.local.runtimeSlotPrepared", { runtime: runtimeName }),
           status: "unsupported" as const,
           color: "var(--text-low)",
-          message: !isPlatformSupported
-            ? t("models.local.macOnly")
-            : model.unavailableReason ||
-              t("models.local.sidecarPending", { runtime: runtimeName }),
+          message:
+            model.unavailableReason ||
+            t("models.local.sidecarPending", { runtime: runtimeName }),
           isInstalled: false,
           isSelected: false,
         };

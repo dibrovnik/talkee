@@ -4,13 +4,10 @@ import { formatErrorMessage } from "../../../lib/utils";
 export function getVoiceAudioConstraints(
   micId: string,
 ): MediaTrackConstraints | true {
-  const platform = `${navigator.platform} ${navigator.userAgent}`.toLowerCase();
-  const useMicProcessing =
-    platform.includes("linux") || platform.includes("x11");
   const constraints: MediaTrackConstraints = {
-    echoCancellation: useMicProcessing,
-    noiseSuppression: useMicProcessing,
-    autoGainControl: useMicProcessing,
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
     channelCount: { ideal: 1 },
   };
 

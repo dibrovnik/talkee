@@ -121,15 +121,6 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
   return new Blob([bytes], { type: mimeType });
 }
 
-function shouldUsePcmOnlyRecorder(): boolean {
-  if (typeof navigator === "undefined") {
-    return false;
-  }
-
-  const platform = `${navigator.platform} ${navigator.userAgent}`.toLowerCase();
-  return platform.includes("linux") || platform.includes("x11");
-}
-
 function createEmptyPcmState(): PcmRecorderState {
   return {
     audioContext: null,
@@ -441,7 +432,7 @@ export function createRecordingRuntimeController(): RecordingRuntimeController {
       state.liveTranscription = null;
       state.pcm = startPcmRecorder(stream);
       state.active = true;
-      state.pcmOnly = shouldUsePcmOnlyRecorder();
+      state.pcmOnly = false;
 
       if (state.pcmOnly) {
         return "wav";

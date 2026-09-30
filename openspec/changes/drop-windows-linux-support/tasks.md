@@ -27,13 +27,13 @@
 
 ## 4. Frontend
 
-- [ ] 4.1 Удалить `src/lib/windowsTitlebar.ts` и использование в `SettingsApp.tsx`; CSS `.app-root.native-frame` в `src/index.css`
-- [ ] 4.2 `src/lib/store.ts`: удалить `isMacPlatform()`, оставить macOS-ветки во всех вызовах (`grep -rn isMacPlatform src`)
-- [ ] 4.3 Удалить определение ОС через `navigator` в `PermissionScreen.tsx`, `SettingsTabs.tsx`, `permissions.ts`, `recordingDevice.ts`, `recordingRuntime.ts`; оставить macOS-поведение
-- [ ] 4.4 `src/lib/frontendHotkeyCapture.ts`: удалить, если используется только вне macOS; обновить `useHotkeyCapture.ts`
-- [ ] 4.5 i18n: удалить ключи `*Linux`, `*Windows` и строки с PipeWire/X11/WASAPI
-- [ ] 4.6 Обновить/удалить тесты, проверявшие non-mac поведение
-- [ ] 4.7 Проверка: `bunx tsc --noEmit && bun test`; `grep -rni "windows\|linux\|pipewire\|x11" src` — остаются только нерелевантные совпадения (например, «windows» как окна Tauri: `src/windows/`)
+- [x] 4.1 Удалить `src/lib/windowsTitlebar.ts` и использование в `SettingsApp.tsx`; CSS `.app-root.native-frame` в `src/index.css`
+- [x] 4.2 `src/lib/store.ts`: удалить `isMacPlatform()`, оставить macOS-ветки во всех вызовах (`grep -rn isMacPlatform src`)
+- [x] 4.3 Удалить определение ОС через `navigator` в `PermissionScreen.tsx`, `SettingsTabs.tsx`, `permissions.ts`, `recordingDevice.ts`, `recordingRuntime.ts`; оставить macOS-поведение
+- [x] 4.4 `src/lib/frontendHotkeyCapture.ts`: удалить, если используется только вне macOS; обновить `useHotkeyCapture.ts`
+- [x] 4.5 i18n: удалить ключи `*Linux`, `*Windows` и строки с PipeWire/X11/WASAPI
+- [x] 4.6 Обновить/удалить тесты, проверявшие non-mac поведение
+- [x] 4.7 Проверка: `bunx tsc --noEmit && bun test`; `grep -rni "windows\|linux\|pipewire\|x11" src` — остаются только нерелевантные совпадения (например, «windows» как окна Tauri: `src/windows/`)
 
 ## 5. Скрипты и CI
 

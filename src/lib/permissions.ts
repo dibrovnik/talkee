@@ -82,12 +82,7 @@ export async function checkSystemAudioPermission(): Promise<PermissionStatus> {
 }
 
 export function requiresSystemAudioPermission(): boolean {
-  if (typeof navigator === "undefined") {
-    return false;
-  }
-
-  const value = `${navigator.platform} ${navigator.userAgent}`.toLowerCase();
-  return value.includes("mac");
+  return true;
 }
 
 export async function requestSystemAudioPermission(): Promise<void> {

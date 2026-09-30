@@ -15,7 +15,6 @@ import {
   DEFAULT_SELECTION_TRANSLATION_HOTKEY,
   formatHotkeyLabel,
   getSettings,
-  isMacPlatform,
   saveSettings,
   type AppSettings,
   type TranslationSettings,
@@ -476,8 +475,7 @@ export function TranslationTab(): ReactElement {
     /127\.0\.0\.1|localhost/i.test(settings?.whisperEndpoint || ""),
   );
   const liveVoiceSupported = Boolean(
-    isMacPlatform() &&
-      settings &&
+    settings &&
       !localModelMode &&
       settings.selectedTranslationAdapter === "openai",
   );
@@ -1300,9 +1298,7 @@ export function TranslationTab(): ReactElement {
         >
           {liveVoiceSupported
             ? t("translation.live.voiceDesc")
-            : !isMacPlatform()
-              ? t("translation.live.voiceMacOnly")
-              : t("translation.live.voiceOpenAiOnly")}
+            : t("translation.live.voiceOpenAiOnly")}
         </div>
         <div
           style={{ fontSize: 12, color: "var(--text-low)", lineHeight: 1.5 }}

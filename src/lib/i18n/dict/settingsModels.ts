@@ -245,10 +245,6 @@ export const settingsModels = {
     ru: "{runtime} runtime-слот подготовлен, но движок еще не встроен в сборку.",
     en: "The {runtime} runtime slot is prepared, but the engine is not yet built into the app.",
   },
-  "models.local.macOnly": {
-    ru: "Эта локальная модель пока доступна только на macOS. Для Windows и Linux оставлен Whisper runtime.",
-    en: "This local model is currently available on macOS only. The Whisper runtime is kept for Windows and Linux.",
-  },
   "models.local.sidecarPending": {
     ru: "{runtime} sidecar запускается отдельно от Whisper, но скачивание и распознавание для этой линейки будут включены после подключения локального engine.",
     en: "The {runtime} sidecar runs separately from Whisper, but downloading and recognition for this line will be enabled once the local engine is connected.",

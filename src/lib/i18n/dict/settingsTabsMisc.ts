@@ -271,10 +271,6 @@ export const settingsTabsMisc = {
     ru: "Озвучка доступна через проверенное подключение к Realtime API.",
     en: "Voice playback is available through a verified Realtime API connection.",
   },
-  "translation.live.voiceMacOnly": {
-    ru: "Озвучка сейчас доступна на macOS. Для Windows и Linux нужна безопасная защита от повторного захвата звука Talkee.",
-    en: "Voice playback is currently available on macOS. Windows and Linux still need safe Talkee self-audio exclusion.",
-  },
   "translation.live.desc": {
     ru: "Системный звук переводится через подключённый API. Локальные модели остаются доступны для обычной диктовки и перевода выделенного текста.",
     en: "System audio is translated through a connected API. Local models remain available for ordinary dictation and selected-text translation.",

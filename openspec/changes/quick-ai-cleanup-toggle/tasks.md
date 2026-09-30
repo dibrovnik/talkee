@@ -1,5 +1,9 @@
 # Tasks
 
+## 0. Предварительные настройки (исходная задача 3.1)
+
+- [ ] 3.1 `src/lib/store.ts`: `cleanupEnabled`, `cleanupToggleHotkey`, нормализация, валидация конфликтов (design.md, решение 6) + тесты
+
 ## 1. Ядро очистки
 
 - [x] 1.1 `src-tauri/src/prompt_config.rs` / `lib.rs`: команда `get_cleanup_prompt(language, style)` доступна в release (design.md, решение 2)
@@ -16,7 +20,6 @@
 
 ## 3. Настройки и переключение
 
-- [ ] 3.1 `src/lib/store.ts`: `cleanupEnabled`, `cleanupToggleHotkey`, нормализация, валидация конфликтов (design.md, решение 6) + тесты
 - [ ] 3.2 Создать `src/lib/cleanupToggle.ts`: `toggleCleanup`, `selectCleanupPreset`, `buildCleanupMenuModel` (design.md, решения 7-9) + тесты
 - [ ] 3.3 `src/windows/widget/hooks/useWidgetHotkey.ts`: регистрация третьей горячей клавиши и перерегистрация при изменении
 - [ ] 3.4 Уведомления «включена · стиль» / «выключена» / «Нет модели для очистки» с действием; i18n-строки

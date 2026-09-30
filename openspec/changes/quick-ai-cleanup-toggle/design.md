@@ -54,7 +54,7 @@
 5. **Thinking-модели.**
    - В `sidecars/talkee-llm` при построении chat template передавать `enable_thinking=false`, если шаблон модели его поддерживает (Qwen3).
    - Независимо от этого `stripThinking` на клиенте вырезает `<think>[\s\S]*?</think>` и ведущие пробелы.
-6. **Настройки** (`store.ts`):
+6. **Настройки** (`store.ts`, выполнить исходную задачу 3.1 до ядра 1.2):
    - `cleanupEnabled: boolean` (по умолчанию `false`);
    - `cleanupToggleHotkey: string` (по умолчанию `"Control+Option+C"`, пустая строка — отключено; валидация `validateHotkey()` + проверка конфликта с `hotkey` и `translation.selectionHotkey`).
 

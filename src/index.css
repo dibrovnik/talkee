@@ -1027,6 +1027,38 @@ details summary:focus {
   color: var(--label-2);
 }
 
+/* Shared popover list item, used by the language and microphone pickers. */
+.ui-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--label);
+  font: inherit;
+  font-size: var(--fs-body);
+  text-align: left;
+  cursor: default;
+}
+
+.ui-menu-item:hover {
+  background: var(--control-muted);
+}
+
+.ui-menu-item--active {
+  background: var(--selected-bg);
+  color: var(--accent-contrast);
+}
+
+.ui-menu-item__hint {
+  color: var(--label-3);
+  font-size: var(--fs-subhead);
+  font-variant-numeric: tabular-nums;
+}
+
 .ui-sidebar-item {
   display: flex;
   align-items: center;

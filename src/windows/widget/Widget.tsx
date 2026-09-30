@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { cursorPosition, getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import type { ReactNode, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -36,6 +36,7 @@ import {
   HISTORY_CLEARED_EVENT,
   HISTORY_DELETED_EVENT,
   HISTORY_UPDATED_EVENT,
+  NATIVE_VOICE_LEVEL_EVENT,
   PROCESSING_CANCEL_REQUEST_EVENT,
   type ProcessingCancelRequestPayload,
   SETTINGS_UPDATED_EVENT,
@@ -162,6 +163,8 @@ class CallCaptureStartError extends Error {
     this.rawCause = rawCause;
   }
 }
+
+const FRAME_INTERVAL_MS = 1000 / 30;
 
 const WIDGET_WAVES = [
   {
@@ -2230,55 +2233,10 @@ function IdlePill({
   onRememberPasteTarget: () => void;
 }) {
   const { t } = useI18n();
-  const widgetWindow = getCurrentWindow();
   const [isHovered, setIsHovered] = useState(false);
   const [copySucceeded, setCopySucceeded] = useState(false);
   const canCopy = Boolean(latestCopyText);
   const controlsVisible = isHovered;
-
-  useEffect(() => {
-    let disposed = false;
-    const enterMarginPx = 8;
-    const leaveMarginPx = 16;
-
-    const updateHoverState = async () => {
-      try {
-        const [cursor, position, size] = await Promise.all([
-          cursorPosition(),
-          widgetWindow.outerPosition(),
-          widgetWindow.outerSize(),
-        ]);
-
-        if (disposed) {
-          return;
-        }
-
-        const margin = isHovered ? leaveMarginPx : enterMarginPx;
-        const hovered =
-          cursor.x >= position.x - margin &&
-          cursor.x <= position.x + size.width + margin &&
-          cursor.y >= position.y - margin &&
-          cursor.y <= position.y + size.height + margin;
-
-        setIsHovered(hovered);
-      } catch (error) {
-        logError(
-          "WIDGET",
-          `Failed to poll widget hover state: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    };
-
-    void updateHoverState();
-    const interval = window.setInterval(() => {
-      void updateHoverState();
-    }, 80);
-
-    return () => {
-      disposed = true;
-      window.clearInterval(interval);
-    };
-  }, [isHovered, widgetWindow]);
 
   const copyLatestText = async () => {
     if (!latestCopyText) {
@@ -2433,12 +2391,47 @@ function FlowRecordingWidget({
   longMark?: "record" | "phone" | "success" | "error";
 }) {
   const showWave = state !== "idle";
+  const isRecording = state === "recording" || state === "long";
   const widgetRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!stream || (state !== "recording" && state !== "long")) {
+    if (!isRecording) {
       widgetRef.current?.style.setProperty("--widget-wave-scale", "1");
       widgetRef.current?.style.setProperty("--widget-wave-opacity", "1");
+      return;
+    }
+
+    let disposed = false;
+    let unlisten: (() => void) | null = null;
+    let smoothedLevel = 0;
+
+    void listen<{ rms: number; peak: number }>(NATIVE_VOICE_LEVEL_EVENT, (event) => {
+      const { rms, peak } = event.payload;
+      const boostedLevel = Math.min(1, Math.max(rms * 15, peak * 9)) ** 0.58;
+      const quietFloor = rms > 0.003 ? 0.1 : 0.025;
+      smoothedLevel = smoothedLevel * 0.48 + Math.max(quietFloor, boostedLevel) * 0.52;
+
+      widgetRef.current?.style.setProperty("--widget-wave-scale", String(1 + smoothedLevel * 0.42));
+      widgetRef.current?.style.setProperty(
+        "--widget-wave-opacity",
+        String(0.82 + smoothedLevel * 0.18),
+      );
+    }).then((stop) => {
+      if (disposed) {
+        stop();
+        return;
+      }
+      unlisten = stop;
+    });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [isRecording]);
+
+  useEffect(() => {
+    if (!stream || state !== "recording") {
       return;
     }
 
@@ -2453,9 +2446,15 @@ function FlowRecordingWidget({
     const dataArray = new Uint8Array(analyser.fftSize);
     let animationFrame = 0;
     let smoothedLevel = 0;
+    let lastDrawTime = 0;
 
-    const draw = () => {
+    const draw = (now: number) => {
       animationFrame = requestAnimationFrame(draw);
+      if (now - lastDrawTime < FRAME_INTERVAL_MS) {
+        return;
+      }
+      lastDrawTime = now;
+
       analyser.getByteTimeDomainData(dataArray);
 
       let sumSquares = 0;
@@ -2477,7 +2476,7 @@ function FlowRecordingWidget({
     };
 
     void audioContext.resume().catch(() => {});
-    draw();
+    animationFrame = requestAnimationFrame(draw);
 
     return () => {
       cancelAnimationFrame(animationFrame);

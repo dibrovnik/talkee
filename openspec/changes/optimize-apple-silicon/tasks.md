@@ -44,12 +44,12 @@
 
 ## 5. Уровень звука и frontend в простое
 
-- [ ] 5.1 `native_voice_recorder.rs`: событие `native-voice-level` 20 Гц (design.md, решение 8)
-- [ ] 5.2 `useWidgetRecording.ts` / `Widget.tsx`: подписка на событие; индикатор использует реальный уровень
-- [ ] 5.3 `Widget.tsx`: hover без 80 мс опроса (design.md, решение 9)
-- [ ] 5.4 `Widget.tsx`: rAF ≤ 30 fps и только в `recording` (design.md, решение 10)
-- [ ] 5.5 `src/index.css`: убрать `backdrop-filter` у виджета (design.md, решение 11)
-- [ ] 5.6 Проверка: `bun test`; ручная проверка hover при активном другом приложении; CPU в простое ≤ 0,5% за 60 с
+- [x] 5.1 `native_voice_recorder.rs`: событие `native-voice-level` 20 Гц (design.md, решение 8)
+- [x] 5.2 `useWidgetRecording.ts` / `Widget.tsx`: подписка на событие; индикатор использует реальный уровень
+- [x] 5.3 `Widget.tsx`: hover без 80 мс опроса (design.md, решение 9)
+- [x] 5.4 `Widget.tsx`: rAF ≤ 30 fps и только в `recording` (design.md, решение 10)
+- [x] 5.5 `src/index.css`: убрать `backdrop-filter` у виджета (design.md, решение 11)
+- [x] 5.6 Проверка: `bun test`; ручная проверка hover при активном другом приложении; CPU в простое ≤ 0,5% за 60 с
 
 ## 6. App Nap
 

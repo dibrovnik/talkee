@@ -98,7 +98,7 @@ export function RowActionsMenu({
         <button
           ref={buttonRef}
           type="button"
-          className="btn"
+          className="ui-icon-button"
           aria-label={label}
           title={label}
           aria-haspopup="menu"
@@ -107,18 +107,8 @@ export function RowActionsMenu({
             event.stopPropagation();
             setOpen((value) => !value);
           }}
-          style={{
-            width: 32,
-            minWidth: 32,
-            height: 32,
-            minHeight: 32,
-            padding: 0,
-            borderRadius: 8,
-            flexShrink: 0,
-            justifyContent: "center",
-          }}
         >
-          <IconDots size={15} stroke={2} />
+          <IconDots size={16} />
         </button>
       </div>
 
@@ -129,19 +119,10 @@ export function RowActionsMenu({
             ref={menuRef}
             role="menu"
             onClick={(event) => event.stopPropagation()}
+            className="ui-menu"
             style={{
-              position: "fixed",
               top: position?.top ?? 0,
               left: position?.left ?? 0,
-              minWidth: 168,
-              background: "var(--dropdown-bg)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              boxShadow: "var(--shadow-panel)",
-              zIndex: 1000,
-              padding: 6,
-              display: "flex",
-              flexDirection: "column",
               visibility: position ? "visible" : "hidden",
             }}
           >
@@ -152,32 +133,12 @@ export function RowActionsMenu({
                 role="menuitem"
                 disabled={item.disabled}
                 title={item.disabled ? item.hint : undefined}
+                className={`ui-menu-item${item.danger ? " ui-menu-item--danger" : ""}`}
                 onClick={() => {
                   if (item.disabled) return;
                   setOpen(false);
                   item.onSelect();
                 }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  width: "100%",
-                  textAlign: "left",
-                  border: "none",
-                  background: "transparent",
-                  cursor: item.disabled ? "not-allowed" : "pointer",
-                  padding: "9px 10px",
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontFamily: "var(--font-main)",
-                  color: item.danger ? "var(--danger)" : "var(--text-hi)",
-                  opacity: item.disabled ? 0.45 : 1,
-                }}
-                onMouseEnter={(event) => {
-                  if (!item.disabled)
-                    event.currentTarget.style.background = "var(--dropdown-hover)";
-                }}
-                onMouseLeave={(event) => (event.currentTarget.style.background = "transparent")}
               >
                 {item.icon}
                 <span>{item.label}</span>

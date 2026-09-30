@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactElement, type ReactNode, useEffect, useState } from "react";
 import { useI18n } from "../lib/i18n";
 import { IconX } from "../lib/icons";
 
@@ -20,7 +20,7 @@ export function SlideOverModal({
   width?: number | string;
   topOffset?: number | string;
   children: ReactNode;
-}) {
+}): ReactElement {
   const { t } = useI18n();
   const [entered, setEntered] = useState(false);
 
@@ -50,82 +50,31 @@ export function SlideOverModal({
     // biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: the backdrop closes the modal on click; keyboard users have Escape and the close button.
     <div
       onClick={requestClose}
-      style={{
-        position: "fixed",
-        top: topOffset,
-        right: 0,
-        bottom: 0,
-        left: 0,
-        zIndex: 1000,
-        display: "flex",
-        justifyContent: "flex-end",
-        background: entered ? "rgba(0,0,0,0.32)" : "rgba(0,0,0,0)",
-        transition: "background 0.24s ease",
-      }}
+      className={`ui-slide-over${entered ? " ui-slide-over--entered" : ""}`}
+      style={{ top: topOffset }}
     >
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: the click handler only stops propagation so clicks inside the panel do not close the modal. */}
       <div
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        style={{
-          width,
-          maxWidth: "100vw",
-          height: "100%",
-          background: "var(--surface-solid)",
-          borderLeft: "1px solid var(--border)",
-          boxShadow: "var(--shadow-panel)",
-          transform: entered ? "translateX(0)" : "translateX(100%)",
-          transition: "transform 0.24s cubic-bezier(0.22, 1, 0.36, 1)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
+        className="ui-slide-over__panel"
+        style={{ width }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            padding: "14px 16px",
-            borderBottom: "1px solid var(--border-subtle)",
-            flexShrink: 0,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 16,
-              fontWeight: 750,
-              color: "var(--text-hi)",
-              minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {title}
-          </div>
+        <div className="ui-slide-over__header">
+          <div className="ui-slide-over__title">{title}</div>
           <button
             type="button"
-            className="btn"
+            className="ui-icon-button"
             onClick={requestClose}
             title={t("summary.close")}
             aria-label={t("summary.close")}
-            style={{
-              width: 32,
-              minWidth: 32,
-              minHeight: 32,
-              padding: 0,
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
           >
             <IconX size={14} stroke={2} />
           </button>
         </div>
 
-        <div style={{ flex: 1, overflow: "auto", padding: 16 }}>{children}</div>
+        <div className="ui-slide-over__body">{children}</div>
       </div>
     </div>
   );

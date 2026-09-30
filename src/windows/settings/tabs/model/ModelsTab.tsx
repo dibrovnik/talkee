@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { lazy, type ReactElement, Suspense } from "react";
 
-import { Dropdown } from "../../../../components/Dropdown";
 import { LocalSttModelCard } from "../../../../components/LocalSttModelCard";
 import { ModelCardDisclosureButton } from "../../../../components/ModelCardDisclosureButton";
 import {
@@ -9,14 +8,9 @@ import {
   IconBolt,
   IconBroadcast,
   IconCheck,
-  IconCode,
   IconDownload,
   IconGauge,
   IconGlobe,
-  IconLanguage,
-  IconMessage,
-  IconMicrophone,
-  IconServer,
   IconTargetArrow,
   IconTrash,
   IconX,
@@ -32,6 +26,13 @@ import {
   STREAMING_STT_ADAPTERS,
 } from "../../../../lib/realtimeModels";
 import type { AppSettings, LocalModelSettings } from "../../../../lib/store";
+import { Badge } from "../../../../ui/Badge";
+import { Button } from "../../../../ui/Button";
+import { PopUpButton } from "../../../../ui/PopUpButton";
+import { SecureField } from "../../../../ui/SecureField";
+import { SegmentedControl } from "../../../../ui/SegmentedControl";
+import { Spinner } from "../../../../ui/Spinner";
+import { TextField } from "../../../../ui/TextField";
 import { RealtimeTranslationModels } from "../RealtimeTranslationModels";
 import {
   type AdapterTestStatus,
@@ -118,17 +119,14 @@ export function ModelsTab(): ReactElement | null {
   const modeOptions: Array<{
     id: ModelMode;
     label: string;
-    Icon: Icon;
   }> = [
     {
       id: "api",
       label: "API",
-      Icon: IconCode,
     },
     {
       id: "local",
       label: t("models.mode.local"),
-      Icon: IconServer,
     },
   ];
 
@@ -295,7 +293,7 @@ export function ModelsTab(): ReactElement | null {
           ? "var(--success-bright)"
           : effectiveStatus === "error"
             ? "var(--error-bright)"
-            : "var(--text-low)";
+            : "var(--label-2)";
 
       return {
         label,
@@ -334,8 +332,8 @@ export function ModelsTab(): ReactElement | null {
           : effectiveStatus === "error"
             ? "var(--error-bright)"
             : hasCredentials
-              ? "var(--text-hi)"
-              : "var(--text-low)",
+              ? "var(--label)"
+              : "var(--label-2)",
       isSelected,
     };
   };
@@ -645,29 +643,12 @@ export function ModelsTab(): ReactElement | null {
     const isActive = activeModelMode === mode;
     const modeLabel = mode === "api" ? "API" : t("models.mode.local");
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 10,
-          padding: "10px 12px",
-          borderRadius: 10,
-          background: "var(--control-muted)",
-          border: "1px solid var(--border-subtle)",
-        }}
-      >
+      <div className="ui-model-card__notice ui-model-card__actions">
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            fontSize: 12.5,
-            fontWeight: 650,
-            color: isActive ? "var(--success-bright)" : "var(--text-mid)",
-          }}
+          className="ui-model-card__actions-leading ui-model-card__status-note"
+          style={{ color: isActive ? "var(--success-bright)" : "var(--label-2)" }}
         >
-          {isActive && <IconCheck size={15} stroke={2.5} />}
+          {isActive && <IconCheck size={14} stroke={2.5} />}
           <span>
             {isActive
               ? t("models.modeCommit.active")
@@ -675,24 +656,12 @@ export function ModelsTab(): ReactElement | null {
           </span>
         </div>
         {!isActive && (
-          <button
-            type="button"
+          <Button
+            variant="primary"
             onClick={mode === "api" ? handleSelectApiMode : handleSelectLocalMode}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 8,
-              border: "none",
-              background: "var(--accent)",
-              color: "var(--accent-contrast)",
-              fontSize: 12,
-              fontWeight: 700,
-              fontFamily: "var(--font-main)",
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
           >
             {t("models.modeCommit.select")}
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -741,7 +710,7 @@ export function ModelsTab(): ReactElement | null {
           ? t("models.local.runtimeReadyModelOff", { runtime: runtimeName })
           : t("models.local.runtimeSlotPrepared", { runtime: runtimeName }),
         status: "unsupported" as const,
-        color: "var(--text-low)",
+        color: "var(--label-2)",
         message:
           model.unavailableReason || t("models.local.sidecarPending", { runtime: runtimeName }),
         isInstalled: false,
@@ -754,7 +723,7 @@ export function ModelsTab(): ReactElement | null {
         label: t("models.local.deleting"),
         connectionLabel: "",
         status: "deleting" as const,
-        color: "var(--text-hi)",
+        color: "var(--label)",
         message: actionState.message || cachedState?.message || null,
         isInstalled,
         isSelected,
@@ -769,7 +738,7 @@ export function ModelsTab(): ReactElement | null {
         label: t("models.local.downloading"),
         connectionLabel: "",
         status: "installing" as const,
-        color: "var(--text-hi)",
+        color: "var(--label)",
         message: actionState?.message || cachedState?.message || null,
         isInstalled,
         isSelected,
@@ -816,7 +785,7 @@ export function ModelsTab(): ReactElement | null {
       label: t("models.local.notDownloaded"),
       connectionLabel: "",
       status: "idle" as const,
-      color: "var(--text-low)",
+      color: "var(--label-2)",
       message: actionState?.message || cachedState?.message || null,
       isInstalled,
       isSelected,
@@ -838,7 +807,7 @@ export function ModelsTab(): ReactElement | null {
       return {
         label: t("models.local.deleting"),
         status: "deleting" as const,
-        color: "var(--text-hi)",
+        color: "var(--label)",
         message: actionState.message || cachedState?.message || backendState?.message || null,
         isInstalled: backendState?.status === "ready",
         isSelected,
@@ -850,7 +819,7 @@ export function ModelsTab(): ReactElement | null {
       return {
         label: t("models.localOther.status.downloading"),
         status: "installing" as const,
-        color: "var(--text-hi)",
+        color: "var(--label)",
         message: actionState?.message || cachedState?.message || backendState?.message || null,
         isInstalled: false,
         isSelected: false,
@@ -885,7 +854,7 @@ export function ModelsTab(): ReactElement | null {
     return {
       label: t("models.localOther.status.notInstalled"),
       status: "idle" as const,
-      color: "var(--text-low)",
+      color: "var(--label-2)",
       message: backendState?.message || null,
       isInstalled: false,
       isSelected: false,
@@ -990,98 +959,31 @@ export function ModelsTab(): ReactElement | null {
     const storageLabel = getLocalModelStorageLabel(model);
 
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          marginTop: 9,
-          flexWrap: "nowrap",
-          minWidth: 0,
-          overflow: "hidden",
-        }}
-      >
+      <div className="ui-model-stats">
         <div
           role="img"
           title={t("models.stat.downloadSizeTitle", { value: storageLabel })}
-          aria-label={t("models.stat.downloadSizeTitle", {
-            value: storageLabel,
-          })}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            flexShrink: 0,
-          }}
+          aria-label={t("models.stat.downloadSizeTitle", { value: storageLabel })}
+          className="ui-model-stat"
         >
-          <IconDownload size={14} stroke={1.9} color="var(--text-hi)" />
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 650,
-              color: "var(--text-hi)",
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {storageLabel}
-          </span>
+          <IconDownload size={14} stroke={1.9} />
+          <span>{storageLabel}</span>
         </div>
 
         <div
           role="img"
-          title={t("models.stat.languagesTitle", {
-            value: languageValueLabel,
-          })}
-          aria-label={t("models.stat.languagesTitle", {
-            value: languageValueLabel,
-          })}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            flexShrink: 0,
-          }}
+          title={t("models.stat.languagesTitle", { value: languageValueLabel })}
+          aria-label={t("models.stat.languagesTitle", { value: languageValueLabel })}
+          className="ui-model-stat"
         >
-          <IconGlobe size={14} stroke={1.9} color="var(--text-hi)" />
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 650,
-              color: "var(--text-hi)",
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {languageValueLabel}
-          </span>
+          <IconGlobe size={14} stroke={1.9} />
+          <span>{languageValueLabel}</span>
         </div>
 
         {stats.map(({ key, title, Icon, value }) => (
-          <div
-            key={key}
-            role="img"
-            title={title}
-            aria-label={title}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              flexShrink: 0,
-            }}
-          >
-            <Icon size={14} stroke={1.9} color="var(--text-hi)" />
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 650,
-                color: "var(--text-hi)",
-                lineHeight: 1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {value}
-            </span>
+          <div key={key} role="img" title={title} aria-label={title} className="ui-model-stat">
+            <Icon size={14} stroke={1.9} />
+            <span>{value}</span>
           </div>
         ))}
 
@@ -1090,25 +992,10 @@ export function ModelsTab(): ReactElement | null {
             role="img"
             title={t("models.stat.streaming")}
             aria-label={t("models.stat.streaming")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              flexShrink: 0,
-            }}
+            className="ui-model-stat"
           >
-            <IconBroadcast size={14} stroke={1.9} color="var(--text-hi)" />
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 650,
-                color: "var(--text-hi)",
-                lineHeight: 1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {t("models.stat.streaming")}
-            </span>
+            <IconBroadcast size={14} stroke={1.9} />
+            <span>{t("models.stat.streaming")}</span>
           </div>
         )}
       </div>
@@ -1391,170 +1278,47 @@ export function ModelsTab(): ReactElement | null {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+    <div className="ui-tab">
       <div>
-        <div
-          style={{
-            fontSize: 17,
-            fontWeight: 700,
-            color: "var(--text-hi)",
-            marginBottom: 4,
-          }}
-        >
-          {t("models.modeSection.title")}
-        </div>
-        <div
-          style={{
-            fontSize: 13,
-            color: "var(--text-mid)",
-            lineHeight: 1.6,
-            marginBottom: 14,
-          }}
-        >
-          {t("models.modeSection.desc")}
+        <div className="ui-page-header">
+          <div className="ui-page-header__title">{t("models.modeSection.title")}</div>
+          <div className="ui-page-header__desc">{t("models.modeSection.desc")}</div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            background: "var(--control-track)",
-            borderRadius: 10,
-            padding: 3,
-            gap: 2,
-          }}
-        >
-          {modeOptions.map(({ id, label, Icon }) => {
-            const active = visibleModelMode === id;
-
-            return (
-              <button
-                key={id}
-                onClick={() => handleModeChange(id)}
-                style={{
-                  flex: 1,
-                  padding: "10px 0",
-                  borderRadius: 8,
-                  border: "none",
-                  fontSize: 13,
-                  fontWeight: active ? 700 : 500,
-                  fontFamily: "var(--font-main)",
-                  background: active ? "var(--dropdown-active)" : "transparent",
-                  color: active ? "var(--text-hi)" : "var(--text-mid)",
-                  cursor: "pointer",
-                  transition: "all 0.18s ease",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 7,
-                }}
-              >
-                <Icon size={15} stroke={active ? 2.2 : 1.7} />
-                <span>{label}</span>
-              </button>
-            );
-          })}
-        </div>
+        <SegmentedControl
+          value={visibleModelMode}
+          options={modeOptions.map(({ id, label }) => ({ value: id, label }))}
+          onChange={handleModeChange}
+          ariaLabel={t("models.modeSection.title")}
+        />
       </div>
 
       {isApiMode && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div
-            style={{
-              display: "flex",
-              background: "var(--control-track)",
-              borderRadius: 10,
-              padding: 3,
-              gap: 2,
-            }}
-          >
-            {(
-              [
-                {
-                  id: "transcription",
-                  label: t("models.local.tabTranscription"),
-                  Icon: IconMicrophone,
-                },
-                {
-                  id: "text",
-                  label: t("models.local.tabText"),
-                  Icon: IconMessage,
-                },
-                {
-                  id: "translation",
-                  label: t("models.local.tabTranslation"),
-                  Icon: IconLanguage,
-                },
-              ] as const
-            ).map(({ id, label, Icon }) => {
-              const active = apiModelKind === id;
-
-              return (
-                <button
-                  key={id}
-                  onClick={() => setApiModelKind(id)}
-                  style={{
-                    flex: 1,
-                    padding: "10px 0",
-                    borderRadius: 8,
-                    border: "none",
-                    fontSize: 13,
-                    fontWeight: active ? 700 : 500,
-                    fontFamily: "var(--font-main)",
-                    background: active ? "var(--dropdown-active)" : "transparent",
-                    color: active ? "var(--text-hi)" : "var(--text-mid)",
-                    cursor: "pointer",
-                    transition: "all 0.18s ease",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 7,
-                  }}
-                >
-                  <Icon size={15} stroke={active ? 2.2 : 1.7} />
-                  <span>{label}</span>
-                  {id === "text" && !apiTextModelConfigured && (
-                    <span
-                      title={t("summary.unavailable.tooltip")}
-                      style={{
-                        width: 7,
-                        height: 7,
-                        borderRadius: 999,
-                        background: "var(--accent)",
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        <div className="ui-tab">
+          <SegmentedControl
+            value={apiModelKind}
+            options={[
+              { value: "transcription", label: t("models.local.tabTranscription") },
+              {
+                value: "text",
+                label: t("models.local.tabText"),
+                needsAttention: !apiTextModelConfigured,
+              },
+              { value: "translation", label: t("models.local.tabTranslation") },
+            ]}
+            onChange={setApiModelKind}
+            ariaLabel={t("models.apiSection.title")}
+          />
 
           {renderModeCommitRow("api")}
 
           {apiModelKind === "transcription" && (
             <>
-              <div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: "var(--text-hi)",
-                    marginBottom: 4,
-                  }}
-                >
-                  {t("models.apiSection.title")}
-                </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "var(--text-mid)",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {t("models.apiSection.desc")}
-                </div>
+              <div className="ui-page-header">
+                <div className="ui-page-header__title">{t("models.apiSection.title")}</div>
+                <div className="ui-page-header__desc">{t("models.apiSection.desc")}</div>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="ui-tab">
                 {API_ADAPTERS.map((adapter) => {
                   const isExpanded = expandedApiAdapter === adapter.id;
                   const adapterValues = getApiAdapterValues(adapter);
@@ -1590,74 +1354,24 @@ export function ModelsTab(): ReactElement | null {
                   return (
                     <div
                       key={adapter.id}
-                      className="card"
-                      style={{
-                        padding: 0,
-                        overflow: isExpanded ? "visible" : "hidden",
-                        position: "relative",
-                        zIndex: isExpanded ? 10 : 0,
-                        background: "var(--surface)",
-                      }}
+                      className={["ui-model-card", isExpanded ? "ui-model-card--overlay" : ""]
+                        .filter(Boolean)
+                        .join(" ")}
                     >
-                      <div
-                        style={{
-                          position: "relative",
-                          padding: "12px 14px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                          textAlign: "left",
-                          fontFamily: "var(--font-main)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            position: "relative",
-                            flex: 1,
-                            minWidth: 0,
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              gap: 10,
-                              marginBottom: 3,
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontSize: 15,
-                                fontWeight: 700,
-                                color: "var(--text-hi)",
-                              }}
-                            >
-                              {adapter.name}
-                            </div>
-                            <div
+                      <div className="ui-model-card__head">
+                        <div className="ui-model-card__main">
+                          <div className="ui-model-card__titlebar">
+                            <div className="ui-model-card__title">{adapter.name}</div>
+                            <Badge
+                              className="ui-model-card__state"
+                              style={{ color: adapterStatus.color }}
                               title={adapterStatus.message || undefined}
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 700,
-                                color: adapterStatus.color,
-                                padding: "5px 9px",
-                                borderRadius: 999,
-                                background: "var(--control-muted)",
-                                whiteSpace: "nowrap",
-                              }}
                             >
                               {adapterStatus.label}
-                            </div>
+                            </Badge>
                           </div>
-                          <div style={{ paddingRight: 34 }}>
-                            <div
-                              style={{
-                                fontSize: 12,
-                                lineHeight: 1.45,
-                                color: "var(--text-mid)",
-                              }}
-                            >
+                          <div className="ui-model-card__body">
+                            <div className="ui-model-card__desc">
                               {t(API_ADAPTER_DESCRIPTION_KEYS[adapter.id])}{" "}
                               {t("models.adapter.recommendedModel", {
                                 model: adapter.recommendedModel,
@@ -1665,29 +1379,16 @@ export function ModelsTab(): ReactElement | null {
                             </div>
                             {streamingVerified &&
                               (selectedModelOption?.supportsStreaming || !selectedModelOption) && (
-                                <div
-                                  role="img"
-                                  title={t("models.stat.streaming")}
-                                  aria-label={t("models.stat.streaming")}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 5,
-                                    marginTop: 9,
-                                  }}
-                                >
-                                  <IconBroadcast size={14} stroke={1.9} color="var(--text-hi)" />
-                                  <span
-                                    style={{
-                                      fontSize: 12,
-                                      fontWeight: 650,
-                                      color: "var(--text-hi)",
-                                      lineHeight: 1,
-                                      whiteSpace: "nowrap",
-                                    }}
+                                <div className="ui-model-stats">
+                                  <div
+                                    role="img"
+                                    title={t("models.stat.streaming")}
+                                    aria-label={t("models.stat.streaming")}
+                                    className="ui-model-stat"
                                   >
-                                    {t("models.stat.streaming")}
-                                  </span>
+                                    <IconBroadcast size={14} stroke={1.9} />
+                                    <span>{t("models.stat.streaming")}</span>
+                                  </div>
                                 </div>
                               )}
                           </div>
@@ -1700,66 +1401,30 @@ export function ModelsTab(): ReactElement | null {
                       </div>
 
                       {isExpanded && (
-                        <div
-                          style={{
-                            borderTop: "1px solid var(--border-subtle)",
-                            padding: "12px 14px",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 10,
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 10,
-                            }}
-                          >
-                            <div className="label" style={{ width: 76, flexShrink: 0 }}>
+                        <div className="ui-model-card__detail">
+                          <div className="ui-model-card__field">
+                            <div className="ui-model-card__field-label">
                               {t("models.field.apiKey")}
                             </div>
-                            <input
-                              type="password"
+                            <SecureField
                               value={adapterValues.apiKey}
                               onChange={(e) =>
                                 updateApiAdapterValues(adapter, {
                                   apiKey: e.target.value,
                                 })
                               }
-                              className="input"
                               placeholder="API key"
-                              style={{
-                                flex: 1,
-                                minWidth: 0,
-                                height: 36,
-                                padding: "8px 10px",
-                                fontFamily:
-                                  "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                                fontSize: 12,
-                              }}
+                              spellCheck={false}
+                              className="ui-textfield--mono"
                             />
                           </div>
 
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 10,
-                            }}
-                          >
-                            <div className="label" style={{ width: 76, flexShrink: 0 }}>
+                          <div className="ui-model-card__field">
+                            <div className="ui-model-card__field-label">
                               {t("models.field.model")}
                             </div>
-                            <div
-                              style={{
-                                flex: 1,
-                                minWidth: 0,
-                                display: "grid",
-                                gap: 6,
-                              }}
-                            >
-                              <Dropdown
+                            <div className="ui-model-card__field-control">
+                              <PopUpButton
                                 value={modelSelectValue}
                                 options={[
                                   ...adapter.models.map((modelOption) => ({
@@ -1776,55 +1441,35 @@ export function ModelsTab(): ReactElement | null {
                                     model: value === CUSTOM_API_MODEL_VALUE ? "" : value,
                                   });
                                 }}
+                                ariaLabel={t("models.field.model")}
                               />
                               {modelSelectValue === CUSTOM_API_MODEL_VALUE && (
-                                <input
-                                  type="text"
+                                <TextField
                                   value={adapterValues.model}
                                   onChange={(event) =>
                                     updateApiAdapterValues(adapter, {
                                       model: event.currentTarget.value,
                                     })
                                   }
-                                  className="input"
                                   placeholder={t("models.field.customModelPlaceholder")}
                                   aria-label={t("models.field.customModelPlaceholder")}
-                                  style={{
-                                    width: "100%",
-                                    height: 36,
-                                    padding: "8px 10px",
-                                    fontFamily:
-                                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                                    fontSize: 12,
-                                  }}
+                                  spellCheck={false}
+                                  className="ui-textfield--mono"
                                 />
                               )}
                             </div>
-                            <div
-                              style={{
-                                fontSize: 11,
-                                color: "var(--text-low)",
-                                whiteSpace: "nowrap",
-                                flexShrink: 0,
-                              }}
-                            >
+                            <div className="ui-model-card__hint">
                               {t("models.field.recommended", {
                                 model: adapter.recommendedModel,
                               })}
                             </div>
                           </div>
 
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 10,
-                            }}
-                          >
-                            <div className="label" style={{ width: 76, flexShrink: 0 }}>
+                          <div className="ui-model-card__field">
+                            <div className="ui-model-card__field-label">
                               {t("models.field.host")}
                             </div>
-                            <input
+                            <TextField
                               type="url"
                               value={adapterValues.endpoint}
                               onChange={(e) =>
@@ -1832,7 +1477,6 @@ export function ModelsTab(): ReactElement | null {
                                   endpoint: e.target.value,
                                 })
                               }
-                              className="input"
                               placeholder={
                                 adapter.defaultEndpoint
                                   ? t("models.field.hostDefaultPlaceholder", {
@@ -1840,148 +1484,52 @@ export function ModelsTab(): ReactElement | null {
                                     })
                                   : t("models.field.hostPlaceholder")
                               }
-                              style={{
-                                flex: 1,
-                                minWidth: 0,
-                                height: 36,
-                                padding: "8px 10px",
-                                fontFamily:
-                                  "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                                fontSize: 12,
-                              }}
+                              spellCheck={false}
+                              className="ui-textfield--mono"
                             />
                             {adapterValues.endpoint.trim() ? (
-                              <button
-                                type="button"
+                              <Button
                                 onClick={() =>
                                   updateApiAdapterValues(adapter, {
                                     endpoint: "",
                                   })
                                 }
-                                style={{
-                                  border: "1px solid var(--border-dashed)",
-                                  background: "var(--control-muted)",
-                                  color: "var(--text-hi)",
-                                  borderRadius: 8,
-                                  padding: "7px 9px",
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  fontFamily: "var(--font-main)",
-                                  whiteSpace: "nowrap",
-                                  flexShrink: 0,
-                                  cursor: "pointer",
-                                }}
                               >
                                 {t("models.common.reset")}
-                              </button>
+                              </Button>
                             ) : (
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  color: "var(--text-low)",
-                                  whiteSpace: "nowrap",
-                                  flexShrink: 0,
-                                }}
-                              >
+                              <div className="ui-model-card__hint">
                                 {t("models.common.optional")}
                               </div>
                             )}
                           </div>
 
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "flex-end",
-                              gap: 10,
-                              flexWrap: "wrap",
-                            }}
-                          >
+                          <div className="ui-model-card__actions">
                             {isAdapterSelected ? (
-                              <div
-                                style={{
-                                  padding: "9px 12px",
-                                  borderRadius: 10,
-                                  border: "1px solid var(--success-border)",
-                                  background: "var(--success-soft)",
-                                  color: "var(--success-bright)",
-                                  fontSize: 12,
-                                  fontWeight: 700,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 8,
-                                }}
-                              >
+                              <Badge variant="success" className="ui-model-card__state">
                                 <IconCheck size={14} stroke={2.5} />
                                 {t("models.common.selected")}
-                              </div>
+                              </Badge>
                             ) : (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 8,
-                                  flexWrap: "wrap",
-                                }}
-                              >
+                              <>
                                 {isAdapterReady && (
-                                  <button
+                                  <Button
                                     onClick={() => handleSelectApiAdapter(adapter)}
                                     disabled={!canSelectApiAdapter}
-                                    style={{
-                                      padding: "9px 12px",
-                                      borderRadius: 10,
-                                      border: "1px solid var(--border-dashed)",
-                                      background: canSelectApiAdapter
-                                        ? "var(--control-muted)"
-                                        : "var(--control-muted)",
-                                      color: canSelectApiAdapter
-                                        ? "var(--text-hi)"
-                                        : "var(--text-mid)",
-                                      fontSize: 12,
-                                      fontWeight: 700,
-                                      fontFamily: "var(--font-main)",
-                                      cursor: canSelectApiAdapter ? "pointer" : "not-allowed",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 8,
-                                    }}
                                   >
                                     <IconCheck size={14} stroke={2.5} />
                                     {t("models.common.select")}
-                                  </button>
+                                  </Button>
                                 )}
 
-                                <button
+                                <Button
+                                  variant="primary"
                                   onClick={() => void handleApiAdapterTest(adapter)}
                                   disabled={isAdapterTestDisabled}
-                                  style={{
-                                    padding: "9px 12px",
-                                    borderRadius: 10,
-                                    border: "1px solid var(--border-dashed)",
-                                    background: isAdapterTestDisabled
-                                      ? "var(--control-muted)"
-                                      : "var(--accent)",
-                                    color: isAdapterTestDisabled
-                                      ? "var(--text-mid)"
-                                      : "var(--accent-contrast)",
-                                    fontSize: 12,
-                                    fontWeight: 700,
-                                    fontFamily: "var(--font-main)",
-                                    cursor:
-                                      adapterStatus.status === "testing"
-                                        ? "wait"
-                                        : isAdapterTestDisabled
-                                          ? "not-allowed"
-                                          : "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                  }}
                                 >
                                   {adapterStatus.status === "testing" ? (
                                     <>
-                                      <span className="loading-soft-ring" />
+                                      <Spinner size={14} />
                                       {t("models.test.checking")}
                                     </>
                                   ) : (
@@ -1992,8 +1540,8 @@ export function ModelsTab(): ReactElement | null {
                                         : t("models.test.saveButton")}
                                     </>
                                   )}
-                                </button>
-                              </div>
+                                </Button>
+                              </>
                             )}
                           </div>
                         </div>
@@ -2013,105 +1561,32 @@ export function ModelsTab(): ReactElement | null {
       )}
 
       {isLocalMode && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div
-            style={{
-              display: "flex",
-              background: "var(--control-track)",
-              borderRadius: 10,
-              padding: 3,
-              gap: 2,
-            }}
-          >
-            {(
-              [
-                {
-                  id: "transcription",
-                  label: t("models.local.tabTranscription"),
-                  Icon: IconMicrophone,
-                },
-                {
-                  id: "text",
-                  label: t("models.local.tabText"),
-                  Icon: IconMessage,
-                },
-                {
-                  id: "other",
-                  label: t("models.local.tabOther"),
-                  Icon: IconLanguage,
-                },
-              ] as const
-            ).map(({ id, label, Icon }) => {
-              const active = localModelKind === id;
-
-              return (
-                <button
-                  key={id}
-                  onClick={() => setLocalModelKind(id)}
-                  style={{
-                    flex: 1,
-                    padding: "10px 0",
-                    borderRadius: 8,
-                    border: "none",
-                    fontSize: 13,
-                    fontWeight: active ? 700 : 500,
-                    fontFamily: "var(--font-main)",
-                    background: active ? "var(--dropdown-active)" : "transparent",
-                    color: active ? "var(--text-hi)" : "var(--text-mid)",
-                    cursor: "pointer",
-                    transition: "all 0.18s ease",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 7,
-                  }}
-                >
-                  <Icon size={15} stroke={active ? 2.2 : 1.7} />
-                  <span>{label}</span>
-                  {id === "text" && !localTextModelSelected && (
-                    <span
-                      title={t("localLlm.required")}
-                      style={{
-                        width: 7,
-                        height: 7,
-                        borderRadius: 999,
-                        background: "var(--accent)",
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        <div className="ui-tab">
+          <SegmentedControl
+            value={localModelKind}
+            options={[
+              { value: "transcription", label: t("models.local.tabTranscription") },
+              {
+                value: "text",
+                label: t("models.local.tabText"),
+                needsAttention: !localTextModelSelected,
+              },
+              { value: "other", label: t("models.local.tabOther") },
+            ]}
+            onChange={setLocalModelKind}
+            ariaLabel={t("models.local.sectionTitle")}
+          />
 
           {renderModeCommitRow("local")}
 
           {localModelKind === "transcription" && (
             <>
-              <div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: "var(--text-hi)",
-                    marginBottom: 4,
-                  }}
-                >
-                  {t("models.local.sectionTitle")}
-                </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "var(--text-mid)",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {t("models.local.sectionDesc")}
-                </div>
+              <div className="ui-page-header">
+                <div className="ui-page-header__title">{t("models.local.sectionTitle")}</div>
+                <div className="ui-page-header__desc">{t("models.local.sectionDesc")}</div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="ui-tab">
                 {LOCAL_MODEL_OPTIONS.map((model) => {
                   const isExpanded = expandedLocalModel === model.id;
                   const modelStatus = getLocalModelStatus(model);
@@ -2201,32 +1676,15 @@ export function ModelsTab(): ReactElement | null {
                       actions={
                         <>
                           {canSelect && !modelStatus.isSelected && (
-                            <button
-                              type="button"
-                              onClick={() => handleSelectLocalModel(model)}
-                              style={{
-                                padding: "9px 12px",
-                                borderRadius: 10,
-                                border: "1px solid var(--border-dashed)",
-                                background: "var(--control-muted)",
-                                color: "var(--text-hi)",
-                                fontSize: 12,
-                                fontWeight: 700,
-                                fontFamily: "var(--font-main)",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                              }}
-                            >
+                            <Button onClick={() => handleSelectLocalModel(model)}>
                               <IconCheck size={14} stroke={2.5} />
                               {t("models.common.select")}
-                            </button>
+                            </Button>
                           )}
 
                           {!isModelBusy && (
-                            <button
-                              type="button"
+                            <Button
+                              variant={isDownloaded || isInstallDisabled ? "default" : "primary"}
                               onClick={() => {
                                 if (isDownloaded) {
                                   setPendingDeleteModel(model);
@@ -2236,28 +1694,6 @@ export function ModelsTab(): ReactElement | null {
                                 void handleInstallLocalSttModel(model);
                               }}
                               disabled={isInstallDisabled}
-                              style={{
-                                padding: "9px 12px",
-                                borderRadius: 10,
-                                border: "1px solid var(--border-dashed)",
-                                background: isInstallDisabled
-                                  ? "var(--control-muted)"
-                                  : isDownloaded
-                                    ? "var(--control-muted)"
-                                    : "var(--accent)",
-                                color: isInstallDisabled
-                                  ? "var(--text-mid)"
-                                  : isDownloaded
-                                    ? "var(--text-hi)"
-                                    : "var(--accent-contrast)",
-                                fontSize: 12,
-                                fontWeight: 700,
-                                fontFamily: "var(--font-main)",
-                                cursor: isInstallDisabled ? "not-allowed" : "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                              }}
                             >
                               {isDownloaded ? (
                                 <>
@@ -2272,31 +1708,14 @@ export function ModelsTab(): ReactElement | null {
                                     : t("models.common.unavailable")}
                                 </>
                               )}
-                            </button>
+                            </Button>
                           )}
 
                           {modelStatus.status === "installing" && (
-                            <button
-                              type="button"
-                              onClick={() => void handleCancelLocalSttDownload(model)}
-                              style={{
-                                padding: "9px 12px",
-                                borderRadius: 10,
-                                border: "1px solid var(--border-dashed)",
-                                background: "var(--control-muted)",
-                                color: "var(--text-hi)",
-                                fontSize: 12,
-                                fontWeight: 700,
-                                fontFamily: "var(--font-main)",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                              }}
-                            >
+                            <Button onClick={() => void handleCancelLocalSttDownload(model)}>
                               <IconX size={14} stroke={2.2} />
                               {t("models.common.cancel")}
-                            </button>
+                            </Button>
                           )}
                         </>
                       }
@@ -2310,95 +1729,34 @@ export function ModelsTab(): ReactElement | null {
                   role="dialog"
                   aria-modal="true"
                   aria-labelledby="delete-local-model-title"
-                  style={{
-                    position: "fixed",
-                    inset: 0,
-                    zIndex: 1000,
-                    background: "var(--modal-scrim)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: 20,
-                  }}
+                  className="ui-modal-scrim"
                   onClick={() => setPendingDeleteModel(null)}
                 >
                   {/* biome-ignore lint/a11y/useKeyWithClickEvents: the click handler only stops propagation so clicks inside the dialog do not close it. */}
                   {/* biome-ignore lint/a11y/noStaticElementInteractions: the click handler only stops propagation so clicks inside the dialog do not close it. */}
                   <div
-                    className="card"
-                    style={{
-                      width: "min(420px, 100%)",
-                      background: "var(--bg)",
-                      padding: 18,
-                      boxShadow: "var(--shadow-modal)",
-                    }}
+                    className="ui-modal"
+                    style={{ width: "min(420px, 100%)", background: "var(--window-bg)" }}
                     onClick={(event) => event.stopPropagation()}
                   >
-                    <div
-                      id="delete-local-model-title"
-                      style={{
-                        fontSize: 17,
-                        fontWeight: 750,
-                        color: "var(--text-hi)",
-                        marginBottom: 8,
-                      }}
-                    >
+                    <div id="delete-local-model-title" className="ui-modal__title">
                       {t("models.deleteDialog.title")}
                     </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        lineHeight: 1.6,
-                        color: "var(--text-mid)",
-                        marginBottom: 16,
-                      }}
-                    >
+                    <div className="ui-modal__body">
                       {t("models.deleteDialog.body", {
                         name: pendingDeleteModel.name,
                       })}
                     </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        gap: 8,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setPendingDeleteModel(null)}
-                        style={{
-                          padding: "10px 14px",
-                          borderRadius: 10,
-                          border: "1px solid var(--border-dashed)",
-                          background: "var(--control-muted)",
-                          color: "var(--text-hi)",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          fontFamily: "var(--font-main)",
-                          cursor: "pointer",
-                        }}
-                      >
+                    <div className="ui-modal__actions">
+                      <Button onClick={() => setPendingDeleteModel(null)}>
                         {t("models.common.cancel")}
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="destructive"
                         onClick={() => void handleDeleteLocalSttModel(pendingDeleteModel)}
-                        style={{
-                          padding: "10px 14px",
-                          borderRadius: 10,
-                          border: "1px solid var(--border-dashed)",
-                          background: "var(--accent)",
-                          color: "var(--accent-contrast)",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          fontFamily: "var(--font-main)",
-                          cursor: "pointer",
-                        }}
                       >
                         {t("models.common.delete")}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -2409,14 +1767,7 @@ export function ModelsTab(): ReactElement | null {
           {localModelKind === "text" && (
             <Suspense
               fallback={
-                <div
-                  className="card"
-                  style={{
-                    padding: 14,
-                    fontSize: 13,
-                    color: "var(--text-mid)",
-                  }}
-                >
+                <div className="ui-model-card__notice ui-form-feedback">
                   {t("models.download.loading")}
                 </div>
               }
@@ -2426,30 +1777,13 @@ export function ModelsTab(): ReactElement | null {
           )}
 
           {localModelKind === "other" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: "var(--text-hi)",
-                    marginBottom: 4,
-                  }}
-                >
-                  {t("models.localOther.sectionTitle")}
-                </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "var(--text-mid)",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {t("models.localOther.sectionDesc")}
-                </div>
+            <div className="ui-tab">
+              <div className="ui-page-header">
+                <div className="ui-page-header__title">{t("models.localOther.sectionTitle")}</div>
+                <div className="ui-page-header__desc">{t("models.localOther.sectionDesc")}</div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="ui-tab">
                 {LOCAL_OTHER_COMPONENTS.map((component) => {
                   const componentStatus = getLocalOtherStatus(component);
                   const isBusy =
@@ -2458,78 +1792,20 @@ export function ModelsTab(): ReactElement | null {
                   const isExpanded = expandedLocalOtherComponent === component.id || isBusy;
 
                   return (
-                    <div
-                      key={component.id}
-                      className="card"
-                      style={{
-                        padding: 0,
-                        overflow: "hidden",
-                        background: "var(--surface)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          position: "relative",
-                          padding: "12px 14px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                          textAlign: "left",
-                          fontFamily: "var(--font-main)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            position: "relative",
-                            flex: 1,
-                            minWidth: 0,
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              gap: 10,
-                              marginBottom: 3,
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontSize: 15,
-                                fontWeight: 700,
-                                color: "var(--text-hi)",
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                              }}
-                            >
-                              {component.name}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 700,
-                                color: componentStatus.color,
-                                padding: "5px 9px",
-                                borderRadius: 999,
-                                background: "var(--control-muted)",
-                                whiteSpace: "nowrap",
-                              }}
+                    <div key={component.id} className="ui-model-card">
+                      <div className="ui-model-card__head">
+                        <div className="ui-model-card__main">
+                          <div className="ui-model-card__titlebar">
+                            <div className="ui-model-card__title">{component.name}</div>
+                            <Badge
+                              className="ui-model-card__state"
+                              style={{ color: componentStatus.color }}
                             >
                               {componentStatus.label}
-                            </div>
+                            </Badge>
                           </div>
-                          <div style={{ paddingRight: 34 }}>
-                            <div
-                              style={{
-                                fontSize: 12,
-                                lineHeight: 1.45,
-                                color: "var(--text-mid)",
-                              }}
-                            >
-                              {t(component.descriptionKey)}
-                            </div>
+                          <div className="ui-model-card__body">
+                            <div className="ui-model-card__desc">{t(component.descriptionKey)}</div>
                             {renderLocalModelStats(component)}
                           </div>
                           <ModelCardDisclosureButton
@@ -2543,59 +1819,29 @@ export function ModelsTab(): ReactElement | null {
                       </div>
 
                       {isExpanded && (
-                        <div
-                          style={{
-                            borderTop: "1px solid var(--border-subtle)",
-                            padding: "12px 14px",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 10,
-                          }}
-                        >
+                        <div className="ui-model-card__detail">
                           {componentStatus.message && componentStatus.status !== "installed" && (
                             <div
-                              style={{
-                                fontSize: 12,
-                                lineHeight: 1.6,
-                                padding: "8px 10px",
-                                borderRadius: 8,
-                                background:
-                                  componentStatus.status === "error"
-                                    ? "var(--danger-soft)"
-                                    : "var(--control-muted)",
-                                color:
-                                  componentStatus.status === "error"
-                                    ? "var(--error-bright)"
-                                    : "var(--text-mid)",
-                                border: `1px solid ${componentStatus.status === "error" ? "var(--danger-border)" : "var(--border-subtle)"}`,
-                              }}
+                              className={[
+                                "ui-model-card__notice",
+                                componentStatus.status === "error"
+                                  ? "ui-model-card__notice--error"
+                                  : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
                             >
                               {componentStatus.message}
                             </div>
                           )}
 
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "flex-end",
-                              gap: 8,
-                              flexWrap: "wrap",
-                            }}
-                          >
+                          <div className="ui-model-card__actions">
                             {componentStatus.status === "installed" && (
                               <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 8,
-                                  color: componentStatus.color,
-                                  fontSize: 12,
-                                  fontWeight: 600,
-                                  marginRight: "auto",
-                                }}
+                                className="ui-model-card__actions-leading ui-model-card__status-note"
+                                style={{ color: componentStatus.color }}
                               >
-                                <IconCheck size={15} stroke={2.5} />
+                                <IconCheck size={14} stroke={2.5} />
                                 {componentStatus.isSelected
                                   ? t("models.localOther.selected")
                                   : t("models.localOther.installedNotSelected")}
@@ -2603,28 +1849,13 @@ export function ModelsTab(): ReactElement | null {
                             )}
 
                             {!isBusy && componentStatus.isInstalled && (
-                              <button
-                                type="button"
+                              <Button
                                 onClick={() =>
                                   handleSelectLocalTranslator(
                                     component,
                                     !componentStatus.isSelected,
                                   )
                                 }
-                                style={{
-                                  padding: "9px 12px",
-                                  borderRadius: 10,
-                                  border: "1px solid var(--border-dashed)",
-                                  background: "var(--control-muted)",
-                                  color: "var(--text-hi)",
-                                  fontSize: 12,
-                                  fontWeight: 700,
-                                  fontFamily: "var(--font-main)",
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 8,
-                                }}
                               >
                                 {componentStatus.isSelected ? (
                                   <>
@@ -2637,13 +1868,13 @@ export function ModelsTab(): ReactElement | null {
                                     {t("models.localOther.select")}
                                   </>
                                 )}
-                              </button>
+                              </Button>
                             )}
 
                             {!isBusy &&
                               (!componentStatus.isInstalled || componentStatus.canDelete) && (
-                                <button
-                                  type="button"
+                                <Button
+                                  variant={componentStatus.isInstalled ? "destructive" : "primary"}
                                   onClick={() => {
                                     if (componentStatus.isInstalled) {
                                       void handleDeleteLocalTranslator(component);
@@ -2651,24 +1882,6 @@ export function ModelsTab(): ReactElement | null {
                                     }
 
                                     void handleInstallLocalTranslator(component);
-                                  }}
-                                  style={{
-                                    padding: "9px 12px",
-                                    borderRadius: 10,
-                                    border: "1px solid var(--border-dashed)",
-                                    background: componentStatus.isInstalled
-                                      ? "var(--control-muted)"
-                                      : "var(--accent)",
-                                    color: componentStatus.isInstalled
-                                      ? "var(--text-hi)"
-                                      : "var(--accent-contrast)",
-                                    fontSize: 12,
-                                    fontWeight: 700,
-                                    fontFamily: "var(--font-main)",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
                                   }}
                                 >
                                   {componentStatus.isInstalled ? (
@@ -2682,7 +1895,7 @@ export function ModelsTab(): ReactElement | null {
                                       {t("models.common.download")}
                                     </>
                                   )}
-                                </button>
+                                </Button>
                               )}
                           </div>
                         </div>

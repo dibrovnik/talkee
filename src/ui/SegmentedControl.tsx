@@ -5,6 +5,8 @@ import { segmentIndexForKey } from "./keyboard";
 export interface SegmentedControlOption<Value extends string = string> {
   value: Value;
   label: string;
+  /** Shows a marker dot after the label (e.g. an unconfigured slot). */
+  needsAttention?: boolean;
 }
 
 export interface SegmentedControlProps<Value extends string = string> {
@@ -62,6 +64,9 @@ export function SegmentedControl<Value extends string = string>({
             onClick={() => onChange(option.value)}
           >
             {option.label}
+            {option.needsAttention ? (
+              <span className="ui-segment__marker" title={option.label} aria-hidden="true" />
+            ) : null}
           </button>
         );
       })}

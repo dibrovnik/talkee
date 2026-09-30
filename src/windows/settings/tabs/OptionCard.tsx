@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { type KeyboardEvent, type ReactElement, type ReactNode, useState } from "react";
 
 import { useI18n } from "../../../lib/i18n";
 import { IconCheck } from "../../../lib/icons";
 
 interface OptionCardProps {
   active?: boolean;
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
-  description: React.ReactNode;
+  description: ReactNode;
   badge?: string;
   onClick?: () => void;
   disabled?: boolean;
@@ -20,37 +20,43 @@ const CARD_TEXT_PREVIEW_LIMIT = 250;
  * toggle — the same pattern as the history table. The toggle stops propagation so
  * it doesn't also trigger the card's own onClick (which selects the prompt).
  */
-function CollapsibleCardText({ text }: { text: string }) {
+function CollapsibleCardText({ text }: { text: string }): ReactElement {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const tooLong = text.length > CARD_TEXT_PREVIEW_LIMIT;
   const visible =
     tooLong && !expanded ? `${text.slice(0, CARD_TEXT_PREVIEW_LIMIT).trimEnd()}...` : text;
   return (
-    <div style={{ display: "grid", gap: 3 }}>
-      <span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{visible}</span>
+    <div className="ui-expandable-text">
+      <span style={{ whiteSpace: "pre-wrap" }}>{visible}</span>
       {tooLong && (
         <button
           type="button"
+          className="ui-disclosure-link"
           onClick={(e) => {
             e.stopPropagation();
             setExpanded((v) => !v);
           }}
-          style={{
-            justifySelf: "start",
-            padding: 0,
-            border: "none",
-            background: "transparent",
-            color: "var(--text-hi)",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            fontFamily: "var(--font-main)",
-          }}
+          onKeyDown={(e) => e.stopPropagation()}
         >
           {expanded ? t("mainTab.collapse") : t("mainTab.expand")}
         </button>
       )}
+    </div>
+  );
+}
+
+/** Radio-style list of `OptionCard` rows inside one grouped surface. */
+function OptionList({
+  ariaLabel,
+  children,
+}: {
+  ariaLabel?: string;
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <div role="radiogroup" aria-label={ariaLabel} className="ui-form-group ui-choice-list">
+      {children}
     </div>
   );
 }
@@ -63,92 +69,47 @@ function OptionCard({
   badge,
   onClick,
   disabled = false,
-}: OptionCardProps) {
+}: OptionCardProps): ReactElement {
+  const select = (): void => {
+    if (!disabled) onClick?.();
+  };
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === " " || event.key === "Enter") {
+      event.preventDefault();
+      select();
+    }
+  };
+
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: option cards are selected with the mouse; each card contains its own focusable controls.
-    // biome-ignore lint/a11y/noStaticElementInteractions: option cards are composite clickable surfaces, not plain static elements.
+    // biome-ignore lint/a11y/useSemanticElements: the row hosts nested controls, so a native radio input cannot wrap it.
     <div
-      onClick={disabled ? undefined : onClick}
-      style={{
-        position: "relative",
-        padding: 18,
-        borderRadius: 10,
-        background: active ? "var(--dropdown-active)" : "var(--surface)",
-        border: `1px solid ${active ? "var(--border-strong)" : "var(--border)"}`,
-        color: "var(--text-hi)",
-        cursor: disabled ? "not-allowed" : onClick ? "pointer" : "default",
-        transition: "transform 0.16s ease, border-color 0.16s ease, background 0.16s ease",
-        opacity: disabled ? 0.72 : 1,
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled && onClick && !active) e.currentTarget.style.transform = "translateY(-1px)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)";
-      }}
+      role="radio"
+      aria-checked={active}
+      aria-disabled={disabled || undefined}
+      tabIndex={disabled ? -1 : 0}
+      onClick={select}
+      onKeyDown={handleKeyDown}
+      className={[
+        "ui-choice",
+        active ? "ui-choice--active" : "",
+        disabled ? "ui-choice--disabled" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <div style={{ display: "flex", gap: 16 }}>
-        <div
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 999,
-            background: active ? "var(--control-muted-strong)" : "var(--avatar-bg)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: active ? "var(--text-hi)" : "var(--text-mid)",
-            flexShrink: 0,
-          }}
-        >
-          {icon}
+      <div className="ui-choice__icon">{icon}</div>
+      <div className="ui-choice__main">
+        <div className="ui-choice__title">
+          <span>{title}</span>
+          {badge && <span className="ui-choice__badge">{badge}</span>}
         </div>
-
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              marginBottom: 6,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 15,
-                fontWeight: active ? 700 : 600,
-                color: "var(--text-hi)",
-              }}
-            >
-              {title}
-            </div>
-            {badge && (
-              <div className="label" style={{ color: "var(--text-low)" }}>
-                {badge}
-              </div>
-            )}
-          </div>
-          <div style={{ fontSize: 13, lineHeight: 1.65, color: "var(--text-mid)" }}>
-            {description}
-          </div>
-        </div>
+        <div className="ui-choice__desc">{description}</div>
       </div>
-
-      {active && (
-        <div
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            color: "var(--text-hi)",
-          }}
-        >
-          <IconCheck size={18} stroke={2.6} />
-        </div>
-      )}
+      <div className="ui-choice__check" aria-hidden="true">
+        {active && <IconCheck size={14} stroke={2.6} />}
+      </div>
     </div>
   );
 }
 
-export { CollapsibleCardText, OptionCard, type OptionCardProps };
+export { CollapsibleCardText, OptionCard, type OptionCardProps, OptionList };

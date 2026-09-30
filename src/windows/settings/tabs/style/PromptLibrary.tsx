@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 
 import { useI18n } from "../../../../lib/i18n";
 import { IconMessage, IconPencil, IconPlus, IconTrash } from "../../../../lib/icons";
@@ -9,7 +9,9 @@ import {
   upsertPrompt,
 } from "../../../../lib/store";
 import { generatePromptText, isSummaryAvailable } from "../../../../lib/summarize";
-import { CollapsibleCardText, OptionCard } from "../OptionCard";
+import { Button } from "../../../../ui/Button";
+import { TextField } from "../../../../ui/TextField";
+import { CollapsibleCardText, OptionCard, OptionList } from "../OptionCard";
 
 interface PromptEditorState {
   id?: string;
@@ -17,19 +19,6 @@ interface PromptEditorState {
   prompt: string;
   temperature?: number;
 }
-
-const PROMPT_FIELD_STYLE: CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid var(--border)",
-  background: "var(--control-bg)",
-  color: "var(--text-hi)",
-  fontSize: 13,
-  fontFamily: "var(--font-main)",
-  lineHeight: 1.6,
-  boxSizing: "border-box",
-};
 
 /**
  * Constructor for the summary prompt library: list built-in + user presets,
@@ -43,7 +32,7 @@ function PromptLibrary({
   settings: AppSettings;
   onReload: () => Promise<unknown>;
   update: (patch: Partial<AppSettings>) => void;
-}) {
+}): ReactElement {
   const { t } = useI18n();
   const [editor, setEditor] = useState<PromptEditorState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -140,223 +129,114 @@ function PromptLibrary({
   };
 
   if (editor) {
+    const cannotGenerate = generating || (!editor.prompt.trim() && !editor.name.trim());
     return (
-      <div className="card" style={{ padding: 16, display: "grid", gap: 12 }}>
-        <div style={{ display: "grid", gap: 6 }}>
-          <div className="label">{t("models.prompt.nameLabel")}</div>
-          <input
+      <div className="ui-form-group ui-form-panel">
+        <div className="ui-form-stack">
+          <label className="ui-form-field__label" htmlFor="prompt-editor-name">
+            {t("models.prompt.nameLabel")}
+          </label>
+          <TextField
+            id="prompt-editor-name"
             value={editor.name}
             onChange={(e) => setEditor({ ...editor, name: e.target.value })}
             placeholder={t("models.prompt.namePlaceholder")}
             maxLength={80}
-            style={PROMPT_FIELD_STYLE}
           />
         </div>
-        <div style={{ display: "grid", gap: 6 }}>
-          <div className="label">{t("models.prompt.promptLabel")}</div>
+        <div className="ui-form-stack">
+          <label className="ui-form-field__label" htmlFor="prompt-editor-text">
+            {t("models.prompt.promptLabel")}
+          </label>
           <textarea
+            id="prompt-editor-text"
             ref={promptFieldRef}
+            className="ui-textfield ui-textarea"
             value={editor.prompt}
             onChange={(e) => {
               setEditor({ ...editor, prompt: e.target.value });
               autoSizePromptField(e.target);
             }}
             placeholder={t("models.prompt.promptPlaceholder")}
-            style={{
-              ...PROMPT_FIELD_STYLE,
-              resize: "none",
-              minHeight: 120,
-              overflowY: "hidden",
-            }}
+            style={{ minHeight: 120, overflowY: "hidden" }}
           />
         </div>
-        {error && (
-          <div style={{ fontSize: 12, color: "var(--danger)", lineHeight: 1.5 }}>{error}</div>
-        )}
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
+        {error && <div className="ui-form-feedback ui-form-feedback--error">{error}</div>}
+        <div className="ui-form-actions">
           {canGenerate ? (
-            <button
-              type="button"
+            <Button
+              className="ui-form-actions__leading"
               onClick={() => void handleGenerate()}
-              disabled={generating || (!editor.prompt.trim() && !editor.name.trim())}
-              style={{
-                padding: "9px 16px",
-                borderRadius: 10,
-                border: "1px solid var(--border)",
-                background: "transparent",
-                color: "var(--text-hi)",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor:
-                  generating || (!editor.prompt.trim() && !editor.name.trim())
-                    ? "default"
-                    : "pointer",
-                opacity: generating || (!editor.prompt.trim() && !editor.name.trim()) ? 0.6 : 1,
-                fontFamily: "var(--font-main)",
-              }}
+              disabled={cannotGenerate}
             >
               {generating ? t("models.prompt.improving") : t("models.prompt.improve")}
-            </button>
+            </Button>
           ) : (
-            <div
-              style={{
-                fontSize: 12,
-                color: "var(--text-mid)",
-                lineHeight: 1.45,
-                maxWidth: 360,
-              }}
-            >
+            <div className="ui-form-actions__leading ui-form-hint">
               {t("models.prompt.noModelHint")}
             </div>
           )}
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={() => {
-                setEditor(null);
-                setError(null);
-              }}
-              disabled={saving}
-              style={{
-                padding: "9px 16px",
-                borderRadius: 10,
-                border: "1px solid var(--border)",
-                background: "transparent",
-                color: "var(--text-mid)",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "var(--font-main)",
-              }}
-            >
-              {t("models.common.cancel")}
-            </button>
-            <button
-              onClick={() => void handleSave()}
-              disabled={saving}
-              style={{
-                padding: "9px 18px",
-                borderRadius: 10,
-                border: "none",
-                background: "var(--accent)",
-                color: "var(--accent-contrast)",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: saving ? "default" : "pointer",
-                opacity: saving ? 0.6 : 1,
-                fontFamily: "var(--font-main)",
-              }}
-            >
-              {saving ? t("models.prompt.saving") : t("models.prompt.save")}
-            </button>
-          </div>
+          <Button
+            onClick={() => {
+              setEditor(null);
+              setError(null);
+            }}
+            disabled={saving}
+          >
+            {t("models.common.cancel")}
+          </Button>
+          <Button variant="primary" onClick={() => void handleSave()} disabled={saving}>
+            {saving ? t("models.prompt.saving") : t("models.prompt.save")}
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}>
-        {t("models.prompt.libraryHint")}
-      </div>
+    <div className="ui-tab">
+      <div className="ui-tab-hint">{t("models.prompt.libraryHint")}</div>
 
-      {summaryPrompts.map((preset) => {
-        const active = preset.id === defaultId;
+      <OptionList ariaLabel={t("models.styleTab.prompts")}>
+        {summaryPrompts.map((preset) => {
+          const active = preset.id === defaultId;
 
-        return (
-          <OptionCard
-            key={preset.id}
-            active={active}
-            icon={<IconMessage size={20} stroke={active ? 2.4 : 1.8} />}
-            title={preset.name}
-            description={<CollapsibleCardText text={preset.prompt} />}
-            onClick={() => update({ defaultSummaryPromptId: preset.id })}
-          />
-        );
-      })}
+          return (
+            <OptionCard
+              key={preset.id}
+              active={active}
+              icon={<IconMessage size={16} />}
+              title={preset.name}
+              description={<CollapsibleCardText text={preset.prompt} />}
+              onClick={() => update({ defaultSummaryPromptId: preset.id })}
+            />
+          );
+        })}
+      </OptionList>
 
-      {error && (
-        <div style={{ fontSize: 12, color: "var(--danger)", lineHeight: 1.5 }}>{error}</div>
-      )}
+      {error && <div className="ui-form-feedback ui-form-feedback--error">{error}</div>}
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button
-          onClick={startNew}
-          style={{
-            flex: 1,
-            minWidth: 160,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 7,
-            padding: "11px 0",
-            borderRadius: 10,
-            border: "1px dashed var(--border-strong)",
-            background: "transparent",
-            color: "var(--text-hi)",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            fontFamily: "var(--font-main)",
-          }}
-        >
-          <IconPlus size={16} stroke={2} />
-          {t("models.prompt.create")}
-        </button>
-
+      <div className="ui-form-actions">
         {selectedIsCustom && (
           <>
-            <button
-              onClick={startEditSelected}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                padding: "11px 16px",
-                borderRadius: 10,
-                border: "1px solid var(--border)",
-                background: "var(--control-bg)",
-                color: "var(--text-hi)",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "var(--font-main)",
-              }}
-            >
-              <IconPencil size={15} stroke={2} />
+            <Button onClick={startEditSelected}>
+              <IconPencil size={14} />
               {t("models.common.edit")}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="destructive"
               onClick={() => void handleDeleteSelected()}
               disabled={busyId === selectedPreset?.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                padding: "11px 16px",
-                borderRadius: 10,
-                border: "1px solid var(--border)",
-                background: "var(--control-bg)",
-                color: "var(--danger)",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "var(--font-main)",
-              }}
             >
-              <IconTrash size={15} stroke={2} />
+              <IconTrash size={14} />
               {t("models.common.delete")}
-            </button>
+            </Button>
           </>
         )}
+        <Button onClick={startNew}>
+          <IconPlus size={14} />
+          {t("models.prompt.create")}
+        </Button>
       </div>
     </div>
   );

@@ -1,11 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
-import { type CSSProperties, useState } from "react";
+import { useState } from "react";
 
-import { Dropdown } from "../../../../components/Dropdown";
 import { ModelCardDisclosureButton } from "../../../../components/ModelCardDisclosureButton";
 import { useI18n } from "../../../../lib/i18n";
 import { IconBolt } from "../../../../lib/icons";
 import type { AppSettings } from "../../../../lib/store";
+import { Badge } from "../../../../ui/Badge";
+import { Button } from "../../../../ui/Button";
+import { PopUpButton } from "../../../../ui/PopUpButton";
+import { SecureField } from "../../../../ui/SecureField";
+import { Spinner } from "../../../../ui/Spinner";
+import { TextField } from "../../../../ui/TextField";
 import {
   type AdapterTestStatus,
   CUSTOM_API_MODEL_VALUE,
@@ -46,15 +51,7 @@ function TextModelCard({
       ? "var(--error-bright)"
       : configured || testState.status === "success"
         ? "var(--success-bright)"
-        : "var(--text-low)";
-  const FIELD_STYLE: CSSProperties = {
-    flex: 1,
-    minWidth: 0,
-    height: 36,
-    padding: "8px 10px",
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-    fontSize: 12,
-  };
+        : "var(--label-3)";
   // Editing a custom text model means it's no longer the bundled local runtime, so
   // drop the marker that tells summary to auto-start the sidecar.
   const editField = (patch: Partial<AppSettings>) => {
@@ -105,64 +102,17 @@ function TextModelCard({
     }
   };
   return (
-    <div
-      className="card"
-      style={{
-        padding: 0,
-        overflow: expanded ? "visible" : "hidden",
-        position: "relative",
-        zIndex: expanded ? 10 : 0,
-        background: "var(--surface)",
-      }}
-    >
-      <div
-        style={{
-          position: "relative",
-          padding: "12px 14px",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          textAlign: "left",
-          fontFamily: "var(--font-main)",
-        }}
-      >
-        <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
-              marginBottom: 3,
-            }}
-          >
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-hi)" }}>
-              {t("models.textModel.title")}
-            </div>
-            <div
-              title={testState.message || undefined}
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: statusColor,
-                padding: "5px 9px",
-                borderRadius: 999,
-                background: "var(--control-muted)",
-                whiteSpace: "nowrap",
-              }}
-            >
+    <div className="ui-model-card">
+      <div className="ui-model-card__head">
+        <div className="ui-model-card__main">
+          <div className="ui-model-card__titlebar">
+            <div className="ui-model-card__title">{t("models.textModel.title")}</div>
+            <Badge className="ui-model-card__state" style={{ color: statusColor }}>
               {statusLabel}
-            </div>
+            </Badge>
           </div>
-          <div
-            style={{
-              paddingRight: 34,
-              fontSize: 12,
-              lineHeight: 1.45,
-              color: "var(--text-mid)",
-            }}
-          >
-            {t("models.textModel.desc")}
+          <div className="ui-model-card__body">
+            <div className="ui-model-card__desc">{t("models.textModel.desc")}</div>
           </div>
           <ModelCardDisclosureButton
             expanded={expanded}
@@ -173,35 +123,21 @@ function TextModelCard({
       </div>
 
       {expanded && (
-        <div
-          style={{
-            borderTop: "1px solid var(--border-subtle)",
-            padding: "12px 14px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div className="label" style={{ width: 76, flexShrink: 0 }}>
-              {t("models.field.apiKey")}
-            </div>
-            <input
-              type="password"
+        <div className="ui-model-card__detail">
+          <div className="ui-model-card__field">
+            <div className="ui-model-card__field-label">{t("models.field.apiKey")}</div>
+            <SecureField
               value={settings.llmApiKey}
               onChange={(e) => editField({ llmApiKey: e.target.value })}
-              className="input"
               placeholder={t("models.textModel.apiKeyPlaceholder")}
               spellCheck={false}
-              style={FIELD_STYLE}
+              className="ui-textfield--mono"
             />
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div className="label" style={{ width: 76, flexShrink: 0 }}>
-              {t("models.field.model")}
-            </div>
-            <div style={{ flex: 1, minWidth: 0, display: "grid", gap: 6 }}>
-              <Dropdown
+          <div className="ui-model-card__field">
+            <div className="ui-model-card__field-label">{t("models.field.model")}</div>
+            <div className="ui-model-card__field-control">
+              <PopUpButton
                 value={modelSelectValue}
                 options={[
                   ...TEXT_MODEL_OPTIONS.map((modelOption) => ({
@@ -218,102 +154,47 @@ function TextModelCard({
                     llmModel: value === CUSTOM_API_MODEL_VALUE ? "" : value,
                   })
                 }
+                ariaLabel={t("models.field.model")}
               />
               {modelSelectValue === CUSTOM_API_MODEL_VALUE && (
-                <input
-                  type="text"
+                <TextField
                   value={settings.llmModel}
                   onChange={(event) => editField({ llmModel: event.currentTarget.value })}
-                  className="input"
                   placeholder={t("models.field.customModelPlaceholder")}
                   aria-label={t("models.field.customModelPlaceholder")}
                   spellCheck={false}
-                  style={{ ...FIELD_STYLE, width: "100%" }}
+                  className="ui-textfield--mono"
                 />
               )}
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: "var(--text-low)",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
-              {t("models.field.recommended", { model: "gpt-4o-mini" })}
-            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div className="label" style={{ width: 76, flexShrink: 0 }}>
-              {t("models.field.host")}
-            </div>
-            <input
+          <div className="ui-model-card__field">
+            <div className="ui-model-card__field-label">{t("models.field.host")}</div>
+            <TextField
               type="url"
               value={settings.llmEndpoint}
               onChange={(e) => editField({ llmEndpoint: e.target.value })}
-              className="input"
               placeholder="https://api.openai.com/v1 · http://127.0.0.1:2455/v1"
               spellCheck={false}
-              style={FIELD_STYLE}
+              className="ui-textfield--mono"
             />
             {settings.llmEndpoint.trim() ? (
-              <button
-                type="button"
-                onClick={() => editField({ llmEndpoint: "" })}
-                style={{
-                  border: "1px solid var(--border-dashed)",
-                  background: "var(--control-muted)",
-                  color: "var(--text-hi)",
-                  borderRadius: 8,
-                  padding: "7px 9px",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  fontFamily: "var(--font-main)",
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                  cursor: "pointer",
-                }}
-              >
+              <Button onClick={() => editField({ llmEndpoint: "" })}>
                 {t("models.common.reset")}
-              </button>
+              </Button>
             ) : (
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--text-low)",
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                }}
-              >
-                {t("models.common.optional")}
-              </div>
+              <div className="ui-model-card__hint">{t("models.common.optional")}</div>
             )}
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <button
-              type="button"
+          <div className="ui-model-card__actions">
+            <Button
+              variant="primary"
               onClick={() => void testTextModel()}
               disabled={testState.status === "testing"}
-              style={{
-                padding: "9px 12px",
-                borderRadius: 10,
-                border: "1px solid var(--border-dashed)",
-                background:
-                  testState.status === "testing" ? "var(--control-muted)" : "var(--accent)",
-                color:
-                  testState.status === "testing" ? "var(--text-mid)" : "var(--accent-contrast)",
-                fontSize: 12,
-                fontWeight: 700,
-                fontFamily: "var(--font-main)",
-                cursor: testState.status === "testing" ? "wait" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
             >
               {testState.status === "testing" ? (
                 <>
-                  <span className="loading-soft-ring" />
+                  <Spinner size={14} />
                   {t("models.test.checking")}
                 </>
               ) : (
@@ -322,7 +203,7 @@ function TextModelCard({
                   {t("models.textModel.testButton")}
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </div>
       )}

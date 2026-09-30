@@ -97,7 +97,7 @@ Talkee — macOS-приложение (Apple Silicon): Rust-бэкенд Tauri v
 
 | Ответственность | Файлы |
 | --- | --- |
-| Общие контролы и модалки | `Dropdown`, `SlideOverModal`, `RowActionsMenu`, `SummaryModal`, `TitleBar`. |
+| Общие контролы и модалки | `SlideOverModal`, `RowActionsMenu`, `SummaryModal`. Примитивы (`Button`, `PopUpButton`, `FormSection` и др.) — в `src/ui/`. |
 | Горячие клавиши | `DictationHotkeyControl`, `HotkeyKeycaps`, `useLiveHotkeyPreview`. |
 | Модели и разрешения | `LocalLlmModels`, `LocalSttModelCard`, `ModelCardDisclosureButton`, `PermissionScreen`. |
 | История, запись и статистика | `HistoryAudioTrack`, `Waveform`, `SpeakerNameInput`, `TranscriptionStatsPanel`. |

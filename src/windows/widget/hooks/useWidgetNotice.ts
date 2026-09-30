@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { MutableRefObject } from "react";
 import { useCallback, useEffect, useRef } from "react";
+import { isIslandPresentationActive } from "../island/islandSession";
 import { showWidgetErrorOverlay } from "../services/widgetErrorOverlay";
 import { NOTICE_TIMEOUT_MS, type WidgetNoticeTone, type WidgetState } from "../widgetConstants";
 
@@ -30,6 +31,20 @@ export function useWidgetNotice({ stateRef }: UseWidgetNoticeParams): UseWidgetN
       if (noticeTimerRef.current) {
         clearTimeout(noticeTimerRef.current);
         noticeTimerRef.current = null;
+      }
+
+      if (isIslandPresentationActive()) {
+        void invoke("show_widget_notice", {
+          message,
+          tone,
+          anchorState: stateRef.current,
+          actionLabel: null,
+          actionTab: null,
+        });
+        noticeTimerRef.current = setTimeout(() => {
+          hideNotice();
+        }, 4000);
+        return;
       }
 
       if (tone === "error") {

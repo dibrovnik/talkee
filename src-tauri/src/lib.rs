@@ -19,6 +19,7 @@ mod local_translator;
 mod logger;
 mod media;
 mod native_voice_recorder;
+mod notch;
 mod paste;
 mod prompt_config;
 pub mod realtime;
@@ -150,6 +151,7 @@ pub fn run() {
                 }
             }
             widget::start_widget_watchdog(app.handle());
+            widget::start_island_screen_observer(app.handle());
 
             if open_settings {
                 let handle = app.handle().clone();
@@ -170,7 +172,11 @@ pub fn run() {
             settings_window::open_settings_tab,
             settings_window::set_settings_titlebar_theme,
             dock::set_dock_visibility,
+            notch::get_island_availability,
             widget::widget_resize,
+            widget::set_widget_presentation,
+            widget::set_island_interactive,
+            widget::set_text_display,
             widget::activate_widget_for_hotkey,
             widget::show_widget_notice,
             widget::hide_widget_notice,

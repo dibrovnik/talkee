@@ -68,6 +68,37 @@ export const settingsGeneral = {
     en: "Current: {hotkey}",
   },
 
+  "settings.indicator.title": { ru: "Индикатор записи", en: "Recording indicator" },
+  "settings.indicator.pill": { ru: "Плавающая пилюля", en: "Floating pill" },
+  "settings.indicator.island": { ru: "Остров у выреза", en: "Notch island" },
+  "settings.indicator.fallback": {
+    ru: "На экранах без выреза",
+    en: "On screens without a notch",
+  },
+  "settings.indicator.fallbackIsland": {
+    ru: "Показывать остров",
+    en: "Show the island",
+  },
+  "settings.indicator.fallbackPill": {
+    ru: "Использовать пилюлю",
+    en: "Use the pill",
+  },
+  "settings.indicator.noNotch": {
+    ru: "На этом Mac нет выреза — остров будет сверху экрана",
+    en: "This Mac has no notch — the island sits at the top of the screen",
+  },
+  "settings.indicator.text": { ru: "Текст", en: "Text" },
+  "settings.indicator.textWindow": { ru: "Окно", en: "Window" },
+  "settings.indicator.textTicker": { ru: "Бегущая строка", en: "Ticker" },
+  "settings.indicator.textHint": {
+    ru: "Бегущая строка идёт внутри индикатора, без отдельного окна",
+    en: "The ticker runs inside the indicator, without a separate window",
+  },
+  "settings.widgetSize.islandDisabled": {
+    ru: "Доступно в режиме пилюли",
+    en: "Available in pill mode",
+  },
+
   // Widget size
   "settings.widgetSize.title": { ru: "Размер виджета", en: "Widget size" },
   "settings.widgetSize.desc": {

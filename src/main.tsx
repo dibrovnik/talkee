@@ -15,6 +15,20 @@ const isSettings =
 const isWidgetNotice =
   new URLSearchParams(window.location.search).get("window") === "widget-notice";
 const isWidgetText = new URLSearchParams(window.location.search).get("window") === "widget-text";
+const isWidgetShell = !isSettings && !isWidgetNotice && !isWidgetText;
+
+// The notch is outside the safe area. viewport-fit=cover lets the island paint
+// into it; the default viewport starts the page below the menu bar.
+if (isWidgetShell) {
+  document
+    .querySelector('meta[name="viewport"]')
+    ?.setAttribute("content", "width=device-width, initial-scale=1, viewport-fit=cover");
+  document.documentElement.style.height = "100%";
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.height = "100%";
+  document.body.style.overflow = "hidden";
+  document.body.style.overscrollBehavior = "none";
+}
 
 applyThemePreference("system");
 void applySavedTheme();

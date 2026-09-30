@@ -27,11 +27,11 @@
 
 ## 3. Сборка
 
-- [ ] 3.1 `src-tauri/Cargo.toml`: `[profile.release]` (design.md, решение 5)
-- [ ] 3.2 `scripts/build-release-macos.sh`, `scripts/build-release.mjs`: `MACOSX_DEPLOYMENT_TARGET=14.0`, `RUSTFLAGS` с `TALKEE_TARGET_CPU` (по умолчанию `native`); в CI — `apple-m1`
-- [ ] 3.3 `src-tauri/tauri.conf.json`: `minimumSystemVersion: "14.0"`
-- [ ] 3.4 Удалить `window-vibrancy`; `cargo install cargo-machete && cargo machete src-tauri` — удалить подтверждённо неиспользуемые зависимости
-- [ ] 3.5 Проверка: release-сборка проходит; `plutil -extract LSMinimumSystemVersion raw .../Talkee.app/Contents/Info.plist` → `14.0`
+- [x] 3.1 `src-tauri/Cargo.toml`: `[profile.release]` (design.md, решение 5)
+- [x] 3.2 `scripts/build-release-macos.sh`, `scripts/build-release.mjs`: `MACOSX_DEPLOYMENT_TARGET=14.0`, `RUSTFLAGS` с `TALKEE_TARGET_CPU` (по умолчанию `native`); в CI — `apple-m1`
+- [x] 3.3 `src-tauri/tauri.conf.json`: `minimumSystemVersion: "14.0"`
+- [x] 3.4 Удалить `window-vibrancy`; `cargo install cargo-machete && cargo machete src-tauri` — удалить подтверждённо неиспользуемые зависимости
+- [x] 3.5 Проверка: release-сборка проходит; `plutil -extract LSMinimumSystemVersion raw .../Talkee.app/Contents/Info.plist` → `14.0`
 
 ## 4. Минимальный ffmpeg
 

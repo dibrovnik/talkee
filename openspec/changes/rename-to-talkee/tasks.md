@@ -10,14 +10,14 @@
 
 ## 2. Идентичность приложения (конфиг)
 
-- [ ] 2.1 `src-tauri/tauri.conf.json`: `productName: "Talkee"`, `mainBinaryName: "talkee"` (или удалить, если не нужен), `identifier: "com.talkee.app"`, заголовки окон, `externalBin` → `binaries/talkee-*`
-- [ ] 2.2 `src-tauri/Info.plist`: имя бандла
-- [ ] 2.3 `src-tauri/Cargo.toml`: `name = "talkee"`, `description`, `default-run = "talkee"`, `[lib] name = "talkee_lib"`, workspace member `sidecars/talkee-llm`; обновить `src-tauri/src/main.rs` (`talkis_lib::run()` → `talkee_lib::run()`)
-- [ ] 2.4 Переименовать каталог `src-tauri/sidecars/talkis-llm` → `talkee-llm` и имя пакета в его `Cargo.toml`
-- [ ] 2.5 Переименовать `src-tauri/src/bin/talkis-stt.rs` → `talkee-stt.rs`, `talkis-diarize.rs` → `talkee-diarize.rs`; хардкод identifier в `talkee-stt.rs` → `com.talkee.app` (design.md, решение 1)
-- [ ] 2.6 `package.json`: `name: "talkee"`, скрипты `logs`, `logs:clear`; `index.html`: `<title>Talkee</title>`
-- [ ] 2.7 Удалить старые артефакты `src-tauri/binaries/talkis-*`; пересобрать sidecar'ы `bun run prepare:sidecars`
-- [ ] 2.8 Проверка: `cargo check --manifest-path src-tauri/Cargo.toml` и `bun run tauri dev` стартует
+- [x] 2.1 `src-tauri/tauri.conf.json`: `productName: "Talkee"`, `mainBinaryName: "talkee"` (или удалить, если не нужен), `identifier: "com.talkee.app"`, заголовки окон, `externalBin` → `binaries/talkee-*`
+- [x] 2.2 `src-tauri/Info.plist`: имя бандла
+- [x] 2.3 `src-tauri/Cargo.toml`: `name = "talkee"`, `description`, `default-run = "talkee"`, `[lib] name = "talkee_lib"`, workspace member `sidecars/talkee-llm`; обновить `src-tauri/src/main.rs` (`talkis_lib::run()` → `talkee_lib::run()`)
+- [x] 2.4 Переименовать каталог `src-tauri/sidecars/talkis-llm` → `talkee-llm` и имя пакета в его `Cargo.toml`
+- [x] 2.5 Переименовать `src-tauri/src/bin/talkis-stt.rs` → `talkee-stt.rs`, `talkis-diarize.rs` → `talkee-diarize.rs`; хардкод identifier в `talkee-stt.rs` → `com.talkee.app` (design.md, решение 1)
+- [x] 2.6 `package.json`: `name: "talkee"`, скрипты `logs`, `logs:clear`; `index.html`: `<title>Talkee</title>`
+- [x] 2.7 Удалить старые артефакты `src-tauri/binaries/talkis-*`; пересобрать sidecar'ы `bun run prepare:sidecars`
+- [x] 2.8 Проверка: `cargo check --manifest-path src-tauri/Cargo.toml` и `bun run tauri dev` стартует
 
 ## 3. Rust: строки и пути
 

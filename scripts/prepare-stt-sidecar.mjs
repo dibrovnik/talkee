@@ -18,7 +18,7 @@ import { withWindowsToolchainPaths } from "./windows-toolchain-env.mjs";
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const tauriDir = join(rootDir, "src-tauri");
-const llmManifest = join(tauriDir, "sidecars", "talkis-llm", "Cargo.toml");
+const llmManifest = join(tauriDir, "sidecars", "talkee-llm", "Cargo.toml");
 const binariesDir = join(tauriDir, "binaries");
 const toolchainEnv = withWindowsToolchainPaths(process.env);
 const placeholderContents = "#!/usr/bin/env sh\nexit 1\n";
@@ -341,8 +341,8 @@ const llmCargoEnv = cargoBuildEnvironment(
 );
 
 const extension = targetTriple.includes("windows") ? ".exe" : "";
-const profile = process.env.TALKIS_STT_RELEASE === "1" ? "release" : "debug";
-const sidecars = ["talkis-stt", "talkis-diarize", "talkis-llm"];
+const profile = process.env.TALKEE_STT_RELEASE === "1" ? "release" : "debug";
+const sidecars = ["talkee-stt", "talkee-diarize", "talkee-llm"];
 const baseCargoArgs = [
   "build",
   "--manifest-path",
@@ -351,16 +351,16 @@ const baseCargoArgs = [
 const sttCargoArgs = [
   ...baseCargoArgs,
   "--bin",
-  "talkis-stt",
+  "talkee-stt",
   "--bin",
-  "talkis-diarize",
+  "talkee-diarize",
 ];
 const llmCargoArgs = [
   "build",
   "--manifest-path",
   llmManifest,
   "--bin",
-  "talkis-llm",
+  "talkee-llm",
 ];
 
 if (profile === "release") {

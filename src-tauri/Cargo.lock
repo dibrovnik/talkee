@@ -5555,7 +5555,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "talkis"
+name = "talkee"
 version = "0.4.8"
 dependencies = [
  "base64 0.22.1",
@@ -5603,7 +5603,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "talkis-llm"
+name = "talkee-llm"
 version = "0.4.8"
 dependencies = [
  "llama-cpp-2",

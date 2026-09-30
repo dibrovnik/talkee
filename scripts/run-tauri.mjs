@@ -91,7 +91,7 @@ function run(command, commandArgs) {
 
 if (isDev) {
   try {
-    await run("bun", ["scripts/run-vite.mjs", "--talkis-check-dev-port"]);
+    await run("bun", ["scripts/run-vite.mjs", "--talkee-check-dev-port"]);
     await run("bun", ["run", "prepare:sidecars"]);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

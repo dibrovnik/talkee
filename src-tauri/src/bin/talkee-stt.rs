@@ -320,7 +320,7 @@ fn default_data_dir() -> PathBuf {
         .unwrap_or_else(|_| env::temp_dir())
         .join("Library")
         .join("Application Support")
-        .join("com.trixter.talkis")
+        .join("com.talkee.app")
         .join("local-stt")
 }
 

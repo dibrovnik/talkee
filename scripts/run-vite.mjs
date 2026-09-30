@@ -37,7 +37,7 @@ function prepareEsbuildBinary() {
   const source = resolveEsbuildNativeBinary();
   if (!source || !existsSync(source)) return undefined;
 
-  const targetDir = join(tmpdir(), "talkis-esbuild");
+  const targetDir = join(tmpdir(), "talkee-esbuild");
   const target = join(targetDir, `esbuild-${process.platform}-${process.arch}`);
 
   mkdirSync(targetDir, { recursive: true });
@@ -84,7 +84,7 @@ async function assertDevServerPortAvailable() {
   if (ipv4Available && ipv6Available) return;
 
   throw new Error(
-    `Talkis dev server port ${DEV_SERVER_PORT} is already in use. ` +
+    `Talkee dev server port ${DEV_SERVER_PORT} is already in use. ` +
       "Stop the other local dev server before running `bun run tauri dev`.",
   );
 }
@@ -93,7 +93,7 @@ const env = { ...process.env };
 const esbuildBinary = prepareEsbuildBinary();
 const viteArgs = process.argv.slice(2);
 
-if (viteArgs.includes("--talkis-check-dev-port")) {
+if (viteArgs.includes("--talkee-check-dev-port")) {
   try {
     await assertDevServerPortAvailable();
   } catch (error) {
@@ -117,7 +117,7 @@ try {
   process.exit(1);
 }
 
-const nodeBinary = process.env.TALKIS_NODE_BINARY || "node";
+const nodeBinary = process.env.TALKEE_NODE_BINARY || "node";
 const child = spawn(nodeBinary, [resolveViteScript(), ...viteArgs], {
   cwd: rootDir,
   env,

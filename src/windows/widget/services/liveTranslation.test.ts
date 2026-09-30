@@ -14,8 +14,6 @@ function connectionSettings(
   patch: Partial<AppSettings> = {},
 ): AppSettings {
   return {
-    useOwnKey: true,
-    deviceToken: "",
     whisperEndpoint: "https://api.openai.com",
     selectedTranslationAdapter: "openai",
     translationAdapters: {},
@@ -24,20 +22,6 @@ function connectionSettings(
 }
 
 describe("live translation mode routing", () => {
-  test("routes Cloud through Talkis without requiring a saved API adapter", () => {
-    const connection = resolveLiveTranslationConnection(
-      connectionSettings({ useOwnKey: false, deviceToken: "device-jwt" }),
-    );
-    expect(connection).toEqual({
-      provider: "talkis-cloud",
-      apiKey: "device-jwt",
-      model: "gpt-realtime",
-      endpoint: "https://proxy.talkis.ru",
-      adapterId: "talkis-cloud",
-      supportsVoice: true,
-    });
-  });
-
   test("keeps verified API routing unchanged", () => {
     const apiKey = "sk-test";
     const model = "gpt-realtime";

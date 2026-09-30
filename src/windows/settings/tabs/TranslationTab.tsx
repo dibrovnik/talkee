@@ -473,14 +473,13 @@ export function TranslationTab(): ReactElement {
     (language) => language.code === liveTargetLanguage,
   );
   const localModelMode = Boolean(
-    settings?.useOwnKey &&
-      /127\.0\.0\.1|localhost/i.test(settings.whisperEndpoint || ""),
+    /127\.0\.0\.1|localhost/i.test(settings?.whisperEndpoint || ""),
   );
   const liveVoiceSupported = Boolean(
     isMacPlatform() &&
       settings &&
-      (!settings.useOwnKey ||
-        (!localModelMode && settings.selectedTranslationAdapter === "openai")),
+      !localModelMode &&
+      settings.selectedTranslationAdapter === "openai",
   );
   const liveVoiceActive =
     liveVoiceSupported && Boolean(settings?.translation.liveVoiceEnabled);

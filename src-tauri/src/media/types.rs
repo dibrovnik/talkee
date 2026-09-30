@@ -28,14 +28,6 @@ pub struct PreparedMediaChunks {
     pub chunks: Vec<PreparedMediaChunk>,
 }
 
-pub struct PreparedProxyMedia {
-    pub temp_dir: PathBuf,
-    pub path: PathBuf,
-    pub file_name: String,
-    pub mime_type: String,
-    pub size_bytes: u64,
-}
-
 pub struct PreparedDiarizationAudio {
     pub temp_dir: PathBuf,
     pub path: PathBuf,

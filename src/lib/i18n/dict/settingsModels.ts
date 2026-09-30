@@ -1,40 +1,5 @@
 // Strings for the Model & Style settings tabs (windows/settings/tabs/SettingsTabs.tsx).
 export const settingsModels = {
-  // ── Account / subscription cards ──
-  "models.account.logout": { ru: "Выйти", en: "Log out" },
-  "models.cta.upgradePro": { ru: "Перейти на PRO", en: "Go PRO" },
-  "models.guest.title": { ru: "Облачный баланс", en: "Cloud balance" },
-  "models.guest.benefit1": {
-    ru: "• Без подписки и автоплатежей",
-    en: "• No subscription or recurring charges",
-  },
-  "models.guest.benefit2": {
-    ru: "• Токены не сгорают",
-    en: "• Tokens do not expire",
-  },
-  "models.guest.benefit3": {
-    ru: "• Локальные модели остаются бесплатными",
-    en: "• Local models remain free",
-  },
-  "models.subscription.active": {
-    ru: "Облако доступно",
-    en: "Cloud is available",
-  },
-  "models.subscription.balance": {
-    ru: "Доступно {tokens} токенов",
-    en: "{tokens} tokens available",
-  },
-  "models.subscription.reserved": {
-    ru: "Зарезервировано: {tokens}",
-    en: "Reserved: {tokens}",
-  },
-  "models.subscription.low": {
-    ru: "Осталось меньше 20%",
-    en: "Less than 20% remaining",
-  },
-  "models.subscription.topUp": { ru: "Пополнить", en: "Top up" },
-
-  // ── Prompt library ──
   "models.prompt.nameLabel": { ru: "Название", en: "Name" },
   "models.prompt.namePlaceholder": {
     ru: "Например: Протокол встречи",
@@ -100,29 +65,10 @@ export const settingsModels = {
     en: "Recognition mode",
   },
   "models.modeSection.desc": {
-    ru: "Вы можете в любой момент переключаться между облаком, своим API-ключом и локальной моделью.",
-    en: "You can switch between the cloud, your own API key, and a local model at any time.",
+    ru: "Вы можете в любой момент переключаться между своим API-ключом и локальной моделью.",
+    en: "You can switch between your own API key and a local model at any time.",
   },
-  "models.mode.cloud": { ru: "Облако", en: "Cloud" },
   "models.mode.local": { ru: "Локально", en: "Local" },
-
-  // ── Cloud mode ──
-  "models.cloud.descActive": {
-    ru: "Распознавание, обработка текста и синхронный перевод идут через облако Talkis. Все данные шифруются при передаче, а основной API-ключ остаётся на сервере.",
-    en: "Recognition, text processing, and live translation run through Talkis Cloud. Data is encrypted in transit, and the primary API key remains on the server.",
-  },
-  "models.cloud.descGuest": {
-    ru: "Для облачного режима нужна авторизация и положительный баланс. После входа данные обновятся автоматически.",
-    en: "Cloud mode requires sign-in and a positive balance. The data refreshes automatically after you log in.",
-  },
-  "models.cloud.proReady": {
-    ru: "Облачный режим готов к выбору",
-    en: "Cloud mode is ready to select",
-  },
-  "models.cloud.needPro": {
-    ru: "Пополните баланс для облачного режима",
-    en: "Top up your balance for cloud mode",
-  },
 
   // ── API adapters section ──
   "models.apiSection.title": {
@@ -332,7 +278,7 @@ export const settingsModels = {
   },
   "models.local.sectionTitle": { ru: "Локальные модели", en: "Local models" },
   "models.local.sectionDesc": {
-    ru: "Выберите модель, скачайте ее через локальный STT runtime и используйте без облака.",
+    ru: "Выберите модель, скачайте ее через локальный STT runtime и используйте локально.",
     en: "Pick a model, download it through the local STT runtime, and use it without the cloud.",
   },
   "models.local.recommendedBadge": { ru: "Рекомендуем", en: "Recommended" },

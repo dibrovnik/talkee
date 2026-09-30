@@ -11,8 +11,6 @@
 <p align="center">
   <a href="README.ru.md">Read in Russian</a>
   ·
-  <a href="https://talkis.ru">Website</a>
-  ·
   <a href="https://github.com/SerTimBerrners-Lee/talkis/releases/latest">Latest release</a>
 </p>
 
@@ -31,8 +29,8 @@ It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, 
 - Dictate into any active text field with a global hotkey.
 - Use locked recording mode for longer speech without holding the keys.
 - Paste cleaned text automatically after transcription.
-- Choose cloud mode, your own API key, or local STT and text LLM models.
-- Translate system audio in real time through Talkis Cloud or a verified Realtime API connection, with optional spoken translation on macOS.
+- Choose your own API key or local STT and text LLM models.
+- Translate system audio in real time through a verified Realtime API connection, with optional spoken translation on macOS.
 - Translate selected text with a separate configurable global hotkey.
 - Transcribe audio and video files from the Files tab or by dropping files onto the widget.
 - Record calls with separate microphone and system-audio tracks on macOS, Windows, and Linux.
@@ -221,20 +219,16 @@ The hotkey, microphone, language, model source, cleanup style, and app appearanc
 
 ## Access Modes
 
-| Capability | Cloud | API | Local |
-| --- | --- | --- | --- |
-| Dictation, files, and local history | Yes | Yes | Yes |
-| Streaming dictation | No; final batch only | Verified models | Streaming-capable models |
-| Selected-text translation | Yes | Yes | Yes |
-| Speaker diarization | When the capability is available | Local diarization kit | Local diarization kit |
-| Synchronous translation | Yes | Verified OpenAI/Gemini Realtime | No |
-| Summaries and prompt processing | Yes | With a configured LLM | With a selected local LLM |
+| Capability | API | Local |
+| --- | --- | --- |
+| Dictation, files, and local history | Yes | Yes |
+| Streaming dictation | Verified models | Streaming-capable models |
+| Selected-text translation | Yes | Yes |
+| Speaker diarization | Local diarization kit | Local diarization kit |
+| Synchronous translation | Verified Realtime API | No |
+| Summaries and prompt processing | With a configured LLM | With a selected local LLM |
 
-The complete data routing, runtime processes, limitations, and failure boundaries are documented in the Russian-language [Cloud/API/Local mode architecture](docs/architecture/processing-modes.md). Verifiable user behavior is collected in the [product business requirements](docs/business-requirements.md).
-
-### Talkis Cloud
-
-Sign in to [Talkis Cloud](https://talkis.ru) and use transcription without managing API keys. Requests go through `proxy.talkis.ru`. Cloud dictation shows recording and processing states, then pastes only the final full-audio batch transcript; the realtime text overlay is intentionally unavailable in Cloud mode. Synchronous translation still uses a short-lived Realtime credential issued by the authenticated proxy; the provider key is never stored in the desktop app.
+The complete data routing, runtime processes, limitations, and failure boundaries are documented in the Russian-language [API/Local mode architecture](docs/architecture/processing-modes.md). Verifiable user behavior is collected in the [product business requirements](docs/business-requirements.md).
 
 ### Own API Key
 
@@ -305,7 +299,7 @@ The Files tab supports audio and video transcription up to 8 GB. Files are proce
 
 Talkis uses the bundled ffmpeg sidecar for video, unsupported audio formats, chunking, and diarization preparation. Ready `16 kHz` mono PCM WAV files can skip conversion for local STT.
 
-Speaker diarization is available through Talkis Cloud or through local Whisper plus the local diarization runtime, depending on the selected access mode.
+Speaker diarization is available through local Whisper plus the local diarization runtime.
 
 ## Call Recording
 
@@ -327,16 +321,15 @@ batch-only models transcribe the call after recording stops.
 
 ## Synchronous Translation
 
-Enable the translation button in Settings -> Translation, choose the target language, and start it from the floating widget. Cloud mode uses the Talkis proxy; API mode uses a verified OpenAI or Gemini Realtime adapter. Local mode does not provide synchronous translation, but local dictation, selected-text translation, file transcription, summaries, and other local features remain available.
+Enable the translation button in Settings -> Translation, choose the target language, and start it from the floating widget. API mode uses a verified [OI] or Gemini Realtime adapter. Local mode does not provide synchronous translation, but local dictation, selected-text translation, file transcription, summaries, and other local features remain available.
 
 The live text overlay keeps consecutive chunks from the same source together and stores the finished session in local history. On macOS, OpenAI-backed sessions can also play translated speech while reducing the original source volume.
 
 ## Privacy
 
-- In cloud mode, requests go through `proxy.talkis.ru`.
 - In own-key mode, requests go directly to the endpoints you configure.
 - In local mode, transcription stays on your machine.
-- API keys and device tokens are stored locally in app settings.
+- API keys are stored locally in app settings.
 - Voice history and file transcription history are stored locally.
 - Talkis does not keep audio on its own servers beyond the API call.
 
@@ -350,7 +343,7 @@ The live text overlay keeps consecutive chunks from the same source together and
 
 ## Product And Architecture Documentation
 
-- [Cloud/API/Local mode architecture](docs/architecture/processing-modes.md) — technical routing for dictation, files, calls, translation, LLM processing, and history.
+- [API/Local mode architecture](docs/architecture/processing-modes.md) — technical routing for dictation, files, calls, translation, LLM processing, and history.
 - [Talkis business requirements](docs/business-requirements.md) — user capabilities, expected behavior, limitations, and acceptance criteria.
 - [Audio pipeline principles](docs/audio-pipeline-principles.md) — mandatory engineering rules for recording, STT, files, and call capture.
 - [Local STT runtime](docs/local-stt-runtime.md) — managed local recognition architecture and contract.
@@ -431,4 +424,4 @@ Project conventions:
 
 Talkis is licensed under the [GNU Affero General Public License v3.0 or later](LICENSE) (`AGPL-3.0-or-later`).
 
-This license keeps the desktop app open-source and also requires source availability for modified versions that are offered to users over a network, which matters for the Talkis Cloud/API companion surface.
+This license keeps the desktop app open-source and also requires source availability for modified versions that are offered to users over a network.

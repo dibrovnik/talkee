@@ -8,7 +8,6 @@ use tauri::{
     tray::{TrayIcon, TrayIconBuilder},
     App, AppHandle, Manager,
 };
-use tauri_plugin_opener::OpenerExt;
 
 const TRAY_ID: &str = "talkis-main-tray";
 const TRAY_OPEN_ID: &str = "talkis-tray-open";
@@ -21,14 +20,7 @@ const TRAY_PROMPTS_ID: &str = "talkis-tray-prompts";
 const TRAY_SETTINGS_ID: &str = "talkis-tray-settings";
 #[cfg(debug_assertions)]
 const TRAY_ONBOARDING_ID: &str = "talkis-tray-onboarding";
-const TRAY_SUPPORT_ID: &str = "talkis-tray-support";
-const TRAY_GITHUB_ID: &str = "talkis-tray-github";
-const TRAY_PRIVACY_ID: &str = "talkis-tray-privacy";
 const TRAY_QUIT_ID: &str = "talkis-tray-quit";
-const TALKIS_WEBSITE_URL: &str = "https://talkis.ru";
-const TALKIS_GITHUB_URL: &str = "https://github.com/SerTimBerrners-Lee/talkis";
-const TALKIS_PRIVACY_URL: &str = "https://github.com/SerTimBerrners-Lee/talkis#privacy";
-const TALKIS_SUPPORT_URL: &str = "mailto:david.perov60@gmail.com?subject=Talkis%20support";
 
 struct TrayState {
     _tray: TrayIcon,
@@ -46,9 +38,6 @@ enum TrayAction {
     Settings,
     #[cfg(debug_assertions)]
     Onboarding,
-    Support,
-    Github,
-    Privacy,
     Quit,
 }
 
@@ -64,9 +53,6 @@ fn tray_action(menu_id: &str) -> Option<TrayAction> {
         TRAY_SETTINGS_ID => Some(TrayAction::Settings),
         #[cfg(debug_assertions)]
         TRAY_ONBOARDING_ID => Some(TrayAction::Onboarding),
-        TRAY_SUPPORT_ID => Some(TrayAction::Support),
-        TRAY_GITHUB_ID => Some(TrayAction::Github),
-        TRAY_PRIVACY_ID => Some(TrayAction::Privacy),
         TRAY_QUIT_ID => Some(TrayAction::Quit),
         _ => None,
     }
@@ -107,15 +93,6 @@ fn open_settings_tab(app: &AppHandle, tab: &'static str) {
     );
 }
 
-fn open_external_url(app: &AppHandle, url: &str, action_name: &str) {
-    if let Err(err) = app.opener().open_url(url, None::<&str>) {
-        logger::log_error(
-            "TRAY",
-            &format!("Failed to run {action_name} from tray: {err}"),
-        );
-    }
-}
-
 pub fn setup(app: &App) -> tauri::Result<()> {
     let open_item = MenuItem::with_id(app, TRAY_OPEN_ID, "Открыть Talkis", true, None::<&str>)?;
     let navigation_separator = PredefinedMenuItem::separator(app)?;
@@ -144,28 +121,10 @@ pub fn setup(app: &App) -> tauri::Result<()> {
         true,
         None::<&str>,
     )?;
-    let help_separator = PredefinedMenuItem::separator(app)?;
-    let support_item = MenuItem::with_id(
-        app,
-        TRAY_SUPPORT_ID,
-        "Написать в поддержку",
-        true,
-        None::<&str>,
-    )?;
-    let github_item = MenuItem::with_id(app, TRAY_GITHUB_ID, "GitHub", true, None::<&str>)?;
-    let privacy_item = MenuItem::with_id(
-        app,
-        TRAY_PRIVACY_ID,
-        "Конфиденциальность",
-        true,
-        None::<&str>,
-    )?;
     let about_metadata = AboutMetadataBuilder::new()
         .name(Some("Talkis"))
         .version(Some(app.package_info().version.to_string()))
         .comments(Some("Голос в текст, транскрибация и перевод."))
-        .website(Some(TALKIS_WEBSITE_URL))
-        .website_label(Some("talkis.ru"))
         .build();
     let about_item = PredefinedMenuItem::about(app, Some("О Talkis"), Some(about_metadata))?;
     let quit_separator = PredefinedMenuItem::separator(app)?;
@@ -184,10 +143,6 @@ pub fn setup(app: &App) -> tauri::Result<()> {
             &settings_item,
             #[cfg(debug_assertions)]
             &onboarding_item,
-            &help_separator,
-            &support_item,
-            &github_item,
-            &privacy_item,
             &about_item,
             &quit_separator,
             &quit_item,
@@ -212,9 +167,6 @@ pub fn setup(app: &App) -> tauri::Result<()> {
                 "open onboarding",
                 settings_window::open_dev_onboarding(app.clone()),
             ),
-            Some(TrayAction::Support) => open_external_url(app, TALKIS_SUPPORT_URL, "open support"),
-            Some(TrayAction::Github) => open_external_url(app, TALKIS_GITHUB_URL, "open GitHub"),
-            Some(TrayAction::Privacy) => open_external_url(app, TALKIS_PRIVACY_URL, "open privacy"),
             Some(TrayAction::Quit) => shutdown::quit(app),
             None => {}
         });
@@ -254,9 +206,6 @@ mod tests {
             tray_action(TRAY_ONBOARDING_ID),
             Some(TrayAction::Onboarding)
         );
-        assert_eq!(tray_action(TRAY_SUPPORT_ID), Some(TrayAction::Support));
-        assert_eq!(tray_action(TRAY_GITHUB_ID), Some(TrayAction::Github));
-        assert_eq!(tray_action(TRAY_PRIVACY_ID), Some(TrayAction::Privacy));
         assert_eq!(tray_action(TRAY_QUIT_ID), Some(TrayAction::Quit));
         assert_eq!(tray_action("unknown"), None);
     }

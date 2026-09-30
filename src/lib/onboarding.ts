@@ -60,7 +60,6 @@ export function buildOnboardingLocalSttPatch({
 }): AppSettingsPatch {
   const now = new Date().toISOString();
   return {
-    useOwnKey: true,
     provider: "custom",
     whisperApiKey: "",
     whisperEndpoint: endpoint?.trim() || ONBOARDING_LOCAL_STT_ENDPOINT,

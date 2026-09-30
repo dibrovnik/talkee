@@ -81,7 +81,6 @@ describe("onboarding local STT helpers", () => {
     });
 
     expect(patch).toMatchObject({
-      useOwnKey: true,
       provider: "custom",
       whisperApiKey: "",
       whisperEndpoint: "http://127.0.0.1:18220",

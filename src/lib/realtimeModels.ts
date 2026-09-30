@@ -1,7 +1,5 @@
 import type { ApiAdapterSettings } from "./store";
 
-export const TALKIS_CLOUD_REALTIME_ENDPOINT = "https://proxy.talkis.ru";
-
 export type StreamingSttAdapterId =
   | "openai"
   | "deepgram"

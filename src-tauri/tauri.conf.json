@@ -62,12 +62,5 @@
         "installerHooks": "windows/installer-hooks.nsh"
       }
     }
-  },
-  "plugins": {
-    "deep-link": {
-      "desktop": {
-        "schemes": ["talkis"]
-      }
-    }
   }
 }

@@ -10,19 +10,14 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { emit } from "@tauri-apps/api/event";
-import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   IconBriefcase,
   IconBroadcast,
   IconCheck,
-  IconCloud,
   IconCode,
-  IconCrown,
   IconDownload,
   IconGauge,
   IconGlobe,
-  IconLogout,
   Icon,
   IconLanguage,
   IconMessage,
@@ -33,7 +28,6 @@ import {
   IconTargetArrow,
   IconTrash,
   IconTypography,
-  IconUser,
   IconX,
   IconBolt,
 } from "../../../lib/icons";
@@ -48,32 +42,12 @@ import {
   deletePrompt,
 } from "../../../lib/store";
 import {
-  calculateCloudBalanceProgress,
-  formatCloudMilliTokens,
-} from "../../../lib/cloudTokenFormat";
-import {
   apiModelModeSettingsPatch,
   DEFAULT_LOCAL_STT_ENDPOINT,
   DEFAULT_LOCAL_STT_MODEL,
   localModelModeSettingsPatch,
-  talkisCloudModeSettingsPatch,
+  resolveProcessingMode,
 } from "../../../lib/modelMode";
-import {
-  beginCloudAuthFlow,
-  cancelCloudAuthFlow,
-  CloudProfile,
-  fetchCloudProfile,
-  getCloudTopUpUrl,
-  cloudLogout,
-  handleAuthToken,
-  generateExchangeCode,
-  getAuthLoginUrlWithCode,
-  isCloudAuthFlowActive,
-  pollForToken,
-  getCachedCloudProfile,
-  subscribeCloudProfile,
-  type CloudAuthFlowId,
-} from "../../../lib/cloudAuth";
 import { logInfo } from "../../../lib/logger";
 
 import { TRANSCRIPTION_STYLE_OPTIONS } from "../../../lib/transcriptionPrompts";
@@ -177,7 +151,7 @@ type ApiAdapterId =
   | "xai";
 
 type AdapterTestStatus = "idle" | "testing" | "success" | "error" | "info";
-type ModelMode = "cloud" | "api" | "local";
+type ModelMode = "api" | "local";
 
 interface ApiAdapterOption {
   id: ApiAdapterId;
@@ -872,428 +846,6 @@ function OptionCard({
       )}
     </div>
   );
-}
-
-function CloudSubscriptionAccountCard({
-  profile,
-  onActivate,
-  onLogout,
-}: {
-  profile: CloudProfile;
-  onActivate: () => void;
-  onLogout: () => void;
-}) {
-  const { t } = useI18n();
-  return (
-    <div
-      className="card"
-      style={{
-        padding: "22px 20px",
-        borderRadius: 10,
-        background: "var(--control-muted)",
-        color: "var(--text-hi)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-          paddingBottom: 16,
-          marginBottom: 16,
-          borderBottom: "1px solid var(--border-subtle)",
-        }}
-      >
-        <div
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: "50%",
-            background: "var(--avatar-bg)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            overflow: "hidden",
-          }}
-        >
-          {profile.user.avatarUrl ? (
-            <img
-              src={profile.user.avatarUrl}
-              alt=""
-              style={{
-                width: "100%",
-                height: "100%",
-                borderRadius: "50%",
-                objectFit: "cover",
-              }}
-            />
-          ) : (
-            <IconUser size={22} stroke={1.5} color="var(--text-low)" />
-          )}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 17,
-              fontWeight: 700,
-              color: "var(--text-hi)",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {profile.user.login || profile.user.email.split("@")[0]}
-          </div>
-          <div
-            style={{
-              fontSize: 13,
-              color: "var(--text-mid)",
-              lineHeight: 1.6,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {profile.user.email}
-          </div>
-        </div>
-
-        <button
-          onClick={onLogout}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 8,
-            borderRadius: 8,
-            color: "var(--text-low)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "color 0.15s, background 0.15s",
-          }}
-          title={t("models.account.logout")}
-        >
-          <IconLogout size={16} stroke={1.8} />
-        </button>
-      </div>
-
-      <SubscriptionPromoContent onActivate={onActivate} />
-    </div>
-  );
-}
-
-function SubscriptionPromoContent({ onActivate }: { onActivate: () => void }) {
-  const { t } = useI18n();
-  return (
-    <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 10,
-          flexWrap: "wrap",
-        }}
-      >
-        <IconCrown size={16} stroke={2.2} />
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: 6,
-            minWidth: 0,
-            flexWrap: "wrap",
-          }}
-        >
-          <span
-            style={{
-              fontWeight: 700,
-              fontSize: 14,
-              letterSpacing: "-0.02em",
-              lineHeight: 1.2,
-            }}
-          >
-            {t("models.guest.title")}
-          </span>
-        </div>
-      </div>
-      <ul
-        style={{
-          listStyle: "none",
-          padding: 0,
-          margin: "0 0 14px",
-          fontSize: 12,
-          lineHeight: 2,
-          opacity: 0.85,
-        }}
-      >
-        <li>{t("models.guest.benefit1")}</li>
-        <li>{t("models.guest.benefit2")}</li>
-        <li>{t("models.guest.benefit3")}</li>
-      </ul>
-      <button
-        onClick={onActivate}
-        style={{
-          width: "100%",
-          padding: "12px",
-          borderRadius: 10,
-          background: "var(--accent)",
-          color: "var(--accent-contrast)",
-          border: "none",
-          fontSize: 11,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          cursor: "pointer",
-          transition: "opacity 0.15s",
-          fontFamily: "var(--font-main)",
-        }}
-      >
-        {t("models.cta.upgradePro")}
-      </button>
-    </>
-  );
-}
-
-function SubscriptionGuestCard({ onActivate }: { onActivate: () => void }) {
-  return (
-    <div
-      className="card"
-      style={{
-        padding: "22px 20px",
-        borderRadius: 10,
-        background: "var(--control-muted)",
-        color: "var(--text-hi)",
-      }}
-    >
-      <SubscriptionPromoContent onActivate={onActivate} />
-    </div>
-  );
-}
-
-const DEFAULT_CLOUD_PROGRESS_TARGET = 3_900_000n;
-const DEFAULT_CLOUD_LOW_THRESHOLD = 780_000n;
-
-function cloudMilliTokens(value: string | undefined, fallback = 0n): bigint {
-  if (!value) return fallback;
-  try {
-    return BigInt(value);
-  } catch {
-    return fallback;
-  }
-}
-
-/**
- * Three-state cloud block shared by the recognition mode surfaces: available
- * wallet, signed-in empty wallet, or guest sign-in card.
- */
-function SubscriptionCards({
-  profile,
-  onActivate,
-  onTopUp,
-  onLogout,
-}: {
-  profile: CloudProfile | null | undefined;
-  onActivate: () => void;
-  onTopUp: () => void;
-  onLogout: () => void;
-}) {
-  const { t, lang } = useI18n();
-
-  if (profile?.subscription.active === true) {
-    const locale = lang === "ru" ? "ru-RU" : "en-US";
-    const wallet = profile.wallet;
-    const balance = cloudMilliTokens(wallet?.balanceMilliTokens);
-    const reserved = cloudMilliTokens(wallet?.reservedMilliTokens);
-    const target = cloudMilliTokens(
-      profile.thresholds?.progressTargetMilliTokens,
-      DEFAULT_CLOUD_PROGRESS_TARGET,
-    );
-    const lowThreshold = cloudMilliTokens(
-      profile.thresholds?.lowBalanceMilliTokens,
-      DEFAULT_CLOUD_LOW_THRESHOLD,
-    );
-    const progress = calculateCloudBalanceProgress(balance, reserved, target);
-    const low = wallet?.low ?? balance < lowThreshold;
-
-    return (
-      <div
-        className="card"
-        style={{ display: "flex", flexDirection: "column", gap: 16 }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 16,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              minWidth: 0,
-            }}
-          >
-            <div
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 999,
-                background: "var(--accent)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <IconCrown
-                size={20}
-                stroke={2.2}
-                color="var(--accent-contrast)"
-              />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                }}
-              >
-                {t("models.subscription.active")}
-              </div>
-              <div
-                style={{
-                  fontSize: 13,
-                  color: "var(--text-mid)",
-                  lineHeight: 1.6,
-                }}
-              >
-                {wallet
-                  ? t("models.subscription.balance", {
-                      tokens: formatCloudMilliTokens(balance, locale),
-                    })
-                  : t("models.cloud.proReady")}
-              </div>
-            </div>
-          </div>
-          <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: 999,
-              background: low ? "var(--text-low)" : "var(--accent)",
-              flexShrink: 0,
-            }}
-          />
-        </div>
-
-        {wallet && (
-          <>
-            <div
-              role="progressbar"
-              aria-label={t("models.subscription.balance", {
-                tokens: formatCloudMilliTokens(balance, locale),
-              })}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={progress.wholePercentage}
-              style={{
-                height: 8,
-                borderRadius: 999,
-                overflow: "hidden",
-                background: "var(--control-track)",
-              }}
-            >
-              <div
-                style={{
-                  width: `${progress.percentage}%`,
-                  height: "100%",
-                  borderRadius: 999,
-                  background: "var(--accent)",
-                  transition: "width 0.2s ease",
-                }}
-              />
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                flexWrap: "wrap",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  color: low ? "var(--text-hi)" : "var(--text-low)",
-                  lineHeight: 1.5,
-                }}
-              >
-                {low
-                  ? t("models.subscription.low")
-                  : reserved > 0n
-                    ? t("models.subscription.reserved", {
-                        tokens: formatCloudMilliTokens(reserved, locale),
-                      })
-                    : `${progress.wholePercentage}%`}
-              </div>
-              {low && (
-                <button
-                  type="button"
-                  onClick={onTopUp}
-                  style={{
-                    padding: "9px 14px",
-                    borderRadius: 10,
-                    border: "none",
-                    background: "var(--accent)",
-                    color: "var(--accent-contrast)",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    fontFamily: "var(--font-main)",
-                    cursor: "pointer",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                  }}
-                >
-                  {t("models.subscription.topUp")}
-                </button>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  }
-
-  if (profile) {
-    return (
-      <CloudSubscriptionAccountCard
-        profile={profile}
-        onActivate={onActivate}
-        onLogout={onLogout}
-      />
-    );
-  }
-
-  return <SubscriptionGuestCard onActivate={onActivate} />;
-}
-
-function extractTokenFromUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    return parsed.searchParams.get("token") || null;
-  } catch {
-    return null;
-  }
 }
 
 interface PromptEditorState {
@@ -2001,16 +1553,10 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
   const [promptPreviewError, setPromptPreviewError] = useState<string | null>(
     null,
   );
-  const [cloudProfile, setCloudProfile] = useState<
-    CloudProfile | null | undefined
-  >(() => getCachedCloudProfile());
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "success" | "error"
   >("idle");
   const [testMessage, setTestMessage] = useState<string | null>(null);
-  const [waitingForAuth, setWaitingForAuth] = useState(false);
-  const [waitingForSubscriptionRefresh, setWaitingForSubscriptionRefresh] =
-    useState(false);
   const [modelModeView, setModelModeView] = useState<ModelMode | null>(null);
   const [styleTabView, setStyleTabView] = useState<"style" | "prompts">(
     "style",
@@ -2049,26 +1595,8 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
   const [localModelActionStates, setLocalModelActionStates] = useState<
     Partial<Record<string, LocalModelActionState>>
   >({});
-  const authPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const exchangeCodeRef = useRef<string | null>(null);
-  const authFlowRef = useRef<CloudAuthFlowId | null>(null);
   const settingsSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const optimisticLocalInstalledModelsRef = useRef<Set<string>>(new Set());
-
-  const clearLocalAuthPolling = useCallback(() => {
-    if (authPollingRef.current) {
-      clearInterval(authPollingRef.current);
-      authPollingRef.current = null;
-    }
-    exchangeCodeRef.current = null;
-    authFlowRef.current = null;
-    setWaitingForAuth(false);
-  }, []);
-
-  const cancelLocalAuthPolling = useCallback(() => {
-    cancelCloudAuthFlow();
-    clearLocalAuthPolling();
-  }, [clearLocalAuthPolling]);
 
   const syncSettings = useCallback(async () => {
     const nextSettings = await getSettings({ reload: true });
@@ -2076,37 +1604,10 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
     return nextSettings;
   }, []);
 
-  const loadCloudProfile = useCallback(async () => {
-    const profile = await fetchCloudProfile({ force: true });
-    return profile;
-  }, []);
-
-  const applyCloudToken = useCallback(
-    async (token: string) => {
-      const flowId = authFlowRef.current;
-      if (!isCloudAuthFlowActive(flowId)) {
-        logInfo(
-          "SETTINGS",
-          "Ignoring auth token without an active local auth flow",
-        );
-        return null;
-      }
-
-      await handleAuthToken(token, { authFlowId: flowId });
-      clearLocalAuthPolling();
-      await syncSettings();
-      const profile = await loadCloudProfile();
-      setWaitingForSubscriptionRefresh(!profile?.subscription.active);
-      return profile;
-    },
-    [clearLocalAuthPolling, loadCloudProfile, syncSettings],
-  );
-
   const refreshLocalInstalledModels = useCallback(async () => {
     if (
       !settings ||
       type !== "model" ||
-      !settings.useOwnKey ||
       !isLocalSttEndpoint(settings.whisperEndpoint)
     ) {
       return;
@@ -2194,7 +1695,6 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
   }, [
     settings?.apiKey,
     settings?.provider,
-    settings?.useOwnKey,
     settings?.whisperApiKey,
     settings?.whisperEndpoint,
     settings?.localModelsDir,
@@ -2233,143 +1733,25 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
     void refreshLocalTranslators();
   }, [refreshLocalTranslators]);
 
-  // IconCloud profile — always fetch (regardless of tab) so hooks are stable
   useEffect(() => {
-    if (getCachedCloudProfile() === undefined) {
-      loadCloudProfile().catch(() => {});
-    }
-  }, [loadCloudProfile]);
-
-  useEffect(() => {
-    return subscribeCloudProfile((nextProfile) => {
-      setCloudProfile(nextProfile);
-      if (nextProfile) {
-        clearLocalAuthPolling();
-      }
-    });
-  }, [clearLocalAuthPolling]);
-
-  useEffect(() => {
-    const refreshCloudProfile = () => {
-      void loadCloudProfile();
+    const refreshSettings = () => {
       void syncSettings();
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        refreshCloudProfile();
+        refreshSettings();
       }
     };
 
-    window.addEventListener("focus", refreshCloudProfile);
+    window.addEventListener("focus", refreshSettings);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.removeEventListener("focus", refreshCloudProfile);
+      window.removeEventListener("focus", refreshSettings);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [loadCloudProfile]);
-
-  useEffect(() => {
-    const unlistenPromise = listen<string>("deep-link-auth", async (event) => {
-      logInfo("SETTINGS", "Received auth token via Tauri event");
-      await applyCloudToken(event.payload);
-    });
-
-    return () => {
-      void unlistenPromise.then((unlisten) => unlisten());
-    };
-  }, [applyCloudToken]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const setup = async () => {
-      try {
-        await onOpenUrl(async (urls) => {
-          if (cancelled) return;
-
-          for (const url of urls) {
-            const token = extractTokenFromUrl(url);
-            if (!token) continue;
-
-            logInfo("SETTINGS", `Deep link auth URL received: ${url}`);
-            await applyCloudToken(token);
-          }
-        });
-      } catch (error) {
-        logInfo("SETTINGS", `Deep link JS API unavailable: ${error}`);
-      }
-    };
-
-    void setup();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [applyCloudToken]);
-
-  useEffect(() => {
-    if (!waitingForAuth) {
-      if (authPollingRef.current) {
-        clearInterval(authPollingRef.current);
-        authPollingRef.current = null;
-      }
-      return;
-    }
-
-    authPollingRef.current = setInterval(async () => {
-      const code = exchangeCodeRef.current;
-      const flowId = authFlowRef.current;
-      if (!code || !isCloudAuthFlowActive(flowId)) return;
-
-      const token = await pollForToken(code);
-      if (
-        !token ||
-        exchangeCodeRef.current !== code ||
-        authFlowRef.current !== flowId ||
-        !isCloudAuthFlowActive(flowId)
-      )
-        return;
-
-      logInfo("SETTINGS", "Auth polling returned device token");
-      await applyCloudToken(token);
-    }, 3000);
-
-    const timeout = setTimeout(() => {
-      cancelLocalAuthPolling();
-    }, 120_000);
-
-    return () => {
-      if (authPollingRef.current) {
-        clearInterval(authPollingRef.current);
-        authPollingRef.current = null;
-      }
-      clearTimeout(timeout);
-    };
-  }, [applyCloudToken, cancelLocalAuthPolling, waitingForAuth]);
-
-  useEffect(() => {
-    if (!waitingForSubscriptionRefresh) {
-      return;
-    }
-
-    const interval = setInterval(async () => {
-      const profile = await loadCloudProfile();
-      if (profile?.subscription.active) {
-        setWaitingForSubscriptionRefresh(false);
-      }
-    }, 3000);
-
-    const timeout = setTimeout(() => {
-      setWaitingForSubscriptionRefresh(false);
-    }, 120_000);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
-  }, [loadCloudProfile, waitingForSubscriptionRefresh]);
+  }, [syncSettings]);
 
   useEffect(() => {
     if (!settings || type !== "style" || !IS_DEV) return;
@@ -2410,14 +1792,10 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       return;
     }
 
-    const currentMode: ModelMode = !settings.useOwnKey
-      ? "cloud"
-      : isLocalSttEndpoint(settings.whisperEndpoint)
-        ? "local"
-        : "api";
+    const currentMode: ModelMode = resolveProcessingMode(settings);
 
     setModelModeView((current) => current ?? currentMode);
-  }, [settings?.useOwnKey, settings?.whisperEndpoint, type]);
+  }, [settings?.whisperEndpoint, type]);
 
   useEffect(() => {
     const unlistenPromise = listen<LocalModelDownloadProgressEvent>(
@@ -2487,52 +1865,12 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
     });
   };
 
-  // Subscription activation / logout — shared by the Models → IconCloud section and
-  // the dedicated "Подписка Talkis" tab so both surfaces drive the same flow.
-  const handleActivateSubscription = async () => {
-    try {
-      const authed = cloudProfile !== null && cloudProfile !== undefined;
-      if (authed) {
-        setWaitingForSubscriptionRefresh(true);
-        await openUrl(cloudProfile.topUpUrl || getCloudTopUpUrl());
-        return;
-      }
-
-      const code = generateExchangeCode();
-      const flowId = beginCloudAuthFlow();
-      exchangeCodeRef.current = code;
-      authFlowRef.current = flowId;
-      setWaitingForAuth(true);
-      await openUrl(getAuthLoginUrlWithCode(code));
-    } catch {
-      cancelLocalAuthPolling();
-    }
-  };
-
-  const handleCloudLogout = async () => {
-    cancelLocalAuthPolling();
-    setWaitingForSubscriptionRefresh(false);
-    await cloudLogout();
-    setCloudProfile(null);
-    await syncSettings();
-  };
-
   if (type === "model") {
-    const hasActiveSubscription = cloudProfile?.subscription.active === true;
-    const isCloudMode = !settings.useOwnKey;
-    const isLocalSttMode =
-      settings.useOwnKey && isLocalSttEndpoint(settings.whisperEndpoint);
-    const isCloudSelected = isCloudMode && hasActiveSubscription;
     const desktopPlatform = detectDesktopPlatform();
-    const activeModelMode: ModelMode = isCloudSelected
-      ? "cloud"
-      : isLocalSttMode
-        ? "local"
-        : "api";
+    const activeModelMode: ModelMode = resolveProcessingMode(settings);
     const visibleModelMode = modelModeView ?? activeModelMode;
     const isApiMode = visibleModelMode === "api";
     const isLocalMode = visibleModelMode === "local";
-    const isCloudView = visibleModelMode === "cloud";
     const selectedApiAdapterId = (settings.selectedApiAdapter ||
       "openai") as ApiAdapterId;
     // In Local mode a local text (LLM) model is "selected" once llmEndpoint points
@@ -2556,11 +1894,6 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       label: string;
       Icon: Icon;
     }> = [
-      {
-        id: "cloud",
-        label: t("models.mode.cloud"),
-        Icon: IconCloud,
-      },
       {
         id: "api",
         label: "API",
@@ -3036,7 +2369,6 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       }
 
       update({
-        useOwnKey: true,
         provider: "openai",
         selectedApiAdapter: adapter.id,
         apiKey,
@@ -3071,23 +2403,12 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       resetInstallState();
     };
 
-    const handleModeChange = (mode: (typeof modeOptions)[number]["id"]) => {
+    const handleModeChange = (mode: ModelMode) => {
       if (mode === visibleModelMode) {
         return;
       }
 
       setModelModeView(mode);
-      resetTestState();
-      resetInstallState();
-    };
-
-    const handleSelectCloudMode = () => {
-      if (!hasActiveSubscription) {
-        return;
-      }
-
-      update(talkisCloudModeSettingsPatch(buildActiveApiAdapterSnapshot()));
-      setModelModeView("cloud");
       resetTestState();
       resetInstallState();
     };
@@ -3664,7 +2985,6 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
     ) => {
       update({
         ...buildActiveApiAdapterSnapshot(),
-        useOwnKey: true,
         provider: "custom",
         whisperApiKey: "",
         whisperEndpoint: endpointOverride || getLocalModelEndpoint(model),
@@ -4017,120 +3337,6 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
               })}
             </div>
           </div>
-
-          {isCloudView && (
-            <>
-              <SubscriptionCards
-                profile={cloudProfile}
-                onActivate={handleActivateSubscription}
-                onTopUp={handleActivateSubscription}
-                onLogout={() => {
-                  void handleCloudLogout();
-                }}
-              />
-
-              {hasActiveSubscription && (
-                <div
-                  className="card"
-                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 15,
-                        fontWeight: 700,
-                        color: "var(--text-hi)",
-                        marginBottom: 4,
-                      }}
-                    >
-                      {t("models.mode.cloud")}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "var(--text-mid)",
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {t("models.cloud.descActive")}
-                    </div>
-                  </div>
-
-                  {(isCloudSelected || hasActiveSubscription) && (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 10,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          color: isCloudSelected
-                            ? "var(--success-bright)"
-                            : "var(--text-hi)",
-                          fontSize: 12,
-                          fontWeight: 600,
-                        }}
-                      >
-                        <IconCheck size={15} stroke={2.5} />
-                        {isCloudSelected
-                          ? t("models.connection.usedForRecognition")
-                          : t("models.cloud.proReady")}
-                      </div>
-
-                      {isCloudSelected ? (
-                        <div
-                          style={{
-                            padding: "9px 12px",
-                            borderRadius: 10,
-                            border: "1px solid var(--success-border)",
-                            background: "var(--success-soft)",
-                            color: "var(--success-bright)",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
-                          <IconCheck size={14} stroke={2.5} />
-                          {t("models.common.selected")}
-                        </div>
-                      ) : hasActiveSubscription ? (
-                        <button
-                          type="button"
-                          onClick={handleSelectCloudMode}
-                          style={{
-                            padding: "9px 12px",
-                            borderRadius: 10,
-                            border: "1px solid var(--border-dashed)",
-                            background: "var(--control-muted)",
-                            color: "var(--text-hi)",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            fontFamily: "var(--font-main)",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
-                          <IconCheck size={14} stroke={2.5} />
-                          {t("models.common.select")}
-                        </button>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
 
           {isApiMode && (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

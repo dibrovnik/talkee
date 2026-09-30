@@ -44,7 +44,6 @@ cpal = "0.15.3"
 window-vibrancy = "0.7.1"
 dirs = "5"
 include_dir = "0.7"
-tauri-plugin-deep-link = "2"
 url = "2.5.8"
 tauri-plugin-process = "2.3.1"
 tauri-plugin-shell = "2.3.2"
@@ -70,7 +69,7 @@ tauri-plugin-autostart = "2.5.1"
 # macOS enforces a single app instance natively; Windows/Linux need this plugin
 # so a second launch focuses the running app instead of spawning another widget.
 [target.'cfg(any(windows, target_os = "linux"))'.dependencies]
-tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
+tauri-plugin-single-instance = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61.2", features = [

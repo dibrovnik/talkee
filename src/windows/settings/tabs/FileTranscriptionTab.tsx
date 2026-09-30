@@ -36,7 +36,6 @@ import { SummaryModal } from "../../../components/SummaryModal";
 import { SpeakerNameInput } from "../../../components/SpeakerNameInput";
 import { useI18n, type TFunc } from "../../../lib/i18n";
 import {
-  canUseCloudSpeakerDiarization,
   fileNameFromPath,
   FileTranscriptionProgress,
   FileTranscriptionStatus,
@@ -428,9 +427,6 @@ export function FileTranscriptionTab({
         const validationRun = speakerDiarizationToggleRunRef.current;
         void (async () => {
           const syncedSettings = await refreshSpeakerInstalledModels(settings);
-          const cloudSpeakerReady = syncedSettings.useOwnKey
-            ? false
-            : await canUseCloudSpeakerDiarization(syncedSettings);
 
           if (!mounted) return;
 
@@ -443,9 +439,7 @@ export function FileTranscriptionTab({
 
           if (
             syncedSettings.fileSpeakerDiarization &&
-            ((!syncedSettings.useOwnKey && !cloudSpeakerReady) ||
-              (syncedSettings.useOwnKey &&
-                !isSpeakerSetupReady(syncedSettings)))
+            !isSpeakerSetupReady(syncedSettings)
           ) {
             setSpeakerDiarization(false);
             void saveSettings({ fileSpeakerDiarization: false });
@@ -688,20 +682,10 @@ export function FileTranscriptionTab({
       const settings = await refreshSpeakerInstalledModels(
         await getSettings({ reload: true }),
       );
-      const isLocalStt = isLocalSttSettings(settings);
-      const effectiveUseOwnKey = isLocalStt || settings.useOwnKey;
-      const cloudSpeakerReady = isLocalStt
-        ? false
-        : await canUseCloudSpeakerDiarization(settings, true);
       settingsRef.current = settings;
       syncSpeakerSetupState(settings);
-      if (speakerMode && !effectiveUseOwnKey && !cloudSpeakerReady) {
-        setSpeakerDiarization(false);
-        await saveSettings({ fileSpeakerDiarization: false });
-        throw new Error("IconCloud speaker diarization unavailable");
-      }
 
-      if (speakerMode && effectiveUseOwnKey && !isSpeakerSetupReady(settings)) {
+      if (speakerMode && !isSpeakerSetupReady(settings)) {
         setPendingSpeakerFilePath(filePath);
         setSpeakerSetupIntent("process");
         setSpeakerSetupMessage("");
@@ -1039,10 +1023,7 @@ export function FileTranscriptionTab({
       setSpeakerSetupMessage("");
       setSpeakerSetupError("");
       setSpeakerSetupModalOpen(true);
-    } else if (
-      (isLocalSttSettings(cachedSettings) || cachedSettings.useOwnKey) &&
-      !isSpeakerSetupReady(cachedSettings)
-    ) {
+    } else if (!isSpeakerSetupReady(cachedSettings)) {
       setPendingSpeakerFilePath(null);
       setSpeakerSetupIntent("toggle");
       setSpeakerSetupMessage("");
@@ -1055,37 +1036,12 @@ export function FileTranscriptionTab({
         const settings = await refreshSpeakerInstalledModels(
           await getSettings({ reload: true }),
         );
-        const isLocalStt = isLocalSttSettings(settings);
-        const effectiveUseOwnKey = isLocalStt || settings.useOwnKey;
-        const cloudSpeakerReady = effectiveUseOwnKey
-          ? false
-          : await canUseCloudSpeakerDiarization(settings, true);
-
         if (!isCurrentToggleRun()) {
           return;
         }
 
         settingsRef.current = settings;
         syncSpeakerSetupState(settings);
-
-        if (!effectiveUseOwnKey) {
-          if (cloudSpeakerReady) {
-            setSpeakerSetupModalOpen(false);
-            setSpeakerSetupIntent(null);
-            return;
-          }
-
-          setSpeakerSetupModalOpen(false);
-          setSpeakerSetupIntent(null);
-          setError(
-            toFileTranscriptionErrorMessage(
-              new Error("IconCloud speaker diarization unavailable"),
-            ),
-          );
-          setSpeakerDiarization(false);
-          await saveSettings({ fileSpeakerDiarization: false });
-          return;
-        }
 
         if (isSpeakerSetupReady(settings)) {
           setSpeakerSetupModalOpen(false);

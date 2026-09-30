@@ -344,9 +344,7 @@ pub trait RealtimeTranslationAdapter {
     fn parse_event(&self, payload: &str) -> Result<Option<NormalizedRealtimeEvent>, String>;
 }
 
-/// Protocol adapter shared by provider transports. Talkis Cloud intentionally
-/// implements the same event contract elsewhere, but is not exposed until its
-/// realtime proxy exists.
+/// Protocol adapter shared by provider transports.
 pub struct ProviderRealtimeAdapter<'a> {
     provider: &'a str,
 }
@@ -374,45 +372,6 @@ impl RealtimeTranslationAdapter for ProviderRealtimeAdapter<'_> {
 
     fn parse_event(&self, payload: &str) -> Result<Option<NormalizedRealtimeEvent>, String> {
         parse_translation_provider_event(self.provider, payload)
-    }
-}
-
-/// Frontend-independent contract for the future Talkis Cloud realtime proxy.
-/// It deliberately has no connection URL or UI catalog entry in this workspace.
-pub struct TalkisCloudRealtimeAdapter;
-
-impl RealtimeTranslationAdapter for TalkisCloudRealtimeAdapter {
-    fn adapter_id(&self) -> &str {
-        "talkis-cloud"
-    }
-
-    fn parse_event(&self, payload: &str) -> Result<Option<NormalizedRealtimeEvent>, String> {
-        let value: Value = serde_json::from_str(payload)
-            .map_err(|err| format!("Invalid Talkis Cloud realtime event: {}", err))?;
-        let status = match value.get("status").and_then(Value::as_str) {
-            Some("started") => NormalizedRealtimeStatus::Started,
-            Some("partial") => NormalizedRealtimeStatus::Partial,
-            Some("final") => NormalizedRealtimeStatus::Final,
-            Some("error") => NormalizedRealtimeStatus::Error,
-            _ => return Ok(None),
-        };
-        Ok(Some(NormalizedRealtimeEvent {
-            status,
-            original: value
-                .get("original")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_string(),
-            translated: value
-                .get("translated")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_string(),
-            message: value
-                .get("message")
-                .and_then(Value::as_str)
-                .map(str::to_string),
-        }))
     }
 }
 
@@ -2100,18 +2059,6 @@ mod tests {
             .expect_err("pending connection must fall back");
         assert!(error.contains("recording stopped"));
         server.abort();
-    }
-
-    #[test]
-    fn parses_future_talkis_cloud_contract_without_exposing_transport() {
-        let adapter = TalkisCloudRealtimeAdapter;
-        assert_eq!(adapter.adapter_id(), "talkis-cloud");
-        let event = adapter
-            .parse_event(r#"{"status":"final","original":"hello","translated":"привет"}"#)
-            .unwrap()
-            .unwrap();
-        assert_eq!(event.status, NormalizedRealtimeStatus::Final);
-        assert_eq!(event.translated, "привет");
     }
 
     #[tokio::test]

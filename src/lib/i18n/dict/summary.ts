@@ -14,8 +14,8 @@ export const summary = {
   "summary.progress.reduce": { ru: "Объединяем части…", en: "Merging parts…" },
 
   "summary.noModel": {
-    ru: "Для саммари нужен вход в Talkis Cloud или указанная текстовая модель (вкладка «Модели»).",
-    en: "Summaries need a Talkis Cloud sign-in or a configured text model (the «Models» tab).",
+    ru: "Для саммари нужна указанная текстовая модель (вкладка «Модели»).",
+    en: "Summaries need a configured text model (the «Models» tab).",
   },
   "summary.empty.noText": { ru: "Нет текста для саммари.", en: "No text to summarize." },
 

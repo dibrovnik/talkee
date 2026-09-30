@@ -28,8 +28,6 @@ const ORIGINAL_PLAYBACK_PREBUFFER_MS: u32 = 80;
 const ORIGINAL_PLAYBACK_MAX_QUEUE_MS: u32 = 500;
 const ORIGINAL_PLAYBACK_RECOVERY_QUEUE_MS: u32 = 200;
 const TRANSLATION_WORKER_START_TIMEOUT: Duration = Duration::from_secs(15);
-const TALKIS_CLOUD_PROVIDER: &str = "talkis-cloud";
-const TALKIS_CLOUD_REALTIME_PATH: &str = "/api/realtime/client-secret";
 
 static SESSION: OnceLock<Mutex<Option<LiveTranslationRuntime>>> = OnceLock::new();
 
@@ -53,15 +51,6 @@ pub struct StartLiveTranslationRequest {
     pub mic_device_label: Option<String>,
     pub save_audio: bool,
     pub storage_dir: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CloudRealtimeClientSecret {
-    client_secret: String,
-    provider: String,
-    model: String,
-    endpoint: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -498,106 +487,11 @@ fn slot() -> &'static Mutex<Option<LiveTranslationRuntime>> {
 async fn resolve_translation_connection(
     req: &StartLiveTranslationRequest,
 ) -> Result<RealtimeConnectionRequest, String> {
-    if req.provider != TALKIS_CLOUD_PROVIDER {
-        return Ok(RealtimeConnectionRequest {
-            provider: req.provider.clone(),
-            api_key: req.api_key.clone(),
-            model: req.model.clone(),
-            endpoint: req.endpoint.clone(),
-            target_language: Some(req.target_language.clone()),
-            purpose: "translation".to_string(),
-            voice_output: req.voice_enabled,
-            voice: req.voice.clone(),
-            voice_speed: req.voice_speed,
-        });
-    }
-
-    if req.api_key.trim().is_empty() {
-        return Err("Войдите в Talkis и проверьте облачный баланс.".to_string());
-    }
-    let url = format!(
-        "{}{}",
-        req.endpoint.trim().trim_end_matches('/'),
-        TALKIS_CLOUD_REALTIME_PATH
-    );
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(15))
-        .build()
-        .map_err(|error| format!("Не удалось подготовить облачное подключение: {}", error))?;
-    logger::log_info(
-        "LIVE_TRANSLATION",
-        "provider=talkis-cloud stage=client_secret_request",
-    );
-    let response = client
-        .post(url)
-        .bearer_auth(req.api_key.trim())
-        .json(&serde_json::json!({
-            "targetLanguage": req.target_language,
-            "voiceOutput": req.voice_enabled,
-            "voice": req.voice,
-            "voiceSpeed": req.voice_speed,
-        }))
-        .send()
-        .await
-        .map_err(|error| format!("Облако Talkis недоступно: {}", error))?;
-    let status = response.status();
-    let response_text = response
-        .text()
-        .await
-        .map_err(|error| format!("Некорректный ответ облака Talkis: {}", error))?;
-    if !status.is_success() {
-        let upstream_message = serde_json::from_str::<serde_json::Value>(&response_text)
-            .ok()
-            .and_then(|value| {
-                value
-                    .get("error")
-                    .and_then(|error| error.as_str())
-                    .map(str::to_string)
-            });
-        let message =
-            match status.as_u16() {
-                401 => "Сессия Talkis истекла. Войдите в облако повторно.".to_string(),
-                402 => "Облачный баланс закончился. Пополните его в личном кабинете Talkis."
-                    .to_string(),
-                403 => "Облачный доступ Talkis сейчас недоступен.".to_string(),
-                429 => "Слишком много запусков синхронного перевода. Повторите через минуту."
-                    .to_string(),
-                _ => upstream_message.unwrap_or_else(|| {
-                    format!("Облако Talkis не запустило синхронный перевод ({})", status)
-                }),
-            };
-        logger::log_error(
-            "LIVE_TRANSLATION",
-            &format!(
-                "provider=talkis-cloud stage=client_secret_failed status={}",
-                status
-            ),
-        );
-        return Err(message);
-    }
-
-    let secret: CloudRealtimeClientSecret = serde_json::from_str(&response_text)
-        .map_err(|error| format!("Некорректный ответ облака Talkis: {}", error))?;
-    if secret.client_secret.trim().is_empty()
-        || secret.provider != "openai"
-        || secret.model.trim().is_empty()
-        || secret.endpoint.trim().is_empty()
-    {
-        return Err("Облако Talkis вернуло неполные данные Realtime-сессии.".to_string());
-    }
-    logger::log_info(
-        "LIVE_TRANSLATION",
-        &format!(
-            "provider=talkis-cloud stage=client_secret_ready model={}",
-            secret.model
-        ),
-    );
-
     Ok(RealtimeConnectionRequest {
-        provider: secret.provider,
-        api_key: secret.client_secret,
-        model: secret.model,
-        endpoint: secret.endpoint,
+        provider: req.provider.clone(),
+        api_key: req.api_key.clone(),
+        model: req.model.clone(),
+        endpoint: req.endpoint.clone(),
         target_language: Some(req.target_language.clone()),
         purpose: "translation".to_string(),
         voice_output: req.voice_enabled,
@@ -879,7 +773,7 @@ pub async fn start_live_translation(
     {
         return Err("Синхронный перевод уже запущен.".to_string());
     }
-    if req.voice_enabled && req.provider != "openai" && req.provider != TALKIS_CLOUD_PROVIDER {
+    if req.voice_enabled && req.provider != "openai" {
         return Err("Озвучка сейчас поддерживается только через OpenAI Realtime API.".to_string());
     }
     #[cfg(not(target_os = "macos"))]

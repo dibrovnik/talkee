@@ -166,10 +166,7 @@ async function loadRecordingAudioSource(
 }
 
 function isLocalSttSettings(settings: AppSettings): boolean {
-  return (
-    settings.useOwnKey &&
-    /127\.0\.0\.1|localhost/i.test(settings.whisperEndpoint || "")
-  );
+  return /127\.0\.0\.1|localhost/i.test(settings.whisperEndpoint || "");
 }
 
 function createRequestId(): string {
@@ -322,50 +319,12 @@ function toUserFacingErrorMessage(
     return tn("widget.error.regionUnsupported");
   }
 
-  if (
-    normalized.includes("402") ||
-    normalized.includes("insufficient_cloud_tokens")
-  ) {
-    return tn("widget.error.subscriptionRequired");
-  }
-
   if (normalized.includes("403") || normalized.includes("forbidden")) {
     if (isLocalStt) {
       return tn("widget.error.localRuntimeRejected");
     }
 
-    if (
-      normalized.includes("subscription inactive") ||
-      normalized.includes("активная подписка") ||
-      normalized.includes("cloud mode")
-    ) {
-      return tn("widget.error.subscriptionRequired");
-    }
-
     return tn("widget.error.requestRejected");
-  }
-
-  if (
-    normalized.includes("invalid or expired token") ||
-    normalized.includes("token expired") ||
-    normalized.includes("token missing user id")
-  ) {
-    return tn("widget.error.cloudSessionExpired");
-  }
-
-  if (normalized.includes("talkis cloud session missing")) {
-    return tn("widget.error.cloudSignInRequired");
-  }
-
-  if (normalized.includes("talkis cloud returned an invalid response")) {
-    return tn("widget.error.cloudInvalidResponse");
-  }
-
-  if (
-    normalized.includes("subscription check failed") ||
-    normalized.includes("cloud auth unavailable")
-  ) {
-    return tn("widget.error.cloudUnavailable");
   }
 
   if (normalized.includes("translation text model unavailable")) {
@@ -408,73 +367,6 @@ function toUserFacingErrorMessage(
   }
 
   return tn("widget.error.processingFailed");
-}
-
-const PROXY_BASE_URL = "https://proxy.talkis.ru";
-
-async function transcribeViaProxy({
-  audioBase64,
-  audioMimeType,
-  audioFileName,
-  settings,
-  signal,
-}: {
-  audioBase64: string;
-  audioMimeType: string;
-  audioFileName: string;
-  settings: AppSettings;
-  signal?: AbortSignal;
-}): Promise<TranscriptionResult> {
-  logInfo("API", `Sending to proxy, audio_size: ${audioBase64.length} chars`);
-
-  // Decode base64 → binary → Blob
-  const binary = atob(audioBase64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  const blob = new Blob([bytes], { type: audioMimeType });
-
-  const form = new FormData();
-  form.append("file", blob, audioFileName);
-  form.append("language", settings.language || "ru");
-  form.append("style", settings.style || "classic");
-
-  const resp = await fetch(`${PROXY_BASE_URL}/api/transcribe`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${settings.deviceToken}`,
-    },
-    body: form,
-    signal,
-  });
-
-  const body = await resp.text();
-
-  if (!resp.ok) {
-    logError("API", `Proxy error (${resp.status}): ${body}`);
-    throw new Error(`Proxy error (${resp.status}): ${body}`);
-  }
-
-  try {
-    const parsed = JSON.parse(body) as { raw?: string; cleaned?: string };
-    const result = {
-      raw: typeof parsed.raw === "string" ? parsed.raw : "",
-      cleaned: typeof parsed.cleaned === "string" ? parsed.cleaned : "",
-    };
-
-    logInfo(
-      "API",
-      `Proxy response parsed: raw_type=${typeof parsed.raw}, cleaned_type=${typeof parsed.cleaned}, cleaned_len=${result.cleaned.length}`,
-    );
-    return result;
-  } catch (error) {
-    logError(
-      "API",
-      `Proxy success response parse failed: ${formatErrorMessage(error)}; body=${body}`,
-    );
-    throw new Error("Talkis Cloud returned an invalid response");
-  }
 }
 
 async function transcribeViaBackend({
@@ -524,7 +416,6 @@ async function transcribeAudio({
   audioMimeType,
   audioFileName,
   settings,
-  signal,
   streamingRequestId,
 }: {
   audioBase64: string;
@@ -534,22 +425,6 @@ async function transcribeAudio({
   signal?: AbortSignal;
   streamingRequestId?: string | null;
 }): Promise<TranscriptionResult> {
-  // Subscription mode: send to proxy
-  if (!settings.useOwnKey && settings.deviceToken?.trim()) {
-    return transcribeViaProxy({
-      audioBase64,
-      audioMimeType,
-      audioFileName,
-      settings,
-      signal,
-    });
-  }
-
-  if (!settings.useOwnKey) {
-    throw new Error("Talkis Cloud session missing");
-  }
-
-  // Own key mode: send to Rust backend
   return transcribeViaBackend({
     audioBase64,
     audioMimeType,

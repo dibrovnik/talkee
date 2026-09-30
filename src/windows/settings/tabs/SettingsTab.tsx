@@ -396,9 +396,7 @@ export function SettingsTab() {
       : t("settings.mic.systemDefault");
   const autostartDisabled = !autostartLoaded || autostartPending;
   const widgetScale = normalizeWidgetScale(settings.widgetScale);
-  const isCloudMode = !settings.useOwnKey;
-  const realtimeTranscriptionActive =
-    !isCloudMode && settings.realtimeTranscriptionEnabled;
+  const realtimeTranscriptionActive = settings.realtimeTranscriptionEnabled;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1233,21 +1231,15 @@ export function SettingsTab() {
                   lineHeight: 1.35,
                 }}
               >
-                {t(
-                  isCloudMode
-                    ? "settings.realtimeTranscription.cloudDesc"
-                    : "settings.realtimeTranscription.desc",
-                )}
+                {t("settings.realtimeTranscription.desc")}
               </div>
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={realtimeTranscriptionActive}
-              aria-disabled={isCloudMode}
               aria-describedby="realtime-transcription-description"
               onClick={() => {
-                if (isCloudMode) return;
                 void update({
                   realtimeTranscriptionEnabled:
                     !settings.realtimeTranscriptionEnabled,
@@ -1263,8 +1255,8 @@ export function SettingsTab() {
                 gridTemplateColumns: "minmax(0, 1fr) 34px",
                 alignItems: "center",
                 gap: 10,
-                opacity: isCloudMode ? 0.64 : 1,
-                cursor: isCloudMode ? "not-allowed" : "pointer",
+                opacity: 1,
+                cursor: "pointer",
                 transform: "none",
                 justifySelf: "end",
               }}
@@ -1280,11 +1272,9 @@ export function SettingsTab() {
                   minWidth: 0,
                 }}
               >
-                {isCloudMode
-                  ? t("settings.realtimeTranscription.unavailable")
-                  : settings.realtimeTranscriptionEnabled
-                    ? t("settings.realtimeTranscription.on")
-                    : t("settings.realtimeTranscription.off")}
+                {settings.realtimeTranscriptionEnabled
+                  ? t("settings.realtimeTranscription.on")
+                  : t("settings.realtimeTranscription.off")}
               </span>
               <span
                 aria-hidden="true"

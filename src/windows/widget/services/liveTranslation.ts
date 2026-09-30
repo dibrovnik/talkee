@@ -7,11 +7,10 @@ import type {
 import {
   hasVerifiedRealtimeCapability,
   REALTIME_TRANSLATION_ADAPTERS,
-  TALKIS_CLOUD_REALTIME_ENDPOINT,
 } from "../../../lib/realtimeModels";
 
 export interface LiveTranslationConnectionConfig {
-  provider: "talkis-cloud" | "openai" | "gemini";
+  provider: "openai" | "gemini";
   apiKey: string;
   model: string;
   endpoint: string;
@@ -20,30 +19,15 @@ export interface LiveTranslationConnectionConfig {
 }
 
 export function isLocalModelMode(settings: AppSettings): boolean {
-  return settings.useOwnKey && /127\.0\.0\.1|localhost/i.test(settings.whisperEndpoint || "");
+  return /127\.0\.0\.1|localhost/i.test(settings.whisperEndpoint || "");
 }
 
 export function resolveLiveTranslationConnection(
   settings: AppSettings,
 ): LiveTranslationConnectionConfig {
-  if (!settings.useOwnKey) {
-    const deviceToken = settings.deviceToken.trim();
-    if (!deviceToken) {
-      throw new Error("Войдите в Talkis и выберите активную облачную подписку.");
-    }
-    return {
-      provider: "talkis-cloud",
-      apiKey: deviceToken,
-      model: "gpt-realtime",
-      endpoint: TALKIS_CLOUD_REALTIME_ENDPOINT,
-      adapterId: "talkis-cloud",
-      supportsVoice: true,
-    };
-  }
-
   if (isLocalModelMode(settings)) {
     throw new Error(
-      "Синхронный перевод недоступен для локальных моделей. Выберите «Облако» или «API».",
+      "Синхронный перевод недоступен для локальных моделей. Выберите «API».",
     );
   }
 

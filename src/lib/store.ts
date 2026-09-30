@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { load } from "@tauri-apps/plugin-store";
 
+import {
+  DEFAULT_LOCAL_STT_ENDPOINT,
+  DEFAULT_LOCAL_STT_MODEL,
+} from "./modelMode";
 import { DEFAULT_WIDGET_SCALE, normalizeWidgetScale } from "./widgetScale";
 import { recordTranscriptionStats } from "./stats";
 import { logInfo } from "./logger";
@@ -255,10 +259,6 @@ export interface AppSettings {
    *  the process dies on app restart while the endpoint stays persisted. Empty for
    *  a user's own local server (e.g. Ollama) or any non-local endpoint. */
   llmLocalModelId: string;
-  /** If true, user provides their own API key. If false, uses subscription */
-  useOwnKey: boolean;
-  /** Device auth token for Talkis Cloud */
-  deviceToken: string;
   /** Default file transcription mode: split uploaded files by speakers */
   fileSpeakerDiarization: boolean;
   /** Dictation translation mode controlled from the widget. */
@@ -692,11 +692,22 @@ function needsLocalSttSettingsMigration(saved: unknown): boolean {
 
   const normalizedEndpoint = normalizeLocalSttEndpoint(endpoint);
   return (
-    raw.useOwnKey !== true ||
     raw.provider !== "custom" ||
     raw.whisperApiKey !== "" ||
     normalizedEndpoint !== endpoint
   );
+}
+
+/** Legacy cloud mode (`useOwnKey=false` + `deviceToken`) cleanup: drop those
+ *  keys from persisted settings and move the user to Local mode when a local
+ *  STT model is installed, otherwise to API mode (empty endpoint). */
+function needsCloudModeSettingsMigration(saved: unknown): boolean {
+  if (!saved || typeof saved !== "object") {
+    return false;
+  }
+
+  const raw = saved as Record<string, unknown>;
+  return raw.useOwnKey !== undefined || raw.deviceToken !== undefined;
 }
 
 export function needsHotkeySettingsMigration(
@@ -785,8 +796,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   whisperEndpoint: "",
   llmEndpoint: "",
   llmLocalModelId: "",
-  useOwnKey: true,
-  deviceToken: "",
   fileSpeakerDiarization: false,
   translation: {
     widgetEnabled: false,
@@ -1322,9 +1331,6 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
         : isBundledLocalLlmEndpoint(raw.llmEndpoint)
           ? parseBundledLocalLlmModelId(raw.llmModel)
           : undefined,
-    useOwnKey: typeof raw.useOwnKey === "boolean" ? raw.useOwnKey : undefined,
-    deviceToken:
-      typeof raw.deviceToken === "string" ? raw.deviceToken : undefined,
     fileSpeakerDiarization:
       typeof raw.fileSpeakerDiarization === "boolean"
         ? raw.fileSpeakerDiarization
@@ -1357,9 +1363,28 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
     normalized.whisperEndpoint = normalizeLocalSttEndpoint(
       normalized.whisperEndpoint,
     );
-    normalized.useOwnKey = true;
     normalized.provider = "custom";
     normalized.whisperApiKey = "";
+  }
+
+  // Legacy cloud mode migration (design decision 2): `useOwnKey=false` users
+  // move to Local mode when a local STT model is installed, otherwise to API
+  // mode (empty endpoint). `useOwnKey`/`deviceToken` keys are dropped.
+  if (raw.useOwnKey === false) {
+    const hasLocalSttModel = Object.values(rawLocalModels ?? {}).some(
+      (model) => model.status === "downloaded",
+    );
+    if (hasLocalSttModel) {
+      normalized.provider = "custom";
+      normalized.whisperApiKey = "";
+      normalized.whisperEndpoint = normalizeLocalSttEndpoint(
+        normalized.whisperEndpoint,
+      ) || DEFAULT_LOCAL_STT_ENDPOINT;
+      normalized.whisperModel = normalized.whisperModel || DEFAULT_LOCAL_STT_MODEL;
+    } else {
+      normalized.whisperEndpoint = "";
+      normalized.provider = parseProvider(raw.provider) || "openai";
+    }
   }
 
   return normalized;
@@ -1616,7 +1641,6 @@ export async function getSettings(
     result.whisperEndpoint =
       normalizeLocalSttEndpoint(result.whisperEndpoint) ||
       result.whisperEndpoint;
-    result.useOwnKey = true;
     result.provider = "custom";
     result.whisperApiKey = "";
   }
@@ -1625,6 +1649,7 @@ export async function getSettings(
     result.language,
   );
   if (
+    needsCloudModeSettingsMigration(saved) ||
     needsLocalSttSettingsMigration(saved) ||
     needsHotkeySettingsMigration(saved, result) ||
     (saved &&

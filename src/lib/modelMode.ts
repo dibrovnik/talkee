@@ -1,6 +1,5 @@
 import type { AppSettings } from "./store";
 
-export const TALKIS_CLOUD_STT_MODEL = "gpt-4o-transcribe";
 export const DEFAULT_LOCAL_STT_ENDPOINT = "http://127.0.0.1:8000";
 export const DEFAULT_LOCAL_STT_MODEL = "whisper-large-v3-turbo";
 
@@ -18,17 +17,19 @@ interface LocalModelModeSelection {
   model?: string;
 }
 
-export function talkisCloudModeSettingsPatch(
-  extra: ModelModeSettingsPatch = {},
-): ModelModeSettingsPatch {
-  return {
-    ...extra,
-    useOwnKey: false,
-    provider: "openai",
-    whisperApiKey: "",
-    whisperEndpoint: "",
-    whisperModel: TALKIS_CLOUD_STT_MODEL,
-  };
+export type ProcessingMode = "api" | "local";
+
+interface ProcessingModeSettings {
+  whisperEndpoint?: string | null;
+}
+
+/** Resolve the active processing mode: local sidecar endpoints (localhost /
+ *  127.0.0.1) mean "Локально", everything else (including empty) means "API". */
+export function resolveProcessingMode(
+  settings: ProcessingModeSettings,
+): ProcessingMode {
+  const endpoint = settings.whisperEndpoint || "";
+  return /127\.0\.0\.1|localhost/i.test(endpoint) ? "local" : "api";
 }
 
 export function apiModelModeSettingsPatch(
@@ -37,7 +38,6 @@ export function apiModelModeSettingsPatch(
 ): ModelModeSettingsPatch {
   return {
     ...extra,
-    useOwnKey: true,
     provider: "openai",
     selectedApiAdapter: selection.adapterId,
     apiKey: selection.apiKey?.trim() || "",
@@ -53,7 +53,6 @@ export function localModelModeSettingsPatch(
 ): ModelModeSettingsPatch {
   return {
     ...extra,
-    useOwnKey: true,
     provider: "custom",
     whisperApiKey: "",
     whisperEndpoint:

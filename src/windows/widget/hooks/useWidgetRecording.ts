@@ -288,10 +288,6 @@ export function useWidgetRecording({
       return;
     }
 
-    // Cloud mode must have a device token. Do not silently fall back to direct OpenAI.
-    const isCloudMode = !activeSettings.useOwnKey;
-    const isSubscriptionMode =
-      isCloudMode && (activeSettings.deviceToken || "").trim().length > 0;
     const hasKey =
       activeSettings.apiKey.trim().length > 0 ||
       activeSettings.whisperApiKey.trim().length > 0 ||
@@ -300,19 +296,12 @@ export function useWidgetRecording({
     // In local STT mode the whisper server runs on localhost and requires no API key.
     // Detect this case by the local-looking endpoint; provider can be stale after upgrades.
     const isLocalSttMode =
-      activeSettings.useOwnKey &&
       (activeSettings.whisperEndpoint || "").match(
         /127\.0\.0\.1|localhost/i,
       ) !== null &&
       (activeSettings.whisperApiKey || "").trim().length === 0;
 
-    if (isCloudMode && !isSubscriptionMode) {
-      logError("RECORDING", "Cloud mode selected but device token is missing");
-      showError(t("widget.recording.cloudSignInRequired"));
-      return;
-    }
-
-    if (!isSubscriptionMode && !hasKey && !isLocalSttMode) {
+    if (!hasKey && !isLocalSttMode) {
       logError("RECORDING", "No transcription model configured");
       showError(t("widget.recording.noModelConfigured"));
       return;

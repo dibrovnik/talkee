@@ -245,6 +245,7 @@ pub fn run() {
             accessibility::check_reduce_transparency,
             runtime_info::get_app_runtime_info,
             get_cleanup_prompt_preview,
+            get_cleanup_prompt,
             start_native_hotkey_capture,
             stop_native_hotkey_capture,
             hotkey_manager::register_handy_hotkey,
@@ -280,6 +281,14 @@ mod tests {
         assert!(should_open_settings_on_launch(true, false));
         assert!(!should_open_settings_on_launch(true, true));
     }
+}
+
+#[tauri::command]
+fn get_cleanup_prompt(
+    language: String,
+    style: String,
+) -> Result<prompt_config::PromptPreview, String> {
+    prompt_config::build_cleanup_prompt_preview(&language, &style)
 }
 
 #[tauri::command]

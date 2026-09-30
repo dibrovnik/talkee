@@ -1,4 +1,4 @@
-// i18n strings for src/components: PermissionScreen, TranscriptionStatsPanel, TitleBar.
+// i18n strings for src/components: PermissionScreen, TranscriptionStatsPanel.
 export const components = {
   // ── PermissionScreen ──────────────────────────────────────
   // PermissionRow status badges (not granted yet)
@@ -134,9 +134,4 @@ export const components = {
   "stats.wordsToday": { ru: "Слов за сегодня", en: "Words today" },
   "stats.wordsThisMonth": { ru: "Слов за месяц", en: "Words this month" },
   "stats.wordsPerMinute": { ru: "Слов в минуту", en: "Words per minute" },
-
-  // ── TitleBar ──────────────────────────────────────────────
-  "titleBar.close": { ru: "Закрыть", en: "Close" },
-  "titleBar.minimize": { ru: "Свернуть", en: "Minimize" },
-  "titleBar.maximize": { ru: "Развернуть", en: "Maximize" },
 } as const;

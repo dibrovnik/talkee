@@ -8,6 +8,8 @@ import {
   IconGlobe,
   IconTargetArrow,
 } from "../lib/icons";
+import { Badge } from "../ui/Badge";
+import { ProgressBar } from "../ui/ProgressBar";
 import { ModelCardDisclosureButton } from "./ModelCardDisclosureButton";
 
 export interface LocalSttModelCardStats {
@@ -70,95 +72,20 @@ export function LocalSttModelCard({
   actions: ReactNode;
 }): ReactElement {
   return (
-    <div
-      className="card"
-      style={{
-        padding: 0,
-        overflow: "hidden",
-        background: "var(--surface)",
-      }}
-    >
-      <div
-        style={{
-          position: "relative",
-          padding: "12px 14px",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          textAlign: "left",
-          fontFamily: "var(--font-main)",
-        }}
-      >
-        <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
-              marginBottom: 3,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                minWidth: 0,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {name}
-              </div>
-              {recommendedLabel && (
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 800,
-                    color: "var(--text-hi)",
-                    padding: "3px 7px",
-                    borderRadius: 999,
-                    background: "var(--control-muted)",
-                    flexShrink: 0,
-                  }}
-                >
-                  {recommendedLabel}
-                </div>
-              )}
+    <div className="ui-model-card">
+      <div className="ui-model-card__head">
+        <div className="ui-model-card__main">
+          <div className="ui-model-card__titlebar">
+            <div className="ui-model-card__title">
+              <span>{name}</span>
+              {recommendedLabel && <Badge>{recommendedLabel}</Badge>}
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: statusColor,
-                padding: "5px 9px",
-                borderRadius: 999,
-                background: "var(--control-muted)",
-                whiteSpace: "nowrap",
-              }}
-            >
+            <Badge className="ui-model-card__state" style={{ color: statusColor }}>
               {statusLabel}
-            </div>
+            </Badge>
           </div>
-          <div style={{ paddingRight: 34 }}>
-            <div
-              style={{
-                fontSize: 12,
-                lineHeight: 1.45,
-                color: "var(--text-mid)",
-              }}
-            >
-              {description}
-            </div>
+          <div className="ui-model-card__body">
+            <div className="ui-model-card__desc">{description}</div>
             <ModelStats stats={stats} />
           </div>
           <ModelCardDisclosureButton
@@ -170,29 +97,16 @@ export function LocalSttModelCard({
       </div>
 
       {expanded && (
-        <div
-          style={{
-            borderTop: "1px solid var(--border-subtle)",
-            padding: "12px 14px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-          }}
-        >
+        <div className="ui-model-card__detail">
           {notice && (
             <div
               role={notice.tone === "error" ? "alert" : undefined}
-              style={{
-                fontSize: 12,
-                lineHeight: 1.6,
-                padding: "8px 10px",
-                borderRadius: 8,
-                background: notice.tone === "error" ? "var(--danger-soft)" : "var(--control-muted)",
-                color: notice.tone === "error" ? "var(--error-bright)" : "var(--text-mid)",
-                border: `1px solid ${
-                  notice.tone === "error" ? "var(--danger-border)" : "var(--border-subtle)"
-                }`,
-              }}
+              className={[
+                "ui-model-card__notice",
+                notice.tone === "error" ? "ui-model-card__notice--error" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
             >
               {notice.message}
             </div>
@@ -200,41 +114,17 @@ export function LocalSttModelCard({
 
           {progress && <ModelProgress progress={progress} />}
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
-              flexWrap: "wrap",
-            }}
-          >
+          <div className="ui-model-card__actions">
             {connectionLabel && (
               <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  color: connectionColor || "var(--text-mid)",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
+                className="ui-model-card__actions-leading ui-model-card__status-note"
+                style={{ color: connectionColor || "var(--label-2)" }}
               >
-                {showConnectionCheck && <IconCheck size={15} stroke={2.5} />}
+                {showConnectionCheck && <IconCheck size={14} stroke={2.5} />}
                 {connectionLabel}
               </div>
             )}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                flexWrap: "wrap",
-                marginLeft: "auto",
-              }}
-            >
-              {actions}
-            </div>
+            {actions}
           </div>
         </div>
       )}
@@ -271,42 +161,11 @@ function ModelStats({ stats }: { stats: LocalSttModelCardStats }): ReactElement 
   ];
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        marginTop: 9,
-        flexWrap: "nowrap",
-        minWidth: 0,
-        overflow: "hidden",
-      }}
-    >
+    <div className="ui-model-stats">
       {items.map(({ key, title, value, Icon }) => (
-        <div
-          key={key}
-          role="img"
-          title={title}
-          aria-label={title}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            flexShrink: 0,
-          }}
-        >
-          <Icon size={14} stroke={1.9} color="var(--text-hi)" />
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 650,
-              color: "var(--text-hi)",
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {value}
-          </span>
+        <div key={key} role="img" title={title} aria-label={title} className="ui-model-stat">
+          <Icon size={14} stroke={1.9} />
+          <span>{value}</span>
         </div>
       ))}
       {stats.streamingLabel && (
@@ -314,25 +173,10 @@ function ModelStats({ stats }: { stats: LocalSttModelCardStats }): ReactElement 
           role="img"
           title={stats.streamingLabel}
           aria-label={stats.streamingLabel}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            flexShrink: 0,
-          }}
+          className="ui-model-stat"
         >
-          <IconBroadcast size={14} stroke={1.9} color="var(--text-hi)" />
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 650,
-              color: "var(--text-hi)",
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {stats.streamingLabel}
-          </span>
+          <IconBroadcast size={14} stroke={1.9} />
+          <span>{stats.streamingLabel}</span>
         </div>
       )}
     </div>
@@ -341,48 +185,18 @@ function ModelStats({ stats }: { stats: LocalSttModelCardStats }): ReactElement 
 
 function ModelProgress({ progress }: { progress: LocalSttModelCardProgress }): ReactElement {
   return (
-    <div role="status" style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          fontSize: 12,
-          color: "var(--text-mid)",
-          fontWeight: 650,
-        }}
-      >
+    <div role="status" className="ui-model-progress">
+      <div className="ui-model-progress__head">
         <span>{progress.message}</span>
-        <span style={{ color: "var(--text-hi)" }}>
+        <span className="ui-model-progress__value">
           {progress.percent !== undefined
             ? `${progress.percent}%`
             : progress.valueLabel || progress.downloadedLabel}
         </span>
       </div>
-      <div
-        aria-hidden="true"
-        style={{
-          width: "100%",
-          height: 8,
-          borderRadius: 999,
-          background: "var(--progress-track)",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            width: `${progress.percent ?? 2}%`,
-            minWidth: progress.percent === undefined ? 18 : 0,
-            height: "100%",
-            borderRadius: 999,
-            background: "var(--accent)",
-            transition: "width 0.2s ease",
-          }}
-        />
-      </div>
+      <ProgressBar value={(progress.percent ?? 2) / 100} />
       {(progress.downloadedLabel || progress.totalLabel) && (
-        <div style={{ fontSize: 11, color: "var(--text-low)", lineHeight: 1.4 }}>
+        <div className="ui-model-progress__meta">
           {progress.downloadedLabel}
           {progress.totalLabel ? ` ${progress.totalTemplate || progress.totalLabel}` : ""}
         </div>

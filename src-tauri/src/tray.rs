@@ -1,13 +1,14 @@
 use crate::{
-    commands::{settings_window, widget},
+    app_menu,
+    commands::{dock, settings_window, widget},
     logger, shutdown,
 };
 use std::future::Future;
 use tauri::{
     image::Image,
-    menu::{AboutMetadataBuilder, Menu, MenuItem, PredefinedMenuItem},
+    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIcon, TrayIconBuilder},
-    App, AppHandle, Manager,
+    App, AppHandle, Manager, Wry,
 };
 
 const TRAY_ID: &str = "talkee-main-tray";
@@ -24,12 +25,14 @@ const TRAY_MODELS_ID: &str = "talkee-tray-models";
 const TRAY_TRANSLATOR_ID: &str = "talkee-tray-translator";
 const TRAY_PROMPTS_ID: &str = "talkee-tray-prompts";
 const TRAY_SETTINGS_ID: &str = "talkee-tray-settings";
+const TRAY_DOCK_ID: &str = "talkee-tray-dock";
 #[cfg(debug_assertions)]
 const TRAY_ONBOARDING_ID: &str = "talkee-tray-onboarding";
 const TRAY_QUIT_ID: &str = "talkee-tray-quit";
 
 struct TrayState {
     _tray: TrayIcon,
+    dock_item: CheckMenuItem<Wry>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -42,6 +45,7 @@ enum TrayAction {
     Translator,
     Prompts,
     Settings,
+    Dock,
     #[cfg(debug_assertions)]
     Onboarding,
     Quit,
@@ -57,6 +61,7 @@ fn tray_action(menu_id: &str) -> Option<TrayAction> {
         TRAY_TRANSLATOR_ID => Some(TrayAction::Translator),
         TRAY_PROMPTS_ID => Some(TrayAction::Prompts),
         TRAY_SETTINGS_ID => Some(TrayAction::Settings),
+        TRAY_DOCK_ID => Some(TrayAction::Dock),
         #[cfg(debug_assertions)]
         TRAY_ONBOARDING_ID => Some(TrayAction::Onboarding),
         TRAY_QUIT_ID => Some(TrayAction::Quit),
@@ -100,57 +105,81 @@ fn open_settings_tab(app: &AppHandle, tab: &'static str) {
 }
 
 pub fn setup(app: &App) -> tauri::Result<()> {
-    let open_item = MenuItem::with_id(app, TRAY_OPEN_ID, "Открыть Talkee", true, None::<&str>)?;
-    let navigation_separator = PredefinedMenuItem::separator(app)?;
-    let history_item = MenuItem::with_id(app, TRAY_HISTORY_ID, "История", true, None::<&str>)?;
-    let file_item =
-        MenuItem::with_id(app, TRAY_FILE_ID, "Транскрибация файла", true, None::<&str>)?;
-    let chat_item = MenuItem::with_id(app, TRAY_CHAT_ID, "Чат", true, None::<&str>)?;
-    let models_item =
-        MenuItem::with_id(app, TRAY_MODELS_ID, "Диктовка и модели", true, None::<&str>)?;
-    let translator_item =
-        MenuItem::with_id(app, TRAY_TRANSLATOR_ID, "Переводчик", true, None::<&str>)?;
+    let open_item = MenuItem::with_id(app, TRAY_OPEN_ID, "Открыть Talkee…", true, None::<&str>)?;
+    let history_item = MenuItem::with_id(app, TRAY_HISTORY_ID, "История…", true, None::<&str>)?;
+    let file_item = MenuItem::with_id(
+        app,
+        TRAY_FILE_ID,
+        "Транскрибация файла…",
+        true,
+        None::<&str>,
+    )?;
+    let chat_item = MenuItem::with_id(app, TRAY_CHAT_ID, "Чат…", true, None::<&str>)?;
+    let models_item = MenuItem::with_id(
+        app,
+        TRAY_MODELS_ID,
+        "Диктовка и модели…",
+        true,
+        None::<&str>,
+    )?;
     let prompts_item =
-        MenuItem::with_id(app, TRAY_PROMPTS_ID, "Стиль и промпты", true, None::<&str>)?;
+        MenuItem::with_id(app, TRAY_PROMPTS_ID, "Стиль и промпты…", true, None::<&str>)?;
+    let translator_item =
+        MenuItem::with_id(app, TRAY_TRANSLATOR_ID, "Переводчик…", true, None::<&str>)?;
     let settings_item = MenuItem::with_id(
         app,
         TRAY_SETTINGS_ID,
-        "Настройки и горячие клавиши",
+        "Настройки…",
         true,
+        Some("CmdOrCtrl+,"),
+    )?;
+    let dock_item = CheckMenuItem::with_id(
+        app,
+        TRAY_DOCK_ID,
+        "Показывать значок в Dock",
+        true,
+        dock::show_in_dock(app.handle()),
         None::<&str>,
     )?;
     #[cfg(debug_assertions)]
     let onboarding_item = MenuItem::with_id(
         app,
         TRAY_ONBOARDING_ID,
-        "Онбординг (DEV)",
+        "Онбординг (DEV)…",
         true,
         None::<&str>,
     )?;
-    let about_metadata = AboutMetadataBuilder::new()
-        .name(Some("Talkee"))
-        .version(Some(app.package_info().version.to_string()))
-        .comments(Some("Голос в текст, транскрибация и перевод."))
-        .build();
-    let about_item = PredefinedMenuItem::about(app, Some("О Talkee"), Some(about_metadata))?;
-    let quit_separator = PredefinedMenuItem::separator(app)?;
-    let quit_item = MenuItem::with_id(app, TRAY_QUIT_ID, "Выйти из Talkee", true, None::<&str>)?;
+    let about_item = PredefinedMenuItem::about(
+        app,
+        Some("О программе Talkee"),
+        Some(app_menu::about_metadata(app)),
+    )?;
+    let quit_item = MenuItem::with_id(
+        app,
+        TRAY_QUIT_ID,
+        "Завершить Talkee",
+        true,
+        Some("CmdOrCtrl+Q"),
+    )?;
     let menu = Menu::with_items(
         app,
         &[
             &open_item,
-            &navigation_separator,
+            &PredefinedMenuItem::separator(app)?,
             &history_item,
             &file_item,
             &chat_item,
+            &PredefinedMenuItem::separator(app)?,
             &models_item,
-            &translator_item,
             &prompts_item,
+            &translator_item,
+            &PredefinedMenuItem::separator(app)?,
             &settings_item,
+            &dock_item,
             #[cfg(debug_assertions)]
             &onboarding_item,
+            &PredefinedMenuItem::separator(app)?,
             &about_item,
-            &quit_separator,
             &quit_item,
         ],
     )?;
@@ -168,6 +197,7 @@ pub fn setup(app: &App) -> tauri::Result<()> {
             Some(TrayAction::Translator) => open_settings_tab(app, "interpreter"),
             Some(TrayAction::Prompts) => open_settings_tab(app, "style"),
             Some(TrayAction::Settings) => open_settings_tab(app, "settings"),
+            Some(TrayAction::Dock) => dock::toggle_from_tray(app),
             #[cfg(debug_assertions)]
             Some(TrayAction::Onboarding) => run_settings_action(
                 "open onboarding",
@@ -179,9 +209,21 @@ pub fn setup(app: &App) -> tauri::Result<()> {
 
     let icon = Image::from_bytes(TRAY_ICON_PNG)?;
     let tray = builder.icon(icon).icon_as_template(true).build(app)?;
-    app.manage(TrayState { _tray: tray });
+    app.manage(TrayState {
+        _tray: tray,
+        dock_item,
+    });
     logger::log_info("TRAY", "System tray initialized");
     Ok(())
+}
+
+/// Keeps the tray check mark in sync with the Dock icon preference.
+pub fn set_dock_checked(app: &AppHandle, checked: bool) {
+    if let Some(state) = app.try_state::<TrayState>() {
+        if let Err(err) = state.dock_item.set_checked(checked) {
+            logger::log_error("TRAY", &format!("Failed to update Dock menu item: {err}"));
+        }
+    }
 }
 
 /// Switches the menu-bar icon between the idle and recording variants.
@@ -224,6 +266,7 @@ mod tests {
         );
         assert_eq!(tray_action(TRAY_PROMPTS_ID), Some(TrayAction::Prompts));
         assert_eq!(tray_action(TRAY_SETTINGS_ID), Some(TrayAction::Settings));
+        assert_eq!(tray_action(TRAY_DOCK_ID), Some(TrayAction::Dock));
         #[cfg(debug_assertions)]
         assert_eq!(
             tray_action(TRAY_ONBOARDING_ID),

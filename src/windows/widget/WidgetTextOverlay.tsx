@@ -276,13 +276,14 @@ export function WidgetTextOverlay(): ReactElement | null {
         height: "100vh",
         padding: 0,
         boxSizing: "border-box",
-        background:
-          "linear-gradient(180deg, var(--app-gradient-start) 0%, var(--app-gradient-end) 100%)",
+        background: "transparent",
+        // The HUD material is always dark, so labels resolve in the dark scheme.
+        colorScheme: "dark",
         overflow: "hidden",
         isolation: "isolate",
-        borderRadius: 16,
-        clipPath: "inset(0 round 16px)",
-        WebkitClipPath: "inset(0 round 16px)",
+        borderRadius: 12,
+        clipPath: "inset(0 round 12px)",
+        WebkitClipPath: "inset(0 round 12px)",
         contain: "paint",
       }}
     >
@@ -295,6 +296,7 @@ export function WidgetTextOverlay(): ReactElement | null {
         }}
         onPointerUp={handleDragPointerEnd}
         onPointerCancel={handleDragPointerEnd}
+        className="widget-overlay-enter"
         style={{
           width: "100%",
           height: "100%",
@@ -304,13 +306,9 @@ export function WidgetTextOverlay(): ReactElement | null {
           flexDirection: "column",
           minHeight: 0,
           overflow: "hidden",
-          borderRadius: 16,
-          border: "1px solid var(--border)",
-          background:
-            "linear-gradient(180deg, var(--app-gradient-start) 0%, var(--app-gradient-end) 100%)",
-          boxShadow: "none",
-          color: "var(--text-hi)",
-          animation: "widget-notice-in 0.22s var(--ease-standard)",
+          borderRadius: 12,
+          background: "transparent",
+          color: "var(--label)",
           position: "relative",
           cursor: "grab",
         }}
@@ -337,10 +335,10 @@ export function WidgetTextOverlay(): ReactElement | null {
               style={{
                 width: 22,
                 height: 22,
-                border: "1px solid var(--border-subtle)",
+                border: "1px solid var(--separator)",
                 borderRadius: 8,
                 background: "var(--control-bg)",
-                color: "var(--text-mid)",
+                color: "var(--label-2)",
                 display: "grid",
                 placeItems: "center",
                 padding: 0,
@@ -363,10 +361,10 @@ export function WidgetTextOverlay(): ReactElement | null {
             style={{
               width: 22,
               height: 22,
-              border: "1px solid var(--border-subtle)",
+              border: "1px solid var(--separator)",
               borderRadius: 8,
               background: "var(--control-bg)",
-              color: "var(--text-mid)",
+              color: "var(--label-2)",
               display: "grid",
               placeItems: "center",
               padding: 0,
@@ -383,7 +381,7 @@ export function WidgetTextOverlay(): ReactElement | null {
               minHeight: 0,
               display: "grid",
               placeItems: "center",
-              color: "var(--text-mid)",
+              color: "var(--label-2)",
               opacity: 0.58,
               fontSize: 12,
               fontWeight: 700,
@@ -416,7 +414,7 @@ export function WidgetTextOverlay(): ReactElement | null {
                 scrollbarGutter: "stable",
                 padding: "1px 8px 2px 2px",
                 boxSizing: "border-box",
-                color: "var(--text-hi)",
+                color: "var(--label)",
                 fontSize: 12,
                 lineHeight: 1.55,
                 fontWeight: 500,
@@ -436,7 +434,7 @@ export function WidgetTextOverlay(): ReactElement | null {
               {state.status === "liveTranslation" ? (
                 <div>
                   {translatedLiveSegments.length === 0 && messageText ? (
-                    <div style={{ color: "var(--text-mid)", fontWeight: 600 }}>{messageText}</div>
+                    <div style={{ color: "var(--label-2)", fontWeight: 600 }}>{messageText}</div>
                   ) : null}
                   {translatedLiveSegments.map((segment, index) => (
                     <div
@@ -445,7 +443,7 @@ export function WidgetTextOverlay(): ReactElement | null {
                       style={{
                         minWidth: 0,
                         padding: index === 0 ? "1px 2px 5px" : "5px 2px",
-                        borderTop: index === 0 ? "none" : "1px solid var(--border-subtle)",
+                        borderTop: index === 0 ? "none" : "1px solid var(--separator)",
                       }}
                     >
                       <div
@@ -457,7 +455,7 @@ export function WidgetTextOverlay(): ReactElement | null {
                           fontSize: 10,
                           lineHeight: 1.3,
                           fontWeight: 750,
-                          color: "var(--text-low)",
+                          color: "var(--label-3)",
                         }}
                       >
                         <span
@@ -512,10 +510,10 @@ export function WidgetTextOverlay(): ReactElement | null {
                   bottom: 8,
                   height: 24,
                   padding: "0 8px",
-                  border: "1px solid var(--border-subtle)",
+                  border: "1px solid var(--separator)",
                   borderRadius: 8,
                   background: "var(--control-bg)",
-                  color: "var(--text-mid)",
+                  color: "var(--label-2)",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 4,

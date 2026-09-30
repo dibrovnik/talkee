@@ -2,10 +2,12 @@ import { listen } from "@tauri-apps/api/event";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { HISTORY_DELETED_EVENT, HISTORY_UPDATED_EVENT } from "../../lib/hotkeyEvents";
 import { useI18n } from "../../lib/i18n";
-import { IconCheck, IconLoader2 } from "../../lib/icons";
+import { IconCheck } from "../../lib/icons";
 import { logError } from "../../lib/logger";
 import { matchesOnboardingTestPhrase } from "../../lib/onboarding";
 import type { AppSettings, HistoryEntry } from "../../lib/store";
+import { Button } from "../../ui/Button";
+import { Spinner } from "../../ui/Spinner";
 import { DictationHotkeyControl } from "../DictationHotkeyControl";
 import { OnboardingConfetti } from "./OnboardingConfetti";
 import { OnboardingShell } from "./OnboardingShell";
@@ -117,69 +119,19 @@ export function OnboardingTestStep({
       currentStep={2}
       title={t("onboarding.test.title")}
       footer={
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        >
-          <button
-            type="button"
-            onClick={onBack}
-            style={{
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: "1px solid var(--border)",
-              background: "var(--control-muted)",
-              color: "var(--text-hi)",
-              cursor: "pointer",
-              fontWeight: 700,
-            }}
-          >
-            ← {t("onboarding.back")}
-          </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {!canFinish && (
-              <button
-                type="button"
-                onClick={onComplete}
-                style={{
-                  padding: "10px 4px",
-                  border: "none",
-                  background: "transparent",
-                  color: "var(--text-low)",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-              >
-                {t("onboarding.test.skip")}
-              </button>
-            )}
-            {canFinish && (
-              <button
-                type="button"
-                onClick={onComplete}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 10,
-                  border: "none",
-                  background: "var(--accent)",
-                  color: "var(--accent-contrast)",
-                  cursor: "pointer",
-                  fontWeight: 750,
-                }}
-              >
-                {t("onboarding.test.finish")}
-              </button>
-            )}
-          </div>
-        </div>
+        <>
+          <Button onClick={onBack}>← {t("onboarding.back")}</Button>
+          {canFinish ? (
+            <Button variant="primary" size="large" onClick={onComplete}>
+              {t("onboarding.test.finish")}
+            </Button>
+          ) : (
+            <Button onClick={onComplete}>{t("onboarding.test.skip")}</Button>
+          )}
+        </>
       }
     >
-      <div style={{ display: "grid", gap: 20, textAlign: "center" }}>
+      <div className="ui-onboarding-test">
         <DictationHotkeyControl
           settings={activeSettings}
           onSettingsChange={setActiveSettings}
@@ -187,158 +139,42 @@ export function OnboardingTestStep({
           livePreview
         />
 
-        <p
-          style={{
-            width: "min(100%, 620px)",
-            margin: "2px auto 0",
-            color: "var(--text-hi)",
-            fontFamily: "var(--font-accent)",
-            fontSize: 22,
-            fontWeight: 750,
-            lineHeight: 1.42,
-            letterSpacing: "-0.03em",
-          }}
-        >
-          {t("onboarding.test.phrase")}
-        </p>
+        <p className="ui-onboarding-test__phrase">{t("onboarding.test.phrase")}</p>
 
         {processing && (
-          <div
-            role="status"
-            aria-live="polite"
-            style={{
-              minHeight: 76,
-              display: "grid",
-              alignItems: "center",
-              justifyItems: "center",
-              gap: 9,
-            }}
-          >
-            <IconLoader2 className="onboarding-test-spinner" size={25} stroke={1.8} />
-            <span
-              style={{
-                color: "var(--text-mid)",
-                fontFamily: "var(--font-main)",
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              {t("onboarding.test.processing")}
-            </span>
+          <div role="status" aria-live="polite" className="ui-onboarding-test__processing">
+            <Spinner size={24} label={t("onboarding.test.processing")} />
+            <span className="ui-onboarding__status">{t("onboarding.test.processing")}</span>
           </div>
         )}
 
         {transcript && phraseMatched && (
           <div
-            className="onboarding-success-reveal"
+            className="ui-onboarding-test__result onboarding-success-reveal"
             role="status"
             aria-live="polite"
-            style={{
-              position: "relative",
-              minHeight: 104,
-              display: "grid",
-              alignContent: "center",
-              justifyItems: "center",
-              gap: 9,
-            }}
           >
             <OnboardingConfetti key={transcript} />
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 7,
-                color: "var(--success)",
-                fontFamily: "var(--font-accent)",
-                fontSize: 16,
-                fontWeight: 800,
-                lineHeight: 1.3,
-                letterSpacing: "-0.025em",
-              }}
-            >
-              <IconCheck size={18} stroke={2.5} />
+            <div className="ui-onboarding-test__result-title ui-onboarding-test__result-title--success">
+              <IconCheck size={16} stroke={2.5} />
               {t("onboarding.test.result")}
             </div>
-            <p
-              style={{
-                width: "min(100%, 620px)",
-                margin: 0,
-                color: "var(--text-hi)",
-                fontFamily: "var(--font-main)",
-                fontSize: 16,
-                fontWeight: 500,
-                lineHeight: 1.55,
-              }}
-            >
-              {transcript}
-            </p>
+            <p className="ui-onboarding-test__transcript">{transcript}</p>
           </div>
         )}
 
         {transcript && !phraseMatched && (
-          <div
-            role="status"
-            aria-live="polite"
-            style={{
-              minHeight: 104,
-              display: "grid",
-              alignContent: "center",
-              justifyItems: "center",
-              gap: 8,
-            }}
-          >
-            <div
-              style={{
-                color: "var(--danger)",
-                fontFamily: "var(--font-accent)",
-                fontSize: 16,
-                fontWeight: 800,
-                lineHeight: 1.3,
-                letterSpacing: "-0.025em",
-              }}
-            >
+          <div role="status" aria-live="polite" className="ui-onboarding-test__result">
+            <div className="ui-onboarding-test__result-title ui-onboarding-test__result-title--error">
               {t("onboarding.test.mismatchTitle")}
             </div>
-            <p
-              style={{
-                width: "min(100%, 620px)",
-                margin: 0,
-                color: "var(--text-hi)",
-                fontFamily: "var(--font-main)",
-                fontSize: 16,
-                fontWeight: 500,
-                lineHeight: 1.55,
-              }}
-            >
-              {transcript}
-            </p>
-            <span
-              style={{
-                color: "var(--text-mid)",
-                fontFamily: "var(--font-main)",
-                fontSize: 12,
-                lineHeight: 1.5,
-              }}
-            >
-              {t("onboarding.test.mismatchHint")}
-            </span>
+            <p className="ui-onboarding-test__transcript">{transcript}</p>
+            <span className="ui-form-hint">{t("onboarding.test.mismatchHint")}</span>
           </div>
         )}
 
         {error && (
-          <div
-            role="alert"
-            style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid var(--danger-border)",
-              background: "var(--danger-soft)",
-              color: "var(--danger)",
-              fontSize: 12,
-              lineHeight: 1.55,
-            }}
-          >
+          <div role="alert" className="ui-callout ui-callout--error">
             {error}
           </div>
         )}

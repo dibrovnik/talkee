@@ -1,12 +1,16 @@
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{
+    window::{Effect, EffectState, EffectsBuilder},
+    AppHandle, Emitter, LogicalPosition, Manager, TitleBarStyle, WebviewUrl, WebviewWindowBuilder,
+};
 
-use crate::logger;
+use crate::{commands::dock, logger};
 
 const SETTINGS_NAVIGATE_EVENT: &str = "settings-navigate";
 #[cfg(debug_assertions)]
 const DEV_ONBOARDING_REQUEST_EVENT: &str = "dev-onboarding-request";
 
 fn show_and_focus_window(win: &tauri::WebviewWindow) {
+    dock::prepare_settings_window(win.app_handle());
     if let Err(err) = win.show() {
         logger::log_error(
             "WINDOW",
@@ -28,15 +32,25 @@ fn show_and_focus_window(win: &tauri::WebviewWindow) {
 }
 
 fn create_settings_window(app: &AppHandle, url: &str) -> Result<tauri::WebviewWindow, String> {
-    let mut builder = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App(url.into()))
+    let builder = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App(url.into()))
         .title("Talkee")
-        .inner_size(920.0, 680.0)
-        .min_inner_size(820.0, 560.0)
-        .center();
-
-    // Keep the custom decoration-less, transparent, rounded shell with the
-    // in-app traffic-light title bar.
-    builder = builder.decorations(false).transparent(true);
+        .inner_size(900.0, 640.0)
+        .min_inner_size(760.0, 520.0)
+        .center()
+        // Native macOS window chrome: real traffic lights on an overlay title
+        // bar, system corner radius and shadow. The window stays transparent so
+        // the whole-window Sidebar vibrancy can show through in the sidebar area.
+        .decorations(true)
+        .title_bar_style(TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .traffic_light_position(LogicalPosition::new(20.0, 20.0))
+        .transparent(true)
+        .effects(
+            EffectsBuilder::new()
+                .effect(Effect::Sidebar)
+                .state(EffectState::FollowsWindowActiveState)
+                .build(),
+        );
 
     let win = builder.build().map_err(|e| e.to_string())?;
 

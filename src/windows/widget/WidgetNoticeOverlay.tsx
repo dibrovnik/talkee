@@ -55,7 +55,7 @@ export function WidgetNoticeOverlay(): ReactElement | null {
     setExpanded((value) => !value);
   };
   const Icon = notice.tone === "error" ? IconAlertCircle : IconInfoCircle;
-  const iconColor = notice.tone === "error" ? "rgba(184,52,52,0.9)" : "rgba(0,0,0,0.58)";
+  const iconColor = notice.tone === "error" ? "var(--danger)" : "var(--label-2)";
 
   return (
     <div
@@ -85,23 +85,20 @@ export function WidgetNoticeOverlay(): ReactElement | null {
           event.preventDefault();
           toggleExpanded();
         }}
+        className="widget-overlay-enter"
         style={{
           position: "relative",
           width: NOTICE_WIDGET_WIDTH,
           minHeight: NOTICE_AREA_HEIGHT,
           maxHeight: expanded ? "100vh" : NOTICE_AREA_HEIGHT,
           padding: "10px 14px",
-          borderRadius: 16,
-          fontSize: 11,
+          borderRadius: 12,
+          fontSize: "var(--fs-subhead)",
           lineHeight: 1.4,
-          letterSpacing: "0.01em",
-          color: "rgba(0,0,0,0.82)",
-          background:
-            "linear-gradient(180deg, rgba(252,251,248,0.98) 0%, rgba(244,239,231,0.96) 100%)",
-          border: "1px solid rgba(0,0,0,0.08)",
-          backdropFilter: "blur(18px)",
-          WebkitBackdropFilter: "blur(18px)",
-          animation: "widget-notice-in 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
+          color: "var(--label)",
+          background: "transparent",
+          // The HUD material is always dark, so labels resolve in the dark scheme.
+          colorScheme: "dark",
           overflowY: expanded ? "auto" : "hidden",
           overflowX: "hidden",
           pointerEvents: "auto",

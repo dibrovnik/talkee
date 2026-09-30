@@ -2,6 +2,7 @@
 compile_error!("talkee supports macOS only");
 
 mod ai;
+mod app_menu;
 mod app_nap;
 mod call_capture;
 mod commands;
@@ -21,18 +22,56 @@ mod native_voice_recorder;
 mod paste;
 mod prompt_config;
 pub mod realtime;
+mod settings_store;
 mod shutdown;
 mod tray;
 
-use commands::{accessibility, runtime_info, settings_window, widget};
-use tauri::Manager;
+use commands::{accessibility, dock, runtime_info, settings_window, widget};
+use tauri::{Manager, RunEvent};
+use tauri_plugin_autostart::ManagerExt;
+
+/// Passed by the login item so an autostart launch can skip the settings window.
+const AUTOSTART_ARG: &str = "--autostart";
+
+fn launched_by_autostart() -> bool {
+    std::env::args().any(|arg| arg == AUTOSTART_ARG)
+}
+
+/// The settings window opens on first run (onboarding) and on explicit
+/// launches, but not when the login item starts the app.
+fn should_open_settings_on_launch(autostart: bool, onboarding_complete: bool) -> bool {
+    !autostart || !onboarding_complete
+}
+
+/// Login items registered before `--autostart` existed have no arguments;
+/// re-enabling rewrites the LaunchAgent with the current ones.
+fn refresh_autostart_registration(app: &tauri::AppHandle) {
+    let autolaunch = app.autolaunch();
+    if !autolaunch.is_enabled().unwrap_or(false) {
+        return;
+    }
+    if let Err(err) = autolaunch.enable() {
+        logger::log_error(
+            "INIT",
+            &format!("Failed to refresh the autostart login item: {err}"),
+        );
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default();
 
     builder
+        .menu(app_menu::build)
+        .on_menu_event(app_menu::handle_event)
         .on_window_event(|window, event| {
+            if window.label() == "settings" {
+                if let tauri::WindowEvent::Destroyed = event {
+                    dock::settings_window_closed(window.app_handle());
+                }
+                return;
+            }
             if window.label() != "widget" {
                 return;
             }
@@ -73,12 +112,31 @@ pub fn run() {
                 );
             }
             hotkey_manager::init(app);
+
+            let autostart = launched_by_autostart();
+            let onboarding_complete = settings_store::read_onboarding_complete(app.handle())
+                .unwrap_or_else(|err| {
+                    logger::log_error(
+                        "INIT",
+                        &format!("Failed to read onboarding state: {err}"),
+                    );
+                    false
+                });
+            let open_settings = should_open_settings_on_launch(autostart, onboarding_complete);
+            logger::log_info(
+                "INIT",
+                &format!(
+                    "Launch: autostart={autostart} onboarding_complete={onboarding_complete} open_settings={open_settings}"
+                ),
+            );
+            dock::init(app.handle(), open_settings);
             tray::setup(app)?;
 
             app.handle().plugin(tauri_plugin_autostart::init(
                 tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-                None,
+                Some(vec![AUTOSTART_ARG]),
             ))?;
+            refresh_autostart_registration(app.handle());
 
             let _ = widget::ensure_widget_notice_window(app.handle());
             let _ = widget::ensure_widget_text_window(app.handle());
@@ -93,11 +151,17 @@ pub fn run() {
             }
             widget::start_widget_watchdog(app.handle());
 
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                let _ = settings_window::open_settings(handle).await;
-            });
+            if open_settings {
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(err) = settings_window::open_settings(handle).await {
+                        logger::log_error(
+                            "INIT",
+                            &format!("Failed to open settings on launch: {err}"),
+                        );
+                    }
+                });
+            }
 
             Ok(())
         })
@@ -105,6 +169,7 @@ pub fn run() {
             settings_window::open_settings,
             settings_window::open_settings_tab,
             settings_window::set_settings_titlebar_theme,
+            dock::set_dock_visibility,
             widget::widget_resize,
             widget::activate_widget_for_hotkey,
             widget::show_widget_notice,
@@ -177,6 +242,7 @@ pub fn run() {
             accessibility::reset_accessibility_permission,
             accessibility::check_accessibility_permission,
             accessibility::check_microphone_permission,
+            accessibility::check_reduce_transparency,
             runtime_info::get_app_runtime_info,
             get_cleanup_prompt_preview,
             start_native_hotkey_capture,
@@ -186,8 +252,34 @@ pub fn run() {
             app_nap::begin_work_activity,
             app_nap::end_work_activity,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Talkee");
+        .build(tauri::generate_context!())
+        .expect("error while building Talkee")
+        .run(|app, event| {
+            if let RunEvent::Reopen { .. } = event {
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(err) = settings_window::open_settings(app).await {
+                        logger::log_error(
+                            "WINDOW",
+                            &format!("Failed to open settings on Dock reopen: {err}"),
+                        );
+                    }
+                });
+            }
+        });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_open_settings_on_launch;
+
+    #[test]
+    fn autostart_skips_settings_only_after_onboarding() {
+        assert!(should_open_settings_on_launch(false, true));
+        assert!(should_open_settings_on_launch(false, false));
+        assert!(should_open_settings_on_launch(true, false));
+        assert!(!should_open_settings_on_launch(true, true));
+    }
 }
 
 #[tauri::command]

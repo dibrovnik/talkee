@@ -6,6 +6,13 @@
   <string>Talkee</string>
   <key>CFBundleDisplayName</key>
   <string>Talkee</string>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>ru</string>
+  <key>CFBundleLocalizations</key>
+  <array>
+    <string>ru</string>
+    <string>en</string>
+  </array>
   <key>NSMicrophoneUsageDescription</key>
   <string>Предоставьте доступ к микрофону, чтобы Talkee мог записывать ваш голос для перевода в текст.</string>
   <key>NSAudioCaptureUsageDescription</key>

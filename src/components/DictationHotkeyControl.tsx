@@ -47,19 +47,18 @@ export function DictationHotkeyControl({
     : capture.active
       ? t("settings.hotkey.press")
       : formatHotkeyLabel(settings.hotkey || DEFAULT_HOTKEY);
-  const feedbackColor =
-    capture.tone === "error"
-      ? "var(--danger)"
-      : capture.tone === "success"
-        ? "var(--success)"
-        : "var(--text-mid)";
   const pressedKeys = useLiveHotkeyPreview({
     enabled: livePreview,
     hotkeyLabel: displayValue,
   });
 
+  const surfaceClass =
+    appearance === "keycaps"
+      ? `ui-hotkey-keycaps${capture.active ? " ui-hotkey-keycaps--active" : ""}`
+      : `ui-input-hotkey${capture.active ? " ui-input-hotkey--active" : ""}`;
+
   return (
-    <div style={{ display: "grid", gap: 10 }}>
+    <div className="ui-form-stack">
       {/* biome-ignore lint/a11y/useSemanticElements: custom hotkey-capture surface keeps its grid/keycaps layout; a <button> would change rendering. */}
       <div
         ref={capture.surfaceRef}
@@ -69,76 +68,34 @@ export function DictationHotkeyControl({
         aria-label={`${t("settings.hotkey.title")}: ${displayValue}`}
         onMouseDown={capture.handleSurfaceMouseDown}
         onKeyDown={capture.handleSurfaceKeyDown}
-        className="btn"
-        style={{
-          width: appearance === "keycaps" ? "fit-content" : "100%",
-          minHeight: 38,
-          padding: appearance === "keycaps" ? "4px" : "0 10px",
-          borderRadius: 8,
-          display: appearance === "field" ? "grid" : undefined,
-          gridTemplateColumns: appearance === "field" ? "minmax(0, 1fr) auto" : undefined,
-          alignItems: appearance === "field" ? "center" : undefined,
-          justifyContent: appearance === "keycaps" ? "center" : undefined,
-          gap: appearance === "keycaps" ? 8 : 10,
-          background: appearance === "keycaps" ? "transparent" : undefined,
-          border:
-            appearance === "keycaps"
-              ? capture.active
-                ? "1px solid rgba(15,118,110,0.28)"
-                : "1px solid transparent"
-              : capture.active
-                ? "1px solid rgba(15,118,110,0.28)"
-                : undefined,
-          boxShadow: capture.active ? "0 0 0 4px rgba(15,118,110,0.08)" : undefined,
-          opacity: capture.submitting ? 0.8 : 1,
-          cursor: capture.submitting ? "wait" : "pointer",
-          justifySelf: appearance === "keycaps" ? "center" : undefined,
-        }}
+        className={surfaceClass}
+        style={{ opacity: capture.submitting ? 0.8 : 1 }}
       >
         {appearance === "keycaps" ? (
           <HotkeyKeycaps label={displayValue} pressedKeys={pressedKeys} size="large" />
         ) : (
-          <span
-            style={{
-              minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              color: "var(--text-hi)",
-              fontSize: 12,
-              fontWeight: 700,
-            }}
-          >
-            {displayValue}
-          </span>
-        )}
-        {appearance === "field" && (
-          <span
-            style={{
-              color: "var(--text-low)",
-              fontSize: 11,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              fontWeight: 600,
-              flexShrink: 0,
-            }}
-          >
-            {capture.submitting
-              ? t("settings.hotkey.checking")
-              : capture.active
-                ? t("settings.hotkey.recording")
-                : t("settings.hotkey.change")}
-          </span>
+          <>
+            <span className="ui-input-hotkey__value">{displayValue}</span>
+            <span className="ui-input-hotkey__hint">
+              {capture.submitting
+                ? t("settings.hotkey.checking")
+                : capture.active
+                  ? t("settings.hotkey.recording")
+                  : t("settings.hotkey.change")}
+            </span>
+          </>
         )}
       </div>
       {(capture.active || capture.submitting || capture.tone !== "idle") && (
         <div
           role={capture.tone === "error" ? "alert" : "status"}
-          style={{
-            color: feedbackColor,
-            fontSize: 12,
-            lineHeight: 1.55,
-          }}
+          className={[
+            "ui-form-feedback",
+            capture.tone === "error" ? "ui-form-feedback--error" : "",
+            capture.tone === "success" ? "ui-form-feedback--success" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
         >
           {capture.feedback}
         </div>

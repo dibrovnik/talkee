@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
 import { SETTINGS_UPDATED_EVENT } from "../lib/hotkeyEvents";
 import { useI18n } from "../lib/i18n";
 import { IconCheck, IconClipboard, IconPencil, IconTrash } from "../lib/icons";
@@ -21,7 +21,9 @@ import {
   transcriptToText,
 } from "../lib/summarize";
 import { formatDurationMs, formatErrorMessage } from "../lib/utils";
-import { Dropdown } from "./Dropdown";
+import { Button } from "../ui/Button";
+import { PopUpButton } from "../ui/PopUpButton";
+import { ProgressBar } from "../ui/ProgressBar";
 import { type RowActionItem, RowActionsMenu } from "./RowActionsMenu";
 import { SlideOverModal } from "./SlideOverModal";
 
@@ -36,7 +38,7 @@ export function SummaryModal({
   entry: HistoryEntry;
   onClose: () => void;
   onEntryChange?: (entry: HistoryEntry) => void;
-}) {
+}): ReactElement {
   const { lang, t } = useI18n();
   const text = useMemo(() => transcriptToText(entry).trim(), [entry]);
 
@@ -229,100 +231,61 @@ export function SummaryModal({
       width="100vw"
       topOffset="var(--summary-modal-top-offset, 0px)"
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="ui-tab">
         {/* Generate controls */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 12, color: "var(--text-mid)" }}>{t("summary.type")}</div>
-          <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <Dropdown
-                value={selected?.id ?? ""}
-                options={promptOptions}
-                onChange={setPromptId}
-                disabled={running || prompts.length === 0}
-              />
-            </div>
-            <button
-              type="button"
-              className="btn"
+        <div className="ui-form-stack">
+          <label className="ui-form-field__label" htmlFor="summary-prompt">
+            {t("summary.type")}
+          </label>
+          <div className="ui-summary__controls">
+            <PopUpButton
+              id="summary-prompt"
+              className="ui-summary__prompt"
+              value={selected?.id ?? ""}
+              options={promptOptions}
+              onChange={setPromptId}
+              disabled={running || prompts.length === 0}
+            />
+            <Button
+              variant={running ? "default" : "primary"}
               onClick={running ? stopSummary : () => void generate()}
               disabled={!running && !canRun}
-              style={{
-                minHeight: 38,
-                padding: "0 18px",
-                borderRadius: 8,
-                justifyContent: "center",
-                background: running ? "var(--surface-hi)" : "var(--accent)",
-                color: running ? "var(--text-hi)" : "var(--accent-contrast)",
-                opacity: running || canRun ? 1 : 0.6,
-                flexShrink: 0,
-                whiteSpace: "nowrap",
-                fontWeight: 600,
-              }}
             >
               {running
                 ? t("summary.stop")
                 : summaries.length
                   ? t("summary.regenerate")
                   : t("summary.generate")}
-            </button>
+            </Button>
           </div>
 
-          {!backend && (
-            <div style={{ fontSize: 12, color: "var(--text-mid)", lineHeight: 1.5 }}>
-              {t("summary.noModel")}
-            </div>
-          )}
+          {!backend && <div className="ui-form-hint">{t("summary.noModel")}</div>}
 
           {running && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ fontSize: 12, color: "var(--text-mid)" }}>{progressLabel()}</div>
-              <div
-                style={{
-                  width: "100%",
-                  height: 8,
-                  borderRadius: 999,
-                  background: "var(--progress-track)",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${progressPercent()}%`,
-                    height: "100%",
-                    borderRadius: 999,
-                    background: "var(--accent)",
-                    transition: "width 0.3s ease",
-                  }}
-                />
-              </div>
+            <div className="ui-form-stack">
+              <div className="ui-form-feedback">{progressLabel()}</div>
+              <ProgressBar value={progressPercent() / 100} ariaLabel={progressLabel()} />
             </div>
           )}
 
-          {error && (
-            <div style={{ fontSize: 12, color: "var(--danger)", lineHeight: 1.5 }}>{error}</div>
-          )}
+          {error && <div className="ui-form-feedback ui-form-feedback--error">{error}</div>}
         </div>
 
         {/* Summary history — same table as the main history list */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-hi)" }}>
-            {t("summary.history.title")}
-          </div>
+        <div className="ui-form-stack">
+          <div className="ui-form-section__title">{t("summary.history.title")}</div>
           {summaries.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--text-low)", lineHeight: 1.6 }}>
-              {t("summary.history.empty")}
-            </div>
+            <div className="ui-form-hint">{t("summary.history.empty")}</div>
           ) : (
-            <table className="b-table" style={{ background: "transparent" }}>
+            <table className="b-table">
               <thead>
                 <tr>
                   <th style={{ width: 124 }}>{t("mainTab.colTime")}</th>
-                  <th style={{ paddingLeft: 8 }}>{t("mainTab.colText")}</th>
+                  <th className="ui-history__text-cell">{t("mainTab.colText")}</th>
                 </tr>
               </thead>
               <tbody>
-                {summaries.map((item, index) => {
+                {summaries.map((item) => {
                   const expanded = expandedId === item.id;
                   const isEditing = editingId === item.id;
                   const tooLong = item.text.length > TEXT_PREVIEW_LIMIT;
@@ -331,117 +294,45 @@ export function SummaryModal({
                       ? `${item.text.slice(0, TEXT_PREVIEW_LIMIT).trimEnd()}...`
                       : item.text;
                   return (
-                    <tr
-                      key={item.id}
-                      style={{
-                        borderBottom:
-                          index < summaries.length - 1
-                            ? "1px solid var(--table-row-border)"
-                            : "none",
-                        cursor: "default",
-                      }}
-                    >
-                      <td style={{ verticalAlign: "top", color: "var(--text-low)" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                          <span style={{ whiteSpace: "nowrap" }}>{formatTime(item.createdAt)}</span>
-                          <span
-                            style={{
-                              fontSize: 10,
-                              opacity: 0.55,
-                              letterSpacing: "0.02em",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
+                    <tr key={item.id}>
+                      <td className="ui-history__time-cell">
+                        <div className="ui-history__time">
+                          <span>{formatTime(item.createdAt)}</span>
+                          <span className="ui-history__time-meta">
                             {formatDurationMs(item.durationMs, lang)}
                           </span>
-                          <span
-                            style={{
-                              fontSize: 10,
-                              opacity: 0.55,
-                              letterSpacing: "0.02em",
-                              whiteSpace: "normal",
-                              wordBreak: "break-word",
-                              lineHeight: 1.35,
-                            }}
-                          >
-                            {item.promptName}
-                          </span>
+                          <span className="ui-history__source">{item.promptName}</span>
                         </div>
                       </td>
-                      <td style={{ verticalAlign: "top", paddingLeft: 8 }}>
-                        <div
-                          style={{ display: "flex", alignItems: "flex-start", gap: 8, minWidth: 0 }}
-                        >
-                          <div style={{ flex: 1, minWidth: 0, display: "grid", gap: 8 }}>
+                      <td className="ui-history__text-cell">
+                        <div className="ui-history__row">
+                          <div className="ui-history__content">
                             {isEditing ? (
                               <>
                                 <textarea
                                   value={editText}
                                   onChange={(e) => setEditText(e.target.value)}
-                                  className="input"
-                                  style={{
-                                    width: "100%",
-                                    minHeight: 320,
-                                    padding: 12,
-                                    fontSize: 13,
-                                    lineHeight: 1.6,
-                                    resize: "vertical",
-                                    fontFamily: "var(--font-main)",
-                                  }}
+                                  aria-label={t("summary.edit")}
+                                  className="ui-textfield ui-textarea"
+                                  style={{ minHeight: 320, resize: "vertical" }}
                                 />
-                                <div
-                                  style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
-                                >
-                                  <button
-                                    type="button"
-                                    className="btn"
-                                    onClick={() => setEditingId(null)}
-                                    style={{ minHeight: 32, padding: "0 12px" }}
-                                  >
+                                <div className="ui-form-actions">
+                                  <Button onClick={() => setEditingId(null)}>
                                     {t("summary.cancel")}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn"
-                                    onClick={() => void saveEdit(item)}
-                                    style={{
-                                      minHeight: 32,
-                                      padding: "0 14px",
-                                      background: "var(--accent)",
-                                      color: "var(--accent-contrast)",
-                                    }}
-                                  >
+                                  </Button>
+                                  <Button variant="primary" onClick={() => void saveEdit(item)}>
                                     {t("summary.save")}
-                                  </button>
+                                  </Button>
                                 </div>
                               </>
                             ) : (
-                              <div
-                                style={{
-                                  display: "grid",
-                                  gap: 2,
-                                  color: "var(--text-mid)",
-                                  lineHeight: 1.7,
-                                  overflowWrap: "anywhere",
-                                  wordBreak: "break-word",
-                                }}
-                              >
+                              <div className="ui-expandable-text">
                                 <span style={{ whiteSpace: "pre-wrap" }}>{visible}</span>
                                 {tooLong && (
                                   <button
                                     type="button"
+                                    className="ui-disclosure-link"
                                     onClick={() => setExpandedId(expanded ? null : item.id)}
-                                    style={{
-                                      marginLeft: 0,
-                                      padding: 0,
-                                      border: "none",
-                                      background: "transparent",
-                                      color: "var(--text-hi)",
-                                      fontSize: 13,
-                                      fontWeight: 600,
-                                      cursor: "pointer",
-                                      justifySelf: "start",
-                                    }}
                                   >
                                     {expanded ? t("mainTab.collapse") : t("mainTab.expand")}
                                   </button>

@@ -88,6 +88,16 @@ export const settingsGeneral = {
     en: "Launch Talkee automatically when you log in.",
   },
 
+  // Dock
+  "settings.dock.title": {
+    ru: "Показывать значок в Dock",
+    en: "Show icon in Dock",
+  },
+  "settings.dock.desc": {
+    ru: "Когда выключено, Talkee работает только в строке меню.",
+    en: "When off, Talkee runs from the menu bar only.",
+  },
+
   // Models directory
   "settings.modelsDir.title": {
     ru: "Директория моделей",

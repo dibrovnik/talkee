@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { type ReactElement, useRef, useState } from "react";
 
-import { Dropdown } from "../../../components/Dropdown";
 import { ModelCardDisclosureButton } from "../../../components/ModelCardDisclosureButton";
 import { useI18n } from "../../../lib/i18n";
 import { IconBolt, IconBroadcast, IconCheck } from "../../../lib/icons";
@@ -12,6 +11,13 @@ import {
   realtimeConfigurationFingerprint,
 } from "../../../lib/realtimeModels";
 import type { ApiAdapterSettings, AppSettings } from "../../../lib/store";
+import { Badge } from "../../../ui/Badge";
+import { Button } from "../../../ui/Button";
+import { FormSection } from "../../../ui/FormSection";
+import { PopUpButton } from "../../../ui/PopUpButton";
+import { SecureField } from "../../../ui/SecureField";
+import { Spinner } from "../../../ui/Spinner";
+import { TextField } from "../../../ui/TextField";
 
 const CUSTOM_MODEL = "__custom_model__";
 type TestStatus = "idle" | "testing" | "success" | "error";
@@ -130,15 +136,7 @@ export function RealtimeTranslationModels({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-hi)" }}>
-          {t("models.translation.title")}
-        </div>
-        <div style={{ marginTop: 4, fontSize: 13, lineHeight: 1.55, color: "var(--text-mid)" }}>
-          {t("models.translation.desc")}
-        </div>
-      </div>
+    <FormSection title={t("models.translation.title")} footer={t("models.translation.desc")}>
       {REALTIME_TRANSLATION_ADAPTERS.map((adapter) => {
         const id = adapter.id as RealtimeTranslationAdapterId;
         const values = settings.translationAdapters[id] || {
@@ -161,320 +159,138 @@ export function RealtimeTranslationModels({
               : status === "error"
                 ? t("models.adapterStatus.error")
                 : t("models.adapterStatus.readyToTest");
+        const statusVariant =
+          isSelected || status === "success"
+            ? "success"
+            : status === "error"
+              ? "danger"
+              : "neutral";
+        const canTest =
+          status !== "testing" && Boolean(values.apiKey.trim()) && Boolean(values.model.trim());
 
         return (
-          <div
+          <FormSection
             key={id}
-            className="card"
-            style={{
-              padding: 0,
-              overflow: isExpanded ? "visible" : "hidden",
-              position: "relative",
-              zIndex: isExpanded ? 10 : 0,
-              background: "var(--surface)",
-            }}
+            nested
+            title={
+              <>
+                <span className="ui-form-section__heading">{adapter.name}</span>
+                <Badge variant={statusVariant} title={statuses[id]?.message}>
+                  {statusLabel}
+                </Badge>
+              </>
+            }
+            footer={
+              <>
+                {t("models.translation.desc")}{" "}
+                {t("models.adapter.recommendedModel", { model: adapter.recommendedModel })}
+                {verified ? (
+                  <span className="ui-form-stat">
+                    <IconBroadcast size={14} stroke={1.9} />
+                    {t("models.stat.streaming")}
+                  </span>
+                ) : null}
+              </>
+            }
+            action={
+              <ModelCardDisclosureButton
+                expanded={isExpanded}
+                onToggle={() => setExpanded(isExpanded ? null : id)}
+                label={t(isExpanded ? "mainTab.collapse" : "mainTab.expand")}
+              />
+            }
           >
-            <div
-              style={{
-                position: "relative",
-                padding: "12px 14px",
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                textAlign: "left",
-                fontFamily: "var(--font-main)",
-              }}
-            >
-              <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    marginBottom: 3,
-                  }}
-                >
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-hi)" }}>
-                    {adapter.name}
-                  </div>
-                  <div
-                    title={statuses[id]?.message}
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color:
-                        isSelected || status === "success"
-                          ? "var(--success-bright)"
-                          : status === "error"
-                            ? "var(--error-bright)"
-                            : "var(--text-low)",
-                      padding: "5px 9px",
-                      borderRadius: 999,
-                      background: "var(--control-muted)",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {statusLabel}
-                  </div>
-                </div>
-                <div style={{ paddingRight: 34 }}>
-                  <div style={{ fontSize: 12, lineHeight: 1.45, color: "var(--text-mid)" }}>
-                    {t("models.translation.desc")}{" "}
-                    {t("models.adapter.recommendedModel", { model: adapter.recommendedModel })}
-                  </div>
-                  {verified && (
-                    <div
-                      role="img"
-                      title={t("models.stat.streaming")}
-                      aria-label={t("models.stat.streaming")}
-                      style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 9 }}
-                    >
-                      <IconBroadcast size={14} stroke={1.9} color="var(--text-hi)" />
-                      <span
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 650,
-                          color: "var(--text-hi)",
-                          lineHeight: 1,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {t("models.stat.streaming")}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <ModelCardDisclosureButton
-                  expanded={isExpanded}
-                  onToggle={() => setExpanded(isExpanded ? null : id)}
-                  label={t(isExpanded ? "mainTab.collapse" : "mainTab.expand")}
-                />
-              </div>
-            </div>
-            {isExpanded && (
-              <div
-                style={{
-                  borderTop: "1px solid var(--border-subtle)",
-                  padding: "12px 14px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <label
-                    className="label"
-                    htmlFor={`translation-${id}-key`}
-                    style={{ width: 76, flexShrink: 0 }}
-                  >
-                    {t("models.field.apiKey")}
-                  </label>
-                  <input
+            {isExpanded ? (
+              <>
+                <div className="ui-form-field">
+                  <span className="ui-form-field__label">{t("models.field.apiKey")}</span>
+                  <SecureField
                     id={`translation-${id}-key`}
-                    type="password"
-                    className="input"
                     value={values.apiKey}
                     placeholder="API key"
+                    className="ui-textfield--mono"
                     onChange={(event) => patchAdapter(id, { apiKey: event.currentTarget.value })}
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      height: 36,
-                      padding: "8px 10px",
-                      fontFamily:
-                        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                      fontSize: 12,
-                    }}
                   />
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div className="label" style={{ width: 76, flexShrink: 0 }}>
-                    {t("models.field.model")}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, display: "grid", gap: 6 }}>
-                    <Dropdown
-                      value={selectValue}
-                      options={[
-                        ...adapter.models.map((model) => ({
-                          value: model.id,
-                          label: `${model.id} · ${t("models.stat.streaming")}`,
-                        })),
-                        { value: CUSTOM_MODEL, label: t("models.field.customModel") },
-                      ]}
-                      onChange={(value) =>
-                        patchAdapter(id, { model: value === CUSTOM_MODEL ? "" : value })
-                      }
+                <div className="ui-form-field">
+                  <span className="ui-form-field__label">{t("models.field.model")}</span>
+                  <PopUpButton
+                    value={selectValue}
+                    ariaLabel={t("models.field.model")}
+                    options={[
+                      ...adapter.models.map((model) => ({
+                        value: model.id,
+                        label: `${model.id} · ${t("models.stat.streaming")}`,
+                      })),
+                      { value: CUSTOM_MODEL, label: t("models.field.customModel") },
+                    ]}
+                    onChange={(value) =>
+                      patchAdapter(id, { model: value === CUSTOM_MODEL ? "" : value })
+                    }
+                  />
+                  {selectValue === CUSTOM_MODEL ? (
+                    <TextField
+                      value={values.model}
+                      aria-label={t("models.field.customModelPlaceholder")}
+                      placeholder={t("models.field.customModelPlaceholder")}
+                      className="ui-textfield--mono"
+                      onChange={(event) => patchAdapter(id, { model: event.currentTarget.value })}
                     />
-                    {selectValue === CUSTOM_MODEL && (
-                      <input
-                        type="text"
-                        className="input"
-                        value={values.model}
-                        aria-label={t("models.field.customModelPlaceholder")}
-                        placeholder={t("models.field.customModelPlaceholder")}
-                        onChange={(event) => patchAdapter(id, { model: event.currentTarget.value })}
-                        style={{
-                          width: "100%",
-                          height: 36,
-                          padding: "8px 10px",
-                          fontFamily:
-                            "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                          fontSize: 12,
-                        }}
-                      />
-                    )}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: "var(--text-low)",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
+                  ) : null}
+                  <span className="ui-form-hint">
                     {t("models.field.recommended", { model: adapter.recommendedModel })}
-                  </div>
+                  </span>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <label
-                    className="label"
-                    htmlFor={`translation-${id}-host`}
-                    style={{ width: 76, flexShrink: 0 }}
-                  >
-                    {t("models.field.host")}
-                  </label>
-                  <input
+                <div className="ui-form-field">
+                  <span className="ui-form-field__label">{t("models.field.host")}</span>
+                  <TextField
                     id={`translation-${id}-host`}
                     type="url"
-                    className="input"
                     value={values.endpoint || ""}
+                    className="ui-textfield--mono"
                     placeholder={t("models.field.hostDefaultPlaceholder", {
                       endpoint: adapter.defaultEndpoint,
                     })}
                     onChange={(event) => patchAdapter(id, { endpoint: event.currentTarget.value })}
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      height: 36,
-                      padding: "8px 10px",
-                      fontFamily:
-                        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                      fontSize: 12,
-                    }}
                   />
                   {values.endpoint?.trim() ? (
-                    <button
-                      type="button"
+                    <Button
                       onClick={() => patchAdapter(id, { endpoint: "" })}
-                      style={{
-                        border: "1px solid var(--border-dashed)",
-                        background: "var(--control-muted)",
-                        color: "var(--text-hi)",
-                        borderRadius: 8,
-                        padding: "7px 9px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        fontFamily: "var(--font-main)",
-                        whiteSpace: "nowrap",
-                        flexShrink: 0,
-                        cursor: "pointer",
-                      }}
+                      aria-label={t("models.common.reset")}
                     >
                       {t("models.common.reset")}
-                    </button>
+                    </Button>
                   ) : (
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: "var(--text-low)",
-                        whiteSpace: "nowrap",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {t("models.common.optional")}
-                    </div>
+                    <span className="ui-form-hint">{t("models.common.optional")}</span>
                   )}
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    gap: 10,
-                    flexWrap: "wrap",
-                  }}
-                >
+                <div className="ui-form-actions">
                   {isSelected ? (
-                    <div
-                      style={{
-                        padding: "9px 12px",
-                        borderRadius: 10,
-                        border: "1px solid var(--success-border)",
-                        background: "var(--success-soft)",
-                        color: "var(--success-bright)",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
+                    <Badge variant="success">
                       <IconCheck size={14} stroke={2.5} />
                       {t("models.common.selected")}
-                    </div>
+                    </Badge>
                   ) : (
-                    <button
-                      type="button"
-                      disabled={
-                        status === "testing" || !values.apiKey.trim() || !values.model.trim()
-                      }
-                      onClick={() => void test(id)}
-                      style={{
-                        padding: "9px 12px",
-                        borderRadius: 10,
-                        border: "1px solid var(--border-dashed)",
-                        background:
-                          status === "testing" || !values.apiKey.trim() || !values.model.trim()
-                            ? "var(--control-muted)"
-                            : "var(--accent)",
-                        color:
-                          status === "testing" || !values.apiKey.trim() || !values.model.trim()
-                            ? "var(--text-mid)"
-                            : "var(--accent-contrast)",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        fontFamily: "var(--font-main)",
-                        cursor:
-                          status === "testing"
-                            ? "wait"
-                            : !values.apiKey.trim() || !values.model.trim()
-                              ? "not-allowed"
-                              : "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
+                    <Button variant="primary" disabled={!canTest} onClick={() => void test(id)}>
                       {status === "testing" ? (
-                        <span className="loading-soft-ring" />
+                        <Spinner size={14} />
                       ) : (
                         <IconBolt size={14} stroke={2.2} />
                       )}
                       {status === "testing"
                         ? t("models.test.checking")
                         : t("models.test.testAndSave")}
-                    </button>
+                    </Button>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
+              </>
+            ) : null}
+          </FormSection>
         );
       })}
-    </div>
+    </FormSection>
   );
 }

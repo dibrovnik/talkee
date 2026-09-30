@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { emit } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import {
   disable as disableAutostart,
   enable as enableAutostart,
@@ -9,18 +9,9 @@ import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
 import { DictationHotkeyControl } from "../../../components/DictationHotkeyControl";
 import { LANGUAGES } from "../../../config/languages";
-import { SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
+import { DOCK_VISIBILITY_CHANGED_EVENT, SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
 import { useI18n } from "../../../lib/i18n";
-import {
-  type Icon,
-  IconCheck,
-  IconChevronDown,
-  IconDeviceDesktop,
-  IconMail,
-  IconMoon,
-  IconSearch,
-  IconSun,
-} from "../../../lib/icons";
+import { IconCheck, IconChevronDown, IconMail, IconSearch } from "../../../lib/icons";
 import { logError, logInfo } from "../../../lib/logger";
 import {
   type AppSettings,
@@ -37,46 +28,24 @@ import {
   WIDGET_SCALE_MIN,
   WIDGET_SCALE_STEP,
 } from "../../../lib/widgetScale";
+import { Button } from "../../../ui/Button";
+import { FormRow } from "../../../ui/FormRow";
+import { FormSection } from "../../../ui/FormSection";
+import { SegmentedControl } from "../../../ui/SegmentedControl";
+import { Slider } from "../../../ui/Slider";
+import { TextField } from "../../../ui/TextField";
+import { Toggle } from "../../../ui/Toggle";
 
-const SETTING_ROW_COLUMNS = "minmax(0, 1fr) 280px";
-const SETTING_ROW_GAP = 16;
-const CONTROL_HEIGHT = 38;
-const CONTROL_RADIUS = 8;
-const CONTROL_FONT_SIZE = 12;
 const SUPPORT_EMAIL = "david.perov60@gmail.com";
-const SETTINGS_CARD_STYLE = {
-  display: "grid",
-  gap: 10,
-  background: "transparent",
-  backdropFilter: "none",
-  WebkitBackdropFilter: "none",
-} as const;
-const GROUPED_SETTINGS_CARD_STYLE = {
-  ...SETTINGS_CARD_STYLE,
-  gap: 0,
-  overflow: "visible",
-  isolation: "isolate",
-} as const;
-const GROUPED_SETTINGS_SECTION_STYLE = {
-  display: "grid",
-  gap: 10,
-  padding: "12px 0",
-  borderTop: "1px solid var(--border-subtle)",
-} as const;
-const GROUPED_SETTINGS_FIRST_SECTION_STYLE = {
-  ...GROUPED_SETTINGS_SECTION_STYLE,
-  paddingTop: 0,
-  borderTop: "none",
-} as const;
-const GROUPED_SETTINGS_LAST_SECTION_STYLE = {
-  ...GROUPED_SETTINGS_SECTION_STYLE,
-  paddingBottom: 0,
-} as const;
-const THEME_OPTIONS: Array<{ id: AppSettings["theme"]; Icon: Icon }> = [
-  { id: "system", Icon: IconDeviceDesktop },
-  { id: "light", Icon: IconSun },
-  { id: "dark", Icon: IconMoon },
-];
+
+type MicAvailabilityState = "ready" | "missing-selected" | "permission-needed" | "empty";
+
+const THEME_OPTIONS = [
+  { value: "system", labelKey: "settings.theme.system" },
+  { value: "light", labelKey: "settings.theme.light" },
+  { value: "dark", labelKey: "settings.theme.dark" },
+] as const;
+
 export function SettingsTab() {
   const { lang, t } = useI18n();
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -100,14 +69,37 @@ export function SettingsTab() {
   const [appDataDir, setAppDataDir] = useState("");
   const [supportFeedback, setSupportFeedback] = useState("");
 
-  type MicAvailabilityState = "ready" | "missing-selected" | "permission-needed" | "empty";
-
   useEffect(() => {
     getSettings({ reload: true }).then((s) => {
       setSettings(s);
       settingsRef.current = s;
     });
   }, []);
+
+  // The tray can toggle the Dock icon while this tab is open; Rust saves it.
+  useEffect(() => {
+    const unlistenPromise = listen<boolean>(DOCK_VISIBILITY_CHANGED_EVENT, ({ payload }) => {
+      if (!settingsRef.current) return;
+      const next = { ...settingsRef.current, showInDock: payload };
+      settingsRef.current = next;
+      setSettings(next);
+    });
+    return () => {
+      void unlistenPromise.then((dispose) => dispose());
+    };
+  }, []);
+
+  const updateShowInDock = async (show: boolean): Promise<void> => {
+    await update({ showInDock: show });
+    try {
+      await invoke("set_dock_visibility", { show });
+    } catch (error) {
+      void logError(
+        "SETTINGS",
+        `Failed to apply Dock icon visibility: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  };
 
   useEffect(() => {
     invoke<string>("get_default_transcription_storage_dir")
@@ -365,227 +357,63 @@ export function SettingsTab() {
   const selectedMicrophone = microphones.find((m) => m.deviceId === settings.micId) || null;
   const visibleMicrophoneLabel = selectedMicrophone
     ? getMicrophoneLabel(selectedMicrophone, microphones.indexOf(selectedMicrophone))
-    : settings.micId
-      ? t("settings.mic.systemDefault")
-      : t("settings.mic.systemDefault");
+    : t("settings.mic.systemDefault");
   const autostartDisabled = !autostartLoaded || autostartPending;
   const widgetScale = normalizeWidgetScale(settings.widgetScale);
   const realtimeTranscriptionActive = settings.realtimeTranscriptionEnabled;
+  const micSelectDisabled = microphones.length === 0 || micStatus === "permission-needed";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div
-        className="card"
-        style={{
-          ...GROUPED_SETTINGS_CARD_STYLE,
-          position: "relative",
-          zIndex: langOpen || micOpen ? 20 : 1,
-        }}
-      >
-        <div style={GROUPED_SETTINGS_FIRST_SECTION_STYLE}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: SETTING_ROW_COLUMNS,
-              alignItems: "center",
-              gap: SETTING_ROW_GAP,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                }}
-              >
-                {t("settings.uiLanguage.title")}
-              </div>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                background: "var(--control-track)",
-                borderRadius: 10,
-                padding: 3,
-                gap: 2,
-                width: "100%",
-                justifySelf: "end",
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <FormSection title={t("settings.uiLanguage.title")}>
+        <FormRow
+          label={t("settings.uiLanguage.title")}
+          description={t("settings.uiLanguage.desc")}
+          control={
+            <SegmentedControl
+              value={lang}
+              onChange={(value) => {
+                void update({ uiLanguage: value as "ru" | "en" });
               }}
-            >
-              {(["ru", "en"] as const).map((code) => {
-                const active = lang === code;
-
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => {
-                      void update({ uiLanguage: code });
-                    }}
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      minHeight: CONTROL_HEIGHT - 6,
-                      padding: "0 4px",
-                      borderRadius: CONTROL_RADIUS,
-                      border: "none",
-                      fontSize: CONTROL_FONT_SIZE,
-                      fontWeight: active ? 700 : 500,
-                      background: active ? "var(--dropdown-active)" : "transparent",
-                      color: active ? "var(--text-hi)" : "var(--text-mid)",
-                      cursor: "pointer",
-                      transition: "background 0.15s ease, color 0.15s ease",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 4,
-                    }}
-                  >
-                    <span
-                      style={{
-                        minWidth: 0,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {t(code === "ru" ? "settings.uiLanguage.ru" : "settings.uiLanguage.en")}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div style={GROUPED_SETTINGS_SECTION_STYLE}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: SETTING_ROW_COLUMNS,
-              alignItems: "center",
-              gap: SETTING_ROW_GAP,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                }}
-              >
-                {t("settings.theme.title")}
-              </div>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                background: "var(--control-track)",
-                borderRadius: 10,
-                padding: 3,
-                gap: 2,
-                width: "100%",
-                justifySelf: "end",
+              options={[
+                { value: "ru", label: t("settings.uiLanguage.ru") },
+                { value: "en", label: t("settings.uiLanguage.en") },
+              ]}
+              ariaLabel={t("settings.uiLanguage.title")}
+            />
+          }
+        />
+        <FormRow
+          label={t("settings.theme.title")}
+          control={
+            <SegmentedControl
+              value={settings.theme}
+              onChange={(value) => {
+                const theme = value as AppSettings["theme"];
+                applyThemePreference(theme);
+                void update({ theme });
               }}
-            >
-              {THEME_OPTIONS.map(({ id, Icon }) => {
-                const active = settings.theme === id;
+              options={THEME_OPTIONS.map(({ value, labelKey }) => ({
+                value,
+                label: t(labelKey),
+              }))}
+              ariaLabel={t("settings.theme.title")}
+            />
+          }
+        />
+      </FormSection>
 
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => {
-                      applyThemePreference(id);
-                      void update({ theme: id });
-                    }}
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      minHeight: CONTROL_HEIGHT - 6,
-                      padding: "0 4px",
-                      borderRadius: CONTROL_RADIUS,
-                      border: "none",
-                      fontSize: CONTROL_FONT_SIZE,
-                      fontWeight: active ? 700 : 500,
-                      background: active ? "var(--dropdown-active)" : "transparent",
-                      color: active ? "var(--text-hi)" : "var(--text-mid)",
-                      cursor: "pointer",
-                      transition: "background 0.15s ease, color 0.15s ease",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 4,
-                    }}
-                  >
-                    <Icon size={13} stroke={active ? 2.2 : 1.7} style={{ flexShrink: 0 }} />
-                    <span
-                      style={{
-                        minWidth: 0,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {t(`settings.theme.${id}`)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div
-          style={{
-            ...GROUPED_SETTINGS_SECTION_STYLE,
-            position: "relative",
-            zIndex: langOpen ? 20 : 1,
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: SETTING_ROW_COLUMNS,
-              alignItems: "center",
-              gap: SETTING_ROW_GAP,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                }}
-              >
-                {t("settings.recognitionLang.title")}
-              </div>
-            </div>
-            <div
-              ref={langRef}
-              style={{
-                position: "relative",
-                width: "100%",
-                justifySelf: "end",
-              }}
-            >
-              <button
+      <FormSection title={t("settings.recognitionLang.title")}>
+        <FormRow
+          label={t("settings.recognitionLang.title")}
+          control={
+            <div ref={langRef} style={{ position: "relative", width: "100%" }}>
+              <Button
                 onClick={() => setLangOpen((o) => !o)}
-                className="btn"
                 style={{
                   width: "100%",
                   justifyContent: "space-between",
                   gap: 8,
-                  minHeight: CONTROL_HEIGHT,
-                  padding: "0 10px",
-                  borderRadius: CONTROL_RADIUS,
-                  fontSize: CONTROL_FONT_SIZE,
                 }}
               >
                 <span
@@ -598,7 +426,7 @@ export function SettingsTab() {
                   {currentLang ? `${currentLang.native} (${currentLang.name})` : settings.language}
                 </span>
                 <IconChevronDown
-                  size={13}
+                  size={11}
                   stroke={2}
                   style={{
                     flexShrink: 0,
@@ -606,18 +434,18 @@ export function SettingsTab() {
                     transition: "transform 0.15s",
                   }}
                 />
-              </button>
+              </Button>
               {langOpen && (
                 <div
                   style={{
                     position: "absolute",
-                    top: "calc(100% + 8px)",
+                    top: "calc(100% + 6px)",
                     right: 0,
                     width: 320,
                     maxHeight: 320,
-                    background: "var(--dropdown-bg)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 24,
+                    background: "var(--control-bg)",
+                    border: "1px solid var(--separator)",
+                    borderRadius: "var(--radius-group)",
                     boxShadow: "var(--shadow-panel)",
                     zIndex: 100,
                     display: "flex",
@@ -627,14 +455,14 @@ export function SettingsTab() {
                 >
                   <div
                     style={{
-                      padding: 12,
-                      borderBottom: "1px solid var(--border-subtle)",
+                      padding: 8,
+                      borderBottom: "1px solid var(--separator)",
                       display: "flex",
                       alignItems: "center",
-                      gap: 8,
+                      gap: 6,
                     }}
                   >
-                    <IconSearch size={13} style={{ color: "var(--text-low)", flexShrink: 0 }} />
+                    <IconSearch size={11} style={{ color: "var(--label-3)", flexShrink: 0 }} />
                     <input
                       ref={(el) => {
                         el?.focus();
@@ -646,8 +474,9 @@ export function SettingsTab() {
                         border: "none",
                         outline: "none",
                         background: "transparent",
-                        fontSize: 12,
-                        color: "var(--text-hi)",
+                        font: "inherit",
+                        fontSize: "var(--fs-callout)",
+                        color: "var(--label)",
                         flex: 1,
                       }}
                     />
@@ -656,140 +485,64 @@ export function SettingsTab() {
                     {filteredLangs.length === 0 ? (
                       <div
                         style={{
-                          padding: "14px 16px",
-                          fontSize: 12,
-                          color: "var(--text-low)",
+                          padding: "10px 12px",
+                          fontSize: "var(--fs-callout)",
+                          color: "var(--label-3)",
                         }}
                       >
                         {t("common.notFound")}
                       </div>
                     ) : (
-                      filteredLangs.map((lang) => (
-                        <button
-                          key={lang.code}
-                          onClick={() => {
-                            update({ language: lang.code });
-                            setLangOpen(false);
-                            setLangSearch("");
-                          }}
-                          style={{
-                            width: "100%",
-                            textAlign: "left",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: "10px 16px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            background:
-                              settings.language === lang.code
-                                ? "var(--dropdown-active)"
-                                : "transparent",
-                            color:
-                              settings.language === lang.code
-                                ? "var(--text-hi)"
-                                : "var(--text-mid)",
-                            fontSize: 12,
-                            transition: "background 0.1s",
-                          }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.background = "var(--dropdown-hover)")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.background =
-                              settings.language === lang.code
-                                ? "var(--dropdown-active)"
-                                : "transparent")
-                          }
-                        >
-                          <span
-                            style={{
-                              minWidth: 28,
-                              fontSize: 10,
-                              color: "var(--text-low)",
-                              fontFamily: "monospace",
+                      filteredLangs.map((language) => {
+                        const active = settings.language === language.code;
+
+                        return (
+                          <button
+                            key={language.code}
+                            type="button"
+                            onClick={() => {
+                              void update({ language: language.code });
+                              setLangOpen(false);
+                              setLangSearch("");
                             }}
+                            className={["ui-menu-item", active ? "ui-menu-item--active" : ""]
+                              .filter(Boolean)
+                              .join(" ")}
                           >
-                            {lang.code}
-                          </span>
-                          <span style={{ flex: 1 }}>{lang.native}</span>
-                          <span style={{ fontSize: 10, color: "var(--text-low)" }}>
-                            {lang.name}
-                          </span>
-                          {settings.language === lang.code && (
-                            <IconCheck
-                              size={12}
-                              stroke={2.5}
-                              style={{
-                                color: "var(--text-hi)",
-                                flexShrink: 0,
-                              }}
-                            />
-                          )}
-                        </button>
-                      ))
+                            <span className="ui-menu-item__hint">{language.code}</span>
+                            <span style={{ flex: 1 }}>{language.native}</span>
+                            <span className="ui-menu-item__hint">{language.name}</span>
+                            {active && (
+                              <IconCheck
+                                size={11}
+                                stroke={2.5}
+                                style={{ color: "var(--label)", flexShrink: 0 }}
+                              />
+                            )}
+                          </button>
+                        );
+                      })
                     )}
                   </div>
                 </div>
               )}
             </div>
-          </div>
-        </div>
-
-        <div
-          style={{
-            ...GROUPED_SETTINGS_SECTION_STYLE,
-            position: "relative",
-            zIndex: micOpen ? 20 : 1,
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: SETTING_ROW_COLUMNS,
-              alignItems: "center",
-              gap: SETTING_ROW_GAP,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                }}
-              >
-                {t("settings.mic.title")}
-              </div>
-            </div>
-            <div
-              ref={micRef}
-              style={{
-                position: "relative",
-                width: "100%",
-                justifySelf: "end",
-              }}
-            >
-              <button
+          }
+        />
+        <FormRow
+          label={t("settings.mic.title")}
+          control={
+            <div ref={micRef} style={{ position: "relative", width: "100%" }}>
+              <Button
+                disabled={micSelectDisabled}
                 onClick={() => {
-                  if (microphones.length === 0 || micStatus === "permission-needed") return;
+                  if (micSelectDisabled) return;
                   setMicOpen((o) => !o);
                 }}
-                className="btn"
                 style={{
                   width: "100%",
                   justifyContent: "space-between",
                   gap: 8,
-                  minHeight: CONTROL_HEIGHT,
-                  padding: "0 10px",
-                  borderRadius: CONTROL_RADIUS,
-                  fontSize: CONTROL_FONT_SIZE,
-                  opacity: microphones.length === 0 || micStatus === "permission-needed" ? 0.7 : 1,
-                  cursor:
-                    microphones.length === 0 || micStatus === "permission-needed"
-                      ? "not-allowed"
-                      : "pointer",
                 }}
               >
                 <span
@@ -804,7 +557,7 @@ export function SettingsTab() {
                     : visibleMicrophoneLabel}
                 </span>
                 <IconChevronDown
-                  size={13}
+                  size={11}
                   stroke={2}
                   style={{
                     flexShrink: 0,
@@ -812,19 +565,19 @@ export function SettingsTab() {
                     transition: "transform 0.15s",
                   }}
                 />
-              </button>
+              </Button>
 
               {micOpen && microphones.length > 0 && (
                 <div
                   style={{
                     position: "absolute",
-                    top: "calc(100% + 8px)",
+                    top: "calc(100% + 6px)",
                     right: 0,
                     width: "100%",
                     maxHeight: 240,
-                    background: "var(--dropdown-bg)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 24,
+                    background: "var(--control-bg)",
+                    border: "1px solid var(--separator)",
+                    borderRadius: "var(--radius-group)",
                     boxShadow: "var(--shadow-panel)",
                     zIndex: 100,
                     display: "flex",
@@ -832,34 +585,19 @@ export function SettingsTab() {
                     overflow: "hidden",
                   }}
                 >
-                  <div style={{ overflow: "auto", flex: 1, padding: "6px 0" }}>
+                  <div style={{ overflow: "auto", flex: 1, padding: "4px 0" }}>
                     <button
+                      type="button"
                       onClick={() => {
                         void update({ micId: "" });
                         setMicOpen(false);
                       }}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        border: "none",
-                        cursor: "pointer",
-                        padding: "10px 16px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        background:
-                          settings.micId === "" ? "var(--dropdown-active)" : "transparent",
-                        color: settings.micId === "" ? "var(--text-hi)" : "var(--text-mid)",
-                        fontSize: 12,
-                        transition: "background 0.1s",
-                      }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background = "var(--dropdown-hover)")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background =
-                          settings.micId === "" ? "var(--dropdown-active)" : "transparent")
-                      }
+                      className={[
+                        "ui-menu-item",
+                        settings.micId === "" ? "ui-menu-item--active" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                     >
                       <span
                         style={{
@@ -872,93 +610,58 @@ export function SettingsTab() {
                       </span>
                       {settings.micId === "" && (
                         <IconCheck
-                          size={12}
+                          size={11}
                           stroke={2.5}
-                          style={{ color: "var(--text-hi)", flexShrink: 0 }}
+                          style={{ color: "var(--label)", flexShrink: 0 }}
                         />
                       )}
                     </button>
-                    {microphones.map((m, i) => (
-                      <button
-                        key={m.deviceId}
-                        onClick={() => {
-                          void update({ micId: m.deviceId });
-                          setMicOpen(false);
-                        }}
-                        style={{
-                          width: "100%",
-                          textAlign: "left",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: "10px 16px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          background:
-                            settings.micId === m.deviceId
-                              ? "var(--dropdown-active)"
-                              : "transparent",
-                          color:
-                            settings.micId === m.deviceId ? "var(--text-hi)" : "var(--text-mid)",
-                          fontSize: 12,
-                          transition: "background 0.1s",
-                        }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = "var(--dropdown-hover)")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background =
-                            settings.micId === m.deviceId
-                              ? "var(--dropdown-active)"
-                              : "transparent")
-                        }
-                      >
-                        <span
-                          style={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
+                    {microphones.map((m, i) => {
+                      const active = settings.micId === m.deviceId;
+
+                      return (
+                        <button
+                          key={m.deviceId}
+                          type="button"
+                          onClick={() => {
+                            void update({ micId: m.deviceId });
+                            setMicOpen(false);
                           }}
+                          className={["ui-menu-item", active ? "ui-menu-item--active" : ""]
+                            .filter(Boolean)
+                            .join(" ")}
                         >
-                          {getMicrophoneLabel(m, i)}
-                        </span>
-                        {settings.micId === m.deviceId && (
-                          <IconCheck
-                            size={12}
-                            stroke={2.5}
-                            style={{ color: "var(--text-hi)", flexShrink: 0 }}
-                          />
-                        )}
-                      </button>
-                    ))}
+                          <span
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {getMicrophoneLabel(m, i)}
+                          </span>
+                          {active && (
+                            <IconCheck
+                              size={11}
+                              stroke={2.5}
+                              style={{ color: "var(--label)", flexShrink: 0 }}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          }
+        />
+      </FormSection>
 
-        <div style={GROUPED_SETTINGS_SECTION_STYLE}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: SETTING_ROW_COLUMNS,
-              alignItems: "center",
-              gap: SETTING_ROW_GAP,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                }}
-              >
-                {t("settings.hotkey.title")}
-              </div>
-            </div>
+      <FormSection title={t("settings.hotkey.title")}>
+        <FormRow
+          label={t("settings.hotkey.title")}
+          control={
             <DictationHotkeyControl
               settings={settings}
               onSettingsChange={(latestSettings) => {
@@ -966,474 +669,164 @@ export function SettingsTab() {
                 setSettings(latestSettings);
               }}
             />
-          </div>
-        </div>
+          }
+        />
+      </FormSection>
 
-        <div style={GROUPED_SETTINGS_SECTION_STYLE}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: SETTING_ROW_COLUMNS,
-              alignItems: "center",
-              gap: SETTING_ROW_GAP,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                }}
-              >
-                {t("settings.widgetSize.title")}
-              </div>
-            </div>
+      <FormSection title={t("settings.widgetSize.title")}>
+        <FormRow
+          label={t("settings.widgetSize.title")}
+          control={
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr) 56px",
+                gridTemplateColumns: "minmax(0, 1fr) 48px",
                 alignItems: "center",
-                gap: 12,
-                justifySelf: "end",
+                gap: 10,
                 width: "100%",
               }}
             >
-              <input
-                type="range"
+              <Slider
                 min={WIDGET_SCALE_MIN}
                 max={WIDGET_SCALE_MAX}
                 step={WIDGET_SCALE_STEP}
                 value={widgetScale}
-                onChange={(event) => {
-                  void update({
-                    widgetScale: normalizeWidgetScale(Number(event.currentTarget.value)),
-                  });
+                onChange={(value) => {
+                  void update({ widgetScale: normalizeWidgetScale(value) });
                 }}
-                aria-label={t("settings.widgetSize.aria")}
-                style={{
-                  width: "100%",
-                  accentColor: "var(--accent)",
-                  cursor: "pointer",
-                }}
+                ariaLabel={t("settings.widgetSize.aria")}
               />
               <div
                 style={{
-                  height: CONTROL_HEIGHT,
-                  borderRadius: CONTROL_RADIUS,
-                  background: "var(--control-muted)",
-                  color: "var(--text-hi)",
+                  height: 22,
+                  borderRadius: 5,
+                  background: "var(--control-track)",
+                  color: "var(--label)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: CONTROL_FONT_SIZE,
-                  fontWeight: 700,
+                  fontSize: "var(--fs-subhead)",
+                  fontWeight: 600,
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
                 {formatWidgetScalePercent(widgetScale)}
               </div>
             </div>
-          </div>
-        </div>
+          }
+        />
+      </FormSection>
 
-        <div style={GROUPED_SETTINGS_SECTION_STYLE}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: SETTING_ROW_COLUMNS,
-              alignItems: "center",
-              gap: SETTING_ROW_GAP,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                }}
-              >
-                {t("settings.autostart.title")}
-              </div>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={autostartEnabled}
-              aria-disabled={autostartDisabled}
-              onClick={() => {
+      <FormSection title={t("settings.autostart.title")}>
+        <FormRow
+          label={t("settings.autostart.title")}
+          description={t("settings.autostart.desc")}
+          control={
+            <Toggle
+              checked={autostartEnabled}
+              disabled={autostartDisabled}
+              onChange={() => {
                 void toggleAutostart();
               }}
-              className="btn"
-              style={{
-                width: "100%",
-                minHeight: CONTROL_HEIGHT,
-                padding: "0 10px",
-                borderRadius: CONTROL_RADIUS,
-                display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr) 34px",
-                alignItems: "center",
-                gap: 10,
-                opacity: autostartDisabled ? 0.72 : 1,
-                cursor: autostartDisabled ? "wait" : "pointer",
-                transform: "none",
-                justifySelf: "end",
+              ariaLabel={t("settings.autostart.title")}
+            />
+          }
+        />
+        <FormRow
+          label={t("settings.dock.title")}
+          description={t("settings.dock.desc")}
+          control={
+            <Toggle
+              checked={settings.showInDock}
+              onChange={(checked) => {
+                void updateShowInDock(checked);
               }}
-            >
-              <span
-                style={{
-                  color: "var(--text-hi)",
-                  fontSize: CONTROL_FONT_SIZE,
-                  fontWeight: 700,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  minWidth: 0,
-                }}
-              >
-                {autostartEnabled ? t("settings.autostart.on") : t("settings.autostart.off")}
-              </span>
-              <span
-                aria-hidden="true"
-                style={{
-                  width: 34,
-                  height: 20,
-                  borderRadius: 999,
-                  background: autostartEnabled ? "var(--accent)" : "var(--switch-track)",
-                  padding: 3,
-                  position: "relative",
-                  transition: "background 0.15s ease",
-                  flexShrink: 0,
-                }}
-              >
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 3,
-                    left: 3,
-                    width: 14,
-                    height: 14,
-                    borderRadius: "50%",
-                    background: "var(--accent-contrast)",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
-                    transform: autostartEnabled ? "translateX(14px)" : "translateX(0)",
-                    transition: "transform 0.18s ease",
-                  }}
-                />
-              </span>
-            </button>
-          </div>
-        </div>
-
-        <div style={GROUPED_SETTINGS_SECTION_STYLE}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: SETTING_ROW_COLUMNS,
-              alignItems: "center",
-              gap: SETTING_ROW_GAP,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                }}
-              >
-                {t("settings.realtimeTranscription.title")}
-              </div>
-              <div
-                id="realtime-transcription-description"
-                style={{
-                  marginTop: 4,
-                  color: "var(--text-low)",
-                  fontSize: 11,
-                  lineHeight: 1.35,
-                }}
-              >
-                {t("settings.realtimeTranscription.desc")}
-              </div>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={realtimeTranscriptionActive}
-              aria-describedby="realtime-transcription-description"
-              onClick={() => {
+              ariaLabel={t("settings.dock.title")}
+            />
+          }
+        />
+        <FormRow
+          label={t("settings.realtimeTranscription.title")}
+          description={t("settings.realtimeTranscription.desc")}
+          control={
+            <Toggle
+              checked={realtimeTranscriptionActive}
+              onChange={() => {
                 void update({
                   realtimeTranscriptionEnabled: !settings.realtimeTranscriptionEnabled,
                 });
               }}
-              className="btn"
-              style={{
-                width: "100%",
-                minHeight: CONTROL_HEIGHT,
-                padding: "0 10px",
-                borderRadius: CONTROL_RADIUS,
-                display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr) 34px",
-                alignItems: "center",
-                gap: 10,
-                opacity: 1,
-                cursor: "pointer",
-                transform: "none",
-                justifySelf: "end",
-              }}
-            >
-              <span
-                style={{
-                  color: "var(--text-hi)",
-                  fontSize: CONTROL_FONT_SIZE,
-                  fontWeight: 700,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  minWidth: 0,
-                }}
-              >
-                {settings.realtimeTranscriptionEnabled
-                  ? t("settings.realtimeTranscription.on")
-                  : t("settings.realtimeTranscription.off")}
-              </span>
-              <span
-                aria-hidden="true"
-                style={{
-                  width: 34,
-                  height: 20,
-                  borderRadius: 999,
-                  background: realtimeTranscriptionActive ? "var(--accent)" : "var(--switch-track)",
-                  padding: 3,
-                  position: "relative",
-                  transition: "background 0.15s ease",
-                  flexShrink: 0,
-                }}
-              >
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 3,
-                    left: 3,
-                    width: 14,
-                    height: 14,
-                    borderRadius: "50%",
-                    background: "var(--accent-contrast)",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
-                    transform: realtimeTranscriptionActive ? "translateX(14px)" : "translateX(0)",
-                    transition: "transform 0.18s ease",
-                  }}
-                />
-              </span>
-            </button>
-          </div>
-        </div>
-
-        <div style={GROUPED_SETTINGS_SECTION_STYLE}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: SETTING_ROW_COLUMNS,
-              alignItems: "center",
-              gap: SETTING_ROW_GAP,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                }}
-              >
-                {t("settings.appDataDir.title")}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                void openAppDataDir();
-              }}
-              className="btn"
-              style={{
-                minHeight: CONTROL_HEIGHT,
-                width: "100%",
-                justifyContent: "center",
-                padding: "0 10px",
-                borderRadius: CONTROL_RADIUS,
-                fontSize: CONTROL_FONT_SIZE,
-              }}
-            >
-              {t("common.open")}
-            </button>
-          </div>
-          <input
-            type="text"
-            value={appDataDir}
-            readOnly
-            className="input"
-            placeholder={t("settings.modelsDir.placeholder")}
-            style={{
-              height: 40,
-              padding: "8px 10px",
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-              fontSize: 11,
-            }}
-          />
-        </div>
-
-        <div style={GROUPED_SETTINGS_SECTION_STYLE}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: SETTING_ROW_COLUMNS,
-              alignItems: "center",
-              gap: SETTING_ROW_GAP,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                }}
-              >
-                {t("settings.recordingAudio.title")}
-              </div>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={settings.saveRecordingAudio}
-              onClick={() => {
+              ariaLabel={t("settings.realtimeTranscription.title")}
+            />
+          }
+        />
+        <FormRow
+          label={t("settings.recordingAudio.title")}
+          control={
+            <Toggle
+              checked={settings.saveRecordingAudio}
+              onChange={() => {
                 void update({
                   saveRecordingAudio: !settings.saveRecordingAudio,
                 });
               }}
-              className="btn"
+              ariaLabel={t("settings.recordingAudio.title")}
+            />
+          }
+        />
+      </FormSection>
+
+      <FormSection title={t("settings.appDataDir.title")}>
+        <FormRow
+          label={t("settings.appDataDir.title")}
+          control={
+            <div
               style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
                 width: "100%",
-                minHeight: CONTROL_HEIGHT,
-                padding: "0 10px",
-                borderRadius: CONTROL_RADIUS,
-                display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr) 34px",
-                alignItems: "center",
-                gap: 10,
-                cursor: "pointer",
-                transform: "none",
-                justifySelf: "end",
               }}
             >
-              <span
-                style={{
-                  color: "var(--text-hi)",
-                  fontSize: CONTROL_FONT_SIZE,
-                  fontWeight: 700,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  minWidth: 0,
+              <Button
+                onClick={() => {
+                  void openAppDataDir();
                 }}
+                style={{ width: "100%", justifyContent: "center" }}
               >
-                {settings.saveRecordingAudio
-                  ? t("settings.recordingAudio.on")
-                  : t("settings.recordingAudio.off")}
-              </span>
-              <span
-                aria-hidden="true"
+                {t("common.open")}
+              </Button>
+              <TextField
+                value={appDataDir}
+                readOnly
+                placeholder={t("settings.modelsDir.placeholder")}
                 style={{
-                  width: 34,
-                  height: 20,
-                  borderRadius: 999,
-                  background: settings.saveRecordingAudio ? "var(--accent)" : "var(--switch-track)",
-                  padding: 3,
-                  position: "relative",
-                  transition: "background 0.15s ease",
-                  flexShrink: 0,
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                  fontSize: "var(--fs-subhead)",
                 }}
-              >
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 3,
-                    left: 3,
-                    width: 14,
-                    height: 14,
-                    borderRadius: "50%",
-                    background: "var(--accent-contrast)",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
-                    transform: settings.saveRecordingAudio ? "translateX(14px)" : "translateX(0)",
-                    transition: "transform 0.18s ease",
-                  }}
-                />
-              </span>
-            </button>
-          </div>
-        </div>
-
-        <div style={GROUPED_SETTINGS_LAST_SECTION_STYLE}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: SETTING_ROW_COLUMNS,
-              alignItems: "center",
-              gap: SETTING_ROW_GAP,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "var(--text-hi)",
-                  margin: 0,
-                }}
-              >
-                {t("settings.support.title")}
-              </div>
+              />
             </div>
-            <button
-              type="button"
+          }
+        />
+      </FormSection>
+
+      <FormSection title={t("settings.support.title")}>
+        <FormRow
+          label={t("settings.support.title")}
+          description={supportFeedback || undefined}
+          control={
+            <Button
               onClick={() => {
                 void contactSupport();
               }}
-              className="btn"
-              style={{
-                minHeight: CONTROL_HEIGHT,
-                width: "100%",
-                justifySelf: "end",
-                justifyContent: "center",
-                gap: 8,
-                padding: "0 10px",
-                borderRadius: CONTROL_RADIUS,
-                fontSize: CONTROL_FONT_SIZE,
-              }}
+              style={{ gap: 6 }}
             >
-              <IconMail size={14} stroke={2} />
+              <IconMail size={12} stroke={2} />
               {t("settings.support.button")}
-            </button>
-          </div>
-          {supportFeedback && (
-            <div
-              style={{
-                fontSize: 13,
-                color: "var(--text-mid)",
-                lineHeight: 1.6,
-              }}
-            >
-              {supportFeedback}
-            </div>
-          )}
-        </div>
-      </div>
+            </Button>
+          }
+        />
+      </FormSection>
     </div>
   );
 }

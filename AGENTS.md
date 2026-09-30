@@ -22,7 +22,7 @@ src-tauri/                  Rust backend
   Cargo.toml
 docs/                       Architecture, audio rules, privacy, release, testing
 rules/                      Agent-facing project rules
-skills/                     Portable Talkee UI style skill
+skills/                     Talkee UI style skill (checklist)
 scripts/                    Build, sidecar and check scripts
 openspec/                   OpenSpec planning workspace (changes, specs, config.yaml)
 ```

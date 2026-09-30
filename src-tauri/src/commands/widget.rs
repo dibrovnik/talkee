@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::sync::{Mutex, OnceLock};
 use tauri::{
+    utils::config::WindowEffectsConfig,
+    window::{Effect, EffectState, EffectsBuilder},
     AppHandle, Emitter, Manager, PhysicalPosition, Position, WebviewUrl, WebviewWindow,
     WebviewWindowBuilder,
 };
@@ -23,6 +25,7 @@ pub const TEXT_OVERLAY_HEIGHT: f64 = 118.1;
 /// Must match NOTICE_WIDGET_GAP in src/windows/widget/widgetConstants.ts (logical pixels).
 pub const NOTICE_GAP: f64 = 2.0;
 const TEXT_OVERLAY_GAP: f64 = 8.0;
+const OVERLAY_CORNER_RADIUS: f64 = 12.0;
 /// Must match widgetStackWidth(false)/widgetStackHeight(false) in
 /// src/windows/widget/widgetConstants.ts.
 pub const WIDGET_WIDTH: f64 = 129.0;
@@ -272,6 +275,17 @@ fn text_overlay_request_matches(
     current.and_then(|payload| payload.request_id.as_deref()) == Some(request_id)
 }
 
+/// Native HUD material for the notice and text overlays. The overlays never
+/// take focus, so the material is pinned to the active state instead of
+/// following the (always inactive) window.
+fn overlay_effects() -> WindowEffectsConfig {
+    EffectsBuilder::new()
+        .effect(Effect::HudWindow)
+        .state(EffectState::Active)
+        .radius(OVERLAY_CORNER_RADIUS)
+        .build()
+}
+
 pub fn ensure_widget_notice_window(app: &AppHandle) -> Result<tauri::WebviewWindow, String> {
     if let Some(win) = app.get_webview_window(NOTICE_WINDOW_LABEL) {
         return Ok(win);
@@ -292,7 +306,10 @@ pub fn ensure_widget_notice_window(app: &AppHandle) -> Result<tauri::WebviewWind
     .visible(false)
     .shadow(false);
 
-    builder = builder.transparent(true).skip_taskbar(true);
+    builder = builder
+        .transparent(true)
+        .effects(overlay_effects())
+        .skip_taskbar(true);
 
     let win = builder.build().map_err(|e| e.to_string())?;
 
@@ -319,7 +336,10 @@ pub fn ensure_widget_text_window(app: &AppHandle) -> Result<tauri::WebviewWindow
     .visible(false)
     .shadow(false);
 
-    builder = builder.transparent(true).skip_taskbar(true);
+    builder = builder
+        .transparent(true)
+        .effects(overlay_effects())
+        .skip_taskbar(true);
 
     let win = builder.build().map_err(|e| e.to_string())?;
 

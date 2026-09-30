@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 
 import { IconChevronDown } from "../lib/icons";
+import { Button } from "../ui/Button";
 
 export function ModelCardDisclosureButton({
   expanded,
@@ -12,31 +13,12 @@ export function ModelCardDisclosureButton({
   label: string;
 }): ReactElement {
   return (
-    <button
-      type="button"
+    <Button
       aria-expanded={expanded}
       aria-label={label}
       title={label}
       onClick={onToggle}
-      style={{
-        position: "absolute",
-        right: 0,
-        bottom: 0,
-        zIndex: 1,
-        width: 24,
-        height: 24,
-        margin: 0,
-        padding: 0,
-        borderRadius: 7,
-        border: "1px solid transparent",
-        background: "transparent",
-        color: "var(--text-low)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        fontFamily: "var(--font-main)",
-      }}
+      className="ui-icon-button ui-model-disclosure"
     >
       <IconChevronDown
         size={15}
@@ -47,6 +29,6 @@ export function ModelCardDisclosureButton({
           transition: "transform 160ms ease",
         }}
       />
-    </button>
+    </Button>
   );
 }

@@ -1,11 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-import { useEffect, useState } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 
 import { ONBOARDING_STT_MODELS, type OnboardingSttModel } from "../../config/onboardingSttModels";
 import { SETTINGS_UPDATED_EVENT } from "../../lib/hotkeyEvents";
 import { useI18n } from "../../lib/i18n";
-import { IconCheck, IconDownload, IconLoader2, IconTrash, IconX } from "../../lib/icons";
+import { IconCheck, IconDownload, IconTrash, IconX } from "../../lib/icons";
 import { logError, logInfo } from "../../lib/logger";
 import {
   buildOnboardingLocalSttPatch,
@@ -14,6 +14,8 @@ import {
 } from "../../lib/onboarding";
 import { type AppSettings, getSettings, saveSettings } from "../../lib/store";
 import { formatErrorMessage } from "../../lib/utils";
+import { Button } from "../../ui/Button";
+import { Spinner } from "../../ui/Spinner";
 import { LocalSttModelCard } from "../LocalSttModelCard";
 import { OnboardingShell } from "./OnboardingShell";
 
@@ -61,7 +63,7 @@ export function OnboardingModelStep({
 }: {
   onContinue: (settings: AppSettings) => void;
   onSkip: () => void;
-}) {
+}): ReactElement {
   const { t } = useI18n();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [installedModels, setInstalledModels] = useState<string[]>([]);
@@ -292,64 +294,25 @@ export function OnboardingModelStep({
       title={t("onboarding.model.title")}
       subtitle={t("onboarding.model.subtitle")}
       footer={
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 10,
-          }}
-        >
-          <button
-            type="button"
-            onClick={onSkip}
-            disabled={isBusy}
-            style={{
-              padding: "10px 4px",
-              border: "none",
-              background: "transparent",
-              color: "var(--text-low)",
-              cursor: isBusy ? "default" : "pointer",
-              opacity: isBusy ? 0.55 : 1,
-              fontSize: 12,
-              fontWeight: 700,
-            }}
-          >
+        <>
+          <Button onClick={onSkip} disabled={isBusy}>
             {t("onboarding.model.skip")}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="primary"
+            size="large"
             onClick={() => settings && onContinue(settings)}
             disabled={!settings || !activeInstalledModel || isBusy}
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "none",
-              background: "var(--accent)",
-              color: "var(--accent-contrast)",
-              cursor: settings && activeInstalledModel && !isBusy ? "pointer" : "default",
-              opacity: settings && activeInstalledModel && !isBusy ? 1 : 0.45,
-              fontWeight: 750,
-            }}
           >
             {t("onboarding.model.continue")}
-          </button>
-        </div>
+          </Button>
+        </>
       }
     >
-      <div style={{ display: "grid", gap: 8 }}>
+      <div className="ui-form-stack">
         {checking && (
-          <div
-            aria-live="polite"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              color: "var(--text-mid)",
-              fontSize: 12,
-            }}
-          >
-            <IconLoader2 size={15} stroke={2} style={{ animation: "spin 1s linear infinite" }} />
+          <div aria-live="polite" className="ui-onboarding__status">
+            <Spinner size={14} label={t("onboarding.model.checking")} />
             {t("onboarding.model.checking")}
           </div>
         )}
@@ -359,7 +322,7 @@ export function OnboardingModelStep({
           description={t(onboardingModel.descriptionKey)}
           recommendedLabel={t("onboarding.model.recommended")}
           statusLabel={statusLabel}
-          statusColor={selected ? "var(--success)" : "var(--text-low)"}
+          statusColor={selected ? "var(--success)" : "var(--label-2)"}
           expanded={expandedId === onboardingModel.id}
           onToggle={() =>
             setExpandedId(expandedId === onboardingModel.id ? "" : onboardingModel.id)
@@ -414,31 +377,25 @@ export function OnboardingModelStep({
                 : t("onboarding.model.downloadedReady")
               : t("onboarding.model.downloadHint")
           }
-          connectionColor={selected ? "var(--success)" : "var(--text-mid)"}
+          connectionColor={selected ? "var(--success)" : "var(--label-2)"}
           showConnectionCheck={installed}
           actions={
             <>
               {installed && !selected && !modelBusy && (
-                <button
-                  type="button"
-                  onClick={() => void selectModel(onboardingModel)}
-                  disabled={isBusy}
-                  style={secondaryActionStyle(isBusy)}
-                >
+                <Button onClick={() => void selectModel(onboardingModel)} disabled={isBusy}>
                   <IconCheck size={14} stroke={2.5} />
                   {t("onboarding.model.select")}
-                </button>
+                </Button>
               )}
               {!modelBusy && (
-                <button
-                  type="button"
+                <Button
+                  variant={installed ? "default" : "primary"}
                   onClick={() =>
                     installed
                       ? setPendingDelete(onboardingModel)
                       : void installModel(onboardingModel)
                   }
                   disabled={isBusy}
-                  style={installed ? secondaryActionStyle(isBusy) : primaryActionStyle(isBusy)}
                 >
                   {installed ? (
                     <IconTrash size={14} stroke={2.2} />
@@ -446,17 +403,13 @@ export function OnboardingModelStep({
                     <IconDownload size={14} stroke={2.2} />
                   )}
                   {installed ? t("onboarding.model.delete") : t("onboarding.model.download")}
-                </button>
+                </Button>
               )}
               {downloading && (
-                <button
-                  type="button"
-                  onClick={() => void cancelDownload(onboardingModel)}
-                  style={secondaryActionStyle(false)}
-                >
+                <Button onClick={() => void cancelDownload(onboardingModel)}>
                   <IconX size={14} stroke={2.2} />
                   {t("onboarding.model.cancel")}
-                </button>
+                </Button>
               )}
             </>
           }
@@ -469,96 +422,32 @@ export function OnboardingModelStep({
           role="dialog"
           aria-modal="true"
           aria-labelledby="onboarding-delete-model-title"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 10001,
-            padding: 20,
-            display: "grid",
-            placeItems: "center",
-            background: "var(--modal-scrim)",
-          }}
+          className="ui-modal-scrim ui-modal-scrim--top"
           onClick={() => setPendingDelete(null)}
         >
           {/* biome-ignore lint/a11y/useKeyWithClickEvents: the click handler only stops propagation so clicks inside the dialog do not close it. */}
           {/* biome-ignore lint/a11y/noStaticElementInteractions: the click handler only stops propagation so clicks inside the dialog do not close it. */}
           <div
-            className="card"
-            style={{
-              width: "min(420px, 100%)",
-              padding: 18,
-              background: "var(--bg)",
-              boxShadow: "var(--shadow-modal)",
-            }}
+            className="ui-modal"
+            style={{ background: "var(--window-bg)" }}
             onClick={(event) => event.stopPropagation()}
           >
-            <h2
-              id="onboarding-delete-model-title"
-              style={{
-                margin: "0 0 8px",
-                fontFamily: "var(--font-accent)",
-                fontSize: 18,
-                letterSpacing: "-0.03em",
-              }}
-            >
+            <h2 id="onboarding-delete-model-title" className="ui-modal__title">
               {t("onboarding.model.deleteTitle")}
             </h2>
-            <p
-              style={{
-                margin: "0 0 16px",
-                color: "var(--text-mid)",
-                fontSize: 13,
-                lineHeight: 1.6,
-              }}
-            >
+            <p className="ui-modal__body">
               {t("onboarding.model.deleteBody", { name: pendingDelete.name })}
             </p>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-              <button
-                type="button"
-                onClick={() => setPendingDelete(null)}
-                style={secondaryActionStyle(false)}
-              >
-                {t("onboarding.model.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={() => void deleteModel(pendingDelete)}
-                style={primaryActionStyle(false)}
-              >
+            <div className="ui-modal__actions">
+              <Button onClick={() => setPendingDelete(null)}>{t("onboarding.model.cancel")}</Button>
+              <Button variant="destructive" onClick={() => void deleteModel(pendingDelete)}>
                 <IconTrash size={14} stroke={2.2} />
                 {t("onboarding.model.delete")}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
     </OnboardingShell>
   );
-}
-
-function secondaryActionStyle(disabled: boolean) {
-  return {
-    padding: "9px 12px",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 10,
-    border: "1px solid var(--border-dashed)",
-    background: "var(--control-muted)",
-    color: "var(--text-hi)",
-    cursor: disabled ? "default" : "pointer",
-    opacity: disabled ? 0.55 : 1,
-    fontSize: 12,
-    fontWeight: 700,
-  } as const;
-}
-
-function primaryActionStyle(disabled: boolean) {
-  return {
-    ...secondaryActionStyle(disabled),
-    border: "1px solid var(--border-dashed)",
-    background: "var(--accent)",
-    color: "var(--accent-contrast)",
-  } as const;
 }

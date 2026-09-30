@@ -9,7 +9,6 @@ import {
   IconDownload,
   IconGauge,
   IconGlobe,
-  IconLoader2,
   IconTargetArrow,
   IconTrash,
   IconX,
@@ -21,6 +20,10 @@ import {
   selectedLocalLlmModelId,
 } from "../lib/localLlmSelection";
 import type { AppSettings } from "../lib/store";
+import { Badge } from "../ui/Badge";
+import { Button } from "../ui/Button";
+import { ProgressBar } from "../ui/ProgressBar";
+import { Spinner } from "../ui/Spinner";
 import { ModelCardDisclosureButton } from "./ModelCardDisclosureButton";
 
 interface LocalLlmModel {
@@ -42,19 +45,6 @@ interface DownloadProgress {
   status: string;
   percent: number | null;
 }
-
-const ACTION_BUTTON_BASE = {
-  padding: "9px 12px",
-  borderRadius: 10,
-  border: "1px solid var(--border-dashed)",
-  fontSize: 12,
-  fontWeight: 700,
-  fontFamily: "var(--font-main)",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-} as const;
 
 /**
  * Local text (LLM) model slot for "Локально" mode — same card style as the local
@@ -275,98 +265,31 @@ export function LocalLlmModels({
     ];
 
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          marginTop: 9,
-          flexWrap: "nowrap",
-          minWidth: 0,
-          overflow: "hidden",
-        }}
-      >
+      <div className="ui-model-stats">
         <div
           role="img"
-          title={t("models.stat.downloadSizeTitle", {
-            value: model.size_label,
-          })}
-          aria-label={t("models.stat.downloadSizeTitle", {
-            value: model.size_label,
-          })}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            flexShrink: 0,
-          }}
+          title={t("models.stat.downloadSizeTitle", { value: model.size_label })}
+          aria-label={t("models.stat.downloadSizeTitle", { value: model.size_label })}
+          className="ui-model-stat"
         >
-          <IconDownload size={14} stroke={1.9} color="var(--text-hi)" />
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 650,
-              color: "var(--text-hi)",
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {model.size_label}
-          </span>
+          <IconDownload size={14} stroke={1.9} />
+          <span>{model.size_label}</span>
         </div>
 
         <div
           role="img"
           title={t("models.stat.languagesTitle", { value: languageValueLabel })}
-          aria-label={t("models.stat.languagesTitle", {
-            value: languageValueLabel,
-          })}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            flexShrink: 0,
-          }}
+          aria-label={t("models.stat.languagesTitle", { value: languageValueLabel })}
+          className="ui-model-stat"
         >
-          <IconGlobe size={14} stroke={1.9} color="var(--text-hi)" />
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 650,
-              color: "var(--text-hi)",
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {languageValueLabel}
-          </span>
+          <IconGlobe size={14} stroke={1.9} />
+          <span>{languageValueLabel}</span>
         </div>
 
         {stats.map(({ key, title, Icon, value }) => (
-          <div
-            key={key}
-            role="img"
-            title={title}
-            aria-label={title}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              flexShrink: 0,
-            }}
-          >
-            <Icon size={14} stroke={1.9} color="var(--text-hi)" />
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 650,
-                color: "var(--text-hi)",
-                lineHeight: 1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {value}
-            </span>
+          <div key={key} role="img" title={title} aria-label={title} className="ui-model-stat">
+            <Icon size={14} stroke={1.9} />
+            <span>{value}</span>
           </div>
         ))}
       </div>
@@ -374,64 +297,26 @@ export function LocalLlmModels({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div>
-        <div
-          style={{
-            fontSize: 15,
-            fontWeight: 700,
-            color: "var(--text-hi)",
-            marginBottom: 4,
-          }}
-        >
-          {t("localLlm.title")}
-        </div>
-        <div style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}>
-          {t("localLlm.desc")}
-        </div>
+    <div className="ui-tab">
+      <div className="ui-page-header">
+        <div className="ui-page-header__title">{t("localLlm.title")}</div>
+        <div className="ui-page-header__desc">{t("localLlm.desc")}</div>
       </div>
 
       {error && (
-        <div
-          style={{
-            fontSize: 12,
-            lineHeight: 1.6,
-            padding: "8px 10px",
-            borderRadius: 8,
-            background: "var(--danger-soft)",
-            color: "var(--error-bright)",
-            border: "1px solid var(--danger-border)",
-          }}
-        >
+        <div className="ui-model-card__notice ui-model-card__notice--error" role="alert">
           {error}
         </div>
       )}
 
       {!usingLocalEndpoint && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 8,
-            fontSize: 12,
-            lineHeight: 1.55,
-            padding: "9px 11px",
-            borderRadius: 8,
-            background: "var(--control-muted)",
-            color: "var(--text-hi)",
-            border: "1px solid var(--border-subtle)",
-          }}
-        >
-          <IconAlertCircle
-            size={15}
-            stroke={2}
-            style={{ flexShrink: 0, marginTop: 1, color: "var(--accent)" }}
-          />
+        <div className="ui-inline-note">
+          <IconAlertCircle size={14} stroke={2} aria-hidden="true" />
           <span>{t("localLlm.required")}</span>
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="ui-tab">
         {models.map((model) => {
           const prog = progress[model.id];
           const isDownloading = prog?.status === "downloading" || prog?.status === "starting";
@@ -456,101 +341,24 @@ export function LocalLlmModels({
             : model.downloaded
               ? "var(--success-bright)"
               : isDownloading || isDeleting
-                ? "var(--text-hi)"
-                : "var(--text-low)";
+                ? "var(--label)"
+                : "var(--label-3)";
 
           return (
-            <div
-              key={model.id}
-              className="card"
-              style={{
-                padding: 0,
-                overflow: "hidden",
-                position: "relative",
-                background: "var(--surface)",
-              }}
-            >
-              <div
-                style={{
-                  position: "relative",
-                  padding: "12px 14px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  textAlign: "left",
-                  fontFamily: "var(--font-main)",
-                }}
-              >
-                <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 10,
-                      marginBottom: 3,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        minWidth: 0,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 15,
-                          fontWeight: 700,
-                          color: "var(--text-hi)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {model.label}
-                      </div>
-                      {model.recommended && (
-                        <div
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 800,
-                            color: "var(--text-hi)",
-                            padding: "3px 7px",
-                            borderRadius: 999,
-                            background: "var(--control-muted)",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {t("models.local.recommendedBadge")}
-                        </div>
-                      )}
+            <div key={model.id} className="ui-model-card">
+              <div className="ui-model-card__head">
+                <div className="ui-model-card__main">
+                  <div className="ui-model-card__titlebar">
+                    <div className="ui-model-card__title">
+                      <span>{model.label}</span>
+                      {model.recommended && <Badge>{t("models.local.recommendedBadge")}</Badge>}
                     </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: statusColor,
-                        padding: "5px 9px",
-                        borderRadius: 999,
-                        background: "var(--control-muted)",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                    <Badge className="ui-model-card__state" style={{ color: statusColor }}>
                       {statusLabel}
-                    </div>
+                    </Badge>
                   </div>
-                  <div style={{ paddingRight: 34 }}>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        lineHeight: 1.45,
-                        color: "var(--text-mid)",
-                      }}
-                    >
-                      {model.description}
-                    </div>
+                  <div className="ui-model-card__body">
+                    <div className="ui-model-card__desc">{model.description}</div>
                     {renderLocalLlmStats(model)}
                   </div>
                   <ModelCardDisclosureButton
@@ -562,165 +370,55 @@ export function LocalLlmModels({
               </div>
 
               {open && (
-                <div
-                  style={{
-                    borderTop: "1px solid var(--border-subtle)",
-                    padding: "12px 14px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                  }}
-                >
+                <div className="ui-model-card__detail">
                   {isDownloading && (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 7,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          fontSize: 12,
-                          color: "var(--text-mid)",
-                          fontWeight: 650,
-                        }}
-                      >
+                    <div className="ui-model-progress" role="status">
+                      <div className="ui-model-progress__head">
                         <span>{t("localLlm.downloadingModel")}</span>
-                        <span style={{ color: "var(--text-hi)" }}>
+                        <span className="ui-model-progress__value">
                           {prog?.percent != null ? `${prog.percent}%` : t("localLlm.preparing")}
                         </span>
                       </div>
-                      <div
-                        style={{
-                          width: "100%",
-                          height: 8,
-                          borderRadius: 999,
-                          background: "var(--progress-track)",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: `${prog?.percent ?? 2}%`,
-                            minWidth: prog?.percent == null ? 18 : 0,
-                            height: "100%",
-                            borderRadius: 999,
-                            background: "var(--accent)",
-                            transition: "width 0.2s ease",
-                          }}
-                        />
-                      </div>
+                      <ProgressBar value={(prog?.percent ?? 2) / 100} />
                     </div>
                   )}
 
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 10,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        flexWrap: "wrap",
-                        marginLeft: "auto",
-                      }}
-                    >
-                      {!model.downloaded ? (
-                        isDownloading ? (
-                          <button
-                            onClick={() => void cancelDownload(model)}
-                            style={{
-                              ...ACTION_BUTTON_BASE,
-                              background: "var(--control-muted)",
-                              color: "var(--text-hi)",
-                            }}
-                          >
-                            <IconX size={14} stroke={2.2} />
-                            {t("localLlm.cancel")}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => void download(model)}
-                            style={{
-                              ...ACTION_BUTTON_BASE,
-                              background: "var(--accent)",
-                              color: "var(--accent-contrast)",
-                            }}
-                          >
-                            <IconDownload size={14} stroke={2.2} />
-                            {t("localLlm.download")}
-                          </button>
-                        )
+                  <div className="ui-model-card__actions">
+                    {!model.downloaded ? (
+                      isDownloading ? (
+                        <Button onClick={() => void cancelDownload(model)}>
+                          <IconX size={14} stroke={2.2} />
+                          {t("localLlm.cancel")}
+                        </Button>
                       ) : (
-                        <>
-                          {isSelected ? (
-                            <button
-                              type="button"
-                              onClick={() => void deselect(model)}
-                              disabled={isBusy}
-                              style={{
-                                ...ACTION_BUTTON_BASE,
-                                background: "var(--control-muted)",
-                                color: "var(--text-hi)",
-                                opacity: isBusy ? 0.7 : 1,
-                              }}
-                            >
-                              <IconX size={14} stroke={2.2} />
-                              {t("localLlm.deselect")}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => void selectForSummary(model)}
-                              disabled={isBusy}
-                              style={{
-                                ...ACTION_BUTTON_BASE,
-                                background: "var(--control-muted)",
-                                color: "var(--text-hi)",
-                                opacity: isBusy ? 0.7 : 1,
-                              }}
-                            >
-                              {isBusy ? (
-                                <IconLoader2
-                                  size={14}
-                                  stroke={2.2}
-                                  style={{
-                                    animation: "spin 1s linear infinite",
-                                  }}
-                                />
-                              ) : (
-                                <IconCheck size={14} stroke={2.5} />
-                              )}
-                              {t("localLlm.select")}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => void remove(model)}
-                            disabled={isBusy}
-                            style={{
-                              ...ACTION_BUTTON_BASE,
-                              background: "var(--control-muted)",
-                              color: "var(--text-hi)",
-                            }}
-                          >
-                            <IconTrash size={14} stroke={2.2} />
-                            {t("localLlm.delete")}
-                          </button>
-                        </>
-                      )}
-                    </div>
+                        <Button variant="primary" onClick={() => void download(model)}>
+                          <IconDownload size={14} stroke={2.2} />
+                          {t("localLlm.download")}
+                        </Button>
+                      )
+                    ) : (
+                      <>
+                        {isSelected ? (
+                          <Button onClick={() => void deselect(model)} disabled={isBusy}>
+                            <IconX size={14} stroke={2.2} />
+                            {t("localLlm.deselect")}
+                          </Button>
+                        ) : (
+                          <Button onClick={() => void selectForSummary(model)} disabled={isBusy}>
+                            {isBusy ? <Spinner size={14} /> : <IconCheck size={14} stroke={2.5} />}
+                            {t("localLlm.select")}
+                          </Button>
+                        )}
+                        <Button
+                          variant="destructive"
+                          onClick={() => void remove(model)}
+                          disabled={isBusy}
+                        >
+                          <IconTrash size={14} stroke={2.2} />
+                          {t("localLlm.delete")}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}

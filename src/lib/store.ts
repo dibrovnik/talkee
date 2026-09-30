@@ -219,6 +219,8 @@ export interface AppSettings {
   saveRecordingAudio: boolean;
   /** Use realtime transcription whenever the selected STT model supports streaming. */
   realtimeTranscriptionEnabled: boolean;
+  /** Show the app icon in the Dock. When off, talkee runs as a menu-bar-only utility. */
+  showInDock: boolean;
   /** Separate API key for Whisper/STT endpoint (used in custom mode) */
   whisperApiKey: string;
   /** Separate API key for LLM endpoint (used in custom mode; empty = skip LLM) */
@@ -731,6 +733,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   transcriptionStorageDir: "",
   saveRecordingAudio: false,
   realtimeTranscriptionEnabled: true,
+  showInDock: true,
   whisperApiKey: "",
   llmApiKey: "",
   provider: "openai",
@@ -1179,6 +1182,7 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
       typeof raw.realtimeTranscriptionEnabled === "boolean"
         ? raw.realtimeTranscriptionEnabled
         : legacyStreamingEnabled,
+    showInDock: typeof raw.showInDock === "boolean" ? raw.showInDock : undefined,
     whisperApiKey: typeof raw.whisperApiKey === "string" ? raw.whisperApiKey : undefined,
     llmApiKey: typeof raw.llmApiKey === "string" ? raw.llmApiKey : undefined,
     provider: parseProvider(raw.provider),

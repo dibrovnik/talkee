@@ -2,7 +2,6 @@ import { emit, listen } from "@tauri-apps/api/event";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { OnboardingFlow } from "../../components/onboarding/OnboardingFlow";
-import { TitleBar } from "../../components/TitleBar";
 import {
   DEV_ONBOARDING_REQUEST_EVENT,
   SELECTION_TEXT_REQUEST_EVENT,
@@ -17,6 +16,7 @@ import {
   type Icon,
   IconAdjustmentsHorizontal,
   IconCpu,
+  IconDeviceDesktopCog,
   IconFileMusic,
   IconHome,
   IconLanguage,
@@ -25,6 +25,7 @@ import {
 } from "../../lib/icons";
 import { logError } from "../../lib/logger";
 import { checkAllPermissions } from "../../lib/permissions";
+import { watchReduceTransparency } from "../../lib/reduceTransparency";
 import {
   getHistoryIndex,
   getPermissionsPassed,
@@ -33,6 +34,8 @@ import {
   type ThemePreference,
 } from "../../lib/store";
 import { watchThemePreference } from "../../lib/theme";
+import { Gallery } from "../../ui/Gallery";
+import { SidebarItem } from "../../ui/SidebarItem";
 import {
   isSettingsTab,
   resolveInitialSettingsTab,
@@ -49,120 +52,75 @@ function resolveInitialTab(): Tab {
   return resolveInitialSettingsTab(window.location.search);
 }
 
-const TABS: { id: Tab; labelKey: MsgKey; icon: Icon; note: string }[] = [
-  {
-    id: "main",
-    labelKey: "settingsApp.tab.main",
-    icon: IconHome,
-    note: "История записей",
-  },
-  {
-    id: "file",
-    labelKey: "settingsApp.tab.file",
-    icon: IconFileMusic,
-    note: "Транскрибация",
-  },
-  {
-    id: "chat",
-    labelKey: "settingsApp.tab.chat",
-    icon: IconMessage,
-    note: "Чат с записями и текстом",
-  },
-  {
-    id: "model",
-    labelKey: "settingsApp.tab.model",
-    icon: IconCpu,
-    note: "Ключи и подключение модели",
-  },
-  {
-    id: "interpreter",
-    labelKey: "settingsApp.tab.interpreter",
-    icon: IconLanguage,
-    note: "Перевод диктовки, выделения и живой речи",
-  },
-  {
-    id: "style",
-    labelKey: "settingsApp.tab.style",
-    icon: IconSparkles,
-    note: "Стиль обработки и Промпты для саммари",
-  },
-  {
-    id: "settings",
-    labelKey: "settingsApp.tab.settings",
-    icon: IconAdjustmentsHorizontal,
-    note: "Язык, микрофон и горячая клавиша",
-  },
+interface SidebarTab {
+  id: Tab;
+  labelKey: MsgKey;
+  icon: Icon;
+  note: string;
+}
+
+// Sidebar groups mirror the "System Settings" grouping: content pages first,
+// then configuration pages, then the app-level settings page.
+const SIDEBAR_GROUPS: SidebarTab[][] = [
+  [
+    {
+      id: "main",
+      labelKey: "settingsApp.tab.main",
+      icon: IconHome,
+      note: "История записей",
+    },
+    {
+      id: "file",
+      labelKey: "settingsApp.tab.file",
+      icon: IconFileMusic,
+      note: "Транскрибация",
+    },
+    {
+      id: "chat",
+      labelKey: "settingsApp.tab.chat",
+      icon: IconMessage,
+      note: "Чат с записями и текстом",
+    },
+  ],
+  [
+    {
+      id: "model",
+      labelKey: "settingsApp.tab.model",
+      icon: IconCpu,
+      note: "Ключи и подключение модели",
+    },
+    {
+      id: "style",
+      labelKey: "settingsApp.tab.style",
+      icon: IconSparkles,
+      note: "Стиль обработки и Промпты для саммари",
+    },
+    {
+      id: "interpreter",
+      labelKey: "settingsApp.tab.interpreter",
+      icon: IconLanguage,
+      note: "Перевод диктовки, выделения и живой речи",
+    },
+  ],
+  [
+    {
+      id: "settings",
+      labelKey: "settingsApp.tab.settings",
+      icon: IconAdjustmentsHorizontal,
+      note: "Язык, микрофон и горячая клавиша",
+    },
+    ...(import.meta.env.DEV
+      ? [
+          {
+            id: "ui" as Tab,
+            labelKey: "settingsApp.tab.ui" as MsgKey,
+            icon: IconDeviceDesktopCog,
+            note: "Витрина примитивов",
+          },
+        ]
+      : []),
+  ],
 ];
-
-function TabButton({
-  tab,
-  isActive,
-  onClick,
-}: {
-  tab: (typeof TABS)[0];
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  const { t } = useI18n();
-  const Icon = tab.icon;
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`nav-item ${isActive ? "active" : ""}`}
-      aria-current={isActive ? "page" : undefined}
-      style={{ width: "100%", textAlign: "left", font: "inherit" }}
-    >
-      <Icon size={18} stroke={isActive ? 2.2 : 1.6} />
-      <span>{t(tab.labelKey)}</span>
-    </button>
-  );
-}
-
-function SidebarLogo() {
-  return (
-    <div style={{ padding: "4px 8px 12px" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          marginBottom: 6,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 3, height: 22 }}>
-          {[8, 16, 11, 19, 10].map((height, index) => (
-            <span
-              // biome-ignore lint/suspicious/noArrayIndexKey: fixed set of logo bars, the order never changes.
-              key={index}
-              style={{
-                display: "block",
-                width: 3,
-                height,
-                borderRadius: 999,
-                background: "var(--accent)",
-                animation: `voice-logo-pulse 1.15s ease-in-out ${index * 0.1}s infinite`,
-              }}
-            />
-          ))}
-        </div>
-        <div
-          style={{
-            fontSize: 30,
-            lineHeight: 0.95,
-            fontWeight: 800,
-            letterSpacing: "-0.06em",
-            fontFamily: "var(--font-brand)",
-            color: "var(--text-hi)",
-          }}
-        >
-          Talkee
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function getTextControlSelection(element: Element | null): string {
   if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
@@ -226,6 +184,10 @@ export function SettingsApp() {
   useEffect(() => {
     return watchThemePreference(themePreference);
   }, [themePreference]);
+
+  useEffect(() => {
+    return watchReduceTransparency();
+  }, []);
 
   useEffect(() => {
     Promise.all([getPermissionsPassed(), checkAllPermissions()])
@@ -350,116 +312,140 @@ export function SettingsApp() {
           } as CSSProperties
         }
       >
-        <TitleBar />
-
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           <aside
+            className="app-sidebar"
             style={{
-              width: 254,
-              padding: "14px 12px 14px",
+              width: 220,
+              // Leave room for the native macOS traffic lights, which float over
+              // the overlay title bar at the top-left of the window.
+              padding: "52px 10px 14px",
               display: "flex",
               flexDirection: "column",
-              gap: 14,
-              background: "var(--sidebar-bg)",
+              gap: 10,
               overflowY: "auto",
               flexShrink: 0,
-              marginTop: -1,
             }}
           >
-            <SidebarLogo />
-
-            <nav style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {TABS.map((t) => (
-                <TabButton
-                  key={t.id}
-                  tab={t}
-                  isActive={activeTab === t.id}
-                  onClick={() => setActiveTab(t.id)}
-                />
-              ))}
-            </nav>
+            {SIDEBAR_GROUPS.map((group, groupIndex) => (
+              <nav
+                key={group[0]?.id ?? `group-${groupIndex}`}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                  paddingTop: groupIndex === 0 ? 0 : 8,
+                  marginTop: groupIndex === 0 ? 0 : 2,
+                  borderTop: groupIndex === 0 ? "none" : "1px solid var(--separator)",
+                }}
+              >
+                {group.map((tab) => (
+                  <SidebarItem
+                    key={tab.id}
+                    icon={tab.icon}
+                    label={t(tab.labelKey)}
+                    active={activeTab === tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                  />
+                ))}
+              </nav>
+            ))}
           </aside>
 
-          <main
+          <div
             style={{
               flex: 1,
-              padding: "18px 24px 24px",
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
               minHeight: 0,
-              overflowY: isChatActive ? "hidden" : "auto",
-              overflowX: "hidden",
-              position: "relative",
               background: "var(--main-bg)",
             }}
           >
-            <div
+            {/* The overlay title bar has no visible chrome in the content area,
+                so the top strip is an explicit window drag region. */}
+            <div data-tauri-drag-region style={{ height: 52, flexShrink: 0 }} />
+            <main
               style={{
-                maxWidth: isChatActive ? "none" : 920,
-                margin: "0 auto",
-                minWidth: 0,
+                flex: 1,
+                padding: "0 24px 24px",
                 minHeight: 0,
-                height: isChatActive ? "100%" : undefined,
-                display: isChatActive ? "flex" : "block",
-                flexDirection: isChatActive ? "column" : undefined,
+                overflowY: isChatActive ? "hidden" : "auto",
                 overflowX: "hidden",
+                position: "relative",
               }}
             >
-              {loadError && (
-                <div
-                  className="card"
-                  style={{
-                    marginBottom: 14,
-                    padding: "12px 14px",
-                    background: "var(--danger-soft)",
-                    border: "1px solid var(--danger-border)",
-                    color: "var(--danger)",
-                  }}
-                >
-                  {loadError}
-                </div>
-              )}
               <div
-                key={navigationNonce}
                 style={{
-                  animation: "slide-down 0.18s ease",
-                  flex: isChatActive ? "1 1 auto" : undefined,
-                  minHeight: isChatActive ? 0 : undefined,
+                  maxWidth: isChatActive ? "none" : 920,
+                  margin: "0 auto",
+                  minWidth: 0,
+                  minHeight: 0,
+                  height: isChatActive ? "100%" : undefined,
+                  display: isChatActive ? "flex" : "block",
+                  flexDirection: isChatActive ? "column" : undefined,
+                  overflowX: "hidden",
                 }}
               >
-                <div style={{ display: activeTab === "main" ? "block" : "none" }}>
-                  <MainTab
-                    focusedEntryId={focusedHistoryEntryId}
-                    focusedEntryNonce={focusedHistoryEntryNonce}
-                  />
-                </div>
-                <div style={{ display: activeTab === "file" ? "block" : "none" }}>
-                  <FileTranscriptionTab focusedEntryId={focusedFileResultId} />
-                </div>
+                {loadError && (
+                  <div
+                    className="card"
+                    style={{
+                      marginBottom: 14,
+                      padding: "12px 14px",
+                      background: "var(--danger-soft)",
+                      border: "1px solid var(--danger-border)",
+                      color: "var(--danger)",
+                    }}
+                  >
+                    {loadError}
+                  </div>
+                )}
                 <div
+                  key={navigationNonce}
                   style={{
-                    display: activeTab === "chat" ? "block" : "none",
-                    height: "100%",
-                    minHeight: 0,
-                    overflow: "hidden",
+                    animation: "slide-down 0.18s ease",
+                    flex: isChatActive ? "1 1 auto" : undefined,
+                    minHeight: isChatActive ? 0 : undefined,
                   }}
                 >
-                  <DevChatTab
-                    isActive={activeTab === "chat"}
-                    onOpenHistoryEntry={openHistoryEntryFromChat}
-                  />
+                  <div style={{ display: activeTab === "main" ? "block" : "none" }}>
+                    <MainTab
+                      focusedEntryId={focusedHistoryEntryId}
+                      focusedEntryNonce={focusedHistoryEntryNonce}
+                    />
+                  </div>
+                  <div style={{ display: activeTab === "file" ? "block" : "none" }}>
+                    <FileTranscriptionTab focusedEntryId={focusedFileResultId} />
+                  </div>
+                  <div
+                    style={{
+                      display: activeTab === "chat" ? "block" : "none",
+                      height: "100%",
+                      minHeight: 0,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <DevChatTab
+                      isActive={activeTab === "chat"}
+                      onOpenHistoryEntry={openHistoryEntryFromChat}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      display: activeTab === "settings" ? "block" : "none",
+                    }}
+                  >
+                    <SettingsTab />
+                  </div>
+                  {activeTab === "model" && <SettingsTabs type="model" />}
+                  {activeTab === "style" && <SettingsTabs type="style" />}
+                  {activeTab === "interpreter" && <TranslationTab />}
+                  {import.meta.env.DEV && activeTab === "ui" && <Gallery />}
                 </div>
-                <div
-                  style={{
-                    display: activeTab === "settings" ? "block" : "none",
-                  }}
-                >
-                  <SettingsTab />
-                </div>
-                {activeTab === "model" && <SettingsTabs type="model" />}
-                {activeTab === "style" && <SettingsTabs type="style" />}
-                {activeTab === "interpreter" && <TranslationTab />}
               </div>
-            </div>
-          </main>
+            </main>
+          </div>
         </div>
       </div>
 

@@ -25,12 +25,13 @@ import {
   IconChevronDown,
   IconCopy,
   IconLanguage,
-  IconLoader2,
   IconRotate2,
 } from "../../../lib/icons";
 import { type AppSettings, getHistory, getSettings } from "../../../lib/store";
 import { LOCAL_TEXT_PROCESSING_LIMITS, processLongTextWithPrompt } from "../../../lib/summarize";
 import { formatDurationMs, formatErrorMessage } from "../../../lib/utils";
+import { Button } from "../../../ui/Button";
+import { Spinner } from "../../../ui/Spinner";
 import { translateSelectedText } from "../../widget/services/selectionTranslation";
 
 interface ChatMessage {
@@ -832,160 +833,50 @@ export function DevChatTab({
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        minHeight: 0,
-        minWidth: 0,
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          flexShrink: 0,
-          paddingBottom: 10,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            minWidth: 0,
-          }}
-        >
-          <h2
-            style={{
-              margin: "0 0 4px",
-              fontSize: 18,
-              fontWeight: 700,
-              letterSpacing: "-0.03em",
-              lineHeight: 1.15,
-              color: "var(--text-hi)",
-            }}
-          >
-            {t("devChat.title")}
-          </h2>
+    <div className="ui-chat">
+      <div className="ui-chat__header">
+        <div className="ui-chat__header-main">
+          <h2 className="ui-page-header__title">{t("devChat.title")}</h2>
         </div>
-        <button
-          type="button"
-          className="btn"
+        <Button
           onClick={clear}
           disabled={!messagesLoaded || running || messages.length === 0}
-          style={{
-            minHeight: 34,
-            padding: "0 12px",
-            borderRadius: 10,
-            opacity: !messagesLoaded || running || messages.length === 0 ? 0.55 : 1,
-            flexShrink: 0,
-            fontSize: 12,
-          }}
+          style={{ flexShrink: 0 }}
         >
           {t("devChat.clear")}
-        </button>
+        </Button>
       </div>
 
-      <div
-        style={{
-          flex: "1 1 auto",
-          minHeight: 0,
-          position: "relative",
-        }}
-      >
-        <div
-          ref={scrollContainerRef}
-          onScroll={handleMessagesScroll}
-          style={{
-            height: "100%",
-            overflowY: "auto",
-            overflowX: "hidden",
-            padding: "8px 0 18px",
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              maxWidth: 760,
-              minHeight: "100%",
-              margin: "0 auto",
-              display: "flex",
-              flexDirection: "column",
-              gap: 18,
-              padding: "8px 0 18px",
-            }}
-          >
+      <div className="ui-chat__viewport">
+        <div ref={scrollContainerRef} onScroll={handleMessagesScroll} className="ui-chat__scroll">
+          <div className="ui-chat__thread">
             {messages.length === 0 ? (
-              <div
-                style={{
-                  margin: "auto",
-                  display: "grid",
-                  justifyItems: "center",
-                  gap: 0,
-                  color: "var(--text-low)",
-                  fontSize: 13,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    justifyContent: "center",
-                    gap: 6,
-                    maxWidth: 520,
-                  }}
-                >
+              <div className="ui-chat__empty">
+                <div className="ui-chat__suggestions">
                   {quickSuggestions.map((suggestion) => (
-                    <button
+                    <Button
                       key={suggestion.label}
-                      type="button"
                       disabled={running || !messagesLoaded}
                       onClick={() => void sendText(suggestion.prompt)}
                       title={suggestion.prompt}
-                      style={{
-                        minHeight: 30,
-                        padding: "0 10px",
-                        borderRadius: 9,
-                        border: "1px solid var(--border-subtle)",
-                        background: "var(--surface-hi)",
-                        color: "var(--text-mid)",
-                        fontSize: 12,
-                        cursor: running || !messagesLoaded ? "default" : "pointer",
-                        opacity: running || !messagesLoaded ? 0.55 : 1,
-                      }}
                     >
                       {suggestion.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
             ) : (
               <>
                 {hiddenMessageCount > 0 && (
-                  <button
-                    type="button"
+                  <Button
                     onClick={revealEarlierMessages}
-                    style={{
-                      alignSelf: "center",
-                      minHeight: 32,
-                      padding: "0 12px",
-                      borderRadius: 16,
-                      border: "1px solid var(--border-subtle)",
-                      background: "var(--surface-hi)",
-                      color: "var(--text-mid)",
-                      fontSize: 12,
-                      cursor: "pointer",
-                    }}
+                    className="ui-chat__load-earlier"
+                    style={{ alignSelf: "center" }}
                   >
                     {t("devChat.loadEarlier", {
                       count: String(Math.min(hiddenMessageCount, DEV_CHAT_VISIBLE_INCREMENT)),
                     })}
-                  </button>
+                  </Button>
                 )}
                 {visibleMessages.map((message) => {
                   const isLongMessage = message.text.length > DEV_CHAT_COLLAPSED_TEXT_CHARS;
@@ -998,82 +889,28 @@ export function DevChatTab({
                   return (
                     <div
                       key={message.id}
-                      style={{
-                        alignSelf: message.role === "user" ? "flex-end" : "stretch",
-                        width: message.role === "user" ? "fit-content" : "100%",
-                        maxWidth: message.role === "user" ? "78%" : "100%",
-                        display: "grid",
-                        gap: 4,
-                      }}
+                      className={`ui-chat__message ui-chat__message--${message.role}`}
                     >
-                      <div
-                        style={{
-                          padding: message.role === "user" ? "10px 13px" : "0",
-                          borderRadius: message.role === "user" ? "18px 18px 4px 18px" : 0,
-                          border:
-                            message.role === "user" ? "1px solid var(--border-subtle)" : "none",
-                          background:
-                            message.role === "user" ? "var(--control-muted)" : "transparent",
-                          color: "var(--text-hi)",
-                          whiteSpace: "pre-wrap",
-                          overflowWrap: "anywhere",
-                          lineHeight: 1.62,
-                          fontSize: 14,
-                        }}
-                      >
-                        {messageText}
-                      </div>
+                      <div className="ui-chat__bubble">{messageText}</div>
                       {message.role === "assistant" && message.sources?.length ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            alignItems: "center",
-                            gap: 6,
-                            color: "var(--text-low)",
-                            fontSize: 11,
-                            lineHeight: 1.35,
-                          }}
-                        >
+                        <div className="ui-chat__sources">
                           <span>{t("devChat.usedSources")}</span>
                           {message.sources.map((source) => {
                             const title = `${source.meta}\n${source.preview}`;
-                            const sourceStyle = {
-                              display: "inline-flex",
-                              alignItems: "center",
-                              minHeight: 22,
-                              maxWidth: "100%",
-                              padding: "0 7px",
-                              borderRadius: 7,
-                              border: "1px solid var(--border-subtle)",
-                              background: "var(--surface-hi)",
-                              color: "var(--text-mid)",
-                              font: "inherit",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            } as const;
+                            const key = `${message.id}-${source.entryId}-${source.index}`;
 
                             return onOpenHistoryEntry ? (
-                              <button
-                                key={`${message.id}-${source.entryId}-${source.index}`}
-                                type="button"
+                              <Button
+                                key={key}
                                 aria-label={t("devChat.openSource", { title: source.title })}
                                 title={title}
                                 onClick={() => onOpenHistoryEntry(source.entryId)}
-                                style={{
-                                  ...sourceStyle,
-                                  cursor: "pointer",
-                                }}
+                                className="ui-chat__source"
                               >
                                 {source.title}
-                              </button>
+                              </Button>
                             ) : (
-                              <span
-                                key={`${message.id}-${source.entryId}-${source.index}`}
-                                title={title}
-                                style={sourceStyle}
-                              >
+                              <span key={key} title={title} className="ui-chat__source">
                                 {source.title}
                               </span>
                             );
@@ -1081,54 +918,23 @@ export function DevChatTab({
                         </div>
                       ) : null}
                       {isLongMessage && (
-                        <button
-                          type="button"
+                        <Button
+                          variant="default"
                           onClick={() => toggleMessageExpanded(message.id)}
-                          style={{
-                            justifySelf: message.role === "user" ? "end" : "start",
-                            padding: 0,
-                            border: "none",
-                            background: "transparent",
-                            color: "var(--text-low)",
-                            fontSize: 11,
-                            lineHeight: 1.35,
-                            cursor: "pointer",
-                          }}
+                          className="ui-link-button ui-chat__expand"
                         >
                           {isExpanded ? t("devChat.collapseMessage") : t("devChat.showFullMessage")}
-                        </button>
+                        </Button>
                       )}
                       {message.role === "assistant" && (
-                        <div
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                            justifySelf: "start",
-                            minHeight: 24,
-                          }}
-                        >
+                        <div className="ui-chat__meta">
                           {message.durationMs != null && (
-                            <span
-                              style={{
-                                fontSize: 12,
-                                lineHeight: "14px",
-                                color: "var(--text-low)",
-                                padding: 0,
-                              }}
-                            >
+                            <span className="ui-chat__duration">
                               {formatDurationMs(message.durationMs, lang)}
                             </span>
                           )}
-                          <div
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 1,
-                            }}
-                          >
-                            <button
-                              type="button"
+                          <div className="ui-chat__actions">
+                            <Button
                               aria-label={
                                 copiedMessageId === message.id
                                   ? t("devChat.copied")
@@ -1140,27 +946,15 @@ export function DevChatTab({
                                   : t("devChat.copyResponse")
                               }
                               onClick={() => void copyAssistantMessage(message)}
-                              style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: 7,
-                                border: "1px solid transparent",
-                                background: "transparent",
-                                color: "var(--text-low)",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                cursor: "pointer",
-                              }}
+                              className="ui-icon-button"
                             >
                               {copiedMessageId === message.id ? (
                                 <IconCheck size={14} stroke={2.5} aria-hidden="true" />
                               ) : (
                                 <IconCopy size={14} stroke={2} aria-hidden="true" />
                               )}
-                            </button>
-                            <button
-                              type="button"
+                            </Button>
+                            <Button
                               aria-label={
                                 translatingMessageId === message.id
                                   ? t("devChat.translating")
@@ -1173,62 +967,27 @@ export function DevChatTab({
                               }
                               disabled={running || Boolean(translatingMessageId)}
                               onClick={() => void translateChatMessage(message)}
-                              style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: 7,
-                                border: "1px solid transparent",
-                                background: "transparent",
-                                color: "var(--text-low)",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                cursor: running || translatingMessageId ? "default" : "pointer",
-                                opacity: running || translatingMessageId ? 0.5 : 1,
-                              }}
+                              className="ui-icon-button"
                             >
                               {translatingMessageId === message.id ? (
-                                <IconLoader2
-                                  className="loading-soft-icon"
-                                  size={14}
-                                  stroke={2.1}
-                                  aria-hidden="true"
-                                />
+                                <Spinner size={14} />
                               ) : (
                                 <IconLanguage size={14} stroke={2} aria-hidden="true" />
                               )}
-                            </button>
-                            <button
-                              type="button"
+                            </Button>
+                            <Button
                               aria-label={t("devChat.regenerateResponse")}
                               title={t("devChat.regenerateResponse")}
                               disabled={running}
                               onClick={() => void regenerateAssistantMessage(message.id)}
-                              style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: 7,
-                                border: "1px solid transparent",
-                                background: "transparent",
-                                color: "var(--text-low)",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                cursor: running ? "default" : "pointer",
-                                opacity: running ? 0.5 : 1,
-                              }}
+                              className="ui-icon-button"
                             >
                               {regeneratingMessageId === message.id ? (
-                                <IconLoader2
-                                  className="loading-soft-icon"
-                                  size={14}
-                                  stroke={2.1}
-                                  aria-hidden="true"
-                                />
+                                <Spinner size={14} />
                               ) : (
                                 <IconRotate2 size={14} stroke={2} aria-hidden="true" />
                               )}
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -1238,24 +997,8 @@ export function DevChatTab({
               </>
             )}
             {running && !regeneratingMessageId && (
-              <div
-                style={{
-                  alignSelf: "stretch",
-                  maxWidth: "78%",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 7,
-                  color: "var(--text-mid)",
-                  fontSize: 14,
-                  lineHeight: 1.62,
-                }}
-              >
-                <IconLoader2
-                  className="loading-soft-icon"
-                  size={14}
-                  stroke={2.1}
-                  aria-hidden="true"
-                />
+              <div className="ui-chat__running">
+                <Spinner size={14} />
                 {t(
                   runningStatus === "searching"
                     ? "devChat.searchingHistory"
@@ -1265,86 +1008,29 @@ export function DevChatTab({
                 )}
               </div>
             )}
-            <div ref={messagesEndRef} style={{ height: 1, flexShrink: 0 }} />
+            <div ref={messagesEndRef} className="ui-chat__end" />
           </div>
         </div>
         {showScrollToBottom && messages.length > 0 && (
-          <button
-            type="button"
+          <Button
             aria-label={t("devChat.scrollToLatest")}
             title={t("devChat.scrollToLatest")}
             onClick={() => scrollToLatest("smooth")}
-            style={{
-              position: "absolute",
-              left: "50%",
-              bottom: 12,
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              border: "1px solid var(--border-subtle)",
-              background: "var(--surface-hi)",
-              color: "var(--text-hi)",
-              boxShadow: "var(--shadow-soft)",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transform: "translateX(-50%)",
-              cursor: "pointer",
-              zIndex: 2,
-            }}
+            className="ui-chat__scroll-button"
           >
             <IconChevronDown size={18} stroke={2.3} aria-hidden="true" />
-          </button>
+          </Button>
         )}
       </div>
 
       {error && (
-        <div
-          role="alert"
-          style={{
-            width: "100%",
-            maxWidth: 760,
-            margin: "0 auto 8px",
-            padding: "9px 12px",
-            border: "1px solid var(--danger-border)",
-            borderRadius: 10,
-            background: "var(--danger-soft)",
-            color: "var(--danger)",
-            fontSize: 12,
-            lineHeight: 1.45,
-            flexShrink: 0,
-          }}
-        >
+        <div role="alert" className="ui-inline-error ui-chat__error">
           {error}
         </div>
       )}
 
-      <form
-        onSubmit={(event) => void send(event)}
-        style={{
-          width: "100%",
-          maxWidth: 760,
-          margin: "0 auto",
-          display: "flex",
-          alignItems: "flex-end",
-          gap: 10,
-          padding: "10px 10px 10px 16px",
-          borderRadius: 14,
-          border: "1px solid var(--border-subtle)",
-          background: "var(--surface-hi)",
-          boxShadow: "var(--shadow-soft)",
-          flexShrink: 0,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            flex: "1 1 0",
-            minWidth: 0,
-            maxWidth: "100%",
-            overflow: "hidden",
-          }}
-        >
+      <form onSubmit={(event) => void send(event)} className="ui-chat__composer">
+        <div className="ui-chat__composer-field">
           <textarea
             ref={textareaRef}
             id="dev-chat-input"
@@ -1357,53 +1043,19 @@ export function DevChatTab({
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleInputKeyDown}
             disabled={running}
-            style={{
-              display: "block",
-              width: "100%",
-              maxWidth: "100%",
-              minWidth: 0,
-              minHeight: 34,
-              maxHeight: 156,
-              boxSizing: "border-box",
-              padding: "6px 0",
-              border: "none",
-              outline: "none",
-              resize: "none",
-              overflowX: "hidden",
-              background: "transparent",
-              color: "var(--text-hi)",
-              fontFamily: "var(--font-main)",
-              fontSize: 14,
-              lineHeight: "22px",
-              whiteSpace: "pre-wrap",
-              overflowWrap: "anywhere",
-              wordBreak: "break-word",
-            }}
+            className="ui-chat__input"
           />
         </div>
-        <button
+        <Button
           type="submit"
+          variant="primary"
           disabled={!canSend}
           aria-label={running ? t("devChat.sending") : t("devChat.send")}
           title={running ? t("devChat.sending") : t("devChat.send")}
-          style={{
-            width: 34,
-            height: 34,
-            minWidth: 34,
-            border: "none",
-            borderRadius: "50%",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "var(--accent)",
-            color: "var(--accent-contrast)",
-            opacity: canSend ? 1 : 0.45,
-            cursor: canSend ? "pointer" : "default",
-            flexShrink: 0,
-          }}
+          className="ui-chat__send"
         >
           <IconArrowUp size={17} stroke={2.4} />
-        </button>
+        </Button>
       </form>
     </div>
   );

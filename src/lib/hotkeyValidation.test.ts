@@ -137,7 +137,7 @@ describe("normalizeHotkey", () => {
     expect(result.normalized).toBe("Command+K");
   });
 
-  test("uppercases single letter keys", () => {
+  test("capitalizes single letter keys", () => {
     const result = normalizeHotkey("Ctrl+b");
     expect(result.valid).toBe(true);
     expect(result.normalized).toBe("Control+B");

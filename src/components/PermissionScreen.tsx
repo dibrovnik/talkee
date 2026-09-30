@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { useCallback, useEffect, useState } from "react";
+import { type ReactElement, type ReactNode, useCallback, useEffect, useState } from "react";
 import { useI18n } from "../lib/i18n";
 import { IconAlertCircle, IconCheck, IconKeyboard, IconMicrophone, IconVolume } from "../lib/icons";
 import { logError, logInfo } from "../lib/logger";
@@ -15,11 +15,13 @@ import {
 } from "../lib/permissions";
 import { getSettings } from "../lib/store";
 import { scaleWidgetDimension } from "../lib/widgetScale";
+import { Badge } from "../ui/Badge";
+import { Button } from "../ui/Button";
 import { widgetStackHeight, widgetStackWidth } from "../windows/widget/widgetConstants";
-import { OnboardingProgress } from "./onboarding/OnboardingShell";
+import { OnboardingShell } from "./onboarding/OnboardingShell";
 
 interface PermissionRowProps {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   description: string;
   status: PermissionStatus;
@@ -38,90 +40,40 @@ function PermissionRow({
   actionLabel,
   actionDisabled = false,
   helpText,
-}: PermissionRowProps) {
+}: PermissionRowProps): ReactElement {
   const { t } = useI18n();
   const isGranted = status === "granted";
   const isDenied = status === "denied";
   const isPrompting = status === "prompting";
 
   return (
-    <div
-      style={{
-        padding: "16px 18px",
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 14,
-        borderRadius: 10,
-        background: "var(--control-muted)",
-        border: "1px solid var(--border-subtle)",
-      }}
-    >
+    <div className="ui-permission-row">
       <div
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: isGranted ? "var(--accent)" : "var(--icon-soft-bg)",
-          color: isGranted ? "var(--accent-contrast)" : "var(--text-mid)",
-          flexShrink: 0,
-        }}
+        className={`ui-permission-row__icon${isGranted ? " ui-permission-row__icon--granted" : ""}`}
       >
-        {isGranted ? <IconCheck size={16} stroke={2.5} /> : icon}
+        {isGranted ? <IconCheck size={14} stroke={2.5} /> : icon}
       </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            marginBottom: 6,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-hi)" }}>{title}</div>
+      <div className="ui-permission-row__main">
+        <div className="ui-permission-row__head">
+          <div className="ui-permission-row__title">
+            <span>{title}</span>
             {!isGranted && (
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: "var(--text-low)",
-                }}
-              >
+              <Badge variant={isDenied ? "danger" : "neutral"}>
                 {isPrompting
                   ? t("permission.badge.check")
                   : isDenied
                     ? t("permission.badge.actionNeeded")
                     : t("permission.badge.notGranted")}
-              </span>
+              </Badge>
             )}
           </div>
 
           {!isGranted && (
-            <button
+            <Button
+              variant={isPrompting ? "default" : "primary"}
               onClick={onAction}
               disabled={actionDisabled}
-              style={{
-                padding: "8px 16px",
-                borderRadius: 8,
-                fontSize: 11,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                cursor: actionDisabled ? "wait" : "pointer",
-                border: "none",
-                background: isPrompting ? "var(--control-muted)" : "var(--accent)",
-                color: isPrompting ? "var(--text-hi)" : "var(--accent-contrast)",
-                fontFamily: "var(--font)",
-                transition: "opacity 0.15s",
-                opacity: actionDisabled ? 0.65 : 1,
-              }}
             >
               {actionLabel ??
                 (isPrompting
@@ -129,23 +81,12 @@ function PermissionRow({
                   : isDenied
                     ? t("permission.action.retry")
                     : t("permission.action.allow"))}
-            </button>
+            </Button>
           )}
         </div>
 
-        <div style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}>{description}</div>
-        {helpText && (
-          <div
-            style={{
-              marginTop: 6,
-              fontSize: 12,
-              color: "var(--text-low)",
-              lineHeight: 1.55,
-            }}
-          >
-            {helpText}
-          </div>
-        )}
+        <div className="ui-permission-row__desc">{description}</div>
+        {helpText && <div className="ui-form-hint">{helpText}</div>}
       </div>
     </div>
   );
@@ -171,7 +112,10 @@ function microphoneHelpText(t: TranslateFn): string {
   return t("permission.micHelp.macos");
 }
 
-export function PermissionScreen({ onComplete, onboardingStep }: PermissionScreenProps) {
+export function PermissionScreen({
+  onComplete,
+  onboardingStep,
+}: PermissionScreenProps): ReactElement {
   const { t } = useI18n();
   const [micStatus, setMicStatus] = useState<PermissionStatus>("unknown");
   const [accStatus, setAccStatus] = useState<PermissionStatus>("unknown");
@@ -373,279 +317,133 @@ export function PermissionScreen({ onComplete, onboardingStep }: PermissionScree
   const canCompleteOnboarding = canContinue && !shouldShowInstallWarning;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 48,
-        right: 0,
-        bottom: 0,
-        left: 0,
-        background: "var(--main-bg)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        zIndex: 9999,
-        padding: 24,
-        overflowY: "auto",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          minHeight: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            width: "min(100%, 680px)",
-            padding: "28px 28px 24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 20,
-            borderRadius: 10,
-            background: "var(--surface-hi)",
-            border: "1px solid var(--border)",
-            boxShadow: "var(--shadow-panel)",
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          {onboardingStep !== undefined && <OnboardingProgress currentStep={onboardingStep} />}
-          {/* Header */}
-          <div style={{ display: "grid", gap: 8 }}>
-            <h1
-              style={{
-                fontSize: 28,
-                lineHeight: 1,
-                margin: 0,
-                fontWeight: 800,
-                fontFamily: "var(--font-brand)",
-                letterSpacing: "-0.04em",
-                color: "var(--text-hi)",
-              }}
-            >
-              {t("permission.header.title")}
-            </h1>
-            <p
-              style={{
-                margin: 0,
-                maxWidth: 520,
-                fontSize: 13,
-                color: "var(--text-mid)",
-                lineHeight: 1.7,
-              }}
-            >
-              {t("permission.header.subtitle")}
-            </p>
-          </div>
-
-          {/* Permission rows */}
-          <div style={{ display: "grid", gap: 10 }}>
-            {shouldShowInstallWarning && (
-              <div
-                style={{
-                  padding: "14px 16px",
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 12,
-                  borderRadius: 10,
-                  background: "var(--danger-soft)",
-                  border: "1px solid var(--danger-border)",
-                }}
-              >
-                <IconAlertCircle
-                  size={16}
-                  style={{
-                    color: "var(--danger)",
-                    flexShrink: 0,
-                    marginTop: 1,
-                  }}
-                />
-                <div style={{ display: "grid", gap: 4 }}>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: "var(--danger)",
-                    }}
-                  >
-                    {t("permission.installWarning.title")}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "var(--text-mid)",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {t("permission.installWarning.desc")}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <PermissionRow
-              icon={<IconMicrophone size={16} stroke={1.8} />}
-              title={t("permission.mic.title")}
-              description={t("permission.mic.desc")}
-              status={micStatus}
-              onAction={handleMicRequest}
-            />
-
-            {requiresSystemAudio && (
-              <PermissionRow
-                icon={<IconVolume size={16} stroke={1.8} />}
-                title={t("permission.systemAudio.title")}
-                description={t("permission.systemAudio.desc")}
-                status={systemAudioStatus}
-                onAction={handleSystemAudioRequest}
-                actionLabel={t("permission.action.check")}
-                helpText={t("permission.systemAudio.help")}
-              />
-            )}
-
-            <PermissionRow
-              icon={<IconKeyboard size={16} stroke={1.8} />}
-              title={pastePermissionTitle}
-              description={pastePermissionDescription}
-              status={
-                requiresAccessibility && shouldShowInstallWarning
-                  ? "denied"
-                  : requiresAccessibility
-                    ? accStatus
-                    : "granted"
-              }
-              onAction={() => {
-                if (shouldShowInstallWarning) {
-                  void openPath("/Applications");
-                  return;
-                }
-
-                if (accessibilityRestartSuggested) {
-                  void handleRestartAndCheck();
-                  return;
-                }
-
-                void handleAccessibilityRequest();
-              }}
-              actionLabel={
-                accessibilityRestartSuggested
-                  ? restarting
-                    ? t("permission.button.restarting")
-                    : t("permission.button.restartAndCheck")
-                  : undefined
-              }
-              actionDisabled={restarting}
-              helpText={pastePermissionHelpText}
-            />
-          </div>
-
-          {/* Hint */}
-          {(accStatus === "prompting" ||
-            accessibilityRestartSuggested ||
-            micStatus === "denied" ||
-            systemAudioStatus === "denied") && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 10,
-                padding: "12px 14px",
-                borderRadius: 10,
-                background: "var(--control-muted)",
-                border: "1px solid var(--border-subtle)",
-              }}
-            >
-              <IconAlertCircle
-                size={14}
-                style={{
-                  color: "var(--text-low)",
-                  flexShrink: 0,
-                  marginTop: 1,
-                }}
-              />
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--text-mid)",
-                  lineHeight: 1.6,
-                }}
-              >
-                {restartError ??
-                  (micStatus === "denied"
-                    ? microphoneHelpText(t)
-                    : systemAudioStatus === "denied"
-                      ? t("permission.hint.systemAudioDenied")
-                      : accessibilityRestartSuggested
-                        ? t("permission.hint.restartAccessibility")
-                        : shouldShowInstallWarning
-                          ? t("permission.hint.reopenAfterMove")
-                          : t("permission.hint.macosDelay"))}
-              </div>
-            </div>
-          )}
-
-          {/* Footer */}
+    <OnboardingShell
+      currentStep={onboardingStep ?? 0}
+      showProgress={onboardingStep !== undefined}
+      title={t("permission.header.title")}
+      subtitle={t("permission.header.subtitle")}
+      footer={
+        <>
           <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 16,
-            }}
+            className="ui-form-hint"
+            style={{ color: canContinue ? "var(--success)" : undefined }}
           >
-            <div
-              style={{
-                fontSize: 12,
-                color: canContinue ? "var(--success)" : "var(--text-low)",
-                lineHeight: 1.55,
-              }}
-            >
-              {shouldShowInstallWarning
-                ? t("permission.footer.launchFromApplications")
-                : canContinue
-                  ? t("permission.footer.allGranted")
-                  : requiresSystemAudio
-                    ? t("permission.footer.grantToContinue")
-                    : requiresAccessibility
-                      ? t("permission.footer.grantBothToContinue")
-                      : t("permission.footer.grantMicToContinue")}
-            </div>
-            <button
-              onClick={handleContinue}
-              disabled={restarting}
-              style={{
-                padding: "10px 20px",
-                borderRadius: 10,
-                fontSize: 11,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                cursor: restarting ? "wait" : "pointer",
-                border: "none",
-                background: canCompleteOnboarding ? "var(--accent)" : "var(--control-muted)",
-                color: canCompleteOnboarding ? "var(--accent-contrast)" : "var(--text-hi)",
-                fontFamily: "var(--font)",
-                transition: "opacity 0.15s",
-                minWidth: 140,
-                opacity: restarting ? 0.65 : 1,
-              }}
-            >
-              {accessibilityRestartSuggested
-                ? restarting
-                  ? t("permission.button.restarting")
-                  : t("permission.button.restartAndCheck")
-                : canCompleteOnboarding
-                  ? t("permission.button.continue")
-                  : shouldShowInstallWarning
-                    ? "Applications"
-                    : t("permission.button.check")}
-            </button>
+            {shouldShowInstallWarning
+              ? t("permission.footer.launchFromApplications")
+              : canContinue
+                ? t("permission.footer.allGranted")
+                : requiresSystemAudio
+                  ? t("permission.footer.grantToContinue")
+                  : requiresAccessibility
+                    ? t("permission.footer.grantBothToContinue")
+                    : t("permission.footer.grantMicToContinue")}
+          </div>
+          <Button
+            variant={canCompleteOnboarding ? "primary" : "default"}
+            size="large"
+            onClick={handleContinue}
+            disabled={restarting}
+          >
+            {accessibilityRestartSuggested
+              ? restarting
+                ? t("permission.button.restarting")
+                : t("permission.button.restartAndCheck")
+              : canCompleteOnboarding
+                ? t("permission.button.continue")
+                : shouldShowInstallWarning
+                  ? "Applications"
+                  : t("permission.button.check")}
+          </Button>
+        </>
+      }
+    >
+      {shouldShowInstallWarning && (
+        <div className="ui-callout ui-callout--error">
+          <IconAlertCircle size={14} />
+          <div>
+            <div className="ui-callout__title">{t("permission.installWarning.title")}</div>
+            <div>{t("permission.installWarning.desc")}</div>
           </div>
         </div>
+      )}
+
+      <div className="ui-form-group">
+        <PermissionRow
+          icon={<IconMicrophone size={16} />}
+          title={t("permission.mic.title")}
+          description={t("permission.mic.desc")}
+          status={micStatus}
+          onAction={handleMicRequest}
+        />
+
+        {requiresSystemAudio && (
+          <PermissionRow
+            icon={<IconVolume size={16} />}
+            title={t("permission.systemAudio.title")}
+            description={t("permission.systemAudio.desc")}
+            status={systemAudioStatus}
+            onAction={handleSystemAudioRequest}
+            actionLabel={t("permission.action.check")}
+            helpText={t("permission.systemAudio.help")}
+          />
+        )}
+
+        <PermissionRow
+          icon={<IconKeyboard size={16} />}
+          title={pastePermissionTitle}
+          description={pastePermissionDescription}
+          status={
+            requiresAccessibility && shouldShowInstallWarning
+              ? "denied"
+              : requiresAccessibility
+                ? accStatus
+                : "granted"
+          }
+          onAction={() => {
+            if (shouldShowInstallWarning) {
+              void openPath("/Applications");
+              return;
+            }
+
+            if (accessibilityRestartSuggested) {
+              void handleRestartAndCheck();
+              return;
+            }
+
+            void handleAccessibilityRequest();
+          }}
+          actionLabel={
+            accessibilityRestartSuggested
+              ? restarting
+                ? t("permission.button.restarting")
+                : t("permission.button.restartAndCheck")
+              : undefined
+          }
+          actionDisabled={restarting}
+          helpText={pastePermissionHelpText}
+        />
       </div>
-    </div>
+
+      {(accStatus === "prompting" ||
+        accessibilityRestartSuggested ||
+        micStatus === "denied" ||
+        systemAudioStatus === "denied") && (
+        <div className="ui-callout">
+          <IconAlertCircle size={14} />
+          <div>
+            {restartError ??
+              (micStatus === "denied"
+                ? microphoneHelpText(t)
+                : systemAudioStatus === "denied"
+                  ? t("permission.hint.systemAudioDenied")
+                  : accessibilityRestartSuggested
+                    ? t("permission.hint.restartAccessibility")
+                    : shouldShowInstallWarning
+                      ? t("permission.hint.reopenAfterMove")
+                      : t("permission.hint.macosDelay"))}
+          </div>
+        </div>
+      )}
+    </OnboardingShell>
   );
 }

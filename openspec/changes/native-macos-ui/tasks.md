@@ -17,10 +17,10 @@
 
 ## 3. Разбиение SettingsTabs.tsx (без изменения поведения)
 
-- [ ] 3.1 Вынести вкладку `model` в `src/windows/settings/tabs/model/ModelsTab.tsx` + подкомпоненты по смыслу (провайдеры STT, LLM, локальные модели)
-- [ ] 3.2 Вынести вкладку `style` в `src/windows/settings/tabs/style/StyleTab.tsx` + `PromptLibrary.tsx`
-- [ ] 3.3 Удалить `SettingsTabs.tsx` (или оставить тонкий роутер), обновить импорты в `SettingsApp.tsx`
-- [ ] 3.4 Проверка: `bunx tsc --noEmit && bun test`; ручная проверка обеих вкладок — поведение не изменилось
+- [x] 3.1 Вынести вкладку `model` в `src/windows/settings/tabs/model/ModelsTab.tsx` + подкомпоненты по смыслу (провайдеры STT, LLM, локальные модели)
+- [x] 3.2 Вынести вкладку `style` в `src/windows/settings/tabs/style/StyleTab.tsx` + `PromptLibrary.tsx`
+- [x] 3.3 Удалить `SettingsTabs.tsx` (или оставить тонкий роутер), обновить импорты в `SettingsApp.tsx`
+- [x] 3.4 Проверка: `bunx tsc --noEmit && bun test`; ручная проверка обеих вкладок — поведение не изменилось
 
 ## 4. Миграция вкладок (каждая — отдельный коммит, проверка в двух темах)
 

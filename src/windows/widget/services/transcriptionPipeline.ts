@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { LANGUAGES } from "../../../config/languages";
+import { showCleanupNotice } from "../../../lib/cleanupNotice";
 import {
   DICTATION_STREAM_UPDATE_EVENT,
   type DictationStreamUpdatePayload,
@@ -18,6 +19,7 @@ import {
   saveHistoryAudio,
 } from "../../../lib/store";
 import { resolveSummaryBackend } from "../../../lib/summarize";
+import { cleanupDictation } from "../../../lib/textCleanup";
 import { formatErrorMessage } from "../../../lib/utils";
 import type { LiveTranscriptionResult } from "./dictationStreamOverlay";
 import {
@@ -371,13 +373,10 @@ async function transcribeViaBackend({
       language: settings.language,
       api_key: settings.apiKey,
       whisper_api_key: settings.whisperApiKey || null,
-      llm_api_key: null,
       style: settings.style || "classic",
       whisper_endpoint: settings.whisperEndpoint || null,
       local_models_dir: settings.localModelsDir || null,
-      llm_endpoint: null,
       whisper_model: whisperModel || null,
-      llm_model: "none",
       file_name: audioFileName,
       mime_type: audioMimeType,
       streaming_enabled: isSttStreamingEnabled(settings),
@@ -487,6 +486,21 @@ async function resolveFinalTranscription({
     );
     return liveResult;
   }
+}
+
+async function applyDictationCleanup(
+  result: TranscriptionResult,
+  settings: AppSettings,
+): Promise<TranscriptionResult> {
+  const outcome = await cleanupDictation(result.raw, settings);
+  logInfo(
+    "CLEANUP",
+    `cleanup_ms=${outcome.durationMs} cleanup_applied=${outcome.applied} cleanup_reason=${outcome.reason ?? "success"}`,
+  );
+  if (outcome.reason === "timeout" || outcome.reason === "error" || outcome.reason === "rejected") {
+    void showCleanupNotice(tn("cleanup.failed"));
+  }
+  return { ...result, cleaned: outcome.text };
 }
 
 async function applyDictationTranslation(
@@ -664,7 +678,10 @@ export async function processRecordingBlob({
       );
     }
 
-    const result = await applyDictationTranslation(transcription, settings);
+    const result = await applyDictationTranslation(
+      await applyDictationCleanup(transcription, settings),
+      settings,
+    );
     const processingTime = Date.now() - apiStart;
 
     if (handle.isCancelled()) {
@@ -820,7 +837,10 @@ export async function retryHistoryEntry(
       );
     }
 
-    const result = await applyDictationTranslation(transcription, retrySettings);
+    const result = await applyDictationTranslation(
+      await applyDictationCleanup(transcription, retrySettings),
+      retrySettings,
+    );
 
     if (handle.isCancelled()) {
       const interrupted = buildInterruptedEntry(entry);

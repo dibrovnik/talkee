@@ -135,6 +135,18 @@ export function WidgetNoticeOverlay(): ReactElement | null {
             }
           >
             {notice.message}
+            {notice.actionLabel && notice.actionTab && (
+              <button
+                type="button"
+                className="ui-disclosure-link"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void invoke("open_settings_tab", { tab: notice.actionTab });
+                }}
+              >
+                {notice.actionLabel}
+              </button>
+            )}
           </div>
         </div>
       </div>

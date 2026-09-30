@@ -330,6 +330,19 @@ fn chat_completion(
 
 /// Build a model-native prompt from OpenAI-style messages. GGUF chat templates
 /// are preferred; ChatML stays as a fallback for older Qwen2.5 files.
+// The installed llama.cpp legacy API cannot pass Jinja keyword arguments.
+// Qwen3's enable_thinking=false branch is an empty, closed assistant think block.
+fn disable_thinking(template: &str, mut prompt: String) -> String {
+    if template.contains("enable_thinking") && !prompt.ends_with("</think>\n\n") {
+        if prompt.ends_with("<think>\n") {
+            prompt.push_str("\n</think>\n\n");
+        } else {
+            prompt.push_str("<think>\n\n</think>\n\n");
+        }
+    }
+    prompt
+}
+
 fn build_prompt(model: &LlamaModel, messages: &[Value]) -> String {
     let chat = build_chat_messages(messages);
     let template = model
@@ -339,7 +352,7 @@ fn build_prompt(model: &LlamaModel, messages: &[Value]) -> String {
 
     match template {
         Ok(tmpl) => match model.apply_chat_template(&tmpl, &chat, true) {
-            Ok(prompt) => prompt,
+            Ok(prompt) => disable_thinking(tmpl.to_str().unwrap_or_default(), prompt),
             Err(err) => {
                 eprintln!(
                     "failed to apply chat template, falling back to ChatML: {}",
@@ -570,4 +583,21 @@ fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack
         .windows(needle.len())
         .position(|window| window == needle)
+}
+
+#[cfg(test)]
+mod cleanup_thinking_tests {
+    use super::*;
+    #[test]
+    fn disables_only_templates_supporting_thinking() {
+        assert_eq!(disable_thinking("chatml", "assistant".into()), "assistant");
+        assert_eq!(
+            disable_thinking("enable_thinking", "assistant".into()),
+            "assistant<think>\n\n</think>\n\n"
+        );
+        assert_eq!(
+            disable_thinking("enable_thinking", "assistant<think>\n".into()),
+            "assistant<think>\n\n</think>\n\n"
+        );
+    }
 }

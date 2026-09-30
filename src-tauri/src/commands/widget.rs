@@ -195,7 +195,10 @@ pub fn start_widget_watchdog(app: &AppHandle) {
 }
 
 #[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct WidgetNoticePayload {
+    action_label: Option<String>,
+    action_tab: Option<String>,
     message: String,
     tone: String,
 }
@@ -532,6 +535,8 @@ pub async fn show_widget_notice(
     message: String,
     tone: String,
     _anchor_state: String,
+    action_label: Option<String>,
+    action_tab: Option<String>,
 ) -> Result<(), String> {
     let widget_window = app
         .get_webview_window("widget")
@@ -544,7 +549,12 @@ pub async fn show_widget_notice(
     app.emit_to(
         NOTICE_WINDOW_LABEL,
         NOTICE_EVENT,
-        WidgetNoticePayload { message, tone },
+        WidgetNoticePayload {
+            message,
+            tone,
+            action_label,
+            action_tab,
+        },
     )
     .map_err(|e| e.to_string())?;
 

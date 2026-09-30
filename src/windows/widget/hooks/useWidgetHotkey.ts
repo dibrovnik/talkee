@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { useCallback, useEffect, useRef } from "react";
+import { toggleCleanup } from "../../../lib/cleanupToggle";
 import {
   HANDY_HOTKEY_EVENT,
   type HandyHotkeyEventPayload,
@@ -107,10 +108,13 @@ export function useWidgetHotkey({
   const { t } = useI18n();
   const isHotkeyCaptureActiveRef = useRef(false);
   const activeCaptureRequestIdRef = useRef<string | null>(null);
+  const cleanupRegisteredHotkeyRef = useRef<string | null>(null);
+  const cleanupHotkeyArmedRef = useRef(false);
   const selectionRegisteredHotkeyRef = useRef<string | null>(null);
   const latestRequestIdsRef = useRef<Record<HotkeyTarget, string | null>>({
     dictation: null,
     selection: null,
+    cleanup: null,
   });
   const transactionQueueRef = useRef<Promise<void>>(Promise.resolve());
   const selectionHotkeyArmedRef = useRef(false);
@@ -140,6 +144,7 @@ export function useWidgetHotkey({
   const handleHotkeyPress = useCallback(
     (event: HandyHotkeyEventPayload) => {
       if (isHotkeyCaptureActiveRef.current) {
+        cleanupHotkeyArmedRef.current = false;
         selectionHotkeyArmedRef.current = false;
         dispatch({ type: "RESET_HOTKEY_STATE" });
         return;
@@ -157,6 +162,14 @@ export function useWidgetHotkey({
         selectionHotkeyArmedRef.current = false;
         dispatch({ type: "RESET_HOTKEY_STATE" });
         logError("HOTKEY", `Ignored unsafe macOS system hotkey event: ${event.hotkey}`);
+        return;
+      }
+
+      if (eventHotkey && eventHotkey === cleanupRegisteredHotkeyRef.current) {
+        if (event.state === "Pressed" && !cleanupHotkeyArmedRef.current) {
+          cleanupHotkeyArmedRef.current = true;
+          void toggleCleanup().catch((error) => showError(String(error)));
+        } else if (event.state === "Released") cleanupHotkeyArmedRef.current = false;
         return;
       }
 
@@ -346,6 +359,20 @@ export function useWidgetHotkey({
     }
   }, [attemptHotkeyRegistration, settingsLoaded, settingsRef, showError, t, unregisterHotkeyRef]);
 
+  const registerCleanupHotkey = useCallback(async () => {
+    if (!settingsLoaded) return;
+    const hotkey = settingsRef.current?.cleanupToggleHotkey || "";
+    if (!hotkey) {
+      await unregisterHotkeyRef(cleanupRegisteredHotkeyRef);
+      return;
+    }
+    const result = await attemptHotkeyRegistration(hotkey, cleanupRegisteredHotkeyRef);
+    if (!result.success) showError(result.message || t("widget.hotkey.registerFailedGeneric"));
+  }, [attemptHotkeyRegistration, settingsLoaded, settingsRef, showError, t, unregisterHotkeyRef]);
+  useEffect(() => {
+    void registerCleanupHotkey();
+  }, [registerCleanupHotkey, settings?.cleanupToggleHotkey]);
+
   useEffect(() => {
     void registerCurrentHotkey();
   }, [registerCurrentHotkey, settings?.hotkey]);
@@ -363,8 +390,9 @@ export function useWidgetHotkey({
     retryRegistrationsRef.current = async () => {
       await registerCurrentHotkey();
       await registerSelectionHotkey();
+      await registerCleanupHotkey();
     };
-  }, [registerCurrentHotkey, registerSelectionHotkey]);
+  }, [registerCurrentHotkey, registerSelectionHotkey, registerCleanupHotkey]);
 
   useEffect(() => {
     const unlistenSettings = listen(SETTINGS_UPDATED_EVENT, async () => {
@@ -423,10 +451,14 @@ export function useWidgetHotkey({
               getActiveHotkey: (target) =>
                 target === "dictation"
                   ? registeredHotkeyRef.current
-                  : selectionRegisteredHotkeyRef.current,
+                  : target === "cleanup"
+                    ? cleanupRegisteredHotkeyRef.current
+                    : selectionRegisteredHotkeyRef.current,
               setActiveHotkey: (target, hotkey) => {
                 if (target === "dictation") {
                   registeredHotkeyRef.current = hotkey;
+                } else if (target === "cleanup") {
+                  cleanupRegisteredHotkeyRef.current = hotkey;
                 } else {
                   selectionRegisteredHotkeyRef.current = hotkey;
                 }
@@ -461,7 +493,9 @@ export function useWidgetHotkey({
               activeHotkey:
                 (payload.target === "dictation"
                   ? registeredHotkeyRef.current
-                  : selectionRegisteredHotkeyRef.current) ?? payload.hotkey,
+                  : payload.target === "cleanup"
+                    ? cleanupRegisteredHotkeyRef.current
+                    : selectionRegisteredHotkeyRef.current) ?? payload.hotkey,
               message: t("settingsGeneralExtra.hotkey.applyFailed"),
             };
           }
@@ -494,6 +528,7 @@ export function useWidgetHotkey({
     );
 
     return () => {
+      cleanupHotkeyArmedRef.current = false;
       selectionHotkeyArmedRef.current = false;
       unlistenSettings.then((unlisten) => unlisten());
       unlistenCaptureState.then((unlisten) => unlisten());

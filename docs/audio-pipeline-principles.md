@@ -21,6 +21,7 @@ Widget hotkey/button
 -> native_voice_recorder.rs first
 -> processRecordingBlob()
 -> ai::transcribe_and_clean()
+-> optional guarded dictation cleanup (shared text backend, 8s API / 12s local deadline)
 -> optional dictation translation via configured text backend
 -> paste_text
 ```

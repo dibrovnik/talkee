@@ -85,3 +85,13 @@ describe("transcription hallucination guard", () => {
     expect(isClearlySilentAudio(undefined)).toBe(false);
   });
 });
+
+test("cleanup length boundary preserves raw and rejects expansion", () => {
+  expect(
+    guardTranscriptionResult({ raw: "Hello", cleaned: "a".repeat(50) }, "en").cleanedFallbackReason,
+  ).toBeNull();
+  expect(guardTranscriptionResult({ raw: "Hello", cleaned: "a".repeat(51) }, "en")).toMatchObject({
+    transcription: { raw: "Hello", cleaned: "Hello" },
+    cleanedFallbackReason: "excessive-cleanup-length",
+  });
+});

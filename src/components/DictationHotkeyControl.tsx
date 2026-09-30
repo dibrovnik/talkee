@@ -11,7 +11,9 @@ export function DictationHotkeyControl({
   onSettingsChange,
   appearance = "field",
   livePreview = false,
+  target = "dictation",
 }: {
+  target?: "dictation" | "cleanup";
   settings: AppSettings;
   onSettingsChange: (settings: AppSettings) => void;
   appearance?: "field" | "keycaps";
@@ -19,7 +21,7 @@ export function DictationHotkeyControl({
 }): ReactElement {
   const { t } = useI18n();
   const capture = useHotkeyCapture({
-    target: "dictation",
+    target,
     logTag: "HOTKEY",
     messages: {
       initial: t("settingsGeneralExtra.hotkey.initial"),
@@ -46,7 +48,9 @@ export function DictationHotkeyControl({
     ? formatHotkeyLabel(capture.draft)
     : capture.active
       ? t("settings.hotkey.press")
-      : formatHotkeyLabel(settings.hotkey || DEFAULT_HOTKEY);
+      : formatHotkeyLabel(
+          target === "cleanup" ? settings.cleanupToggleHotkey : settings.hotkey || DEFAULT_HOTKEY,
+        );
   const pressedKeys = useLiveHotkeyPreview({
     enabled: livePreview,
     hotkeyLabel: displayValue,
@@ -86,6 +90,18 @@ export function DictationHotkeyControl({
           </>
         )}
       </div>
+      {target === "cleanup" && settings.cleanupToggleHotkey && (
+        <button
+          type="button"
+          className="ui-disclosure-link"
+          disabled={capture.submitting}
+          onClick={() => {
+            void capture.submit("");
+          }}
+        >
+          {t("cleanup.clear")}
+        </button>
+      )}
       {(capture.active || capture.submitting || capture.tone !== "idle") && (
         <div
           role={capture.tone === "error" ? "alert" : "status"}

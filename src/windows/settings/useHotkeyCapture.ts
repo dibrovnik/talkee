@@ -136,15 +136,18 @@ export function useHotkeyCapture({
       const requestId = captureRequestIdRef.current ?? createRequestId(target);
       await stop();
 
-      if (!candidate) {
+      if (candidate === null || (!candidate && target !== "cleanup")) {
         setDraft(null);
         setTone("error");
         setFeedback(messagesRef.current.recognizeFailed);
         return;
       }
 
-      const normalized = normalizeHotkey(candidate);
-      if (!normalized.valid || !normalized.normalized) {
+      const normalized =
+        target === "cleanup" && !candidate
+          ? { valid: true, normalized: "" }
+          : normalizeHotkey(candidate);
+      if (!normalized.valid || normalized.normalized === undefined) {
         setDraft(candidate);
         setTone("error");
         setFeedback(normalized.error || messagesRef.current.invalid);

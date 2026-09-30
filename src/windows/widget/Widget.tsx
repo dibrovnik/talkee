@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
+import { Menu } from "@tauri-apps/api/menu";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -19,6 +20,7 @@ import {
   stopCallCapture,
   transcribeCallCaptureSession,
 } from "../../lib/callCapture";
+import { buildCleanupMenuModel, selectCleanupPreset, toggleCleanup } from "../../lib/cleanupToggle";
 import {
   type FileTranscriptionProgress,
   type FileTranscriptionStatus,
@@ -387,12 +389,19 @@ export function Widget() {
       logInfo("CALL_CAPTURE", "Resumed call mic after voice recording");
     }
   }, []);
-  const { state, stream, lockedRecording, widgetScale, resizeWidget, toggleManualRecording } =
-    useWidgetController({
-      onVoiceRecordingProcessing: resumeCallMicForVoice,
-      onVoiceRecordingStart: pauseCallMicForVoice,
-      onVoiceRecordingStartFailed: resumeCallMicForVoice,
-    });
+  const {
+    cleanupEnabled,
+    state,
+    stream,
+    lockedRecording,
+    widgetScale,
+    resizeWidget,
+    toggleManualRecording,
+  } = useWidgetController({
+    onVoiceRecordingProcessing: resumeCallMicForVoice,
+    onVoiceRecordingStart: pauseCallMicForVoice,
+    onVoiceRecordingStartFailed: resumeCallMicForVoice,
+  });
   const stateRef = useRef(state);
   const fileDropStateRef = useRef<WidgetFileDropState>("idle");
   const retryProcessingSourceRef = useRef<WidgetRetryProcessingSource | null>(null);
@@ -1554,6 +1563,44 @@ export function Widget() {
     };
   }, []);
 
+  const showCleanupMenu = async (): Promise<void> => {
+    try {
+      const model = buildCleanupMenuModel(await getSettings({ reload: true }));
+      const menu = await Menu.new({
+        items: [
+          {
+            id: "cleanup-toggle",
+            text: t("cleanup.title"),
+            checked: model.enabled,
+            action: () => {
+              void toggleCleanup().catch((error) => logError("CLEANUP", String(error)));
+            },
+          },
+          {
+            text: t("cleanup.styles"),
+            items: model.presets.map((preset) => ({
+              id: preset.id,
+              text: preset.name,
+              checked: preset.id === model.selectedId,
+              action: () => {
+                void selectCleanupPreset(preset.id).catch((error) =>
+                  logError("CLEANUP", String(error)),
+                );
+              },
+            })),
+          },
+        ],
+      });
+      try {
+        await menu.popup();
+      } finally {
+        await menu.close();
+      }
+    } catch (error) {
+      logError("CLEANUP", String(error));
+    }
+  };
+
   const handleDragPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) {
       return;
@@ -1836,7 +1883,20 @@ export function Widget() {
       }}
     >
       <div
+        role="toolbar"
+        aria-label={t("cleanup.styles")}
+        onKeyDown={(event) => {
+          if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+            event.preventDefault();
+            void showCleanupMenu();
+          }
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          void showCleanupMenu();
+        }}
         style={{
+          position: "relative",
           width: scaledStackWidth,
           height: scaledStackHeight,
           display: "grid",
@@ -1874,10 +1934,30 @@ export function Widget() {
           {!fileDropActive && (
             <div
               style={{
+                position: "relative",
                 marginInlineEnd: -WIDGET_PRIMARY_INLINE_INSET,
                 pointerEvents: "none",
               }}
             >
+              {cleanupEnabled &&
+                (displayWidgetState === "idle" || displayWidgetState === "recording") && (
+                  <span
+                    role="img"
+                    aria-label={t("cleanup.indicator")}
+                    title={t("cleanup.indicator")}
+                    style={{
+                      position: "absolute",
+                      right: 8,
+                      top: 2,
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      background: "var(--accent)",
+                      pointerEvents: "none",
+                      zIndex: 2,
+                    }}
+                  />
+                )}
               {displayWidgetState === "idle" && (
                 <IdlePill
                   latestCopyText={latestCopyText}

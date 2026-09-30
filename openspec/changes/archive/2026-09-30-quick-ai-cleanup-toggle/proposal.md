@@ -10,12 +10,12 @@
 
 **Очистка в API и локальном режимах**
 - После распознавания текст обрабатывается выбранным промптом очистки через текстовый backend (`resolveSummaryBackend`: свой endpoint или локальная LLM).
-- Работает таймаут: 8 с для API, 12 с для локальной LLM.
+- Работает таймаут: 8 с для API, 12 с для локальной LLM; HTTP-операция отменяется по дедлайну, поздний результат не применяется.
 - При ошибке, таймауте или отклонённом `transcriptionGuard` результате вставляется исходный текст и показывается короткое уведомление.
 
 **Настройки**
 - `cleanupEnabled` — по умолчанию выключено.
-- `cleanupToggleHotkey` — по умолчанию `Control+Option+C`, можно очистить.
+- `cleanupToggleHotkey` — по умолчанию `Control+Shift+C`, можно очистить.
 - Существующий `selectedCleanupPromptId` определяет стиль.
 
 **Быстрые переключатели**
@@ -52,13 +52,13 @@
   - `src/lib/store.ts` — новые поля, валидация горячей клавиши через `validateHotkey()`;
   - `src/windows/widget/services/transcriptionPipeline.ts` — шаг очистки;
   - `src/windows/widget/services/transcriptionGuard.ts`;
-  - `src/lib/summarize.ts` — переиспользование `generatePromptText`;
+  - `src/lib/summarize.ts` — переиспользование `resolveSummaryBackend(...).run(...)`, передача сигнала отмены и дедлайна;
   - `src/windows/widget/hooks/useWidgetHotkey.ts` — третья горячая клавиша;
   - `src/windows/widget/Widget.tsx` — индикатор и контекстное меню;
   - вкладка «Стиль»;
   - i18n.
 - **Rust:**
-  - `src-tauri/src/ai.rs` — удалить заглушку «disabled by policy», если очистка останется на стороне TS;
+  - `src-tauri/src/ai.rs` — удалить заглушку «disabled by policy»; необязательный дедлайн `process_text` для отмены HTTP-операции;
   - `src-tauri/src/tray.rs` — `CheckMenuItem` и подменю;
   - `src-tauri/src/llm_runtime.rs` / `sidecars/talkee-llm` — отключение thinking и прогрев;
   - события синхронизации состояния между окнами.

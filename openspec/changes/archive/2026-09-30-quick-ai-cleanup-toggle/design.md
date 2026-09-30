@@ -25,7 +25,7 @@
 ## Decisions
 
 1. **Очистка на стороне TS, а не в Rust `transcribe_and_clean`.**
-   - Текстовый backend (`resolveSummaryBackend`/`generatePromptText`) уже живёт в TS и умеет работать и с custom-, и с local-endpoint'ами. Дублировать его в Rust не нужно.
+   - Текстовый backend (`resolveSummaryBackend(...).run(...)`) уже живёт в TS и умеет работать и с custom-, и с local-endpoint'ами. Дублировать его в Rust не нужно.
    - Rust продолжает возвращать `raw`. Из `ai.rs` удалить лог-заглушку «disabled by policy», а заодно и мёртвые поля `llm_*`/`style` запроса, если они больше нигде не используются. Проверить grep'ом: `style` нужен для подсказки Whisper, его оставить.
 2. **Промпт.** Системный промпт очистки собирать той же логикой, что `build_cleanup_prompt_preview`: язык + стиль + overrides. Порядок:
    1. превратить dev-команду в обычную `get_cleanup_prompt(language, style)` без флага dev;
@@ -37,25 +37,27 @@
 3. **Новый модуль `src/lib/textCleanup.ts`** с чистым API:
    ```ts
    export interface CleanupOutcome { text: string; applied: boolean; reason?: "disabled" | "no-backend" | "timeout" | "error" | "rejected"; durationMs: number }
-   export async function cleanupDictation(raw: string, settings: AppSettings, deps?: { generate?: typeof generatePromptText; now?: () => number }): Promise<CleanupOutcome>
+   export async function cleanupDictation(raw: string, settings: AppSettings, deps?: { run?: ResolvedSummaryBackend["run"]; now?: () => number }): Promise<CleanupOutcome>
    export function stripThinking(text: string): string
    export function isCleanupAvailable(settings: AppSettings): boolean
    ```
-   - Таймаут: `AbortController` + `Promise.race`. Значения — константы `CLEANUP_TIMEOUT_API_MS = 8000`, `CLEANUP_TIMEOUT_LOCAL_MS = 12000`.
+   - Таймаут: `AbortController` + `Promise.race`. Runner получает `text` = исходный текст, `prompt` = инструкция очистки, `signal` и `deadlineMs` = абсолютное время окончания. `generatePromptText` остаётся генератором промптов и не используется для очистки. Значения — константы `CLEANUP_TIMEOUT_API_MS = 8000`, `CLEANUP_TIMEOUT_LOCAL_MS = 12000`.
+   - Настоящая отмена транспорта: `summarize.ts` передаёт `deadline_ms` в `process_text`, проверяет `signal` до и после прогрева и перед каждой повторной попыткой; после отмены не запускает новые запросы/перезапуски. `ai.rs` принимает необязательный дедлайн и применяет оставшийся бюджет ко всей HTTP-операции (отправка + чтение ответа) через `tokio::time::timeout`; по истечении срока future запроса уничтожается. Уже завершившийся после таймаута результат не применяется. Без дедлайна существующие summary/переводы сохраняют поведение. Прогрев общего runtime не останавливается, но после отмены запрос очистки не запускается.
    - Результат проверяется существующим `transcriptionGuard.ts`, при необходимости расширить его правилом «длина ответа > 2× исходника + 40 символов → reject».
    - Пустой `raw` → `applied: false` без запроса.
-   - Тесты с подменой `generate`: успех, таймаут, ошибка, `<think>`, reject, выключено, нет backend.
+   - Тесты с подменой `run`: успех, таймаут, ошибка, `<think>`, reject, выключено, нет backend.
 4. **Встраивание в пайплайн.**
    - `transcriptionPipeline.ts`: после получения `raw` и до вставки вызвать `cleanupDictation`, вставлять `outcome.text`.
    - Пока идёт очистка, оверлей показывает существующее состояние обработки. Если такого нет — добавить в `widgetMachine` подсостояние `cleaning` без изменения размера пилюли.
    - При `reason ∈ {timeout, error, rejected}` — уведомление из спеки.
    - В лог: `cleanup_ms`, `cleanup_applied`, `cleanup_reason`.
 5. **Thinking-модели.**
-   - В `sidecars/talkee-llm` при построении chat template передавать `enable_thinking=false`, если шаблон модели его поддерживает (Qwen3).
+   - В `sidecars/talkee-llm` при построении chat template реализовать ветку `enable_thinking=false`, если шаблон модели её поддерживает (Qwen3). У установленного `llama-cpp-2` legacy API нет Jinja kwargs: добавить пустой закрытый assistant-блок `<think>\n\n</think>\n\n` только для шаблонов с `enable_thinking`, не меняя прочие шаблоны.
    - Независимо от этого `stripThinking` на клиенте вырезает `<think>[\s\S]*?</think>` и ведущие пробелы.
-6. **Настройки** (`store.ts`):
+6. **Настройки** (`store.ts`, выполнить исходную задачу 3.1 до ядра 1.2):
+   - `Control+Option` запрещён существующим `validateHotkey` из-за VoiceOver; безопасный дефолт — `Control+Shift+C`.
    - `cleanupEnabled: boolean` (по умолчанию `false`);
-   - `cleanupToggleHotkey: string` (по умолчанию `"Control+Option+C"`, пустая строка — отключено; валидация `validateHotkey()` + проверка конфликта с `hotkey` и `translation.selectionHotkey`).
+   - `cleanupToggleHotkey: string` (по умолчанию `"Control+Shift+C"`, пустая строка — отключено; валидация `validateHotkey()` + проверка конфликта с `hotkey` и `translation.selectionHotkey`).
 
    Нормализация для старых настроек — дефолты. Изменение сохраняется сразу и рассылается событием `settings-updated` (использовать существующий механизм публикации настроек).
 7. **Горячая клавиша.**
@@ -86,5 +88,5 @@
 ## Risks / Trade-offs
 
 - **Задержка.** Локальная LLM добавляет время к каждой диктовке. Для скорости рекомендуемая модель в UI — Qwen3 1.7B или Qwen2.5 3B, это нужно указать в подсказке.
-- **`Control+Option+C`** может быть занят в других приложениях. Клавиша настраиваемая.
+- **`Control+Shift+C`** может быть занят в других приложениях. Клавиша настраиваемая.
 - **Синхронизация трея и меню виджета** через события может рассинхронизироваться. Источник истины — store; меню перестраивается при каждом `settings-updated`.

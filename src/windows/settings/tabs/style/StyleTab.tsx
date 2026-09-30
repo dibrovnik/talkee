@@ -1,10 +1,15 @@
-import type { ReactElement } from "react";
-
+import { type ReactElement, useState } from "react";
+import { DictationHotkeyControl } from "../../../../components/DictationHotkeyControl";
+import { selectCleanupPreset, toggleCleanup } from "../../../../lib/cleanupToggle";
 import { type Icon, IconBriefcase, IconCode, IconMessage } from "../../../../lib/icons";
-import type { AppSettings } from "../../../../lib/store";
+import { logError } from "../../../../lib/logger";
+import { type AppSettings, listPromptsByKind } from "../../../../lib/store";
 import { TRANSCRIPTION_STYLE_OPTIONS } from "../../../../lib/transcriptionPrompts";
 import { Badge } from "../../../../ui/Badge";
+import { FormRow } from "../../../../ui/FormRow";
+import { FormSection } from "../../../../ui/FormSection";
 import { SegmentedControl } from "../../../../ui/SegmentedControl";
+import { Toggle } from "../../../../ui/Toggle";
 import { OptionCard, OptionList } from "../OptionCard";
 import { useSettingsTabsState } from "../useSettingsTabsState";
 import { PromptLibrary } from "./PromptLibrary";
@@ -23,7 +28,18 @@ export function StyleTab(): ReactElement | null {
     promptPreviewError,
   } = useSettingsTabsState("style");
 
+  const [cleanupError, setCleanupError] = useState("");
   if (!settings) return null;
+  const changeCleanup = async (): Promise<void> => {
+    try {
+      await toggleCleanup();
+      await syncSettings();
+      setCleanupError("");
+    } catch (error) {
+      setCleanupError(String(error));
+      logError("CLEANUP", String(error));
+    }
+  };
 
   const STYLE_ICONS: Record<AppSettings["style"], Icon> = {
     classic: IconMessage,
@@ -38,6 +54,37 @@ export function StyleTab(): ReactElement | null {
         <div className="ui-page-header__desc">{t("models.textProcessing.desc")}</div>
       </div>
 
+      <FormSection footer={t("cleanup.localHint")}>
+        <FormRow
+          label={t("cleanup.title")}
+          control={
+            <Toggle
+              checked={settings.cleanupEnabled}
+              ariaLabel={t("cleanup.title")}
+              onChange={() => {
+                void changeCleanup();
+              }}
+            />
+          }
+        />
+        <FormRow
+          label={t("cleanup.hotkey")}
+          control={
+            <DictationHotkeyControl
+              target="cleanup"
+              settings={settings}
+              onSettingsChange={() => {
+                void syncSettings();
+              }}
+            />
+          }
+        />
+        {cleanupError && (
+          <div role="alert" className="ui-form-feedback ui-form-feedback--error">
+            {cleanupError}
+          </div>
+        )}
+      </FormSection>
       <SegmentedControl
         value={styleTabView}
         options={[
@@ -50,22 +97,27 @@ export function StyleTab(): ReactElement | null {
 
       {styleTabView === "style" && (
         <OptionList ariaLabel={t("models.styleTab.style")}>
-          {TRANSCRIPTION_STYLE_OPTIONS.map((st) => {
-            const isActive = settings.style === st.id;
-            const Icon = STYLE_ICONS[st.id];
+          {listPromptsByKind(settings, "cleanup").map((st) => {
+            const isActive = settings.selectedCleanupPromptId === st.id;
+            const Icon = STYLE_ICONS[st.id as AppSettings["style"]] ?? IconMessage;
 
             return (
               <OptionCard
                 key={st.id}
                 active={isActive}
                 icon={<Icon size={16} />}
-                title={st.title}
-                description={st.description}
+                title={st.name}
+                description={
+                  TRANSCRIPTION_STYLE_OPTIONS.find((option) => option.id === st.id)?.description ??
+                  st.prompt
+                }
                 onClick={() =>
-                  update({
-                    style: st.id as AppSettings["style"],
-                    selectedCleanupPromptId: st.id,
-                  })
+                  void selectCleanupPreset(st.id)
+                    .then(syncSettings)
+                    .catch((error) => {
+                      setCleanupError(String(error));
+                      logError("CLEANUP", String(error));
+                    })
                 }
               />
             );

@@ -6,6 +6,8 @@ export type WidgetNoticeTone = "error" | "info";
 export interface WidgetNoticeState {
   message: string;
   tone: WidgetNoticeTone;
+  actionLabel?: string;
+  actionTab?: string;
 }
 
 export const MIN_RECORDING_DURATION_MS = 500;

@@ -117,6 +117,7 @@ type RunOnce = (params: {
   temperature?: number;
   maxTokens?: number;
   signal?: AbortSignal;
+  deadlineMs?: number;
 }) => Promise<string>;
 
 export interface ResolvedSummaryBackend {
@@ -130,13 +131,15 @@ interface ProcessTextResponse {
 }
 
 function llmRunner(endpoint: string, model: string, apiKey: string): RunOnce {
-  return async ({ text, prompt, temperature, maxTokens }) => {
+  return async ({ text, prompt, temperature, maxTokens, signal, deadlineMs }) => {
+    signal?.throwIfAborted();
     const response = await invoke<ProcessTextResponse>("process_text", {
       req: {
         text,
         prompt,
         temperature: temperature ?? null,
         max_tokens: maxTokens ?? null,
+        deadline_ms: deadlineMs ?? null,
         endpoint: endpoint || null,
         model: model || null,
         api_key: apiKey || null,
@@ -167,17 +170,21 @@ function localLlmRunner(
   apiKey: string,
 ): RunOnce {
   let baseUrl: string | null = null;
-  return async ({ text, prompt, temperature, maxTokens }) => {
+  return async ({ text, prompt, temperature, maxTokens, signal, deadlineMs }) => {
+    signal?.throwIfAborted();
     let lastRestartableError: unknown = null;
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
+      signal?.throwIfAborted();
       if (!baseUrl || attempt > 0) {
         if (attempt > 0) {
           await invoke<void>("stop_local_llm").catch(() => {});
         }
+        signal?.throwIfAborted();
         baseUrl = await invoke<string>("start_local_llm", { modelId });
       }
 
+      signal?.throwIfAborted();
       try {
         const response = await invoke<ProcessTextResponse>("process_text", {
           req: {
@@ -185,6 +192,7 @@ function localLlmRunner(
             prompt,
             temperature: temperature ?? null,
             max_tokens: maxTokens ?? null,
+            deadline_ms: deadlineMs ?? null,
             endpoint: baseUrl || fallbackEndpoint || null,
             model: model || null,
             api_key: apiKey || null,
@@ -192,6 +200,8 @@ function localLlmRunner(
         });
         return response.result;
       } catch (error) {
+        signal?.throwIfAborted();
+        if (deadlineMs !== undefined && Date.now() >= deadlineMs) throw error;
         if (!isRestartableLocalLlmError(error)) {
           throw error;
         }

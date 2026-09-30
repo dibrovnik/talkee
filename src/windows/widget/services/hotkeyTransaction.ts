@@ -37,10 +37,15 @@ export interface HotkeyTransactionDependencies {
 }
 
 function configuredHotkey(settings: AppSettings, target: HotkeyTarget): string {
-  return target === "dictation" ? settings.hotkey : settings.translation.selectionHotkey;
+  return target === "cleanup"
+    ? settings.cleanupToggleHotkey
+    : target === "dictation"
+      ? settings.hotkey
+      : settings.translation.selectionHotkey;
 }
 
 function settingsPatch(target: HotkeyTarget, hotkey: string): AppSettingsPatch {
+  if (target === "cleanup") return { cleanupToggleHotkey: hotkey };
   if (target === "dictation") {
     return { hotkey };
   }
@@ -54,6 +59,7 @@ function settingsPatch(target: HotkeyTarget, hotkey: string): AppSettingsPatch {
 }
 
 function rollbackPatch(settings: AppSettings, target: HotkeyTarget): AppSettingsPatch {
+  if (target === "cleanup") return { cleanupToggleHotkey: settings.cleanupToggleHotkey };
   return target === "dictation"
     ? { hotkey: settings.hotkey }
     : {
@@ -98,7 +104,10 @@ export async function applyHotkeyTransaction(
   dependencies: HotkeyTransactionDependencies,
 ): Promise<HotkeyRegistrationResultPayload> {
   dependencies.log("validate", request, `candidate=${request.hotkey}`);
-  const normalized = normalizeHotkey(request.hotkey);
+  const normalized =
+    request.target === "cleanup" && !request.hotkey
+      ? { valid: true, normalized: "" }
+      : normalizeHotkey(request.hotkey);
   const initialSettings = await dependencies.loadSettings();
   const configuredCurrent =
     normalizeHotkey(configuredHotkey(initialSettings, request.target)).normalized ??
@@ -106,7 +115,7 @@ export async function applyHotkeyTransaction(
   const registeredCurrent = dependencies.getActiveHotkey(request.target);
   const activeCurrent = registeredCurrent ?? configuredCurrent;
 
-  if (!normalized.valid || !normalized.normalized) {
+  if (!normalized.valid || normalized.normalized === undefined) {
     return result(request, false, request.hotkey, activeCurrent, normalized.error);
   }
 
@@ -116,21 +125,23 @@ export async function applyHotkeyTransaction(
     return result(request, false, nextHotkey, activeCurrent, dependencies.messages.stale);
   }
 
-  const otherTarget: HotkeyTarget = request.target === "dictation" ? "selection" : "dictation";
-  const configuredOther =
-    normalizeHotkey(configuredHotkey(initialSettings, otherTarget)).normalized ??
-    configuredHotkey(initialSettings, otherTarget);
-  const activeOther = dependencies.getActiveHotkey(otherTarget);
-  if (nextHotkey === configuredOther || nextHotkey === activeOther) {
-    dependencies.log("conflict", request, `conflictsWith=${otherTarget}`);
-    return result(request, false, nextHotkey, activeCurrent, dependencies.messages.conflict);
+  for (const otherTarget of ["dictation", "selection", "cleanup"] as const) {
+    if (otherTarget === request.target || !nextHotkey) continue;
+    const configuredOther = normalizeHotkey(
+      configuredHotkey(initialSettings, otherTarget) || "",
+    ).normalized;
+    const activeOther = dependencies.getActiveHotkey(otherTarget);
+    if (nextHotkey === configuredOther || nextHotkey === activeOther) {
+      dependencies.log("conflict", request, `conflictsWith=${otherTarget}`);
+      return result(request, false, nextHotkey, activeCurrent, dependencies.messages.conflict);
+    }
   }
 
   // Persistent settings are not evidence that the shortcut is currently
   // registered. This matters when a disabled selection shortcut is enabled
   // again with the same value: the runtime ref is null and the key must be
   // registered before the transaction can report success.
-  const registeredNew = nextHotkey !== registeredCurrent;
+  const registeredNew = !!nextHotkey && nextHotkey !== registeredCurrent;
   if (registeredNew) {
     dependencies.log("register", request, `hotkey=${nextHotkey}`);
     try {
@@ -179,7 +190,7 @@ export async function applyHotkeyTransaction(
     return result(request, false, nextHotkey, activeCurrent, dependencies.messages.stale);
   }
 
-  if (registeredNew && registeredCurrent && registeredCurrent !== nextHotkey) {
+  if (registeredCurrent && registeredCurrent !== nextHotkey) {
     dependencies.log("unregister-old", request, `hotkey=${registeredCurrent}`);
     try {
       await dependencies.unregisterHotkey(registeredCurrent);
@@ -201,7 +212,7 @@ export async function applyHotkeyTransaction(
     }
   }
 
-  dependencies.setActiveHotkey(request.target, nextHotkey);
+  dependencies.setActiveHotkey(request.target, nextHotkey || null);
   dependencies.log("complete", request, `active=${nextHotkey}`);
   return result(request, true, nextHotkey, nextHotkey);
 }

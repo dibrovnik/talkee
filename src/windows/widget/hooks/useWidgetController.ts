@@ -4,8 +4,14 @@ import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  buildCleanupMenuModel,
+  selectCleanupPreset,
+  toggleCleanup,
+} from "../../../lib/cleanupToggle";
+import {
   SELECTION_TEXT_REQUEST_EVENT,
   SELECTION_TEXT_RESPONSE_EVENT,
+  SETTINGS_UPDATED_EVENT,
   type SelectionTextResponsePayload,
 } from "../../../lib/hotkeyEvents";
 import { tn } from "../../../lib/i18n";
@@ -57,6 +63,7 @@ interface ResizeWidgetOptions {
 }
 
 interface WidgetControllerState {
+  cleanupEnabled: boolean;
   state: WidgetState;
   stream: MediaStream | null;
   notice: WidgetNoticeState | null;
@@ -613,6 +620,34 @@ export function useWidgetController({
     startRecordingRef.current = startRecording;
   }, [startRecording]);
 
+  useEffect(() => {
+    let mounted = true;
+    let tail = Promise.resolve();
+    const updateMenu = (): void => {
+      tail = tail
+        .then(async () => {
+          const current = await getSettings({ reload: true });
+          if (mounted) await invoke("update_cleanup_menu", { ...buildCleanupMenuModel(current) });
+        })
+        .catch((error) => logError("CLEANUP", String(error)));
+    };
+    const updates = listen(SETTINGS_UPDATED_EVENT, updateMenu);
+    const actions = listen<{ kind: "toggle" | "select"; id?: string }>(
+      "tray-cleanup-action",
+      ({ payload }) => {
+        const work =
+          payload.kind === "toggle" ? toggleCleanup() : selectCleanupPreset(payload.id ?? "");
+        void work.catch((error) => showError(String(error))).finally(updateMenu);
+      },
+    );
+    void Promise.all([updates, actions]).then(() => updateMenu());
+    return () => {
+      mounted = false;
+      void updates.then((stop) => stop());
+      void actions.then((stop) => stop());
+    };
+  }, [showError]);
+
   // ── Hotkey ──────────────────────────────────────────────────────────────
   useWidgetHotkey({
     settingsLoaded,
@@ -651,6 +686,7 @@ export function useWidgetController({
   }, [clearMoveSaveTimer, clearReleaseStopTimer]);
 
   return {
+    cleanupEnabled: settings?.cleanupEnabled ?? false,
     state: widgetState,
     stream,
     notice: null,

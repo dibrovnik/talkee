@@ -82,13 +82,10 @@ pub struct TranscribeRequest {
     pub language: String,
     pub api_key: String,
     pub whisper_api_key: Option<String>,
-    pub llm_api_key: Option<String>,
     pub style: String,
     pub whisper_endpoint: Option<String>,
     pub local_models_dir: Option<String>,
-    pub llm_endpoint: Option<String>,
     pub whisper_model: Option<String>,
-    pub llm_model: Option<String>,
     pub file_name: Option<String>,
     pub mime_type: Option<String>,
     pub mode: Option<String>,
@@ -719,8 +716,8 @@ pub async fn transcribe_and_clean(
     logger::log_info(
         "API",
         &format!(
-            "Starting transcription... style={}, language={}, whisper_model={:?}, llm_model={:?}",
-            req.style, req.language, req.whisper_model, req.llm_model
+            "Starting transcription... style={}, language={}, whisper_model={:?}",
+            req.style, req.language, req.whisper_model
         ),
     );
 
@@ -1057,10 +1054,6 @@ async fn transcribe_audio_bytes_internal(
         });
     }
 
-    logger::log_info(
-        "LLM",
-        "Own API/local transcription mode: style cleanup is disabled by policy",
-    );
     logger::log_info("API", "Transcription complete");
 
     let raw_segments = whisper_body
@@ -1569,13 +1562,10 @@ pub async fn transcribe_file_path(
         language: req.language.clone(),
         api_key: req.api_key.clone(),
         whisper_api_key: req.whisper_api_key.clone(),
-        llm_api_key: None,
         style: req.style.clone(),
         whisper_endpoint: req.whisper_endpoint.clone(),
         local_models_dir: req.local_models_dir.clone(),
-        llm_endpoint: None,
         whisper_model: req.whisper_model.clone(),
-        llm_model: Some("none".to_string()),
         file_name: None,
         mime_type: None,
         mode: Some("transcribe_only".to_string()),
@@ -1738,6 +1728,8 @@ struct ModelListItem {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ProcessTextRequest {
+    #[serde(default)]
+    pub deadline_ms: Option<u64>,
     pub text: String,
     pub prompt: String,
     #[serde(default)]
@@ -1780,7 +1772,7 @@ pub struct EmbedTextResponse {
 /// Run an explicit, user-initiated text-processing prompt (e.g. summary) against
 /// any OpenAI-compatible chat endpoint: a bundled local
 /// runtime (127.0.0.1), or a user-provided endpoint. This is a deliberate user
-/// action, not the automatic transcription cleanup that stays disabled by policy.
+/// action, including optional dictation cleanup.
 #[tauri::command]
 pub async fn process_text(req: ProcessTextRequest) -> Result<ProcessTextResponse, String> {
     let text = req.text.trim();
@@ -1847,15 +1839,32 @@ pub async fn process_text(req: ProcessTextRequest) -> Result<ProcessTextResponse
         request = request.bearer_auth(key);
     }
 
-    let response = request
-        .send()
+    let operation = async {
+        let response = request
+            .send()
+            .await
+            .map_err(|err| format!("Запрос к текстовой модели не удался: {}", err))?;
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .map_err(|err| format!("Не удалось прочитать ответ модели: {}", err))?;
+        Ok::<_, String>((status, body))
+    };
+    let (status, body) = if let Some(deadline) = req.deadline_ms {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|err| err.to_string())?
+            .as_millis() as u64;
+        tokio::time::timeout(
+            Duration::from_millis(deadline.saturating_sub(now)),
+            operation,
+        )
         .await
-        .map_err(|err| format!("Запрос к текстовой модели не удался: {}", err))?;
-    let status = response.status();
-    let body = response
-        .text()
-        .await
-        .map_err(|err| format!("Не удалось прочитать ответ модели: {}", err))?;
+        .map_err(|_| "Таймаут очистки текста".to_string())??
+    } else {
+        operation.await?
+    };
 
     if !status.is_success() {
         let snippet: String = body.chars().take(500).collect();
@@ -3026,4 +3035,47 @@ pub async fn test_api_connection(
         message: format!("{} ({}ms)", messages.join(" "), latency_ms),
         latency_ms,
     })
+}
+
+#[cfg(test)]
+mod cleanup_deadline_tests {
+    use super::*;
+    use tokio::io::AsyncReadExt;
+
+    #[tokio::test]
+    async fn cleanup_deadline_closes_stalled_http_connection() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/v1", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut buffer = [0u8; 4096];
+            assert!(socket.read(&mut buffer).await.unwrap() > 0);
+            // The client must close its connection when its deadline expires.
+            assert_eq!(
+                tokio::time::timeout(Duration::from_secs(2), socket.read(&mut buffer))
+                    .await
+                    .unwrap()
+                    .unwrap(),
+                0
+            );
+        });
+        let deadline = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+            + 200;
+        let result = process_text(ProcessTextRequest {
+            text: "Hello".into(),
+            prompt: "Clean".into(),
+            deadline_ms: Some(deadline),
+            temperature: None,
+            max_tokens: None,
+            endpoint: Some(endpoint),
+            model: Some("test".into()),
+            api_key: None,
+        })
+        .await;
+        assert!(matches!(result, Err(message) if message.contains("Таймаут")));
+        server.await.unwrap();
+    }
 }

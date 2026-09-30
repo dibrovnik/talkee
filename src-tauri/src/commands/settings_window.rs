@@ -3,13 +3,14 @@ use tauri::{
     AppHandle, Emitter, LogicalPosition, Manager, TitleBarStyle, WebviewUrl, WebviewWindowBuilder,
 };
 
-use crate::logger;
+use crate::{commands::dock, logger};
 
 const SETTINGS_NAVIGATE_EVENT: &str = "settings-navigate";
 #[cfg(debug_assertions)]
 const DEV_ONBOARDING_REQUEST_EVENT: &str = "dev-onboarding-request";
 
 fn show_and_focus_window(win: &tauri::WebviewWindow) {
+    dock::prepare_settings_window(win.app_handle());
     if let Err(err) = win.show() {
         logger::log_error(
             "WINDOW",

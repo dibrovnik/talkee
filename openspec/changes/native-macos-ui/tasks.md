@@ -38,11 +38,11 @@
 
 ## 5. Меню, Dock, запуск
 
-- [ ] 5.1 Меню приложения (design.md, решение 6); `Info.plist`: `CFBundleDevelopmentRegion`/`CFBundleLocalizations`
-- [ ] 5.2 Меню трея: разделители, многоточия, `CheckMenuItem` для Dock (design.md, решение 7)
-- [ ] 5.3 `showInDock` в `src/lib/store.ts` + команда `set_dock_visibility` (design.md, решение 8)
-- [ ] 5.4 Поведение запуска: `--autostart`, `RunEvent::Reopen` (design.md, решение 9)
-- [ ] 5.5 Проверка вручную: ⌘C/⌘V в поле ввода, ⌘W, ⌘, ; выключить Dock → значок пропал, настройки из трея открываются; перезагрузка с автозагрузкой → окно не открылось
+- [x] 5.1 Меню приложения (design.md, решение 6); `Info.plist`: `CFBundleDevelopmentRegion`/`CFBundleLocalizations`
+- [x] 5.2 Меню трея: разделители, многоточия, `CheckMenuItem` для Dock (design.md, решение 7)
+- [x] 5.3 `showInDock` в `src/lib/store.ts` + команда `set_dock_visibility` (design.md, решение 8)
+- [x] 5.4 Поведение запуска: `--autostart`, `RunEvent::Reopen` (design.md, решение 9)
+- [x] 5.5 Проверка вручную: ⌘C/⌘V в поле ввода, ⌘W, ⌘, ; выключить Dock → значок пропал, настройки из трея открываются; перезагрузка с автозагрузкой → окно не открылось
 
 ## 6. Оверлеи и доступность
 

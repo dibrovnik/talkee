@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { emit } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import {
   disable as disableAutostart,
   enable as enableAutostart,
@@ -9,7 +9,7 @@ import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
 import { DictationHotkeyControl } from "../../../components/DictationHotkeyControl";
 import { LANGUAGES } from "../../../config/languages";
-import { SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
+import { DOCK_VISIBILITY_CHANGED_EVENT, SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
 import { useI18n } from "../../../lib/i18n";
 import { IconCheck, IconChevronDown, IconMail, IconSearch } from "../../../lib/icons";
 import { logError, logInfo } from "../../../lib/logger";
@@ -75,6 +75,31 @@ export function SettingsTab() {
       settingsRef.current = s;
     });
   }, []);
+
+  // The tray can toggle the Dock icon while this tab is open; Rust saves it.
+  useEffect(() => {
+    const unlistenPromise = listen<boolean>(DOCK_VISIBILITY_CHANGED_EVENT, ({ payload }) => {
+      if (!settingsRef.current) return;
+      const next = { ...settingsRef.current, showInDock: payload };
+      settingsRef.current = next;
+      setSettings(next);
+    });
+    return () => {
+      void unlistenPromise.then((dispose) => dispose());
+    };
+  }, []);
+
+  const updateShowInDock = async (show: boolean): Promise<void> => {
+    await update({ showInDock: show });
+    try {
+      await invoke("set_dock_visibility", { show });
+    } catch (error) {
+      void logError(
+        "SETTINGS",
+        `Failed to apply Dock icon visibility: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  };
 
   useEffect(() => {
     invoke<string>("get_default_transcription_storage_dir")
@@ -714,7 +739,7 @@ export function SettingsTab() {
             <Toggle
               checked={settings.showInDock}
               onChange={(checked) => {
-                void update({ showInDock: checked });
+                void updateShowInDock(checked);
               }}
               ariaLabel={t("settings.dock.title")}
             />

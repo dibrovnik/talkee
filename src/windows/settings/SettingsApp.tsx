@@ -2,7 +2,6 @@ import { emit, listen } from "@tauri-apps/api/event";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { OnboardingFlow } from "../../components/onboarding/OnboardingFlow";
-import { TitleBar } from "../../components/TitleBar";
 import {
   DEV_ONBOARDING_REQUEST_EVENT,
   SELECTION_TEXT_REQUEST_EVENT,
@@ -350,20 +349,19 @@ export function SettingsApp() {
           } as CSSProperties
         }
       >
-        <TitleBar />
-
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           <aside
             style={{
               width: 254,
-              padding: "14px 12px 14px",
+              // Leave room for the native macOS traffic lights, which float over
+              // the overlay title bar at the top-left of the window.
+              padding: "52px 12px 14px",
               display: "flex",
               flexDirection: "column",
               gap: 14,
               background: "var(--sidebar-bg)",
               overflowY: "auto",
               flexShrink: 0,
-              marginTop: -1,
             }}
           >
             <SidebarLogo />
@@ -380,86 +378,99 @@ export function SettingsApp() {
             </nav>
           </aside>
 
-          <main
+          <div
             style={{
               flex: 1,
-              padding: "18px 24px 24px",
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
               minHeight: 0,
-              overflowY: isChatActive ? "hidden" : "auto",
-              overflowX: "hidden",
-              position: "relative",
               background: "var(--main-bg)",
             }}
           >
-            <div
+            {/* The overlay title bar has no visible chrome in the content area,
+                so the top strip is an explicit window drag region. */}
+            <div data-tauri-drag-region style={{ height: 52, flexShrink: 0 }} />
+            <main
               style={{
-                maxWidth: isChatActive ? "none" : 920,
-                margin: "0 auto",
-                minWidth: 0,
+                flex: 1,
+                padding: "0 24px 24px",
                 minHeight: 0,
-                height: isChatActive ? "100%" : undefined,
-                display: isChatActive ? "flex" : "block",
-                flexDirection: isChatActive ? "column" : undefined,
+                overflowY: isChatActive ? "hidden" : "auto",
                 overflowX: "hidden",
+                position: "relative",
               }}
             >
-              {loadError && (
-                <div
-                  className="card"
-                  style={{
-                    marginBottom: 14,
-                    padding: "12px 14px",
-                    background: "var(--danger-soft)",
-                    border: "1px solid var(--danger-border)",
-                    color: "var(--danger)",
-                  }}
-                >
-                  {loadError}
-                </div>
-              )}
               <div
-                key={navigationNonce}
                 style={{
-                  animation: "slide-down 0.18s ease",
-                  flex: isChatActive ? "1 1 auto" : undefined,
-                  minHeight: isChatActive ? 0 : undefined,
+                  maxWidth: isChatActive ? "none" : 920,
+                  margin: "0 auto",
+                  minWidth: 0,
+                  minHeight: 0,
+                  height: isChatActive ? "100%" : undefined,
+                  display: isChatActive ? "flex" : "block",
+                  flexDirection: isChatActive ? "column" : undefined,
+                  overflowX: "hidden",
                 }}
               >
-                <div style={{ display: activeTab === "main" ? "block" : "none" }}>
-                  <MainTab
-                    focusedEntryId={focusedHistoryEntryId}
-                    focusedEntryNonce={focusedHistoryEntryNonce}
-                  />
-                </div>
-                <div style={{ display: activeTab === "file" ? "block" : "none" }}>
-                  <FileTranscriptionTab focusedEntryId={focusedFileResultId} />
-                </div>
+                {loadError && (
+                  <div
+                    className="card"
+                    style={{
+                      marginBottom: 14,
+                      padding: "12px 14px",
+                      background: "var(--danger-soft)",
+                      border: "1px solid var(--danger-border)",
+                      color: "var(--danger)",
+                    }}
+                  >
+                    {loadError}
+                  </div>
+                )}
                 <div
+                  key={navigationNonce}
                   style={{
-                    display: activeTab === "chat" ? "block" : "none",
-                    height: "100%",
-                    minHeight: 0,
-                    overflow: "hidden",
+                    animation: "slide-down 0.18s ease",
+                    flex: isChatActive ? "1 1 auto" : undefined,
+                    minHeight: isChatActive ? 0 : undefined,
                   }}
                 >
-                  <DevChatTab
-                    isActive={activeTab === "chat"}
-                    onOpenHistoryEntry={openHistoryEntryFromChat}
-                  />
+                  <div style={{ display: activeTab === "main" ? "block" : "none" }}>
+                    <MainTab
+                      focusedEntryId={focusedHistoryEntryId}
+                      focusedEntryNonce={focusedHistoryEntryNonce}
+                    />
+                  </div>
+                  <div style={{ display: activeTab === "file" ? "block" : "none" }}>
+                    <FileTranscriptionTab focusedEntryId={focusedFileResultId} />
+                  </div>
+                  <div
+                    style={{
+                      display: activeTab === "chat" ? "block" : "none",
+                      height: "100%",
+                      minHeight: 0,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <DevChatTab
+                      isActive={activeTab === "chat"}
+                      onOpenHistoryEntry={openHistoryEntryFromChat}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      display: activeTab === "settings" ? "block" : "none",
+                    }}
+                  >
+                    <SettingsTab />
+                  </div>
+                  {activeTab === "model" && <SettingsTabs type="model" />}
+                  {activeTab === "style" && <SettingsTabs type="style" />}
+                  {activeTab === "interpreter" && <TranslationTab />}
                 </div>
-                <div
-                  style={{
-                    display: activeTab === "settings" ? "block" : "none",
-                  }}
-                >
-                  <SettingsTab />
-                </div>
-                {activeTab === "model" && <SettingsTabs type="model" />}
-                {activeTab === "style" && <SettingsTabs type="style" />}
-                {activeTab === "interpreter" && <TranslationTab />}
               </div>
-            </div>
-          </main>
+            </main>
+          </div>
         </div>
       </div>
 

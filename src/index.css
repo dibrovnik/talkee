@@ -1,133 +1,125 @@
 @import "tailwindcss";
 
-:root,
-:root[data-theme="light"] {
-  --bg: #faf9f6;
-  --bg-soft: #f4f1eb;
-  --surface: rgba(255, 255, 255, 0.72);
-  --surface-hi: rgba(255, 255, 255, 0.88);
-  --surface-solid: #f8f5ef;
-  --surface-strong: #f1ede6;
-  --surface-inverse: #000000;
-  --border: rgba(0, 0, 0, 0.09);
-  --border-strong: rgba(0, 0, 0, 0.16);
-  --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-dashed: rgba(0, 0, 0, 0.12);
-  --text-hi: #000000;
-  --text-mid: #39342d;
-  --text-low: #5d564d;
-  --text-faint: #847d73;
-  --accent: #000000;
+/*
+ * Native macOS appearance.
+ *
+ * Colors come from the WebKit system color keywords (`-apple-system-*`) so the
+ * UI follows the system light/dark theme and the system accent color without a
+ * restart. CSS Color 4 system colors (`CanvasText`, `AccentColor`) are the
+ * documented fallback if a keyword is ever unsupported.
+ *
+ * The legacy token names below (`--text-hi`, `--border-strong`, ...) are kept as
+ * aliases to the system palette. New markup should use the semantic tokens
+ * (`--label`, `--separator`, `--control-bg`, `--accent`, ...).
+ */
+:root {
+  color-scheme: light dark;
+
+  /* Typography (Apple HIG sizes for macOS) */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  --font-main: var(--font);
+  --font-accent: var(--font-display);
+  --font-brand: var(--font-display);
+  --fs-large-title: 26px;
+  --fs-title1: 22px;
+  --fs-title2: 17px;
+  --fs-title3: 15px;
+  --fs-body: 13px;
+  --fs-callout: 12px;
+  --fs-subhead: 11px;
+  --fs-caption: 10px;
+
+  /* System semantic colors */
+  --label: -apple-system-label;
+  --label-2: -apple-system-secondary-label;
+  --label-3: -apple-system-tertiary-label;
+  --separator: -apple-system-separator;
+  --control-bg: -apple-system-control-background;
+  --window-bg: -apple-system-window-background;
+  --accent: -apple-system-control-accent;
+  --selected-bg: -apple-system-selected-content-background;
+  --selected-bg-inactive: -apple-system-unemphasized-selected-content-background;
   --accent-contrast: #ffffff;
-  --accent-hover: #171717;
-  --danger: #8f2d20;
-  --danger-soft: rgba(143, 45, 32, 0.08);
-  --danger-border: rgba(143, 45, 32, 0.18);
-  --success: #1f5130;
-  --success-soft: rgba(31, 81, 48, 0.08);
-  --success-border: rgba(31, 81, 48, 0.16);
-  --success-bright: #16a34a;
-  --error-bright: #dc2626;
-  --app-gradient-a: rgba(255, 255, 255, 0.8);
-  --app-gradient-b: rgba(0, 0, 0, 0.035);
-  --app-gradient-start: #fcfbf8;
-  --app-gradient-end: #f5f1ea;
-  --grid-line: rgba(0, 0, 0, 0.018);
-  --sidebar-bg: #faf9f6;
-  --main-bg: #faf9f6;
-  --titlebar-bg: rgba(250, 249, 246, 0.96);
-  --titlebar-border: rgba(0, 0, 0, 0.05);
-  --titlebar-text: rgba(0, 0, 0, 0.72);
-  --control-bg: rgba(255, 255, 255, 0.78);
-  --control-bg-hover: rgba(255, 255, 255, 0.94);
-  --control-muted: rgba(0, 0, 0, 0.04);
-  --control-muted-strong: rgba(0, 0, 0, 0.08);
-  --control-track: rgba(0, 0, 0, 0.05);
-  --dropdown-bg: rgba(255, 255, 255, 0.98);
-  --dropdown-hover: rgba(0, 0, 0, 0.03);
-  --dropdown-active: rgba(0, 0, 0, 0.04);
-  --table-border: rgba(0, 0, 0, 0.05);
-  --table-row-border: rgba(0, 0, 0, 0.04);
-  --table-hover: rgba(255, 255, 255, 0.44);
-  --overlay-bg: rgba(244, 241, 235, 0.72);
-  --modal-scrim: rgba(0, 0, 0, 0.22);
-  --icon-soft-bg: rgba(0, 0, 0, 0.04);
-  --avatar-bg: rgba(0, 0, 0, 0.05);
-  --progress-track: rgba(0, 0, 0, 0.08);
-  --switch-track: rgba(0, 0, 0, 0.12);
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-app: 16px;
+
+  /* Legacy aliases (kept so untouched markup adopts the native palette) */
+  --bg: var(--window-bg);
+  --bg-soft: var(--window-bg);
+  --surface: var(--control-bg);
+  --surface-hi: var(--control-bg);
+  --surface-solid: var(--control-bg);
+  --surface-strong: var(--control-bg);
+  --surface-inverse: var(--accent);
+  --border: var(--separator);
+  --border-strong: var(--separator);
+  --border-subtle: var(--separator);
+  --border-dashed: var(--separator);
+  --text-hi: var(--label);
+  --text-mid: var(--label-2);
+  --text-low: var(--label-2);
+  --text-faint: var(--label-3);
+  --accent-hover: var(--accent);
+  --danger: #d70015;
+  --danger-soft: rgba(215, 0, 21, 0.1);
+  --danger-border: rgba(215, 0, 21, 0.22);
+  --success: #248a3d;
+  --success-soft: rgba(36, 138, 61, 0.12);
+  --success-border: rgba(36, 138, 61, 0.24);
+  --success-bright: #248a3d;
+  --error-bright: #d70015;
+  --app-gradient-a: transparent;
+  --app-gradient-b: transparent;
+  --app-gradient-start: var(--window-bg);
+  --app-gradient-end: var(--window-bg);
+  --grid-line: transparent;
+  --sidebar-bg: transparent;
+  --main-bg: var(--window-bg);
+  --titlebar-bg: transparent;
+  --titlebar-border: transparent;
+  --titlebar-text: var(--label-2);
+  --control-bg-hover: color-mix(in srgb, CanvasText 8%, transparent);
+  --control-muted: color-mix(in srgb, CanvasText 6%, transparent);
+  --control-muted-strong: color-mix(in srgb, CanvasText 12%, transparent);
+  --control-track: color-mix(in srgb, CanvasText 10%, transparent);
+  --dropdown-bg: var(--control-bg);
+  --dropdown-hover: color-mix(in srgb, CanvasText 6%, transparent);
+  --dropdown-active: color-mix(in srgb, CanvasText 10%, transparent);
+  --table-border: var(--separator);
+  --table-row-border: var(--separator);
+  --table-hover: color-mix(in srgb, CanvasText 5%, transparent);
+  --overlay-bg: color-mix(in srgb, Canvas 62%, transparent);
+  --modal-scrim: rgba(0, 0, 0, 0.35);
+  --icon-soft-bg: color-mix(in srgb, CanvasText 7%, transparent);
+  --avatar-bg: color-mix(in srgb, CanvasText 10%, transparent);
+  --progress-track: color-mix(in srgb, CanvasText 12%, transparent);
+  --switch-track: color-mix(in srgb, CanvasText 14%, transparent);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-app: 10px;
   --radius-pill: 999px;
-  --radius-bubble: 22px 22px 0 22px;
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-  --font-main: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-  --font-accent: -apple-system, "SF Pro Display", BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-  --font-brand: -apple-system, "SF Pro Display", BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-  --shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.04);
-  --shadow-panel: 0 16px 40px rgba(0, 0, 0, 0.08);
-  --shadow-modal: 0 18px 50px rgba(0, 0, 0, 0.18);
+  --radius-bubble: 18px 18px 0 18px;
+  --radius-control: 6px;
+  --radius-group: 10px;
+  --radius-window: 10px;
+  --shadow-soft: none;
+  --shadow-panel: none;
+  --shadow-modal: 0 10px 30px rgba(0, 0, 0, 0.22);
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-:root[data-theme="dark"] {
-  --bg: #050505;
-  --bg-soft: #0a0a0a;
-  --surface: rgba(18, 18, 18, 0.78);
-  --surface-hi: rgba(28, 28, 28, 0.88);
-  --surface-solid: #101010;
-  --surface-strong: #1a1a1a;
-  --surface-inverse: #f5f5f5;
-  --border: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.18);
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-dashed: rgba(255, 255, 255, 0.2);
-  --text-hi: #f7f7f7;
-  --text-mid: #c9c9c9;
-  --text-low: #8f8f8f;
-  --text-faint: #6a6a6a;
-  --accent: #f5f5f5;
-  --accent-contrast: #050505;
-  --accent-hover: #e2e2e2;
-  --danger: #ff9b9b;
-  --danger-soft: rgba(255, 107, 107, 0.11);
-  --danger-border: rgba(255, 107, 107, 0.24);
-  --success: #9be7b0;
-  --success-soft: rgba(34, 197, 94, 0.12);
-  --success-border: rgba(34, 197, 94, 0.24);
-  --success-bright: #86efac;
-  --error-bright: #fca5a5;
-  --app-gradient-a: rgba(255, 255, 255, 0.055);
-  --app-gradient-b: rgba(255, 255, 255, 0.035);
-  --app-gradient-start: #0d0d0d;
-  --app-gradient-end: #030303;
-  --grid-line: rgba(255, 255, 255, 0.025);
-  --sidebar-bg: #050505;
-  --main-bg: #050505;
-  --titlebar-bg: rgba(5, 5, 5, 0.96);
-  --titlebar-border: rgba(255, 255, 255, 0.08);
-  --titlebar-text: rgba(247, 247, 247, 0.78);
-  --control-bg: rgba(255, 255, 255, 0.065);
-  --control-bg-hover: rgba(255, 255, 255, 0.1);
-  --control-muted: rgba(255, 255, 255, 0.065);
-  --control-muted-strong: rgba(255, 255, 255, 0.12);
-  --control-track: rgba(255, 255, 255, 0.08);
-  --dropdown-bg: rgba(16, 16, 16, 0.98);
-  --dropdown-hover: rgba(255, 255, 255, 0.075);
-  --dropdown-active: rgba(255, 255, 255, 0.11);
-  --table-border: rgba(255, 255, 255, 0.075);
-  --table-row-border: rgba(255, 255, 255, 0.055);
-  --table-hover: rgba(255, 255, 255, 0.04);
-  --overlay-bg: rgba(3, 3, 3, 0.78);
-  --modal-scrim: rgba(0, 0, 0, 0.58);
-  --icon-soft-bg: rgba(255, 255, 255, 0.07);
-  --avatar-bg: rgba(255, 255, 255, 0.08);
-  --progress-track: rgba(255, 255, 255, 0.11);
-  --switch-track: rgba(255, 255, 255, 0.14);
-  --shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.32);
-  --shadow-panel: 0 16px 40px rgba(0, 0, 0, 0.46);
-  --shadow-modal: 0 18px 50px rgba(0, 0, 0, 0.58);
+@media (prefers-color-scheme: dark) {
+  :root {
+    --danger: #ff453a;
+    --danger-soft: rgba(255, 69, 58, 0.14);
+    --danger-border: rgba(255, 69, 58, 0.28);
+    --success: #30d158;
+    --success-soft: rgba(48, 209, 88, 0.14);
+    --success-border: rgba(48, 209, 88, 0.28);
+    --success-bright: #30d158;
+    --error-bright: #ff453a;
+    --accent-contrast: #ffffff;
+  }
 }
 
 *,
@@ -148,9 +140,9 @@ body {
 body {
   margin: 0;
   font-family: var(--font);
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-hi);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--label);
   background: transparent;
 }
 
@@ -164,26 +156,12 @@ select {
 .app-root {
   width: 100vw;
   height: 100vh;
-  color: var(--text-hi);
-  background:
-    radial-gradient(circle at top left, var(--app-gradient-a), transparent 30%),
-    radial-gradient(circle at right 20%, var(--app-gradient-b), transparent 24%),
-    linear-gradient(
-      180deg,
-      var(--app-gradient-start) 0%,
-      var(--bg) 42%,
-      var(--app-gradient-end) 100%
-    );
-  border-radius: var(--radius-app);
-  clip-path: inset(0 round var(--radius-app));
+  color: var(--label);
+  background: transparent;
   overflow: hidden;
   position: relative;
   isolation: isolate;
   contain: paint;
-}
-
-.app-root > * {
-  border-radius: inherit;
 }
 
 #root {
@@ -192,28 +170,12 @@ select {
   overflow: hidden;
 }
 
-.app-root::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(circle at center, black 30%, transparent 85%);
-  pointer-events: none;
-  opacity: 0.35;
-  border-radius: inherit;
-}
-
 .surface,
 .surface-hi,
 .card {
   position: relative;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: var(--control-bg);
+  border: 1px solid var(--separator);
 }
 
 .surface {
@@ -221,23 +183,22 @@ select {
 }
 
 .surface-hi {
-  background: var(--surface-hi);
-  border-color: var(--border-strong);
+  background: var(--control-bg);
+  border-color: var(--separator);
   border-radius: var(--radius-md);
 }
 
 .card {
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-group);
   padding: 18px;
   box-shadow: none;
 }
 
 .label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-low);
+  font-size: var(--fs-subhead);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--label-2);
 }
 
 .subtle-row-text {
@@ -280,33 +241,33 @@ select {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 0 16px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
+  gap: 6px;
+  min-height: 22px;
+  padding: 0 10px;
+  font-size: var(--fs-body);
+  font-weight: 400;
+  letter-spacing: 0;
+  border-radius: var(--radius-control);
+  cursor: default;
   transition:
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease,
-    transform 0.18s var(--ease-standard),
-    box-shadow 0.18s ease;
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
   background: var(--control-bg);
-  border: 1px solid var(--border);
-  color: var(--text-hi);
+  border: 1px solid var(--separator);
+  color: var(--label);
 }
 
 .btn:hover {
-  transform: translateY(-1px);
   background: var(--control-bg-hover);
-  border-color: var(--border-strong);
 }
 
 .btn:active {
-  transform: translateY(0);
+  background: var(--control-muted-strong);
+}
+
+.btn:disabled {
+  opacity: 0.5;
 }
 
 .hotkey-keycap {
@@ -379,8 +340,8 @@ select {
 }
 
 .btn-primary {
-  background: var(--surface-inverse);
-  border-color: var(--surface-inverse);
+  background: var(--accent);
+  border-color: var(--accent);
   color: var(--accent-contrast);
 }
 
@@ -390,36 +351,39 @@ select {
 }
 
 .btn-danger {
-  background: var(--danger-soft);
-  border-color: var(--danger-border);
+  background: var(--control-bg);
+  border-color: var(--separator);
   color: var(--danger);
 }
 
 .btn-danger:hover {
-  background: rgba(143, 45, 32, 0.12);
-  border-color: rgba(143, 45, 32, 0.28);
+  background: var(--danger-soft);
+  border-color: var(--danger-border);
 }
 
 .input {
   width: 100%;
-  min-height: 46px;
-  padding: 0 0 10px;
-  font-size: 13px;
+  min-height: 22px;
+  padding: 3px 7px;
+  font-size: var(--fs-body);
   font-family: var(--font);
-  color: var(--text-hi);
-  border: none;
-  border-bottom: 1px solid var(--border-strong);
-  background: transparent;
+  color: var(--label);
+  border: 1px solid var(--separator);
+  border-radius: 5px;
+  background: var(--control-bg);
   outline: none;
-  transition: border-color 0.18s ease;
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 .input:focus {
-  border-bottom-color: var(--text-hi);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, AccentColor 45%, transparent);
 }
 
 .input::placeholder {
-  color: var(--text-faint);
+  color: var(--label-3);
 }
 
 .nav-item {
@@ -490,49 +454,29 @@ select {
 
 .section-title-ui {
   margin: 0;
-  font-size: 28px;
-  line-height: 1;
-  letter-spacing: -0.04em;
+  font-size: var(--fs-title1);
+  line-height: 1.2;
+  letter-spacing: 0;
   font-weight: 700;
 }
 
 .section-subtle {
   margin: 0;
-  font-size: 13px;
-  color: var(--text-mid);
-  line-height: 1.6;
+  font-size: var(--fs-body);
+  color: var(--label-2);
+  line-height: 1.5;
 }
 
 .main-hero-slide {
   animation: slide-down 0.22s var(--ease-standard);
 }
 
+/* Native grouped panel (kept under the original class name). */
 .stats-glass-card {
   position: relative;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.07));
-  border: 1px solid transparent;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.68),
-    0 3px 10px rgba(39, 34, 27, 0.025);
-  backdrop-filter: blur(26px) saturate(1.28);
-  -webkit-backdrop-filter: blur(26px) saturate(1.28);
+  background: var(--control-bg);
+  border: 1px solid var(--separator);
   isolation: isolate;
-}
-
-.stats-glass-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background:
-    linear-gradient(115deg, rgba(255, 255, 255, 0.54), transparent 30%),
-    linear-gradient(250deg, transparent 58%, rgba(255, 255, 255, 0.12));
-  pointer-events: none;
-}
-
-.stats-glass-card > * {
-  position: relative;
-  z-index: 1;
 }
 
 .stats-glass-metric {
@@ -546,23 +490,7 @@ select {
   right: 0;
   bottom: 14px;
   width: 1px;
-  background: rgba(255, 255, 255, 0.28);
-}
-
-:root[data-theme="dark"] .stats-glass-card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.025));
-  border-color: transparent;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.13),
-    0 4px 12px rgba(0, 0, 0, 0.14);
-}
-
-:root[data-theme="dark"] .stats-glass-card::before {
-  opacity: 0.12;
-}
-
-:root[data-theme="dark"] .stats-glass-metric:not(:last-child)::after {
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--separator);
 }
 
 @media (prefers-reduced-motion: reduce) {

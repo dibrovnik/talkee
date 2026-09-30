@@ -2,11 +2,11 @@
 
 ## 1. Окно и тема
 
-- [ ] 1.1 `src-tauri/src/commands/settings_window.rs`: параметры окна и vibrancy (design.md, решение 1)
-- [ ] 1.2 Удалить `src/components/TitleBar.tsx` и его использование; удалить `clip-path`/скругления `.app-root` в `src/index.css`; добавить drag-region и отступ под светофоры в `SettingsApp.tsx`
-- [ ] 1.3 `src/index.css`: заменить токены (design.md, решение 2); удалить палитру «капучино», градиенты, сетку, `.label` uppercase, `.btn` с подъёмом, стеклянные карточки
-- [ ] 1.4 `src/lib/theme.ts`: `color-scheme` + `setTheme` (design.md, решение 2)
-- [ ] 1.5 Проверка: `bun run tauri dev` — системные светофоры, vibrancy боковой панели, смена системной темы и акцентного цвета применяется сразу
+- [x] 1.1 `src-tauri/src/commands/settings_window.rs`: параметры окна и vibrancy (design.md, решение 1)
+- [x] 1.2 Удалить `src/components/TitleBar.tsx` и его использование; удалить `clip-path`/скругления `.app-root` в `src/index.css`; добавить drag-region и отступ под светофоры в `SettingsApp.tsx`
+- [x] 1.3 `src/index.css`: заменить токены (design.md, решение 2); удалить палитру «капучино», градиенты, сетку, `.label` uppercase, `.btn` с подъёмом, стеклянные карточки
+- [x] 1.4 `src/lib/theme.ts`: `color-scheme` + `setTheme` (design.md, решение 2)
+- [x] 1.5 Проверка: `bun run tauri dev` — системные светофоры, vibrancy боковой панели, смена системной темы и акцентного цвета применяется сразу
 
 ## 2. Примитивы
 

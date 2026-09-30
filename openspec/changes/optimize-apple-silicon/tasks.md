@@ -35,12 +35,12 @@
 
 ## 4. Минимальный ffmpeg
 
-- [ ] 4.1 Составить список используемых аргументов ffmpeg (grep из design.md, решение 7) и форматов диалога выбора файла; записать в `docs/third-party/ffmpeg.md`
-- [ ] 4.2 Переписать `scripts/prepare-ffmpeg-sidecar.mjs`: загрузка исходников с проверкой SHA256, `configure` с флагами из design.md, кеш сборки, копирование в `src-tauri/binaries/talkee-ffmpeg-aarch64-apple-darwin`
-- [ ] 4.3 Решить вопрос ffprobe по `media/probe.rs` (design.md, решение 7)
-- [ ] 4.4 Удалить `ffmpeg-static` из `package.json`
-- [ ] 4.5 Добавить Rust-тест или скрипт `scripts/smoke-ffmpeg.mjs`: сгенерировать тестовые файлы (wav, m4a/aac, mp3, ogg/opus, webm/opus, mp4 с видео+aac) системным `afconvert`/заранее положенными маленькими фикстурами ≤ 100 КБ в `src-tauri/tests/fixtures/media/` и прогнать через встроенный ffmpeg → WAV 16 кГц mono
-- [ ] 4.6 Проверка: `ls -la src-tauri/binaries/talkee-ffmpeg-*` ≤ 8 МБ; smoke-тест зелёный
+- [x] 4.1 Составить список используемых аргументов ffmpeg (grep из design.md, решение 7) и форматов диалога выбора файла; записать в `docs/third-party/ffmpeg.md`
+- [x] 4.2 Переписать `scripts/prepare-ffmpeg-sidecar.mjs`: загрузка исходников с проверкой SHA256, `configure` с флагами из design.md, кеш сборки, копирование в `src-tauri/binaries/talkee-ffmpeg-aarch64-apple-darwin`
+- [x] 4.3 Решить вопрос ffprobe по `media/probe.rs` (design.md, решение 7)
+- [x] 4.4 Удалить `ffmpeg-static` из `package.json`
+- [x] 4.5 Добавить Rust-тест или скрипт `scripts/smoke-ffmpeg.mjs`: сгенерировать тестовые файлы (wav, m4a/aac, mp3, ogg/opus, webm/opus, mp4 с видео+aac) системным `afconvert`/заранее положенными маленькими фикстурами ≤ 100 КБ в `src-tauri/tests/fixtures/media/` и прогнать через встроенный ffmpeg → WAV 16 кГц mono
+- [x] 4.6 Проверка: `ls -la src-tauri/binaries/talkee-ffmpeg-*` ≤ 8 МБ; smoke-тест зелёный
 
 ## 5. Уровень звука и frontend в простое
 

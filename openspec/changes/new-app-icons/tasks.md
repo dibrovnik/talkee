@@ -19,6 +19,6 @@
 
 ## 3. Финал
 
-- [ ] 3.1 Собрать `.app`, проверить иконку в Dock, Finder (список 16 pt), Cmd+Tab
-- [ ] 3.2 README: скриншот новой иконки, заметка про кеш иконок (`killall Dock`)
-- [ ] 3.3 Проверка: `bun run gate`; `openspec validate new-app-icons --strict`
+- [x] 3.1 Собрать `.app`, проверить иконку в Dock, Finder (список 16 pt), Cmd+Tab
+- [x] 3.2 README: скриншот новой иконки, заметка про кеш иконок (`killall Dock`)
+- [x] 3.3 Проверка: `bun run gate`; `openspec validate new-app-icons --strict`

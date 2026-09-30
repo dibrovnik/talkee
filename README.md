@@ -176,6 +176,7 @@ The live text overlay keeps consecutive chunks from the same source together and
 - Transcription contains unexpected foreign characters: choose a fixed recognition language such as `ru` or `en` instead of auto.
 - Local STT returns model errors: open `Модели` -> `Локально`, make sure the model is installed and selected, then reinstall it if the runtime reports missing files.
 - Call recording cannot start: grant Microphone and the System Audio Recording permission, then start the call recording again.
+- The Dock or Finder still shows the old Talkee icon after an update: macOS caches icons. Run `killall Dock` or re-register the app with `lsregister -f /Applications/Talkee.app` to refresh it.
 - Need deeper diagnostics: open `~/.talkee/talkee.log` or run `bun run logs` during development.
 
 ## Product And Architecture Documentation

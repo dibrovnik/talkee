@@ -8,14 +8,14 @@
 
 ## 1. Кеш и прогрев STT-модели
 
-- [ ] 1.1 `src-tauri/src/bin/talkee-stt.rs`: `ModelCache` + `get_or_load` (design.md, решение 1); заменить три вызова `Model::load`
-- [ ] 1.2 Idle-выгрузка: фоновый поток + аргумент `--idle-unload-secs` (по умолчанию 600)
-- [ ] 1.3 Эндпоинты `POST /v1/warmup`, `GET /v1/status`
-- [ ] 1.4 Логи `model_load_ms`, `inference_ms` в каждом запросе транскрибации
-- [ ] 1.5 Unit-тесты кеша (с подменой загрузчика через trait/замыкание): попадание, смена модели, выгрузка по простою
-- [ ] 1.6 `src-tauri/src/local_stt.rs`: передавать `--idle-unload-secs`; `src-tauri/src/ai.rs` `warm_up_local_stt_runtime`: после готовности runtime вызывать `POST /v1/warmup` (design.md, решение 2)
-- [ ] 1.7 `src/windows/widget/hooks/useWidgetRecording.ts`: запускать прогрев в режиме «Локально» и для batch-диктовки (fire-and-forget, без `await` в критическом пути); потоковую ветку не менять
-- [ ] 1.8 Проверка: `cargo test --workspace`; две диктовки подряд → во второй `model_load_ms=0`
+- [x] 1.1 `src-tauri/src/bin/talkee-stt.rs`: `ModelCache` + `get_or_load` (design.md, решение 1); заменить три вызова `Model::load`
+- [x] 1.2 Idle-выгрузка: фоновый поток + аргумент `--idle-unload-secs` (по умолчанию 600)
+- [x] 1.3 Эндпоинты `POST /v1/warmup`, `GET /v1/status`
+- [x] 1.4 Логи `model_load_ms`, `inference_ms` в каждом запросе транскрибации
+- [x] 1.5 Unit-тесты кеша (с подменой загрузчика через trait/замыкание): попадание, смена модели, выгрузка по простою
+- [x] 1.6 `src-tauri/src/local_stt.rs`: передавать `--idle-unload-secs`; `src-tauri/src/ai.rs` `warm_up_local_stt_runtime`: после готовности runtime вызывать `POST /v1/warmup` (design.md, решение 2)
+- [x] 1.7 `src/windows/widget/hooks/useWidgetRecording.ts`: запускать прогрев в режиме «Локально» и для batch-диктовки (fire-and-forget, без `await` в критическом пути); потоковую ветку не менять
+- [x] 1.8 Проверка: `cargo test --workspace`; две диктовки подряд → во второй `model_load_ms=0`
 
 ## 2. Потоки и фичи крейтов
 

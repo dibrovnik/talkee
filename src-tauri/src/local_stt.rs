@@ -20,6 +20,7 @@ const MODEL_DOWNLOAD_MAX_ATTEMPTS: usize = 3;
 const MODEL_DOWNLOAD_RETRY_DELAYS_MS: [u64; MODEL_DOWNLOAD_MAX_ATTEMPTS - 1] = [750, 1_500];
 const RUNTIME_START_TIMEOUT_SECS: u64 = 15;
 const RUNTIME_READINESS_POLL_INTERVAL_MS: u64 = 250;
+const LOCAL_STT_IDLE_UNLOAD_SECS: u64 = 600;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LocalRuntimeKind {
@@ -1077,6 +1078,8 @@ async fn start_bundled_runtime(
             &data_dir.to_string_lossy(),
             "--models-dir",
             &models_dir.to_string_lossy(),
+            "--idle-unload-secs",
+            &LOCAL_STT_IDLE_UNLOAD_SECS.to_string(),
         ])
         .spawn()
         .map_err(|err| {

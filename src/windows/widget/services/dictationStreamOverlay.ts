@@ -88,6 +88,7 @@ export async function warmUpLiveDictationRuntime(
       whisper_api_key: settings.whisperApiKey || null,
       whisper_endpoint: settings.whisperEndpoint || null,
       local_models_dir: settings.localModelsDir || null,
+      whisper_model: settings.whisperModel || null,
     },
   });
 

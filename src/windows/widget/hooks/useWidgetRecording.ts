@@ -333,6 +333,11 @@ export function useWidgetRecording({
 
       let dictationStreamPromise: Promise<DictationStreamOverlaySession | null> | null = null;
       const liveWarmUpPromise = localLiveStreamingEnabled ? warmUpLiveRuntime() : null;
+      if (!localLiveStreamingEnabled && isLocalSttMode) {
+        // Batch local dictation: warm the model in the background so the model
+        // load overlaps with the user speaking. Never block recording start.
+        void warmUpLiveRuntime();
+      }
       if (liveStreamingEnabled && !activeSettings.micId) {
         dictationStreamPromise = startLiveOverlay();
       }

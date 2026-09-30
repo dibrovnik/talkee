@@ -1,0 +1,11 @@
+# Commits created by the quality-gates change that only reformat the codebase.
+# They are excluded from `git blame` and `git log -p` output.
+# Configure locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub applies this file automatically on the website.)
+
+# style: apply biome formatting
+04b3d667bb61d70a7638d562dcb18c07d8c84069
+
+# style: apply rustfmt
+d68b4cd2cebd39604874e94ce2c2dd8db4cca323

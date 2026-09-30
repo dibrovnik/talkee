@@ -29,7 +29,7 @@
 - [x] 4.3 `TranslationTab.tsx` и `RealtimeTranslationModels.tsx`
 - [x] 4.4 `MainTab.tsx` (история, статистика)
 - [x] 4.5 `FileTranscriptionTab.tsx`
-- [ ] 4.6 `DevChatTab.tsx`
+- [x] 4.6 `DevChatTab.tsx`
 - [ ] 4.7 `model/ModelsTab.tsx` и компоненты `LocalSttModelCard.tsx`, `LocalLlmModels.tsx`, `ModelCardDisclosureButton.tsx`
 - [ ] 4.8 `style/StyleTab.tsx`, `SummaryModal.tsx`, `SlideOverModal.tsx`, `RowActionsMenu.tsx`
 - [ ] 4.9 Онбординг `src/components/onboarding/*` и `PermissionScreen.tsx`

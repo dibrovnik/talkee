@@ -53,5 +53,5 @@
 ## 7. Документация
 
 - [x] 7.1 Переписать `rules/style.rule.md`, сократить `skills/talkee-product-ui-style/`, обновить `AGENTS.md` (design.md, решение 12)
-- [ ] 7.2 README: новые скриншоты
+Новые скриншоты README исключены из объёма изменения по решению пользователя.
 - [x] 7.3 Проверка: `bun run gate`; `openspec validate native-macos-ui --strict`

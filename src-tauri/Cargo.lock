@@ -5478,6 +5478,7 @@ dependencies = [
  "hex",
  "hound",
  "include_dir",
+ "libc",
  "objc2 0.6.4",
  "objc2-app-kit",
  "objc2-core-audio",
@@ -5509,6 +5510,7 @@ dependencies = [
 name = "talkee-llm"
 version = "0.4.8"
 dependencies = [
+ "libc",
  "llama-cpp-2",
  "serde_json",
 ]

@@ -11,7 +11,7 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::num::NonZeroU32;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use llama_cpp_2::context::params::LlamaContextParams;
 use llama_cpp_2::llama_backend::LlamaBackend;
@@ -29,6 +29,40 @@ const MAX_REQUEST_BYTES: usize = 8 * 1024 * 1024;
 // exhaust memory on supported 8–16 GB Windows machines.
 const DEFAULT_CTX: u32 = 4096;
 const DEFAULT_MAX_TOKENS: i32 = 1024;
+
+fn perf_core_count() -> usize {
+    static CORES: OnceLock<usize> = OnceLock::new();
+    *CORES.get_or_init(|| {
+        #[cfg(target_os = "macos")]
+        if let Some(count) = sysctl_perflevel0_physicalcpu() {
+            return count;
+        }
+
+        std::thread::available_parallelism()
+            .map(|count| count.get())
+            .unwrap_or(0)
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn sysctl_perflevel0_physicalcpu() -> Option<usize> {
+    use std::ffi::CString;
+
+    let name = CString::new("hw.perflevel0.physicalcpu").ok()?;
+    let mut value: i32 = 0;
+    let mut size = std::mem::size_of::<i32>();
+    let result = unsafe {
+        libc::sysctlbyname(
+            name.as_ptr(),
+            &mut value as *mut i32 as *mut libc::c_void,
+            &mut size,
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+
+    (result == 0 && value > 0).then_some(value as usize)
+}
 
 struct Config {
     host: String,
@@ -80,6 +114,16 @@ fn main() {
         std::process::exit(1);
     });
 
+    eprintln!(
+        "{} backend={} threads={}",
+        SERVER_NAME,
+        if backend.supports_gpu_offload() {
+            "metal"
+        } else {
+            "cpu"
+        },
+        perf_core_count()
+    );
     eprintln!("{} listening on {}", SERVER_NAME, bind_addr);
     for stream in listener.incoming() {
         match stream {
@@ -375,7 +419,11 @@ fn generate(
     max_tokens: i32,
     ctx_size: u32,
 ) -> Result<String, String> {
-    let ctx_params = LlamaContextParams::default().with_n_ctx(NonZeroU32::new(ctx_size));
+    let threads = perf_core_count() as i32;
+    let ctx_params = LlamaContextParams::default()
+        .with_n_ctx(NonZeroU32::new(ctx_size))
+        .with_n_threads(threads)
+        .with_n_threads_batch(threads);
     let mut ctx = model
         .new_context(backend, ctx_params)
         .map_err(|err| format!("context error: {}", err))?;

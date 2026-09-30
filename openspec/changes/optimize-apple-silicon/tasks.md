@@ -19,11 +19,11 @@
 
 ## 2. Потоки и фичи крейтов
 
-- [ ] 2.1 `perf_core_count()` в `talkee-stt.rs` и `sidecars/talkee-llm/src/main.rs`; применить (design.md, решение 3)
-- [ ] 2.2 `src-tauri/src/local_translator.rs`: число потоков ct2rs
-- [ ] 2.3 `src-tauri/Cargo.toml`: ct2rs `accelerate` вместо `ruy`; `sidecars/talkee-llm/Cargo.toml`: убрать `openmp`
-- [ ] 2.4 Логировать при старте sidecar'ов: backend (Metal/CPU), число потоков
-- [ ] 2.5 Проверка: `cargo test --workspace`; ручной замер перевода и LLM-summary до/после на фиксированном тексте — регрессии нет
+- [x] 2.1 `perf_core_count()` в `talkee-stt.rs` и `sidecars/talkee-llm/src/main.rs`; применить (design.md, решение 3)
+- [x] 2.2 `src-tauri/src/local_translator.rs`: число потоков ct2rs
+- [x] 2.3 `src-tauri/Cargo.toml`: ct2rs `accelerate` вместо `ruy`; `sidecars/talkee-llm/Cargo.toml`: убрать `openmp`
+- [x] 2.4 Логировать при старте sidecar'ов: backend (Metal/CPU), число потоков
+- [x] 2.5 Проверка: `cargo test --workspace`; ручной замер перевода и LLM-summary до/после на фиксированном тексте — регрессии нет
 
 ## 3. Сборка
 

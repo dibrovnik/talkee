@@ -14,8 +14,8 @@ use std::sync::{Arc, Mutex, Once, OnceLock};
 use std::time::{Duration, Instant, SystemTime};
 use transcribe_cpp::{
     CommitPolicy, ExtSlot, Model, MoonshineStreamingOptions, ParakeetBufferedStreamOptions,
-    ParakeetStreamOptions, RunExtension, RunOptions, Stream, StreamExtension, StreamOptions,
-    TimestampKind, VoxtralRealtimeStreamOptions, WhisperRunOptions,
+    ParakeetStreamOptions, RunExtension, RunOptions, SessionOptions, Stream, StreamExtension,
+    StreamOptions, TimestampKind, VoxtralRealtimeStreamOptions, WhisperRunOptions,
 };
 
 const SERVER_NAME: &str = "talkee-stt";
@@ -882,6 +882,47 @@ fn log_transcription_timings(model_id: &str, cached: &CachedModel<Model>, infere
     );
 }
 
+fn perf_core_count() -> usize {
+    static CORES: OnceLock<usize> = OnceLock::new();
+    *CORES.get_or_init(|| {
+        #[cfg(target_os = "macos")]
+        if let Some(count) = sysctl_perflevel0_physicalcpu() {
+            return count;
+        }
+
+        std::thread::available_parallelism()
+            .map(|count| count.get())
+            .unwrap_or(0)
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn sysctl_perflevel0_physicalcpu() -> Option<usize> {
+    use std::ffi::CString;
+
+    let name = CString::new("hw.perflevel0.physicalcpu").ok()?;
+    let mut value: i32 = 0;
+    let mut size = std::mem::size_of::<i32>();
+    let result = unsafe {
+        libc::sysctlbyname(
+            name.as_ptr(),
+            &mut value as *mut i32 as *mut libc::c_void,
+            &mut size,
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+
+    (result == 0 && value > 0).then_some(value as usize)
+}
+
+fn session_options() -> SessionOptions {
+    SessionOptions {
+        n_threads: perf_core_count() as i32,
+        ..Default::default()
+    }
+}
+
 fn warmup_model(request: &HttpRequest, config: &RuntimeConfig) -> Result<String, (u16, String)> {
     let payload: WarmupRequest = serde_json::from_slice(&request.body)
         .map_err(|err| (400, format!("Некорректное тело warmup-запроса: {}", err)))?;
@@ -989,12 +1030,14 @@ fn transcribe(request: &HttpRequest, config: &RuntimeConfig) -> Result<String, (
     let loaded_model = &cached_model.model;
     let capabilities = loaded_model.capabilities();
     let supports_whisper_options = loaded_model.accepts_ext(ExtSlot::Run, WHISPER_RUN_EXT_KIND);
-    let mut session = loaded_model.session().map_err(|err| {
-        (
-            500,
-            format!("Не удалось создать transcribe.cpp session: {}", err),
-        )
-    })?;
+    let mut session = loaded_model
+        .session_with(&session_options())
+        .map_err(|err| {
+            (
+                500,
+                format!("Не удалось создать transcribe.cpp session: {}", err),
+            )
+        })?;
     let streaming_requested = streaming_requested_from_fields(&multipart.fields);
     let mut options = if streaming_requested {
         run_options_from_fields_with_auto(
@@ -1112,12 +1155,14 @@ fn transcribe_streaming(
     let loaded_model = &cached_model.model;
     let capabilities = loaded_model.capabilities();
     let supports_whisper_options = loaded_model.accepts_ext(ExtSlot::Run, WHISPER_RUN_EXT_KIND);
-    let mut session = loaded_model.session().map_err(|err| {
-        (
-            500,
-            format!("Не удалось создать transcribe.cpp session: {}", err),
-        )
-    })?;
+    let mut session = loaded_model
+        .session_with(&session_options())
+        .map_err(|err| {
+            (
+                500,
+                format!("Не удалось создать transcribe.cpp session: {}", err),
+            )
+        })?;
     let mut options = run_options_from_fields_with_auto(
         &multipart.fields,
         capabilities.max_timestamp_kind,
@@ -1214,12 +1259,14 @@ fn transcribe_live(
     let loaded_model = &cached_model.model;
     let capabilities = loaded_model.capabilities();
     let supports_whisper_options = loaded_model.accepts_ext(ExtSlot::Run, WHISPER_RUN_EXT_KIND);
-    let mut session = loaded_model.session().map_err(|err| {
-        (
-            500,
-            format!("Не удалось создать transcribe.cpp session: {}", err),
-        )
-    })?;
+    let mut session = loaded_model
+        .session_with(&session_options())
+        .map_err(|err| {
+            (
+                500,
+                format!("Не удалось создать transcribe.cpp session: {}", err),
+            )
+        })?;
     let mut options = run_options_from_fields_with_auto(
         &fields,
         capabilities.max_timestamp_kind,
@@ -1381,6 +1428,7 @@ fn init_transcribe_cpp() {
             transcribe_cpp::version(),
             devices
         );
+        eprintln!("{} threads={}", SERVER_NAME, perf_core_count());
     });
 }
 

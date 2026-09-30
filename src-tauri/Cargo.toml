@@ -53,6 +53,7 @@ cpal = "0.15.3"
 window-vibrancy = "0.7.1"
 dirs = "5"
 include_dir = "0.7"
+libc = "0.2"
 url = "2.5.8"
 tauri-plugin-process = "2.3.1"
 tauri-plugin-shell = "2.3.2"
@@ -60,7 +61,7 @@ transcribe-cpp = { version = "0.1.1", default-features = false, features = ["met
 hound = "3.5.1"
 tauri-plugin-dialog = "2"
 handy-keys = "0.2.4"
-ct2rs = { version = "0.9.19", default-features = false, features = ["all-tokenizers", "ruy"] }
+ct2rs = { version = "0.9.19", default-features = false, features = ["all-tokenizers", "accelerate"] }
 tauri-plugin-autostart = "2.5.1"
 block2 = "0.6"
 objc2 = "0.6"

@@ -232,6 +232,8 @@ export interface AppSettings {
   /** Model name for LLM cleanup (e.g. "gpt-4o-mini", "deepseek-chat") */
   llmModel: string;
   hotkey: string;
+  cleanupEnabled: boolean;
+  cleanupToggleHotkey: string;
   /** Floating widget visual scale. 1 = 100%. */
   widgetScale: number;
   theme: ThemePreference;
@@ -740,6 +742,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   whisperModel: "whisper-1",
   llmModel: "gpt-4o-mini",
   hotkey: DEFAULT_HOTKEY,
+  cleanupEnabled: false,
+  cleanupToggleHotkey: "Control+Shift+C",
   widgetScale: DEFAULT_WIDGET_SCALE,
   theme: "system",
   language: DEFAULT_LANGUAGE,
@@ -1194,6 +1198,15 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
           : undefined,
     llmModel: typeof raw.llmModel === "string" ? raw.llmModel : undefined,
     hotkey,
+    cleanupEnabled: typeof raw.cleanupEnabled === "boolean" ? raw.cleanupEnabled : false,
+    cleanupToggleHotkey:
+      raw.cleanupToggleHotkey === ""
+        ? ""
+        : (normalizeHotkey(
+            typeof raw.cleanupToggleHotkey === "string"
+              ? raw.cleanupToggleHotkey
+              : "Control+Shift+C",
+          ).normalized ?? ""),
     widgetScale: raw.widgetScale === undefined ? undefined : normalizeWidgetScale(raw.widgetScale),
     theme: parseTheme(raw.theme),
     language: typeof raw.language === "string" ? raw.language : undefined,
@@ -1242,6 +1255,15 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
       ...normalized.translation,
       selectionHotkey: nonConflictingSelectionHotkey(normalized.hotkey),
     };
+  }
+
+  if (
+    normalized.cleanupToggleHotkey &&
+    [normalized.hotkey || DEFAULT_HOTKEY, normalized.translation?.selectionHotkey].includes(
+      normalized.cleanupToggleHotkey,
+    )
+  ) {
+    normalized.cleanupToggleHotkey = "";
   }
 
   if (isLocalSttEndpoint(normalized.whisperEndpoint)) {
@@ -1529,6 +1551,23 @@ export function mergeAppSettingsPatch(current: AppSettings, patch: AppSettingsPa
   };
 }
 
+export function validateCleanupHotkey(
+  settings: Pick<AppSettings, "hotkey" | "translation" | "cleanupToggleHotkey">,
+): string {
+  if (!settings.cleanupToggleHotkey) return "";
+  const result = normalizeHotkey(settings.cleanupToggleHotkey);
+  if (!result.valid || !result.normalized)
+    throw new Error(result.error || "Неверная горячая клавиша");
+  if (
+    [settings.hotkey, settings.translation.selectionHotkey].some(
+      (key) => normalizeHotkey(key).normalized === result.normalized,
+    )
+  ) {
+    throw new Error("Горячая клавиша очистки конфликтует с диктовкой или переводом");
+  }
+  return result.normalized;
+}
+
 export function saveSettings(settings: AppSettingsPatch): Promise<void> {
   return settingsSaveQueue.enqueue(async () => {
     const store = await getStore();
@@ -1555,6 +1594,7 @@ export function saveSettings(settings: AppSettingsPatch): Promise<void> {
     nextSettings.localModelsDir = "";
     nextSettings.transcriptionStorageDir = "";
 
+    nextSettings.cleanupToggleHotkey = validateCleanupHotkey(nextSettings);
     await store.set("settings", nextSettings);
     await store.save();
   });

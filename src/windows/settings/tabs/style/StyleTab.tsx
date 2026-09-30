@@ -3,7 +3,7 @@ import { DictationHotkeyControl } from "../../../../components/DictationHotkeyCo
 import { selectCleanupPreset, toggleCleanup } from "../../../../lib/cleanupToggle";
 import { type Icon, IconBriefcase, IconCode, IconMessage } from "../../../../lib/icons";
 import { logError } from "../../../../lib/logger";
-import type { AppSettings } from "../../../../lib/store";
+import { type AppSettings, listPromptsByKind } from "../../../../lib/store";
 import { TRANSCRIPTION_STYLE_OPTIONS } from "../../../../lib/transcriptionPrompts";
 import { Badge } from "../../../../ui/Badge";
 import { FormRow } from "../../../../ui/FormRow";
@@ -97,17 +97,20 @@ export function StyleTab(): ReactElement | null {
 
       {styleTabView === "style" && (
         <OptionList ariaLabel={t("models.styleTab.style")}>
-          {TRANSCRIPTION_STYLE_OPTIONS.map((st) => {
+          {listPromptsByKind(settings, "cleanup").map((st) => {
             const isActive = settings.selectedCleanupPromptId === st.id;
-            const Icon = STYLE_ICONS[st.id];
+            const Icon = STYLE_ICONS[st.id as AppSettings["style"]] ?? IconMessage;
 
             return (
               <OptionCard
                 key={st.id}
                 active={isActive}
                 icon={<Icon size={16} />}
-                title={st.title}
-                description={st.description}
+                title={st.name}
+                description={
+                  TRANSCRIPTION_STYLE_OPTIONS.find((option) => option.id === st.id)?.description ??
+                  st.prompt
+                }
                 onClick={() =>
                   void selectCleanupPreset(st.id)
                     .then(syncSettings)

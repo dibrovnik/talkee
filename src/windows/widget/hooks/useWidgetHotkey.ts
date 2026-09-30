@@ -144,6 +144,7 @@ export function useWidgetHotkey({
   const handleHotkeyPress = useCallback(
     (event: HandyHotkeyEventPayload) => {
       if (isHotkeyCaptureActiveRef.current) {
+        cleanupHotkeyArmedRef.current = false;
         selectionHotkeyArmedRef.current = false;
         dispatch({ type: "RESET_HOTKEY_STATE" });
         return;
@@ -527,6 +528,7 @@ export function useWidgetHotkey({
     );
 
     return () => {
+      cleanupHotkeyArmedRef.current = false;
       selectionHotkeyArmedRef.current = false;
       unlistenSettings.then((unlisten) => unlisten());
       unlistenCaptureState.then((unlisten) => unlisten());

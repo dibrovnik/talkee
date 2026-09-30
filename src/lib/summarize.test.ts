@@ -179,3 +179,20 @@ describe("long text map-reduce processing", () => {
     );
   });
 });
+
+it("aborted text runners never start requests or local warm-up", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  for (const configured of [
+    settings({ llmApiKey: "key" }),
+    settings({
+      llmEndpoint: "http://127.0.0.1:8011/v1",
+      llmLocalModelId: "qwen3-1.7b-instruct-q4",
+    }),
+  ]) {
+    const backend = resolveSummaryBackend(configured);
+    await expect(
+      backend?.run({ text: "Hello", prompt: "Clean", signal: controller.signal }),
+    ).rejects.toThrow();
+  }
+});

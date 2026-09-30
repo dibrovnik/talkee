@@ -9,6 +9,7 @@ import {
   type AppSettings,
   type AppSettingsPatch,
   findPrompt,
+  getSelectedCleanupPrompt,
   getSettings,
   listPromptsByKind,
   saveSettings,
@@ -23,7 +24,7 @@ export function buildCleanupMenuModel(settings: AppSettings): CleanupMenuModel {
   return {
     enabled: settings.cleanupEnabled,
     presets: listPromptsByKind(settings, "cleanup").map(({ id, name }) => ({ id, name })),
-    selectedId: settings.selectedCleanupPromptId,
+    selectedId: getSelectedCleanupPrompt(settings).id,
   };
 }
 interface CleanupDependencies {
@@ -64,7 +65,7 @@ export function toggleCleanup(deps: Partial<CleanupDependencies> = {}): Promise<
     await d.notice(
       enabled
         ? tn("cleanup.on", {
-            style: findPrompt(settings, settings.selectedCleanupPromptId)?.name ?? settings.style,
+            style: getSelectedCleanupPrompt(settings).name,
           })
         : tn("cleanup.off"),
     );

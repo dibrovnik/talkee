@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { guardTranscriptionResult } from "../windows/widget/services/transcriptionGuard";
-import { type AppSettings, findPrompt } from "./store";
+import { type AppSettings, getSelectedCleanupPrompt } from "./store";
 import { type ResolvedSummaryBackend, resolveSummaryBackend } from "./summarize";
 
 export const CLEANUP_TIMEOUT_API_MS = 8000;
@@ -43,14 +43,13 @@ export async function cleanupDictation(
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const work = async (): Promise<string> => {
-      const preset = findPrompt(settings, settings.selectedCleanupPromptId);
-      const prompt =
-        preset && !preset.builtin
-          ? preset
-          : await invoke<{ prompt: string; temperature?: number }>("get_cleanup_prompt", {
-              language: settings.language,
-              style: settings.style,
-            });
+      const preset = getSelectedCleanupPrompt(settings);
+      const prompt = !preset.builtin
+        ? preset
+        : await invoke<{ prompt: string; temperature?: number }>("get_cleanup_prompt", {
+            language: settings.language,
+            style: settings.style,
+          });
       controller.signal.throwIfAborted();
       return (deps.run ?? backend.run)({
         text: raw,

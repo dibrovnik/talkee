@@ -1905,24 +1905,6 @@ export function Widget() {
           pointerEvents: "none",
         }}
       >
-        {cleanupEnabled && (state === "idle" || state === "recording") && (
-          <span
-            role="img"
-            aria-label={t("cleanup.indicator")}
-            title={t("cleanup.indicator")}
-            style={{
-              position: "absolute",
-              right: 2,
-              top: 2,
-              width: 5,
-              height: 5,
-              borderRadius: "50%",
-              background: "var(--accent)",
-              pointerEvents: "none",
-              zIndex: 2,
-            }}
-          />
-        )}
         <div
           style={{
             width: stackWidth,
@@ -1952,10 +1934,30 @@ export function Widget() {
           {!fileDropActive && (
             <div
               style={{
+                position: "relative",
                 marginInlineEnd: -WIDGET_PRIMARY_INLINE_INSET,
                 pointerEvents: "none",
               }}
             >
+              {cleanupEnabled &&
+                (displayWidgetState === "idle" || displayWidgetState === "recording") && (
+                  <span
+                    role="img"
+                    aria-label={t("cleanup.indicator")}
+                    title={t("cleanup.indicator")}
+                    style={{
+                      position: "absolute",
+                      right: 8,
+                      top: 2,
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      background: "var(--accent)",
+                      pointerEvents: "none",
+                      zIndex: 2,
+                    }}
+                  />
+                )}
               {displayWidgetState === "idle" && (
                 <IdlePill
                   latestCopyText={latestCopyText}

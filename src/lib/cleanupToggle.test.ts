@@ -56,3 +56,16 @@ test("all cleanup entry points share persisted state and model availability", as
   await selectCleanupPreset("tech", deps);
   expect(settings.style).toBe("tech");
 });
+
+test("custom cleanup presets and stale summary selections share a safe menu model", () => {
+  const settings = {
+    cleanupEnabled: true,
+    selectedCleanupPromptId: "mine",
+    prompts: [{ id: "mine", kind: "cleanup", name: "Custom", prompt: "Clean" }],
+  } as AppSettings;
+  expect(buildCleanupMenuModel(settings).presets).toContainEqual({ id: "mine", name: "Custom" });
+  expect(buildCleanupMenuModel(settings).selectedId).toBe("mine");
+  expect(
+    buildCleanupMenuModel({ ...settings, selectedCleanupPromptId: "summary-short" }).selectedId,
+  ).toBe("classic");
+});

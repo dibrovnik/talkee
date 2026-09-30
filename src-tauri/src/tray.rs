@@ -340,13 +340,9 @@ pub fn update_cleanup_menu(
     selected_id: String,
 ) -> Result<(), String> {
     let mut ids = std::collections::HashSet::new();
-    if presets.len() > 200
-        || presets.iter().any(|preset| {
-            preset.id.is_empty()
-                || preset.id.len() > 256
-                || preset.name.is_empty()
-                || !ids.insert(&preset.id)
-        })
+    if presets
+        .iter()
+        .any(|preset| preset.id.is_empty() || preset.name.is_empty() || !ids.insert(&preset.id))
     {
         return Err("Invalid cleanup presets".into());
     }

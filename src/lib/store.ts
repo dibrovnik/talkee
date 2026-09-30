@@ -1629,7 +1629,7 @@ export function findPrompt(
 
 export function getSelectedCleanupPrompt(settings: AppSettings): PromptPreset {
   const selected = findPrompt(settings, settings.selectedCleanupPromptId);
-  if (selected) return selected;
+  if (selected?.kind === "cleanup") return selected;
   const fallback = BUILTIN_PROMPTS.find((preset) => preset.id === DEFAULT_CLEANUP_PROMPT_ID);
   if (!fallback) {
     throw new Error("Default cleanup prompt is missing from BUILTIN_PROMPTS");

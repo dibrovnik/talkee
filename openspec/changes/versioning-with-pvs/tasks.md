@@ -2,10 +2,10 @@
 
 ## 1. Установка и конфигурация
 
-- [ ] 1.1 `bun add -d @dibrovnik/pvs@0.1.1 --exact`
-- [ ] 1.2 `src-tauri/tauri.conf.json`: `"version": "../package.json"` (design.md, решение 1)
-- [ ] 1.3 Проверить `grep -c '^version = ' src-tauri/Cargo.toml` = 2; создать `pvs.config.json` (design.md, решение 2)
-- [ ] 1.4 Проверка: `bunx pvs check` → exit 0; `bunx pvs bump patch --dry-run` показывает `package.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`; `bunx pvs bump minor --dry-run` не должен показывать один файл дважды
+- [x] 1.1 `bun add -d @dibrovnik/pvs@0.1.1 --exact`
+- [x] 1.2 `src-tauri/tauri.conf.json`: `"version": "../package.json"` (design.md, решение 1)
+- [x] 1.3 Проверить `grep -c '^version = ' src-tauri/Cargo.toml` = 2; создать `pvs.config.json` (design.md, решение 2)
+- [x] 1.4 Проверка: `bunx pvs check` → exit 0; `bunx pvs bump patch --dry-run` показывает `package.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`; `bunx pvs bump minor --dry-run` не должен показывать один файл дважды
 
 ## 2. Скрипты
 

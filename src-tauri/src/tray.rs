@@ -3,12 +3,14 @@ use crate::{
     commands::{dock, settings_window, widget},
     logger, shutdown,
 };
+use serde::{Deserialize, Serialize};
 use std::future::Future;
+use std::sync::Mutex;
 use tauri::{
     image::Image,
-    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
+    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu},
     tray::{TrayIcon, TrayIconBuilder},
-    App, AppHandle, Manager, Wry,
+    App, AppHandle, Emitter, Manager, Wry,
 };
 
 const TRAY_ID: &str = "talkee-main-tray";
@@ -33,10 +35,15 @@ const TRAY_QUIT_ID: &str = "talkee-tray-quit";
 struct TrayState {
     _tray: TrayIcon,
     dock_item: CheckMenuItem<Wry>,
+    cleanup_item: CheckMenuItem<Wry>,
+    cleanup_styles: Submenu<Wry>,
+    cleanup_presets: Mutex<Vec<CheckMenuItem<Wry>>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 enum TrayAction {
+    CleanupToggle,
+    CleanupSelect(String),
     Open,
     History,
     FileTranscription,
@@ -52,7 +59,11 @@ enum TrayAction {
 }
 
 fn tray_action(menu_id: &str) -> Option<TrayAction> {
+    if let Some(id) = menu_id.strip_prefix("talkee-cleanup-preset:") {
+        return Some(TrayAction::CleanupSelect(id.to_string()));
+    }
     match menu_id {
+        "talkee-cleanup-toggle" => Some(TrayAction::CleanupToggle),
         TRAY_OPEN_ID => Some(TrayAction::Open),
         TRAY_HISTORY_ID => Some(TrayAction::History),
         TRAY_FILE_ID => Some(TrayAction::FileTranscription),
@@ -161,6 +172,15 @@ pub fn setup(app: &App) -> tauri::Result<()> {
         true,
         Some("CmdOrCtrl+Q"),
     )?;
+    let cleanup_item = CheckMenuItem::with_id(
+        app,
+        "talkee-cleanup-toggle",
+        "ИИ-очистка текста",
+        true,
+        false,
+        None::<&str>,
+    )?;
+    let cleanup_styles = Submenu::new(app, "Стиль очистки", true)?;
     let menu = Menu::with_items(
         app,
         &[
@@ -172,6 +192,8 @@ pub fn setup(app: &App) -> tauri::Result<()> {
             &PredefinedMenuItem::separator(app)?,
             &models_item,
             &prompts_item,
+            &cleanup_item,
+            &cleanup_styles,
             &translator_item,
             &PredefinedMenuItem::separator(app)?,
             &settings_item,
@@ -189,6 +211,26 @@ pub fn setup(app: &App) -> tauri::Result<()> {
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match tray_action(event.id().as_ref()) {
+            Some(TrayAction::CleanupToggle) => {
+                let _ = app.emit_to(
+                    "widget",
+                    "tray-cleanup-action",
+                    CleanupAction {
+                        kind: "toggle",
+                        id: None,
+                    },
+                );
+            }
+            Some(TrayAction::CleanupSelect(id)) => {
+                let _ = app.emit_to(
+                    "widget",
+                    "tray-cleanup-action",
+                    CleanupAction {
+                        kind: "select",
+                        id: Some(id),
+                    },
+                );
+            }
             Some(TrayAction::Open) => open_talkee(app),
             Some(TrayAction::History) => open_settings_tab(app, "main"),
             Some(TrayAction::FileTranscription) => open_settings_tab(app, "file"),
@@ -212,6 +254,9 @@ pub fn setup(app: &App) -> tauri::Result<()> {
     app.manage(TrayState {
         _tray: tray,
         dock_item,
+        cleanup_item,
+        cleanup_styles,
+        cleanup_presets: Mutex::new(Vec::new()),
     });
     logger::log_info("TRAY", "System tray initialized");
     Ok(())
@@ -275,4 +320,65 @@ mod tests {
         assert_eq!(tray_action(TRAY_QUIT_ID), Some(TrayAction::Quit));
         assert_eq!(tray_action("unknown"), None);
     }
+}
+
+#[derive(Clone, Serialize)]
+struct CleanupAction {
+    kind: &'static str,
+    id: Option<String>,
+}
+#[derive(Deserialize)]
+pub struct CleanupPreset {
+    id: String,
+    name: String,
+}
+#[tauri::command]
+pub fn update_cleanup_menu(
+    app: AppHandle,
+    enabled: bool,
+    presets: Vec<CleanupPreset>,
+    selected_id: String,
+) -> Result<(), String> {
+    let mut ids = std::collections::HashSet::new();
+    if presets.len() > 200
+        || presets.iter().any(|preset| {
+            preset.id.is_empty()
+                || preset.id.len() > 256
+                || preset.name.is_empty()
+                || !ids.insert(&preset.id)
+        })
+    {
+        return Err("Invalid cleanup presets".into());
+    }
+    let state = app.state::<TrayState>();
+    let mut items = state
+        .cleanup_presets
+        .lock()
+        .map_err(|err| err.to_string())?;
+    for item in items.drain(..) {
+        state
+            .cleanup_styles
+            .remove(&item)
+            .map_err(|err| err.to_string())?;
+    }
+    for preset in presets {
+        let item = CheckMenuItem::with_id(
+            &app,
+            format!("talkee-cleanup-preset:{}", preset.id),
+            preset.name,
+            true,
+            preset.id == selected_id,
+            None::<&str>,
+        )
+        .map_err(|err| err.to_string())?;
+        state
+            .cleanup_styles
+            .append(&item)
+            .map_err(|err| err.to_string())?;
+        items.push(item);
+    }
+    state
+        .cleanup_item
+        .set_checked(enabled)
+        .map_err(|err| err.to_string())
 }

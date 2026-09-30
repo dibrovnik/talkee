@@ -7,6 +7,9 @@ license = "AGPL-3.0-or-later"
 edition = "2021"
 default-run = "talkee"
 
+[lints]
+workspace = true
+
 [workspace]
 members = ["sidecars/talkee-llm"]
 default-members = ["."]
@@ -16,6 +19,12 @@ resolver = "2"
 version = "0.4.8"
 edition = "2021"
 license = "AGPL-3.0-or-later"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
 
 [lib]
 name = "talkee_lib"

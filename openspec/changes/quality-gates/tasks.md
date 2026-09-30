@@ -2,11 +2,11 @@
 
 ## 1. Инструменты
 
-- [ ] 1.1 `bun add -d --exact @biomejs/biome lefthook @types/bun`
-- [ ] 1.2 Создать `biome.jsonc` (design.md, решение 1), сверив стиль кавычек/точек с запятой/ширины строки с текущим кодом
-- [ ] 1.3 Создать `tsconfig.test.json` (design.md, решение 2)
-- [ ] 1.4 Создать `src-tauri/rustfmt.toml`; добавить `[workspace.lints.*]` и `[lints] workspace = true` в `src-tauri/Cargo.toml` и `src-tauri/sidecars/talkee-llm/Cargo.toml` (design.md, решение 3)
-- [ ] 1.5 Проверка: `bunx biome --version`, `cargo fmt --version`, `cargo clippy --version`
+- [x] 1.1 `bun add -d --exact @biomejs/biome lefthook @types/bun`
+- [x] 1.2 Создать `biome.jsonc` (design.md, решение 1), сверив стиль кавычек/точек с запятой/ширины строки с текущим кодом
+- [x] 1.3 Создать `tsconfig.test.json` (design.md, решение 2)
+- [x] 1.4 Создать `src-tauri/rustfmt.toml`; добавить `[workspace.lints.*]` и `[lints] workspace = true` в `src-tauri/Cargo.toml` и `src-tauri/sidecars/talkee-llm/Cargo.toml` (design.md, решение 3)
+- [x] 1.5 Проверка: `bunx biome --version`, `cargo fmt --version`, `cargo clippy --version`
 
 ## 2. Нормализация кодовой базы (каждый пункт — отдельный коммит)
 

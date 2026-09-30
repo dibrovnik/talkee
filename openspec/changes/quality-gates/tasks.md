@@ -20,10 +20,10 @@
 
 ## 3. Команда gate
 
-- [ ] 3.1 Создать `scripts/gate.mjs` (design.md, решение 4), включая создание sidecar placeholder'ов
-- [ ] 3.2 Тест `scripts/gate.test.mjs`: порядок групп, остановка на первой ошибке, `--keep-going` (команды подменить на `true`/`false`)
-- [ ] 3.3 `package.json`: `gate`, `format`, `lint`; `check:release` = `bun run gate && bun run build`; удалить `smoke:hotkey`, `check` (заменён gate)
-- [ ] 3.4 Проверка: `bun run gate` → exit 0; намеренно сломать форматирование одного файла → gate падает на группе `format`; откатить
+- [x] 3.1 Создать `scripts/gate.mjs` (design.md, решение 4), включая создание sidecar placeholder'ов
+- [x] 3.2 Тест `scripts/gate.test.mjs`: порядок групп, остановка на первой ошибке, `--keep-going` (команды подменить на `true`/`false`)
+- [x] 3.3 `package.json`: `gate`, `format`, `lint`; `check:release` = `bun run gate && bun run build`; удалить `smoke:hotkey`, `check` (заменён gate)
+- [x] 3.4 Проверка: `bun run gate` → exit 0; намеренно сломать форматирование одного файла → gate падает на группе `format`; откатить
 
 ## 4. Хуки и CI
 

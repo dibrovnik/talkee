@@ -52,5 +52,5 @@
 - `bun test` — зелёный; 319 тестов на финальном gate, включая rollback/clear/conflicts третьей клавиши и старые записи истории.
 - Native debug build: `bun run tauri build --debug --no-bundle` — успешен. CUA в Talkee Dev подтвердил вкладку «Стиль», сохранение on/off, уведомления «включена · Разработка» / «выключена» и появление индикатора. Тестовое включение возвращено в off; исходный стиль tech не изменён.
 - Ручные 2.4, 3.5, 4.4 остаются открытыми: запись реального голоса и вставка не проверены; синтетическая глобальная клавиша CUA не дала handy-hotkey события; попытка правого клика CUA вернула `windowNotFoundAtPosition`. Одновременно работают production Talkee и Talkee Dev. Dev runner сообщает отсутствие стабильного Apple Development identity (ad-hoc signature), системные разрешения не изменялись. Требуется повторить три сценария в одном штатном подписанном экземпляре приложения. Запущенный для проверки Talkee Dev завершён штатно через меню; production Talkee не закрывался.
-- Финальный `bun run gate` — полностью зелёный, лог `/private/tmp/talkee-cleanup-final-gate2.log`; strict OpenSpec validation — зелёная.
+- Финальный `bun run gate` — полностью зелёный, лог `/private/tmp/talkee-cleanup-final-gate3.log`; strict OpenSpec validation — зелёная.
 - Новые скриншоты README/артефакты не создавались; чтение UI использовалось только для проверок.

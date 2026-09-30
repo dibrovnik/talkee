@@ -637,7 +637,7 @@ export function useWidgetController({
       ({ payload }) => {
         const work =
           payload.kind === "toggle" ? toggleCleanup() : selectCleanupPreset(payload.id ?? "");
-        void work.catch((error) => showError(String(error)));
+        void work.catch((error) => showError(String(error))).finally(updateMenu);
       },
     );
     void Promise.all([updates, actions]).then(() => updateMenu());

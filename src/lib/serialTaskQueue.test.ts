@@ -25,12 +25,7 @@ describe("createSerialTaskQueue", () => {
 
     releaseFirst?.();
     await Promise.all([first, second]);
-    expect(events).toEqual([
-      "first:start",
-      "first:end",
-      "second:start",
-      "second:end",
-    ]);
+    expect(events).toEqual(["first:start", "first:end", "second:start", "second:end"]);
   });
 
   test("continues after a failed task", async () => {

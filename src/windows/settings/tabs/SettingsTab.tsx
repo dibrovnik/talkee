@@ -1,4 +1,3 @@
-import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import {
@@ -7,25 +6,29 @@ import {
   isEnabled as isAutostartEnabled,
 } from "@tauri-apps/plugin-autostart";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import { useEffect, useRef, useState } from "react";
+import { DictationHotkeyControl } from "../../../components/DictationHotkeyControl";
+import { LANGUAGES } from "../../../config/languages";
+import { SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
+import { useI18n } from "../../../lib/i18n";
 import {
+  type Icon,
   IconCheck,
   IconChevronDown,
-  IconMail,
   IconDeviceDesktop,
+  IconMail,
   IconMoon,
   IconSearch,
   IconSun,
-  type Icon,
 } from "../../../lib/icons";
-
+import { logError, logInfo } from "../../../lib/logger";
 import {
+  type AppSettings,
+  type AppSettingsPatch,
   getSettings,
   mergeAppSettingsPatch,
   saveSettings,
-  AppSettings,
-  AppSettingsPatch,
 } from "../../../lib/store";
-import { DictationHotkeyControl } from "../../../components/DictationHotkeyControl";
 import { applyThemePreference } from "../../../lib/theme";
 import {
   formatWidgetScalePercent,
@@ -34,10 +37,6 @@ import {
   WIDGET_SCALE_MIN,
   WIDGET_SCALE_STEP,
 } from "../../../lib/widgetScale";
-import { SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
-import { logError, logInfo } from "../../../lib/logger";
-import { LANGUAGES } from "../../../config/languages";
-import { useI18n } from "../../../lib/i18n";
 
 const SETTING_ROW_COLUMNS = "minmax(0, 1fr) 280px";
 const SETTING_ROW_GAP = 16;
@@ -101,8 +100,7 @@ export function SettingsTab() {
   const [appDataDir, setAppDataDir] = useState("");
   const [supportFeedback, setSupportFeedback] = useState("");
 
-  type MicAvailabilityState =
-    "ready" | "missing-selected" | "permission-needed" | "empty";
+  type MicAvailabilityState = "ready" | "missing-selected" | "permission-needed" | "empty";
 
   useEffect(() => {
     getSettings({ reload: true }).then((s) => {
@@ -153,10 +151,7 @@ export function SettingsTab() {
 
     const fetchMics = async () => {
       try {
-        if (
-          !navigator.mediaDevices ||
-          !navigator.mediaDevices.enumerateDevices
-        ) {
+        if (!navigator.mediaDevices?.enumerateDevices) {
           void logInfo("SETTINGS", "Media devices API not available");
           setMicStatus("empty");
           setMicMessage(t("settingsGeneralExtra.mic.unavailableEnv"));
@@ -176,7 +171,9 @@ export function SettingsTab() {
               await new Promise((r) => setTimeout(r, 50));
               devices = await navigator.mediaDevices.enumerateDevices();
               mics = devices.filter((d) => d.kind === "audioinput");
-              stream.getTracks().forEach((t) => t.stop());
+              stream.getTracks().forEach((t) => {
+                t.stop();
+              });
             } catch (permitErr) {
               void logInfo(
                 "SETTINGS",
@@ -223,9 +220,7 @@ export function SettingsTab() {
           ? getMicrophoneLabel(selectedMic, uniqueMics.indexOf(selectedMic))
           : t("settings.mic.systemDefault");
         setMicStatus("ready");
-        setMicMessage(
-          t("settingsGeneralExtra.mic.inUse", { label: activeLabel }),
-        );
+        setMicMessage(t("settingsGeneralExtra.mic.inUse", { label: activeLabel }));
       } catch (err) {
         void logError(
           "SETTINGS",
@@ -247,26 +242,20 @@ export function SettingsTab() {
   // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(e.target as Node))
-        setLangOpen(false);
-      if (micRef.current && !micRef.current.contains(e.target as Node))
-        setMicOpen(false);
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
+      if (micRef.current && !micRef.current.contains(e.target as Node)) setMicOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const update = async (
-    patch: AppSettingsPatch,
-  ): Promise<AppSettings | null> => {
+  const update = async (patch: AppSettingsPatch): Promise<AppSettings | null> => {
     if (!settingsRef.current) return null;
     const s = mergeAppSettingsPatch(settingsRef.current, patch);
     settingsRef.current = s;
     setSettings(s);
     const scaleRequestId =
-      patch.widgetScale === undefined
-        ? null
-        : ++widgetScaleSaveRequestRef.current;
+      patch.widgetScale === undefined ? null : ++widgetScaleSaveRequestRef.current;
     if (scaleRequestId !== null) {
       void logInfo(
         "WIDGET_SCALE",
@@ -290,9 +279,7 @@ export function SettingsTab() {
   };
 
   const contactSupport = async (): Promise<void> => {
-    const subject = encodeURIComponent(
-      t("settingsGeneralExtra.support.mailSubject"),
-    );
+    const subject = encodeURIComponent(t("settingsGeneralExtra.support.mailSubject"));
     const body = encodeURIComponent(t("settingsGeneralExtra.support.mailBody"));
     const mailto = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
 
@@ -313,9 +300,7 @@ export function SettingsTab() {
           }),
         );
       } catch {
-        setSupportFeedback(
-          t("settingsGeneralExtra.support.writeUs", { email: SUPPORT_EMAIL }),
-        );
+        setSupportFeedback(t("settingsGeneralExtra.support.writeUs", { email: SUPPORT_EMAIL }));
       }
     }
   };
@@ -338,10 +323,7 @@ export function SettingsTab() {
       const confirmedEnabled = await isAutostartEnabled();
       setAutostartEnabled(confirmedEnabled);
       setAutostartLoaded(true);
-      void logInfo(
-        "SETTINGS",
-        `Autostart ${confirmedEnabled ? "enabled" : "disabled"}`,
-      );
+      void logInfo("SETTINGS", `Autostart ${confirmedEnabled ? "enabled" : "disabled"}`);
     } catch (error) {
       void logError(
         "SETTINGS",
@@ -354,9 +336,7 @@ export function SettingsTab() {
 
   const openAppDataDir = async (): Promise<void> => {
     try {
-      const dir =
-        appDataDir ||
-        (await invoke<string>("get_default_transcription_storage_dir"));
+      const dir = appDataDir || (await invoke<string>("get_default_transcription_storage_dir"));
       setAppDataDir(dir);
       await openPath(dir);
       void logInfo("SETTINGS", `Opened app data directory: ${dir}`);
@@ -370,9 +350,7 @@ export function SettingsTab() {
 
   const getMicrophoneLabel = (mic: MediaDeviceInfo, index: number): string => {
     const label = mic.label?.trim();
-    return label
-      ? label
-      : t("settingsGeneralExtra.mic.fallbackName", { index: index + 1 });
+    return label ? label : t("settingsGeneralExtra.mic.fallbackName", { index: index + 1 });
   };
 
   if (!settings) return null;
@@ -384,13 +362,9 @@ export function SettingsTab() {
       l.code.toLowerCase().includes(langSearch.toLowerCase()),
   );
   const currentLang = LANGUAGES.find((l) => l.code === settings.language);
-  const selectedMicrophone =
-    microphones.find((m) => m.deviceId === settings.micId) || null;
+  const selectedMicrophone = microphones.find((m) => m.deviceId === settings.micId) || null;
   const visibleMicrophoneLabel = selectedMicrophone
-    ? getMicrophoneLabel(
-        selectedMicrophone,
-        microphones.indexOf(selectedMicrophone),
-      )
+    ? getMicrophoneLabel(selectedMicrophone, microphones.indexOf(selectedMicrophone))
     : settings.micId
       ? t("settings.mic.systemDefault")
       : t("settings.mic.systemDefault");
@@ -459,9 +433,7 @@ export function SettingsTab() {
                       border: "none",
                       fontSize: CONTROL_FONT_SIZE,
                       fontWeight: active ? 700 : 500,
-                      background: active
-                        ? "var(--dropdown-active)"
-                        : "transparent",
+                      background: active ? "var(--dropdown-active)" : "transparent",
                       color: active ? "var(--text-hi)" : "var(--text-mid)",
                       cursor: "pointer",
                       transition: "background 0.15s ease, color 0.15s ease",
@@ -479,11 +451,7 @@ export function SettingsTab() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {t(
-                        code === "ru"
-                          ? "settings.uiLanguage.ru"
-                          : "settings.uiLanguage.en",
-                      )}
+                      {t(code === "ru" ? "settings.uiLanguage.ru" : "settings.uiLanguage.en")}
                     </span>
                   </button>
                 );
@@ -544,9 +512,7 @@ export function SettingsTab() {
                       border: "none",
                       fontSize: CONTROL_FONT_SIZE,
                       fontWeight: active ? 700 : 500,
-                      background: active
-                        ? "var(--dropdown-active)"
-                        : "transparent",
+                      background: active ? "var(--dropdown-active)" : "transparent",
                       color: active ? "var(--text-hi)" : "var(--text-mid)",
                       cursor: "pointer",
                       transition: "background 0.15s ease, color 0.15s ease",
@@ -556,11 +522,7 @@ export function SettingsTab() {
                       gap: 4,
                     }}
                   >
-                    <Icon
-                      size={13}
-                      stroke={active ? 2.2 : 1.7}
-                      style={{ flexShrink: 0 }}
-                    />
+                    <Icon size={13} stroke={active ? 2.2 : 1.7} style={{ flexShrink: 0 }} />
                     <span
                       style={{
                         minWidth: 0,
@@ -633,9 +595,7 @@ export function SettingsTab() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {currentLang
-                    ? `${currentLang.native} (${currentLang.name})`
-                    : settings.language}
+                  {currentLang ? `${currentLang.native} (${currentLang.name})` : settings.language}
                 </span>
                 <IconChevronDown
                   size={13}
@@ -674,17 +634,14 @@ export function SettingsTab() {
                       gap: 8,
                     }}
                   >
-                    <IconSearch
-                      size={13}
-                      style={{ color: "var(--text-low)", flexShrink: 0 }}
-                    />
+                    <IconSearch size={13} style={{ color: "var(--text-low)", flexShrink: 0 }} />
                     <input
-                      autoFocus
+                      ref={(el) => {
+                        el?.focus();
+                      }}
                       value={langSearch}
                       onChange={(e) => setLangSearch(e.target.value)}
-                      placeholder={t(
-                        "settings.recognitionLang.searchPlaceholder",
-                      )}
+                      placeholder={t("settings.recognitionLang.searchPlaceholder")}
                       style={{
                         border: "none",
                         outline: "none",
@@ -736,8 +693,7 @@ export function SettingsTab() {
                             transition: "background 0.1s",
                           }}
                           onMouseEnter={(e) =>
-                            (e.currentTarget.style.background =
-                              "var(--dropdown-hover)")
+                            (e.currentTarget.style.background = "var(--dropdown-hover)")
                           }
                           onMouseLeave={(e) =>
                             (e.currentTarget.style.background =
@@ -757,9 +713,7 @@ export function SettingsTab() {
                             {lang.code}
                           </span>
                           <span style={{ flex: 1 }}>{lang.native}</span>
-                          <span
-                            style={{ fontSize: 10, color: "var(--text-low)" }}
-                          >
+                          <span style={{ fontSize: 10, color: "var(--text-low)" }}>
                             {lang.name}
                           </span>
                           {settings.language === lang.code && (
@@ -819,11 +773,7 @@ export function SettingsTab() {
             >
               <button
                 onClick={() => {
-                  if (
-                    microphones.length === 0 ||
-                    micStatus === "permission-needed"
-                  )
-                    return;
+                  if (microphones.length === 0 || micStatus === "permission-needed") return;
                   setMicOpen((o) => !o);
                 }}
                 className="btn"
@@ -835,14 +785,9 @@ export function SettingsTab() {
                   padding: "0 10px",
                   borderRadius: CONTROL_RADIUS,
                   fontSize: CONTROL_FONT_SIZE,
-                  opacity:
-                    microphones.length === 0 ||
-                    micStatus === "permission-needed"
-                      ? 0.7
-                      : 1,
+                  opacity: microphones.length === 0 || micStatus === "permission-needed" ? 0.7 : 1,
                   cursor:
-                    microphones.length === 0 ||
-                    micStatus === "permission-needed"
+                    microphones.length === 0 || micStatus === "permission-needed"
                       ? "not-allowed"
                       : "pointer",
                 }}
@@ -903,25 +848,17 @@ export function SettingsTab() {
                         alignItems: "center",
                         justifyContent: "space-between",
                         background:
-                          settings.micId === ""
-                            ? "var(--dropdown-active)"
-                            : "transparent",
-                        color:
-                          settings.micId === ""
-                            ? "var(--text-hi)"
-                            : "var(--text-mid)",
+                          settings.micId === "" ? "var(--dropdown-active)" : "transparent",
+                        color: settings.micId === "" ? "var(--text-hi)" : "var(--text-mid)",
                         fontSize: 12,
                         transition: "background 0.1s",
                       }}
                       onMouseEnter={(e) =>
-                        (e.currentTarget.style.background =
-                          "var(--dropdown-hover)")
+                        (e.currentTarget.style.background = "var(--dropdown-hover)")
                       }
                       onMouseLeave={(e) =>
                         (e.currentTarget.style.background =
-                          settings.micId === ""
-                            ? "var(--dropdown-active)"
-                            : "transparent")
+                          settings.micId === "" ? "var(--dropdown-active)" : "transparent")
                       }
                     >
                       <span
@@ -962,15 +899,12 @@ export function SettingsTab() {
                               ? "var(--dropdown-active)"
                               : "transparent",
                           color:
-                            settings.micId === m.deviceId
-                              ? "var(--text-hi)"
-                              : "var(--text-mid)",
+                            settings.micId === m.deviceId ? "var(--text-hi)" : "var(--text-mid)",
                           fontSize: 12,
                           transition: "background 0.1s",
                         }}
                         onMouseEnter={(e) =>
-                          (e.currentTarget.style.background =
-                            "var(--dropdown-hover)")
+                          (e.currentTarget.style.background = "var(--dropdown-hover)")
                         }
                         onMouseLeave={(e) =>
                           (e.currentTarget.style.background =
@@ -1074,9 +1008,7 @@ export function SettingsTab() {
                 value={widgetScale}
                 onChange={(event) => {
                   void update({
-                    widgetScale: normalizeWidgetScale(
-                      Number(event.currentTarget.value),
-                    ),
+                    widgetScale: normalizeWidgetScale(Number(event.currentTarget.value)),
                   });
                 }}
                 aria-label={t("settings.widgetSize.aria")}
@@ -1162,9 +1094,7 @@ export function SettingsTab() {
                   minWidth: 0,
                 }}
               >
-                {autostartEnabled
-                  ? t("settings.autostart.on")
-                  : t("settings.autostart.off")}
+                {autostartEnabled ? t("settings.autostart.on") : t("settings.autostart.off")}
               </span>
               <span
                 aria-hidden="true"
@@ -1172,9 +1102,7 @@ export function SettingsTab() {
                   width: 34,
                   height: 20,
                   borderRadius: 999,
-                  background: autostartEnabled
-                    ? "var(--accent)"
-                    : "var(--switch-track)",
+                  background: autostartEnabled ? "var(--accent)" : "var(--switch-track)",
                   padding: 3,
                   position: "relative",
                   transition: "background 0.15s ease",
@@ -1191,9 +1119,7 @@ export function SettingsTab() {
                     borderRadius: "50%",
                     background: "var(--accent-contrast)",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
-                    transform: autostartEnabled
-                      ? "translateX(14px)"
-                      : "translateX(0)",
+                    transform: autostartEnabled ? "translateX(14px)" : "translateX(0)",
                     transition: "transform 0.18s ease",
                   }}
                 />
@@ -1241,8 +1167,7 @@ export function SettingsTab() {
               aria-describedby="realtime-transcription-description"
               onClick={() => {
                 void update({
-                  realtimeTranscriptionEnabled:
-                    !settings.realtimeTranscriptionEnabled,
+                  realtimeTranscriptionEnabled: !settings.realtimeTranscriptionEnabled,
                 });
               }}
               className="btn"
@@ -1282,9 +1207,7 @@ export function SettingsTab() {
                   width: 34,
                   height: 20,
                   borderRadius: 999,
-                  background: realtimeTranscriptionActive
-                    ? "var(--accent)"
-                    : "var(--switch-track)",
+                  background: realtimeTranscriptionActive ? "var(--accent)" : "var(--switch-track)",
                   padding: 3,
                   position: "relative",
                   transition: "background 0.15s ease",
@@ -1301,9 +1224,7 @@ export function SettingsTab() {
                     borderRadius: "50%",
                     background: "var(--accent-contrast)",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
-                    transform: realtimeTranscriptionActive
-                      ? "translateX(14px)"
-                      : "translateX(0)",
+                    transform: realtimeTranscriptionActive ? "translateX(14px)" : "translateX(0)",
                     transition: "transform 0.18s ease",
                   }}
                 />
@@ -1360,8 +1281,7 @@ export function SettingsTab() {
             style={{
               height: 40,
               padding: "8px 10px",
-              fontFamily:
-                "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
               fontSize: 11,
             }}
           />
@@ -1433,9 +1353,7 @@ export function SettingsTab() {
                   width: 34,
                   height: 20,
                   borderRadius: 999,
-                  background: settings.saveRecordingAudio
-                    ? "var(--accent)"
-                    : "var(--switch-track)",
+                  background: settings.saveRecordingAudio ? "var(--accent)" : "var(--switch-track)",
                   padding: 3,
                   position: "relative",
                   transition: "background 0.15s ease",
@@ -1452,9 +1370,7 @@ export function SettingsTab() {
                     borderRadius: "50%",
                     background: "var(--accent-contrast)",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
-                    transform: settings.saveRecordingAudio
-                      ? "translateX(14px)"
-                      : "translateX(0)",
+                    transform: settings.saveRecordingAudio ? "translateX(14px)" : "translateX(0)",
                     transition: "transform 0.18s ease",
                   }}
                 />

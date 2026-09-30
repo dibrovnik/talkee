@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  mergeAppSettingsPatch,
-  normalizeSavedSettings,
-  type AppSettings,
-} from "./store";
+import { type AppSettings, mergeAppSettingsPatch, normalizeSavedSettings } from "./store";
 
 describe("translation settings migration", () => {
   test("keeps dictation translation active without the legacy widget button", () => {

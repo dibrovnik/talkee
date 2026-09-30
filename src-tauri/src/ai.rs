@@ -310,18 +310,35 @@ fn resolve_streaming_transcription_url(whisper_url: &str) -> String {
     }
 }
 
-fn build_whisper_multipart_form(
+struct WhisperMultipartParams<'a> {
     audio_bytes: Vec<u8>,
-    file_name: &str,
-    mime_type: &str,
-    whisper_model: &str,
+    file_name: &'a str,
+    mime_type: &'a str,
+    whisper_model: &'a str,
     is_transcribe_model: bool,
     is_local_endpoint: bool,
     require_segments: bool,
     use_streaming: bool,
-    language: &str,
-    lang_param: &str,
+    language: &'a str,
+    lang_param: &'a str,
+}
+
+fn build_whisper_multipart_form(
+    params: WhisperMultipartParams<'_>,
 ) -> Result<multipart::Form, String> {
+    let WhisperMultipartParams {
+        audio_bytes,
+        file_name,
+        mime_type,
+        whisper_model,
+        is_transcribe_model,
+        is_local_endpoint,
+        require_segments,
+        use_streaming,
+        language,
+        lang_param,
+    } = params;
+
     let file_part = multipart::Part::bytes(audio_bytes)
         .file_name(file_name.to_string())
         .mime_str(mime_type)
@@ -868,18 +885,18 @@ async fn transcribe_audio_bytes_internal(
 
     let mut streaming_body: Option<WhisperResp> = None;
     if let Some(request_id) = live_streaming_request_id {
-        let form = build_whisper_multipart_form(
-            audio_bytes.clone(),
-            &file_name,
-            &mime_type,
-            &whisper_model,
+        let form = build_whisper_multipart_form(WhisperMultipartParams {
+            audio_bytes: audio_bytes.clone(),
+            file_name: &file_name,
+            mime_type: &mime_type,
+            whisper_model: &whisper_model,
             is_transcribe_model,
             is_local_endpoint,
             require_segments,
             use_streaming,
-            &req.language,
-            &lang_param,
-        )?;
+            language: &req.language,
+            lang_param: &lang_param,
+        })?;
 
         match send_local_streaming_transcription_request(
             &app,
@@ -918,18 +935,18 @@ async fn transcribe_audio_bytes_internal(
     let whisper_body: WhisperResp = if let Some(body) = streaming_body {
         body
     } else {
-        let form = build_whisper_multipart_form(
+        let form = build_whisper_multipart_form(WhisperMultipartParams {
             audio_bytes,
-            &file_name,
-            &mime_type,
-            &whisper_model,
+            file_name: &file_name,
+            mime_type: &mime_type,
+            whisper_model: &whisper_model,
             is_transcribe_model,
             is_local_endpoint,
             require_segments,
             use_streaming,
-            &req.language,
-            &lang_param,
-        )?;
+            language: &req.language,
+            lang_param: &lang_param,
+        })?;
 
         let mut whisper_request = stt_client.post(&whisper_url).multipart(form);
         if let Some(whisper_key) = whisper_key {

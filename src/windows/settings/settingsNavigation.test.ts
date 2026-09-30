@@ -1,9 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import {
-  isSettingsTab,
-  resolveInitialSettingsTab,
-} from "./settingsNavigation";
+import { isSettingsTab, resolveInitialSettingsTab } from "./settingsNavigation";
 
 describe("settings navigation", () => {
   it("exposes chat as a product settings tab", () => {

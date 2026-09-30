@@ -25,12 +25,14 @@ export interface TranscriptionStyleOption {
   description: string;
 }
 
-export const TRANSCRIPTION_STYLE_OPTIONS: TranscriptionStyleOption[] = config.styleOrder.map((id) => {
-  const style = config.styles[id];
+export const TRANSCRIPTION_STYLE_OPTIONS: TranscriptionStyleOption[] = config.styleOrder.map(
+  (id) => {
+    const style = config.styles[id];
 
-  return {
-    id: id as AppSettings["style"],
-    title: style.uiTitle,
-    description: style.uiDescription,
-  };
-});
+    return {
+      id: id as AppSettings["style"],
+      title: style.uiTitle,
+      description: style.uiDescription,
+    };
+  },
+);

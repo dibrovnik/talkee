@@ -1,19 +1,45 @@
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useState,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
-import type {
-  FocusEvent as ReactFocusEvent,
-  PointerEvent as ReactPointerEvent,
-  ReactElement,
-} from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import type {
+  ReactElement,
+  FocusEvent as ReactFocusEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  HistoryAudioTrack,
+  HistoryAudioTrackPlaceholder,
+} from "../../../components/HistoryAudioTrack";
+import { type RowActionItem, RowActionsMenu } from "../../../components/RowActionsMenu";
+import { SpeakerNameInput } from "../../../components/SpeakerNameInput";
+import { TranscriptionStatsPanel } from "../../../components/TranscriptionStatsPanel";
+import { retryCallCaptureHistoryEntry } from "../../../lib/callCapture";
+import { retryFileHistoryEntry } from "../../../lib/fileTranscription";
+import {
+  HISTORY_CLEARED_EVENT,
+  HISTORY_DELETED_EVENT,
+  HISTORY_UPDATED_EVENT,
+  PROCESSING_CANCEL_REQUEST_EVENT,
+  type ProcessingCancelRequestPayload,
+  SETTINGS_UPDATED_EVENT,
+  WIDGET_RETRY_PROCESSING_EVENT,
+  type WidgetRetryProcessingPayload,
+} from "../../../lib/hotkeyEvents";
+import { type MsgKey, type TFunc, type UiLanguage, useI18n } from "../../../lib/i18n";
+import {
+  IconAlertCircle,
+  IconCheck,
+  IconCopy,
+  IconHelpCircle,
+  IconListCheck,
+  IconLoader2,
+  IconPencil,
+  IconRotate2,
+  IconSquare,
+  IconTrash,
+} from "../../../lib/icons";
+import { logError, logInfo } from "../../../lib/logger";
+import { cancelProcessing } from "../../../lib/processingControl";
 import {
   clearHistory,
   DEFAULT_HOTKEY,
@@ -22,58 +48,16 @@ import {
   getHistoryEntry,
   getHistoryIndex,
   getSettings,
-  toHistoryListEntry,
-  updateHistoryEntry,
   type HistoryEntry,
   type HistoryListEntry,
   type Speaker,
   type SpeakerTranscriptSegment,
+  toHistoryListEntry,
+  updateHistoryEntry,
 } from "../../../lib/store";
-import {
-  IconAlertCircle,
-  IconCheck,
-  IconCopy,
-  IconHelpCircle,
-  IconLoader2,
-  IconListCheck,
-  IconPencil,
-  IconRotate2,
-  IconSquare,
-  IconTrash,
-} from "../../../lib/icons";
-import {
-  HISTORY_CLEARED_EVENT,
-  HISTORY_DELETED_EVENT,
-  HISTORY_UPDATED_EVENT,
-  PROCESSING_CANCEL_REQUEST_EVENT,
-  SETTINGS_UPDATED_EVENT,
-  WIDGET_RETRY_PROCESSING_EVENT,
-  type ProcessingCancelRequestPayload,
-  type WidgetRetryProcessingPayload,
-} from "../../../lib/hotkeyEvents";
 import { isSummaryAvailable } from "../../../lib/summarize";
-import { retryCallCaptureHistoryEntry } from "../../../lib/callCapture";
-import { retryFileHistoryEntry } from "../../../lib/fileTranscription";
-import { cancelProcessing } from "../../../lib/processingControl";
 import { formatDurationMs } from "../../../lib/utils";
-import { logError, logInfo } from "../../../lib/logger";
-import { TranscriptionStatsPanel } from "../../../components/TranscriptionStatsPanel";
-import {
-  RowActionsMenu,
-  type RowActionItem,
-} from "../../../components/RowActionsMenu";
-import {
-  HistoryAudioTrack,
-  HistoryAudioTrackPlaceholder,
-} from "../../../components/HistoryAudioTrack";
-import { SpeakerNameInput } from "../../../components/SpeakerNameInput";
 import { retryHistoryEntry } from "../../widget/services/transcriptionPipeline";
-import {
-  useI18n,
-  type TFunc,
-  type UiLanguage,
-  type MsgKey,
-} from "../../../lib/i18n";
 
 const LazySummaryModal = lazy(() =>
   import("../../../components/SummaryModal").then((module) => ({
@@ -127,29 +111,19 @@ const MAIN_HERO_SLIDES = [
   actionKey: MsgKey;
 }[];
 
-function getHistorySource(entry: {
-  source?: HistoryEntry["source"];
-}): HistorySource {
-  if (
-    entry.source === "file" ||
-    entry.source === "call" ||
-    entry.source === "liveTranslation"
-  ) {
+function getHistorySource(entry: { source?: HistoryEntry["source"] }): HistorySource {
+  if (entry.source === "file" || entry.source === "call" || entry.source === "liveTranslation") {
     return entry.source;
   }
 
   return "voice";
 }
 
-function isHistoryListEntry(
-  entry: HistoryListEntry | HistoryEntry,
-): entry is HistoryListEntry {
+function isHistoryListEntry(entry: HistoryListEntry | HistoryEntry): entry is HistoryListEntry {
   return "textPreview" in entry;
 }
 
-function toInitialHistoryListEntry(
-  entry: HistoryListEntry | HistoryEntry,
-): HistoryListEntry {
+function toInitialHistoryListEntry(entry: HistoryListEntry | HistoryEntry): HistoryListEntry {
   return isHistoryListEntry(entry) ? entry : toHistoryListEntry(entry);
 }
 
@@ -203,6 +177,7 @@ function SpeakerHistoryTranscript({
     <div style={{ display: "grid", gap: 8 }}>
       {segments.map((segment, index) => (
         <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: segments can share a start time; the index keeps the key unique.
           key={`${segment.start}-${index}`}
           style={{
             display: "grid",
@@ -217,8 +192,7 @@ function SpeakerHistoryTranscript({
             style={{
               fontSize: 12,
               color: "var(--text-low)",
-              fontFamily:
-                "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
             }}
           >
             {formatTimestamp(segment.start)}
@@ -276,12 +250,9 @@ function ExpandableHistoryText({
   const { t } = useI18n();
   const speakerSegments = segments?.length ? segments : null;
   const textTooLong = (textLength ?? text.length) > HISTORY_TEXT_PREVIEW_LIMIT;
-  const shouldCollapse =
-    textTooLong || Boolean(speakerSegments) || Boolean(hasSpeakerTranscript);
+  const shouldCollapse = textTooLong || Boolean(speakerSegments) || Boolean(hasSpeakerTranscript);
   const visibleText =
-    textTooLong && !expanded
-      ? `${text.slice(0, HISTORY_TEXT_PREVIEW_LIMIT).trimEnd()}...`
-      : text;
+    textTooLong && !expanded ? `${text.slice(0, HISTORY_TEXT_PREVIEW_LIMIT).trimEnd()}...` : text;
 
   return (
     <div
@@ -350,19 +321,13 @@ function ExpandableHistoryText({
 function formatDayLabel(timestamp: string, t: TFunc, lang: UiLanguage): string {
   const entryDate = new Date(timestamp);
   const today = new Date();
-  const startOfToday = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const startOfEntryDay = new Date(
     entryDate.getFullYear(),
     entryDate.getMonth(),
     entryDate.getDate(),
   );
-  const diffDays = Math.round(
-    (startOfToday.getTime() - startOfEntryDay.getTime()) / 86400000,
-  );
+  const diffDays = Math.round((startOfToday.getTime() - startOfEntryDay.getTime()) / 86400000);
 
   if (diffDays === 0) return t("mainTab.day.today");
   if (diffDays === 1) return t("mainTab.day.yesterday");
@@ -385,31 +350,21 @@ export function MainTab({
   const [copied, setCopied] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [retrySucceededId, setRetrySucceededId] = useState<string | null>(null);
-  const [hotkeyLabel, setHotkeyLabel] = useState(
-    formatHotkeyLabel(DEFAULT_HOTKEY),
-  );
+  const [hotkeyLabel, setHotkeyLabel] = useState(formatHotkeyLabel(DEFAULT_HOTKEY));
   const [isClearArmed, setIsClearArmed] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
-  const [visibleHistoryLimit, setVisibleHistoryLimit] = useState(
-    HISTORY_INITIAL_RENDER_LIMIT,
-  );
+  const [visibleHistoryLimit, setVisibleHistoryLimit] = useState(HISTORY_INITIAL_RENDER_LIMIT);
   const [hintHelpOpen, setHintHelpOpen] = useState(false);
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
   const [heroHasAdvanced, setHeroHasAdvanced] = useState(false);
   const [heroPaused, setHeroPaused] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
-  const [editingSpeakerEntryId, setEditingSpeakerEntryId] = useState<
-    string | null
-  >(null);
+  const [editingSpeakerEntryId, setEditingSpeakerEntryId] = useState<string | null>(null);
   const [summaryEntry, setSummaryEntry] = useState<HistoryEntry | null>(null);
   const [summaryAvailable, setSummaryAvailable] = useState(false);
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
-  const [fullEntryCache, setFullEntryCache] = useState<
-    Map<string, HistoryEntry>
-  >(() => new Map());
-  const [loadingFullEntryIds, setLoadingFullEntryIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [fullEntryCache, setFullEntryCache] = useState<Map<string, HistoryEntry>>(() => new Map());
+  const [loadingFullEntryIds, setLoadingFullEntryIds] = useState<Set<string>>(() => new Set());
   const heroPointerStartX = useRef<number | null>(null);
   const focusedRowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
   const expandedIdsRef = useRef(expandedIds);
@@ -496,69 +451,51 @@ export function MainTab({
     void loadHistoryIndex();
     void syncHotkeyLabel();
 
-    const unlistenHistory = listen<HistoryEntry>(
-      HISTORY_UPDATED_EVENT,
-      ({ payload }) => {
-        if (!payload?.id) {
-          void loadHistoryIndex();
-          return;
+    const unlistenHistory = listen<HistoryEntry>(HISTORY_UPDATED_EVENT, ({ payload }) => {
+      if (!payload?.id) {
+        void loadHistoryIndex();
+        return;
+      }
+
+      const listEntry = toHistoryListEntry(payload);
+      setHistory((current) => {
+        const existingIndex = current.findIndex((entry) => entry.id === listEntry.id);
+        if (existingIndex === -1) {
+          return [listEntry, ...current];
         }
 
-        const listEntry = toHistoryListEntry(payload);
-        setHistory((current) => {
-          const existingIndex = current.findIndex(
-            (entry) => entry.id === listEntry.id,
-          );
-          if (existingIndex === -1) {
-            return [listEntry, ...current];
-          }
+        const next = [...current];
+        next[existingIndex] = listEntry;
+        return next;
+      });
 
-          const next = [...current];
-          next[existingIndex] = listEntry;
-          return next;
-        });
+      const shouldKeepFullEntry =
+        expandedIdsRef.current.has(payload.id) ||
+        summaryEntryRef.current?.id === payload.id ||
+        Boolean(activeAudioIdRef.current?.startsWith(`${payload.id}:`));
+      if (shouldKeepFullEntry) {
+        setFullEntryCache((current) => addFullEntryToCache(current, payload));
+      }
+      setSummaryEntry((current) => (current?.id === payload.id ? payload : current));
+    });
 
-        const shouldKeepFullEntry =
-          expandedIdsRef.current.has(payload.id) ||
-          summaryEntryRef.current?.id === payload.id ||
-          Boolean(activeAudioIdRef.current?.startsWith(`${payload.id}:`));
-        if (shouldKeepFullEntry) {
-          setFullEntryCache((current) => addFullEntryToCache(current, payload));
-        }
-        setSummaryEntry((current) =>
-          current?.id === payload.id ? payload : current,
-        );
-      },
-    );
+    const unlistenDeleted = listen<{ id: string }>(HISTORY_DELETED_EVENT, ({ payload }) => {
+      if (!payload?.id) {
+        void loadHistoryIndex();
+        return;
+      }
 
-    const unlistenDeleted = listen<{ id: string }>(
-      HISTORY_DELETED_EVENT,
-      ({ payload }) => {
-        if (!payload?.id) {
-          void loadHistoryIndex();
-          return;
-        }
-
-        setHistory((current) =>
-          current.filter((entry) => entry.id !== payload.id),
-        );
-        setFullEntryCache((current) => {
-          if (!current.has(payload.id)) return current;
-          const next = new Map(current);
-          next.delete(payload.id);
-          return next;
-        });
-        setActiveAudioId((current) =>
-          current?.startsWith(`${payload.id}:`) ? null : current,
-        );
-        setEditingSpeakerEntryId((current) =>
-          current === payload.id ? null : current,
-        );
-        setSummaryEntry((current) =>
-          current?.id === payload.id ? null : current,
-        );
-      },
-    );
+      setHistory((current) => current.filter((entry) => entry.id !== payload.id));
+      setFullEntryCache((current) => {
+        if (!current.has(payload.id)) return current;
+        const next = new Map(current);
+        next.delete(payload.id);
+        return next;
+      });
+      setActiveAudioId((current) => (current?.startsWith(`${payload.id}:`) ? null : current));
+      setEditingSpeakerEntryId((current) => (current === payload.id ? null : current));
+      setSummaryEntry((current) => (current?.id === payload.id ? null : current));
+    });
 
     const unlistenCleared = listen(HISTORY_CLEARED_EVENT, () => {
       setHistory([]);
@@ -601,9 +538,7 @@ export function MainTab({
         setHeroSlideIndex((current) => (current + 1) % MAIN_HERO_SLIDES.length);
         setHeroHasAdvanced(true);
       },
-      heroHasAdvanced
-        ? MAIN_HERO_SLIDE_DELAY_MS
-        : MAIN_HERO_FIRST_SLIDE_DELAY_MS,
+      heroHasAdvanced ? MAIN_HERO_SLIDE_DELAY_MS : MAIN_HERO_FIRST_SLIDE_DELAY_MS,
     );
 
     return () => window.clearTimeout(timeout);
@@ -617,9 +552,7 @@ export function MainTab({
       return;
     }
 
-    const focusedIndex = history.findIndex(
-      (entry) => entry.id === focusedEntryId,
-    );
+    const focusedIndex = history.findIndex((entry) => entry.id === focusedEntryId);
     if (focusedIndex >= visibleHistoryLimit) {
       setVisibleHistoryLimit(focusedIndex + 1);
       return;
@@ -633,13 +566,7 @@ export function MainTab({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [
-    focusedEntryId,
-    focusedEntryNonce,
-    history,
-    historyFilter,
-    visibleHistoryLimit,
-  ]);
+  }, [focusedEntryId, focusedEntryNonce, history, historyFilter, visibleHistoryLimit]);
 
   useEffect(() => {
     setVisibleHistoryLimit(HISTORY_INITIAL_RENDER_LIMIT);
@@ -654,9 +581,7 @@ export function MainTab({
       next.delete(id);
       return next;
     });
-    setActiveAudioId((current) =>
-      current?.startsWith(`${id}:`) ? null : current,
-    );
+    setActiveAudioId((current) => (current?.startsWith(`${id}:`) ? null : current));
     setEditingSpeakerEntryId((current) => (current === id ? null : current));
     setSummaryEntry((current) => (current?.id === id ? null : current));
     await emit(HISTORY_DELETED_EVENT, { id });
@@ -683,10 +608,7 @@ export function MainTab({
   const copyText = async (id: string, text: string) => {
     await navigator.clipboard.writeText(text);
     setCopied(id);
-    setTimeout(
-      () => setCopied((current) => (current === id ? null : current)),
-      1500,
-    );
+    setTimeout(() => setCopied((current) => (current === id ? null : current)), 1500);
   };
 
   const copyEntryText = async (id: string): Promise<void> => {
@@ -697,9 +619,7 @@ export function MainTab({
   };
 
   const contactSupport = async (): Promise<void> => {
-    const subject = encodeURIComponent(
-      t("settingsGeneralExtra.support.mailSubject"),
-    );
+    const subject = encodeURIComponent(t("settingsGeneralExtra.support.mailSubject"));
     const body = encodeURIComponent(t("settingsGeneralExtra.support.mailBody"));
     const mailto = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
 
@@ -735,9 +655,7 @@ export function MainTab({
       next.add(entry.id);
       return next;
     });
-    setEditingSpeakerEntryId((current) =>
-      current === entry.id ? null : entry.id,
-    );
+    setEditingSpeakerEntryId((current) => (current === entry.id ? null : entry.id));
   };
 
   const toggleExpanded = (id: string): void => {
@@ -772,17 +690,13 @@ export function MainTab({
   ): Promise<void> => {
     if (!entry.segments?.length || !entry.speakers?.length) return;
 
-    const currentSpeaker = entry.speakers.find(
-      (speaker) => speaker.id === speakerId,
-    );
+    const currentSpeaker = entry.speakers.find((speaker) => speaker.id === speakerId);
     const nextLabel = label.trim() || currentSpeaker?.label || "";
     const nextSpeakers = entry.speakers.map((speaker) =>
       speaker.id === speakerId ? { ...speaker, label: nextLabel } : speaker,
     );
     const nextSegments = entry.segments.map((segment) =>
-      segment.speakerId === speakerId
-        ? { ...segment, speakerLabel: nextLabel }
-        : segment,
+      segment.speakerId === speakerId ? { ...segment, speakerLabel: nextLabel } : segment,
     );
     const nextText = formatSpeakerTranscript(nextSegments);
     const nextEntry: HistoryEntry = {
@@ -795,14 +709,10 @@ export function MainTab({
     };
 
     setHistory((current) =>
-      current.map((item) =>
-        item.id === entry.id ? toHistoryListEntry(nextEntry) : item,
-      ),
+      current.map((item) => (item.id === entry.id ? toHistoryListEntry(nextEntry) : item)),
     );
     rememberFullEntry(nextEntry);
-    setSummaryEntry((current) =>
-      current?.id === nextEntry.id ? nextEntry : current,
-    );
+    setSummaryEntry((current) => (current?.id === nextEntry.id ? nextEntry : current));
     await updateHistoryEntry(nextEntry);
     await emit(HISTORY_UPDATED_EVENT, nextEntry);
   };
@@ -832,13 +742,10 @@ export function MainTab({
       }
       setRetrySucceededId(entry.id);
       setTimeout(() => {
-        setRetrySucceededId((current) =>
-          current === entry.id ? null : current,
-        );
+        setRetrySucceededId((current) => (current === entry.id ? null : current));
       }, 1800);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : t("mainTab.retryFailed");
+      const message = error instanceof Error ? error.message : t("mainTab.retryFailed");
 
       setHistory((current) =>
         current.map((item) =>
@@ -862,14 +769,11 @@ export function MainTab({
       });
     } finally {
       if (source === "voice" || source === "call") {
-        await emit<WidgetRetryProcessingPayload>(
-          WIDGET_RETRY_PROCESSING_EVENT,
-          {
-            active: false,
-            source,
-            entryId: entry.id,
-          },
-        );
+        await emit<WidgetRetryProcessingPayload>(WIDGET_RETRY_PROCESSING_EVENT, {
+          active: false,
+          source,
+          entryId: entry.id,
+        });
       }
       setRetryingId((current) => (current === entry.id ? null : current));
     }
@@ -891,7 +795,7 @@ export function MainTab({
     );
     setFullEntryCache((current) => {
       const cached = current.get(id);
-      if (!cached || cached.status !== "processing") return current;
+      if (cached?.status !== "processing") return current;
       return addFullEntryToCache(current, {
         ...cached,
         status: "interrupted",
@@ -901,12 +805,9 @@ export function MainTab({
 
     // Broadcast a stop request: the widget cancels fresh recordings, this window
     // cancels in-window retries. Whichever process owns the job aborts it.
-    await emit<ProcessingCancelRequestPayload>(
-      PROCESSING_CANCEL_REQUEST_EVENT,
-      {
-        entryId: id,
-      },
-    );
+    await emit<ProcessingCancelRequestPayload>(PROCESSING_CANCEL_REQUEST_EVENT, {
+      entryId: id,
+    });
   };
 
   const filteredHistory = useMemo<HistoryListEntry[]>(() => {
@@ -946,15 +847,12 @@ export function MainTab({
 
   const hiddenHistoryCount = filteredHistory.length - visibleHistory.length;
 
-  const activeHeroSlide =
-    MAIN_HERO_SLIDES[heroSlideIndex] ?? MAIN_HERO_SLIDES[0];
+  const activeHeroSlide = MAIN_HERO_SLIDES[heroSlideIndex] ?? MAIN_HERO_SLIDES[0];
   const isSupportHeroSlide = activeHeroSlide.id === "support";
 
   const showAdjacentHeroSlide = (direction: 1 | -1): void => {
     setHeroSlideIndex(
-      (current) =>
-        (current + direction + MAIN_HERO_SLIDES.length) %
-        MAIN_HERO_SLIDES.length,
+      (current) => (current + direction + MAIN_HERO_SLIDES.length) % MAIN_HERO_SLIDES.length,
     );
     setHeroHasAdvanced(true);
   };
@@ -968,9 +866,7 @@ export function MainTab({
     setHintHelpOpen((value) => !value);
   };
 
-  const handleHeroPointerDown = (
-    event: ReactPointerEvent<HTMLElement>,
-  ): void => {
+  const handleHeroPointerDown = (event: ReactPointerEvent<HTMLElement>): void => {
     if (event.pointerType === "mouse" && event.button !== 0) {
       return;
     }
@@ -1001,6 +897,7 @@ export function MainTab({
   };
 
   const heroHintFooter = (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the handlers only pause/resume the hero carousel on hover, focus and pointer drag.
     <div
       onMouseEnter={() => setHeroPaused(true)}
       onMouseLeave={() => setHeroPaused(false)}
@@ -1176,11 +1073,7 @@ export function MainTab({
               }}
               className={isClearArmed ? "btn btn-danger" : "btn"}
               style={{ minHeight: 34, padding: "0 12px" }}
-              title={
-                isClearArmed
-                  ? t("mainTab.clearAllConfirmTitle")
-                  : t("mainTab.clearAllTitle")
-              }
+              title={isClearArmed ? t("mainTab.clearAllConfirmTitle") : t("mainTab.clearAllTitle")}
             >
               <IconTrash size={12} stroke={2} />{" "}
               {isClearArmed ? t("mainTab.confirm") : t("mainTab.clear")}
@@ -1222,9 +1115,7 @@ export function MainTab({
                       border: "none",
                       fontSize: 12,
                       fontWeight: active ? 700 : 500,
-                      background: active
-                        ? "var(--dropdown-active)"
-                        : "transparent",
+                      background: active ? "var(--dropdown-active)" : "transparent",
                       color: active ? "var(--text-hi)" : "var(--text-mid)",
                       cursor: "pointer",
                     }}
@@ -1280,8 +1171,7 @@ export function MainTab({
                   lineHeight: 1.7,
                 }}
               >
-                {t("mainTab.emptyHintBefore")} <b>{hotkeyLabel}</b>{" "}
-                {t("mainTab.emptyHintAfter")}
+                {t("mainTab.emptyHintBefore")} <b>{hotkeyLabel}</b> {t("mainTab.emptyHintAfter")}
               </p>
             </div>
           ) : filteredHistory.length === 0 ? (
@@ -1315,16 +1205,11 @@ export function MainTab({
                   <div className="label" style={{ paddingLeft: 4 }}>
                     {group.label}
                   </div>
-                  <table
-                    className="b-table"
-                    style={{ background: "transparent" }}
-                  >
+                  <table className="b-table" style={{ background: "transparent" }}>
                     <thead>
                       <tr>
                         <th style={{ width: 108 }}>{t("mainTab.colTime")}</th>
-                        <th style={{ paddingLeft: 8 }}>
-                          {t("mainTab.colText")}
-                        </th>
+                        <th style={{ paddingLeft: 8 }}>{t("mainTab.colText")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1332,17 +1217,11 @@ export function MainTab({
                         const source = getHistorySource(item);
                         const fullEntry = fullEntryCache.get(item.id);
                         const isExpanded = expandedIds.has(item.id);
-                        const isLoadingFullEntry = loadingFullEntryIds.has(
-                          item.id,
-                        );
+                        const isLoadingFullEntry = loadingFullEntryIds.has(item.id);
                         const displayText =
-                          isExpanded && fullEntry
-                            ? fullEntry.cleaned
-                            : item.textPreview;
+                          isExpanded && fullEntry ? fullEntry.cleaned : item.textPreview;
                         const displayTextLength =
-                          isExpanded && fullEntry
-                            ? fullEntry.cleaned.length
-                            : item.textLength;
+                          isExpanded && fullEntry ? fullEntry.cleaned.length : item.textLength;
 
                         return (
                           <tr
@@ -1359,9 +1238,7 @@ export function MainTab({
                             }}
                             style={{
                               background:
-                                focusedEntryId === item.id
-                                  ? "rgba(0,0,0,0.04)"
-                                  : "transparent",
+                                focusedEntryId === item.id ? "rgba(0,0,0,0.04)" : "transparent",
                               borderBottom:
                                 index < group.items.length - 1
                                   ? "1px solid var(--table-row-border)"
@@ -1384,13 +1261,10 @@ export function MainTab({
                                 }}
                               >
                                 <span style={{ whiteSpace: "nowrap" }}>
-                                  {new Date(item.timestamp).toLocaleTimeString(
-                                    "ru-RU",
-                                    {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    },
-                                  )}
+                                  {new Date(item.timestamp).toLocaleTimeString("ru-RU", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
                                 </span>
                                 {item.processingTime != null && (
                                   <span
@@ -1401,10 +1275,7 @@ export function MainTab({
                                       whiteSpace: "nowrap",
                                     }}
                                   >
-                                    {formatDurationMs(
-                                      item.processingTime,
-                                      lang,
-                                    )}
+                                    {formatDurationMs(item.processingTime, lang)}
                                   </span>
                                 )}
                                 {historyFilter === "all" && (
@@ -1425,9 +1296,7 @@ export function MainTab({
                                 )}
                               </div>
                             </td>
-                            <td
-                              style={{ verticalAlign: "top", paddingLeft: 8 }}
-                            >
+                            <td style={{ verticalAlign: "top", paddingLeft: 8 }}>
                               <div
                                 style={{
                                   display: "flex",
@@ -1444,8 +1313,7 @@ export function MainTab({
                                     gap: 8,
                                   }}
                                 >
-                                  {item.status === "recording" ||
-                                  item.status === "processing" ? (
+                                  {item.status === "recording" || item.status === "processing" ? (
                                     <>
                                       {displayText ? (
                                         <ExpandableHistoryText
@@ -1456,9 +1324,7 @@ export function MainTab({
                                           editing={false}
                                           loading={false}
                                           onSpeakerRename={() => {}}
-                                          onToggle={() =>
-                                            toggleExpanded(item.id)
-                                          }
+                                          onToggle={() => toggleExpanded(item.id)}
                                         />
                                       ) : null}
                                       {item.errorMessage ? (
@@ -1473,8 +1339,7 @@ export function MainTab({
                                         </div>
                                       ) : null}
                                     </>
-                                  ) : item.status === "failed" ||
-                                    item.status === "interrupted" ? (
+                                  ) : item.status === "failed" || item.status === "interrupted" ? (
                                     <>
                                       <div
                                         style={{
@@ -1484,8 +1349,7 @@ export function MainTab({
                                           padding: "6px 10px",
                                           borderRadius: 999,
                                           background: "var(--danger-soft)",
-                                          border:
-                                            "1px solid var(--danger-border)",
+                                          border: "1px solid var(--danger-border)",
                                           color: "var(--danger)",
                                           fontSize: 12,
                                           lineHeight: 1.4,
@@ -1507,39 +1371,22 @@ export function MainTab({
                                           wordBreak: "break-word",
                                         }}
                                       >
-                                        {item.errorMessage ||
-                                          t("mainTab.audioSavedLocally")}
+                                        {item.errorMessage || t("mainTab.audioSavedLocally")}
                                       </div>
                                     </>
                                   ) : (
                                     <ExpandableHistoryText
                                       text={displayText}
                                       textLength={displayTextLength}
-                                      hasSpeakerTranscript={
-                                        item.mode === "speakers"
-                                      }
+                                      hasSpeakerTranscript={item.mode === "speakers"}
                                       speakers={fullEntry?.speakers}
-                                      segments={
-                                        isExpanded
-                                          ? fullEntry?.segments
-                                          : undefined
-                                      }
+                                      segments={isExpanded ? fullEntry?.segments : undefined}
                                       expanded={isExpanded}
-                                      editing={
-                                        editingSpeakerEntryId === item.id
-                                      }
-                                      loading={
-                                        isExpanded &&
-                                        isLoadingFullEntry &&
-                                        !fullEntry
-                                      }
+                                      editing={editingSpeakerEntryId === item.id}
+                                      loading={isExpanded && isLoadingFullEntry && !fullEntry}
                                       onSpeakerRename={(speakerId, label) => {
                                         if (fullEntry) {
-                                          return renameSpeaker(
-                                            fullEntry,
-                                            speakerId,
-                                            label,
-                                          );
+                                          return renameSpeaker(fullEntry, speakerId, label);
                                         }
                                       }}
                                       onToggle={() => toggleExpanded(item.id)}
@@ -1582,10 +1429,7 @@ export function MainTab({
                                   }}
                                 >
                                   {item.status === "recording" ? (
-                                    <span
-                                      aria-hidden="true"
-                                      style={{ width: 32, height: 32 }}
-                                    />
+                                    <span aria-hidden="true" style={{ width: 32, height: 32 }} />
                                   ) : item.status === "processing" ? (
                                     <button
                                       onClick={() => cancelEntry(item.id)}
@@ -1601,19 +1445,12 @@ export function MainTab({
                                       }}
                                       title={t("mainTab.stopProcessing")}
                                     >
-                                      <IconSquare
-                                        size={11}
-                                        stroke={2}
-                                        fill="currentColor"
-                                      />
+                                      <IconSquare size={11} stroke={2} fill="currentColor" />
                                     </button>
-                                  ) : (item.status === "failed" ||
-                                      item.status === "interrupted") &&
+                                  ) : (item.status === "failed" || item.status === "interrupted") &&
                                     ((source === "voice" && item.hasAudio) ||
-                                      (source === "call" &&
-                                        item.hasCallTracks) ||
-                                      (source === "file" &&
-                                        item.hasFilePath)) ? (
+                                      (source === "call" && item.hasCallTracks) ||
+                                      (source === "file" && item.hasFilePath)) ? (
                                     <button
                                       onClick={() => {
                                         void retryEntry(item.id);
@@ -1646,16 +1483,10 @@ export function MainTab({
                                       label={t("rowMenu.actions")}
                                       items={
                                         [
-                                          (source === "file" ||
-                                            source === "call") && {
+                                          (source === "file" || source === "call") && {
                                             key: "edit",
                                             label: t("rowMenu.edit"),
-                                            icon: (
-                                              <IconPencil
-                                                size={14}
-                                                stroke={2}
-                                              />
-                                            ),
+                                            icon: <IconPencil size={14} stroke={2} />,
                                             onSelect: () => {
                                               void editEntry(item.id);
                                             },
@@ -1663,22 +1494,14 @@ export function MainTab({
                                           {
                                             key: "copy",
                                             label:
-                                              copied === item.id ||
-                                              retrySucceededId === item.id
+                                              copied === item.id || retrySucceededId === item.id
                                                 ? t("mainTab.success")
                                                 : t("rowMenu.copy"),
                                             icon:
-                                              copied === item.id ||
-                                              retrySucceededId === item.id ? (
-                                                <IconCheck
-                                                  size={14}
-                                                  stroke={2.5}
-                                                />
+                                              copied === item.id || retrySucceededId === item.id ? (
+                                                <IconCheck size={14} stroke={2.5} />
                                               ) : (
-                                                <IconCopy
-                                                  size={14}
-                                                  stroke={2}
-                                                />
+                                                <IconCopy size={14} stroke={2} />
                                               ),
                                             onSelect: () => {
                                               void copyEntryText(item.id);
@@ -1687,49 +1510,39 @@ export function MainTab({
                                           {
                                             key: "summarize",
                                             label: t("rowMenu.summarize"),
-                                            icon: (
-                                              <IconListCheck
-                                                size={14}
-                                                stroke={2}
-                                              />
-                                            ),
+                                            icon: <IconListCheck size={14} stroke={2} />,
                                             disabled: !summaryAvailable,
-                                            hint: t(
-                                              "summary.unavailable.tooltip",
-                                            ),
+                                            hint: t("summary.unavailable.tooltip"),
                                             onSelect: () => {
-                                              void loadFullEntry(item.id).then(
-                                                (entry) => {
-                                                  if (entry) {
-                                                    setSummaryEntry(entry);
-                                                  }
-                                                },
-                                              );
+                                              void loadFullEntry(item.id).then((entry) => {
+                                                if (entry) {
+                                                  setSummaryEntry(entry);
+                                                }
+                                              });
                                             },
                                           },
                                         ].filter(Boolean) as RowActionItem[]
                                       }
                                     />
                                   )}
-                                  {item.status !== "processing" &&
-                                    item.status !== "recording" && (
-                                      <button
-                                        onClick={() => deleteEntry(item.id)}
-                                        className="btn btn-danger"
-                                        style={{
-                                          width: 32,
-                                          minWidth: 32,
-                                          height: 32,
-                                          minHeight: 32,
-                                          padding: 0,
-                                          flexShrink: 0,
-                                          borderRadius: 8,
-                                        }}
-                                        title={t("mainTab.delete")}
-                                      >
-                                        <IconTrash size={12} stroke={2} />
-                                      </button>
-                                    )}
+                                  {item.status !== "processing" && item.status !== "recording" && (
+                                    <button
+                                      onClick={() => deleteEntry(item.id)}
+                                      className="btn btn-danger"
+                                      style={{
+                                        width: 32,
+                                        minWidth: 32,
+                                        height: 32,
+                                        minHeight: 32,
+                                        padding: 0,
+                                        flexShrink: 0,
+                                        borderRadius: 8,
+                                      }}
+                                      title={t("mainTab.delete")}
+                                    >
+                                      <IconTrash size={12} stroke={2} />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </td>
@@ -1746,10 +1559,7 @@ export function MainTab({
                   className="btn"
                   onClick={() =>
                     setVisibleHistoryLimit((current) =>
-                      Math.min(
-                        current + HISTORY_RENDER_INCREMENT,
-                        filteredHistory.length,
-                      ),
+                      Math.min(current + HISTORY_RENDER_INCREMENT, filteredHistory.length),
                     )
                   }
                   style={{
@@ -1762,10 +1572,7 @@ export function MainTab({
                   }}
                 >
                   {t("mainTab.showMoreHistory", {
-                    count: Math.min(
-                      HISTORY_RENDER_INCREMENT,
-                      hiddenHistoryCount,
-                    ),
+                    count: Math.min(HISTORY_RENDER_INCREMENT, hiddenHistoryCount),
                   })}
                 </button>
               )}

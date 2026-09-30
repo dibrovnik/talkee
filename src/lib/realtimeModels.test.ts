@@ -23,12 +23,11 @@ describe("realtime model catalogs", () => {
       "openai",
       "gemini",
     ]);
-    expect(REALTIME_TRANSLATION_ADAPTERS[0].recommendedModel).toBe(
+    expect(REALTIME_TRANSLATION_ADAPTERS[0].recommendedModel).toBe("gpt-realtime");
+    expect(REALTIME_TRANSLATION_ADAPTERS[0].models.map((model) => model.id)).toEqual([
       "gpt-realtime",
-    );
-    expect(
-      REALTIME_TRANSLATION_ADAPTERS[0].models.map((model) => model.id),
-    ).toEqual(["gpt-realtime", "gpt-realtime-mini"]);
+      "gpt-realtime-mini",
+    ]);
   });
 
   test("invalidates custom model capability after any configuration change", () => {
@@ -76,9 +75,7 @@ describe("realtime model catalogs", () => {
       model: "gpt-realtime-whisper",
       endpoint: "",
     };
-    expect(
-      canUseConfiguredRealtimeModel(adapter, values),
-    ).toBe(false);
+    expect(canUseConfiguredRealtimeModel(adapter, values)).toBe(false);
 
     const fingerprint = realtimeConfigurationFingerprint({
       provider: "openai",
@@ -93,8 +90,6 @@ describe("realtime model catalogs", () => {
         streamingCapabilityFingerprint: fingerprint,
       }),
     ).toBe(true);
-    expect(batchFallbackModel("openai", "gpt-realtime-whisper")).toBe(
-      "gpt-4o-transcribe",
-    );
+    expect(batchFallbackModel("openai", "gpt-realtime-whisper")).toBe("gpt-4o-transcribe");
   });
 });

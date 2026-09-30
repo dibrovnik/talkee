@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import type { ReactElement, PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import { SETTINGS_UPDATED_EVENT } from "../../lib/hotkeyEvents";
 import {
   IconCheck,
   IconChevronDown,
@@ -13,7 +13,6 @@ import {
   IconMicrophone,
   IconX,
 } from "../../lib/icons";
-import { SETTINGS_UPDATED_EVENT } from "../../lib/hotkeyEvents";
 import { applySavedTheme } from "../../lib/theme";
 import { WidgetErrorStatusBar } from "./WidgetErrorStatusBar";
 import {
@@ -33,9 +32,7 @@ const EMPTY_STATE: WidgetTextOverlayState = {
 export function WidgetTextOverlay(): ReactElement | null {
   const overlayWindow = getCurrentWindow();
   const [state, setState] = useState<WidgetTextOverlayState | null>(null);
-  const [copiedTarget, setCopiedTarget] = useState<
-    "content" | "error" | null
-  >(null);
+  const [copiedTarget, setCopiedTarget] = useState<"content" | "error" | null>(null);
   const [errorExpanded, setErrorExpanded] = useState(false);
   const [followingLatest, setFollowingLatest] = useState(true);
   const copiedResetTimerRef = useRef<number | null>(null);
@@ -76,19 +73,14 @@ export function WidgetTextOverlay(): ReactElement | null {
     };
 
     const loadCachedPayload = (): void => {
-      void invoke<WidgetTextOverlayState | null>(
-        "get_widget_text_overlay_payload",
-      )
+      void invoke<WidgetTextOverlayState | null>("get_widget_text_overlay_payload")
         .then(applyPayload)
         .catch(() => {});
     };
 
-    const unlistenPromise = listen<WidgetTextOverlayState | null>(
-      TEXT_OVERLAY_EVENT,
-      (event) => {
-        applyPayload(event.payload);
-      },
-    ).then((unlisten) => {
+    const unlistenPromise = listen<WidgetTextOverlayState | null>(TEXT_OVERLAY_EVENT, (event) => {
+      applyPayload(event.payload);
+    }).then((unlisten) => {
       loadCachedPayload();
       void invoke("widget_text_overlay_ready").catch(() => {});
       return unlisten;
@@ -143,9 +135,7 @@ export function WidgetTextOverlay(): ReactElement | null {
     (state?.status === "dictating" && !translatedText) ||
     (state?.status === "liveTranslation" && !liveCopyText && !messageText);
   const primaryText =
-    liveCopyText ||
-    translatedText ||
-    (state?.status === "liveTranslation" ? messageText : "");
+    liveCopyText || translatedText || (state?.status === "liveTranslation" ? messageText : "");
   const errorMessage = state?.status === "error" ? messageText : "";
   const LoadingIcon =
     state?.status === "dictating"
@@ -185,8 +175,7 @@ export function WidgetTextOverlay(): ReactElement | null {
   const handleScroll = (): void => {
     const node = scrollRef.current;
     if (!node) return;
-    const distanceFromBottom =
-      node.scrollHeight - node.scrollTop - node.clientHeight;
+    const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
     setFollowingLatest(distanceFromBottom <= 20);
   };
 
@@ -209,9 +198,7 @@ export function WidgetTextOverlay(): ReactElement | null {
     const timeout = window.setTimeout(() => {
       const requestId = state.requestId;
       void invoke(
-        requestId
-          ? "hide_widget_text_overlay_request"
-          : "hide_widget_text_overlay",
+        requestId ? "hide_widget_text_overlay_request" : "hide_widget_text_overlay",
         requestId ? { requestId } : undefined,
       );
     }, TEXT_OVERLAY_AUTO_DISMISS_MS);
@@ -219,9 +206,7 @@ export function WidgetTextOverlay(): ReactElement | null {
     return () => window.clearTimeout(timeout);
   }, [errorExpanded, errorMessage, primaryText, state?.requestId, state?.status]);
 
-  const handleDragPointerDown = (
-    event: ReactPointerEvent<HTMLDivElement>,
-  ): void => {
+  const handleDragPointerDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
     if (event.button !== 0 || (event.target as HTMLElement).closest("button")) {
       return;
     }
@@ -230,14 +215,8 @@ export function WidgetTextOverlay(): ReactElement | null {
     dragTriggeredRef.current = false;
   };
 
-  const handleDragPointerMove = async (
-    event: ReactPointerEvent<HTMLDivElement>,
-  ): Promise<void> => {
-    if (
-      !dragStartRef.current ||
-      dragTriggeredRef.current ||
-      (event.buttons & 1) === 0
-    ) {
+  const handleDragPointerMove = async (event: ReactPointerEvent<HTMLDivElement>): Promise<void> => {
+    if (!dragStartRef.current || dragTriggeredRef.current || (event.buttons & 1) === 0) {
       return;
     }
 
@@ -263,17 +242,12 @@ export function WidgetTextOverlay(): ReactElement | null {
   const close = (): void => {
     const requestId = state?.requestId;
     void invoke(
-      requestId
-        ? "hide_widget_text_overlay_request"
-        : "hide_widget_text_overlay",
+      requestId ? "hide_widget_text_overlay_request" : "hide_widget_text_overlay",
       requestId ? { requestId } : undefined,
     );
   };
 
-  const copy = async (
-    textToCopy: string,
-    target: "content" | "error",
-  ): Promise<void> => {
+  const copy = async (textToCopy: string, target: "content" | "error"): Promise<void> => {
     if (!textToCopy) {
       return;
     }
@@ -462,20 +436,16 @@ export function WidgetTextOverlay(): ReactElement | null {
               {state.status === "liveTranslation" ? (
                 <div>
                   {translatedLiveSegments.length === 0 && messageText ? (
-                    <div style={{ color: "var(--text-mid)", fontWeight: 600 }}>
-                      {messageText}
-                    </div>
+                    <div style={{ color: "var(--text-mid)", fontWeight: 600 }}>{messageText}</div>
                   ) : null}
                   {translatedLiveSegments.map((segment, index) => (
                     <div
+                      // biome-ignore lint/suspicious/noArrayIndexKey: live segments can share channel and start time; the index keeps the key unique.
                       key={`${segment.channel}-${segment.startedAtMs}-${index}`}
                       style={{
                         minWidth: 0,
                         padding: index === 0 ? "1px 2px 5px" : "5px 2px",
-                        borderTop:
-                          index === 0
-                            ? "none"
-                            : "1px solid var(--border-subtle)",
+                        borderTop: index === 0 ? "none" : "1px solid var(--border-subtle)",
                       }}
                     >
                       <div
@@ -498,9 +468,7 @@ export function WidgetTextOverlay(): ReactElement | null {
                             flex: "0 0 auto",
                             borderRadius: "50%",
                             background:
-                              segment.channel === "mic"
-                                ? "var(--success)"
-                                : "var(--accent)",
+                              segment.channel === "mic" ? "var(--success)" : "var(--accent)",
                           }}
                         />
                         {segment.channel === "mic" ? "Вы" : "Системный звук"}
@@ -516,14 +484,11 @@ export function WidgetTextOverlay(): ReactElement | null {
                       >
                         {segment.translated.slice(
                           0,
-                          segment.stableTranslatedLength ??
-                            segment.translated.length,
+                          segment.stableTranslatedLength ?? segment.translated.length,
                         )}
                         {segment.stableTranslatedLength !== undefined ? (
                           <span style={{ opacity: 0.62 }}>
-                            {segment.translated.slice(
-                              segment.stableTranslatedLength,
-                            )}
+                            {segment.translated.slice(segment.stableTranslatedLength)}
                           </span>
                         ) : null}
                       </div>

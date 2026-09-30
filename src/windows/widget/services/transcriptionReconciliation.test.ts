@@ -19,9 +19,7 @@ function settings(overrides: Partial<AppSettings>): AppSettings {
 
 describe("live transcription reconciliation", () => {
   test("does not reconcile when realtime produced no result", () => {
-    expect(
-      resolveLiveTranscriptionReconciliationMode(settings({}), false),
-    ).toBeNull();
+    expect(resolveLiveTranscriptionReconciliationMode(settings({}), false)).toBeNull();
   });
 
   test("preserves reconciliation for the legacy own-key OpenAI realtime model", () => {
@@ -39,9 +37,7 @@ describe("live transcription reconciliation", () => {
     });
 
     expect(shouldAcceptLiveTranscription(ownKeySettings, true)).toBe(true);
-    expect(
-      resolveLiveTranscriptionReconciliationMode(ownKeySettings, true),
-    ).toBe("openai");
+    expect(resolveLiveTranscriptionReconciliationMode(ownKeySettings, true)).toBe("openai");
   });
 
   test("does not add batch reconciliation to local or unrelated API realtime models", () => {

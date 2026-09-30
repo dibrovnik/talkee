@@ -87,10 +87,7 @@ export interface ReducerResult {
 
 // ── Pure reducer ────────────────────────────────────────────────────────────
 
-export function widgetReducer(
-  state: WidgetMachineState,
-  action: WidgetAction,
-): ReducerResult {
+export function widgetReducer(state: WidgetMachineState, action: WidgetAction): ReducerResult {
   switch (action.type) {
     case "HOTKEY_PRESSED":
       return handleHotkeyPressed(state);
@@ -124,25 +121,28 @@ export function widgetReducer(
 function handleHotkeyPressed(state: WidgetMachineState): ReducerResult {
   // Locked recording + already recording → stop
   if (state.lockedRecording && state.widgetState === "recording") {
-    return result({
-      ...state,
-      hotkeyHeld: true,
-      suppressNextRelease: true,
-    }, [{ type: "stop_and_process" }]);
+    return result(
+      {
+        ...state,
+        hotkeyHeld: true,
+        suppressNextRelease: true,
+      },
+      [{ type: "stop_and_process" }],
+    );
   }
 
   // Recording + release timer active → user double-tapped → lock mode
   if (state.widgetState === "recording" && state.releaseStopTimerActive) {
-    return result({
-      ...state,
-      hotkeyHeld: true,
-      lockedRecording: true,
-      pendingStopAfterStart: false,
-      releaseStopTimerActive: false,
-    }, [
-      { type: "clear_release_stop_timer" },
-      { type: "set_locked_recording_ui", value: true },
-    ]);
+    return result(
+      {
+        ...state,
+        hotkeyHeld: true,
+        lockedRecording: true,
+        pendingStopAfterStart: false,
+        releaseStopTimerActive: false,
+      },
+      [{ type: "clear_release_stop_timer" }, { type: "set_locked_recording_ui", value: true }],
+    );
   }
 
   // Already held or not idle → ignore
@@ -151,14 +151,17 @@ function handleHotkeyPressed(state: WidgetMachineState): ReducerResult {
   }
 
   // Fresh press from idle → start recording
-  return result({
-    ...state,
-    widgetState: "recording",
-    hotkeyHeld: true,
-    lockedRecording: false,
-    recordingActive: false,
-    pendingStopAfterStart: false,
-  }, [{ type: "start_recording" }]);
+  return result(
+    {
+      ...state,
+      widgetState: "recording",
+      hotkeyHeld: true,
+      lockedRecording: false,
+      recordingActive: false,
+      pendingStopAfterStart: false,
+    },
+    [{ type: "start_recording" }],
+  );
 }
 
 function handleHotkeyReleased(state: WidgetMachineState): ReducerResult {
@@ -207,39 +210,47 @@ function handleRecordingStarted(state: WidgetMachineState, timestamp: number): R
 }
 
 function handleRecordingFailed(_state: WidgetMachineState): ReducerResult {
-  return result({
-    ...initialWidgetMachineState,
-  }, []);
+  return result(
+    {
+      ...initialWidgetMachineState,
+    },
+    [],
+  );
 }
 
 function handleProcessingComplete(state: WidgetMachineState): ReducerResult {
-  return result({
-    ...state,
-    widgetState: "idle",
-    recordingActive: false,
-    lockedRecording: false,
-  }, [
-    { type: "set_locked_recording_ui", value: false },
-  ]);
+  return result(
+    {
+      ...state,
+      widgetState: "idle",
+      recordingActive: false,
+      lockedRecording: false,
+    },
+    [{ type: "set_locked_recording_ui", value: false }],
+  );
 }
 
 function handleProcessingFailed(_state: WidgetMachineState, message: string): ReducerResult {
-  return result({
-    ...initialWidgetMachineState,
-  }, [
-    { type: "show_notice", message, tone: "error" },
-  ]);
+  return result(
+    {
+      ...initialWidgetMachineState,
+    },
+    [{ type: "show_notice", message, tone: "error" }],
+  );
 }
 
 function handleSetProcessing(state: WidgetMachineState): ReducerResult {
-  return result({
-    ...state,
-    widgetState: "processing",
-    recordingActive: false,
-    pendingStopAfterStart: false,
-    lockedRecording: false,
-    releaseStopTimerActive: false,
-  }, []);
+  return result(
+    {
+      ...state,
+      widgetState: "processing",
+      recordingActive: false,
+      pendingStopAfterStart: false,
+      lockedRecording: false,
+      releaseStopTimerActive: false,
+    },
+    [],
+  );
 }
 
 function handleManualRecordingStart(state: WidgetMachineState): ReducerResult {
@@ -247,19 +258,19 @@ function handleManualRecordingStart(state: WidgetMachineState): ReducerResult {
     return result(state, []);
   }
 
-  return result({
-    ...state,
-    widgetState: "recording",
-    hotkeyHeld: false,
-    lockedRecording: true,
-    recordingActive: false,
-    pendingStopAfterStart: false,
-    releaseStopTimerActive: false,
-    suppressNextRelease: false,
-  }, [
-    { type: "set_locked_recording_ui", value: true },
-    { type: "start_recording" },
-  ]);
+  return result(
+    {
+      ...state,
+      widgetState: "recording",
+      hotkeyHeld: false,
+      lockedRecording: true,
+      recordingActive: false,
+      pendingStopAfterStart: false,
+      releaseStopTimerActive: false,
+      suppressNextRelease: false,
+    },
+    [{ type: "set_locked_recording_ui", value: true }, { type: "start_recording" }],
+  );
 }
 
 function handleManualRecordingStop(state: WidgetMachineState): ReducerResult {
@@ -268,10 +279,13 @@ function handleManualRecordingStop(state: WidgetMachineState): ReducerResult {
   }
 
   if (!state.recordingActive) {
-    return result({
-      ...state,
-      pendingStopAfterStart: true,
-    }, []);
+    return result(
+      {
+        ...state,
+        pendingStopAfterStart: true,
+      },
+      [],
+    );
   }
 
   return result(state, [{ type: "stop_and_process" }]);
@@ -294,24 +308,30 @@ function handleReleaseStopTimerFired(state: WidgetMachineState): ReducerResult {
 }
 
 function handleError(_state: WidgetMachineState, message: string): ReducerResult {
-  return result({
-    ...initialWidgetMachineState,
-  }, [
-    { type: "show_notice", message, tone: "error" },
-    { type: "set_locked_recording_ui", value: false },
-    { type: "clear_release_stop_timer" },
-    { type: "set_stream", stream: null },
-  ]);
+  return result(
+    {
+      ...initialWidgetMachineState,
+    },
+    [
+      { type: "show_notice", message, tone: "error" },
+      { type: "set_locked_recording_ui", value: false },
+      { type: "clear_release_stop_timer" },
+      { type: "set_stream", stream: null },
+    ],
+  );
 }
 
 function handleResetHotkeyState(state: WidgetMachineState): ReducerResult {
-  return result({
-    ...state,
-    hotkeyHeld: false,
-    pendingStopAfterStart: false,
-    suppressNextRelease: false,
-    releaseStopTimerActive: false,
-  }, [{ type: "clear_release_stop_timer" }]);
+  return result(
+    {
+      ...state,
+      hotkeyHeld: false,
+      pendingStopAfterStart: false,
+      suppressNextRelease: false,
+      releaseStopTimerActive: false,
+    },
+    [{ type: "clear_release_stop_timer" }],
+  );
 }
 
 // ── Helper ──────────────────────────────────────────────────────────────────

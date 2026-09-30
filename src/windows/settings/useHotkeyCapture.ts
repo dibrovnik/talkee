@@ -1,23 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { emit, listen } from "@tauri-apps/api/event";
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
   RefObject,
 } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { emit, listen } from "@tauri-apps/api/event";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   HOTKEY_CAPTURE_STATE_EVENT,
   HOTKEY_CHANGE_REQUEST_EVENT,
   HOTKEY_REGISTRATION_RESULT_EVENT,
-  NATIVE_HOTKEY_CAPTURE_EVENT,
   type HotkeyRegistrationResultPayload,
   type HotkeyTarget,
+  NATIVE_HOTKEY_CAPTURE_EVENT,
   type NativeHotkeyCapturePayload,
 } from "../../lib/hotkeyEvents";
-import { normalizeHotkey } from "../../lib/store";
 import { logError } from "../../lib/logger";
+import { normalizeHotkey } from "../../lib/store";
 
 export type HotkeyFeedbackTone = "idle" | "success" | "error";
 
@@ -119,14 +119,9 @@ export function useHotkeyCapture({
         }).catch(() => null);
       }
       if (requestId) {
-        await invoke("stop_native_hotkey_capture", { requestId, target }).catch(
-          (error) => {
-            void logError(
-              logTag,
-              `Failed to stop native hotkey capture: ${String(error)}`,
-            );
-          },
-        );
+        await invoke("stop_native_hotkey_capture", { requestId, target }).catch((error) => {
+          void logError(logTag, `Failed to stop native hotkey capture: ${String(error)}`);
+        });
       }
       if (message) {
         setTone("idle");
@@ -223,10 +218,7 @@ export function useHotkeyCapture({
     const resultListener = listen<HotkeyRegistrationResultPayload>(
       HOTKEY_REGISTRATION_RESULT_EVENT,
       async ({ payload }) => {
-        if (
-          payload.target !== target ||
-          payload.requestId !== pendingRequestIdRef.current
-        ) {
+        if (payload.target !== target || payload.requestId !== pendingRequestIdRef.current) {
           return;
         }
 
@@ -293,10 +285,7 @@ export function useHotkeyCapture({
       if (document.visibilityState === "hidden") cancel();
     };
     const handleMouseDown = (event: MouseEvent): void => {
-      if (
-        surfaceRef.current &&
-        !surfaceRef.current.contains(event.target as Node)
-      ) {
+      if (surfaceRef.current && !surfaceRef.current.contains(event.target as Node)) {
         cancel();
       }
     };
@@ -325,8 +314,7 @@ export function useHotkeyCapture({
         return;
       }
       if (event.key !== "Enter" && event.key !== " ") return;
-      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
-        return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       event.preventDefault();
       event.stopPropagation();
       void start();

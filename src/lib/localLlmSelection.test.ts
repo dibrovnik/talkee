@@ -5,8 +5,8 @@ import {
   isBundledLocalLlmEndpoint,
   isBundledLocalLlmModelId,
   isLocalLlmEndpoint,
-  localLlmDeselectionSettingsPatch,
   localLlmDeleteSettingsPatch,
+  localLlmDeselectionSettingsPatch,
   selectedLocalLlmModelId,
 } from "./localLlmSelection";
 

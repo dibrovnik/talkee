@@ -25,31 +25,18 @@ export function resolveRowActionsMenuPosition({
   viewportWidth,
   viewportHeight,
 }: MenuGeometry): MenuPosition {
-  const availableBelow =
-    viewportHeight - VIEWPORT_PADDING - anchorBottom - MENU_GAP;
+  const availableBelow = viewportHeight - VIEWPORT_PADDING - anchorBottom - MENU_GAP;
   const availableAbove = anchorTop - VIEWPORT_PADDING - MENU_GAP;
-  const opensAbove =
-    menuHeight > availableBelow && availableAbove > availableBelow;
-  const maxLeft = Math.max(
-    VIEWPORT_PADDING,
-    viewportWidth - VIEWPORT_PADDING - menuWidth,
-  );
-  const maxTop = Math.max(
-    VIEWPORT_PADDING,
-    viewportHeight - VIEWPORT_PADDING - menuHeight,
-  );
+  const opensAbove = menuHeight > availableBelow && availableAbove > availableBelow;
+  const maxLeft = Math.max(VIEWPORT_PADDING, viewportWidth - VIEWPORT_PADDING - menuWidth);
+  const maxTop = Math.max(VIEWPORT_PADDING, viewportHeight - VIEWPORT_PADDING - menuHeight);
 
   return {
-    left: Math.min(
-      Math.max(VIEWPORT_PADDING, anchorRight - menuWidth),
-      maxLeft,
-    ),
+    left: Math.min(Math.max(VIEWPORT_PADDING, anchorRight - menuWidth), maxLeft),
     top: Math.min(
       Math.max(
         VIEWPORT_PADDING,
-        opensAbove
-          ? anchorTop - MENU_GAP - menuHeight
-          : anchorBottom + MENU_GAP,
+        opensAbove ? anchorTop - MENU_GAP - menuHeight : anchorBottom + MENU_GAP,
       ),
       maxTop,
     ),

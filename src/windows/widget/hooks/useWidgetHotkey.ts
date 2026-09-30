@@ -1,10 +1,22 @@
-import { useCallback, useEffect, useRef } from "react";
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-
+import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
-  AppSettings,
+  HANDY_HOTKEY_EVENT,
+  type HandyHotkeyEventPayload,
+  HOTKEY_CAPTURE_STATE_EVENT,
+  HOTKEY_CHANGE_REQUEST_EVENT,
+  HOTKEY_REGISTRATION_RESULT_EVENT,
+  type HotkeyCaptureStatePayload,
+  type HotkeyChangeRequestPayload,
+  type HotkeyTarget,
+  SETTINGS_UPDATED_EVENT,
+} from "../../../lib/hotkeyEvents";
+import { useI18n } from "../../../lib/i18n";
+import { logError, logInfo } from "../../../lib/logger";
+import {
+  type AppSettings,
   DEFAULT_HOTKEY,
   DEFAULT_SELECTION_TRANSLATION_HOTKEY,
   getSettings,
@@ -12,24 +24,8 @@ import {
   normalizeHotkey,
   saveSettings,
 } from "../../../lib/store";
-import {
-  HOTKEY_CAPTURE_STATE_EVENT,
-  HOTKEY_CHANGE_REQUEST_EVENT,
-  HOTKEY_REGISTRATION_RESULT_EVENT,
-  HANDY_HOTKEY_EVENT,
-  HandyHotkeyEventPayload,
-  HotkeyCaptureStatePayload,
-  HotkeyChangeRequestPayload,
-  HotkeyTarget,
-  SETTINGS_UPDATED_EVENT,
-} from "../../../lib/hotkeyEvents";
-import { logError, logInfo } from "../../../lib/logger";
-import { useI18n } from "../../../lib/i18n";
-import type {
-  WidgetAction,
-  WidgetMachineState,
-} from "../services/widgetMachine";
 import { applyHotkeyTransaction } from "../services/hotkeyTransaction";
+import type { WidgetAction, WidgetMachineState } from "../services/widgetMachine";
 
 interface UseWidgetHotkeyParams {
   settingsLoaded: boolean;
@@ -118,32 +114,22 @@ export function useWidgetHotkey({
   });
   const transactionQueueRef = useRef<Promise<void>>(Promise.resolve());
   const selectionHotkeyArmedRef = useRef(false);
-  const handleHotkeyPressRef = useRef<(event: HandyHotkeyEventPayload) => void>(
-    () => {},
-  );
+  const handleHotkeyPressRef = useRef<(event: HandyHotkeyEventPayload) => void>(() => {});
   const retryRegistrationsRef = useRef<() => Promise<void>>(async () => {});
 
-  const hotkeyForComparison = useCallback(
-    (hotkey: string | null | undefined): string | null => {
-      if (!hotkey) return null;
-      return normalizeHotkey(hotkey).normalized ?? hotkey;
-    },
-    [],
-  );
+  const hotkeyForComparison = useCallback((hotkey: string | null | undefined): string | null => {
+    if (!hotkey) return null;
+    return normalizeHotkey(hotkey).normalized ?? hotkey;
+  }, []);
 
-  const unregisterHotkeyRef = useCallback(
-    async (hotkeyRef: MutableRefObject<string | null>) => {
-      const currentHotkey = hotkeyRef.current;
-      if (!currentHotkey) return;
+  const unregisterHotkeyRef = useCallback(async (hotkeyRef: MutableRefObject<string | null>) => {
+    const currentHotkey = hotkeyRef.current;
+    if (!currentHotkey) return;
 
-      logInfo("HOTKEY", `Unregistering: ${currentHotkey}`);
-      await invoke("unregister_handy_hotkey", { hotkey: currentHotkey }).catch(
-        () => {},
-      );
-      hotkeyRef.current = null;
-    },
-    [],
-  );
+    logInfo("HOTKEY", `Unregistering: ${currentHotkey}`);
+    await invoke("unregister_handy_hotkey", { hotkey: currentHotkey }).catch(() => {});
+    hotkeyRef.current = null;
+  }, []);
 
   const activateWidgetForHotkey = useCallback(() => {
     invoke("activate_widget_for_hotkey").catch((error) => {
@@ -160,10 +146,7 @@ export function useWidgetHotkey({
       }
 
       const machine = machineRef.current;
-      logInfo(
-        "HOTKEY",
-        `Triggered! state=${machine.widgetState}, shortcutState=${event.state}`,
-      );
+      logInfo("HOTKEY", `Triggered! state=${machine.widgetState}, shortcutState=${event.state}`);
 
       if (event.state !== "Pressed" && event.state !== "Released") {
         return;
@@ -173,17 +156,12 @@ export function useWidgetHotkey({
       if (isUnsafeMacGlobalHotkey(eventHotkey)) {
         selectionHotkeyArmedRef.current = false;
         dispatch({ type: "RESET_HOTKEY_STATE" });
-        logError(
-          "HOTKEY",
-          `Ignored unsafe macOS system hotkey event: ${event.hotkey}`,
-        );
+        logError("HOTKEY", `Ignored unsafe macOS system hotkey event: ${event.hotkey}`);
         return;
       }
 
       const voiceHotkey = hotkeyForComparison(
-        registeredHotkeyRef.current ??
-          settingsRef.current?.hotkey ??
-          DEFAULT_HOTKEY,
+        registeredHotkeyRef.current ?? settingsRef.current?.hotkey ?? DEFAULT_HOTKEY,
       );
       const selectionHotkey = hotkeyForComparison(
         selectionRegisteredHotkeyRef.current ??
@@ -203,23 +181,14 @@ export function useWidgetHotkey({
           dispatch({ type: "RESET_HOTKEY_STATE" });
         }
 
-        const action = resolveSelectionHotkeyAction(
-          event.state,
-          selectionHotkeyArmedRef.current,
-        );
+        const action = resolveSelectionHotkeyAction(event.state, selectionHotkeyArmedRef.current);
 
         if (action === "arm") {
           selectionHotkeyArmedRef.current = true;
-          logInfo(
-            "HOTKEY",
-            `Selection translation hotkey armed: ${event.hotkey}`,
-          );
+          logInfo("HOTKEY", `Selection translation hotkey armed: ${event.hotkey}`);
         } else if (action === "trigger") {
           selectionHotkeyArmedRef.current = false;
-          logInfo(
-            "HOTKEY",
-            `Selection translation hotkey released: ${event.hotkey}`,
-          );
+          logInfo("HOTKEY", `Selection translation hotkey released: ${event.hotkey}`);
           onSelectionTranslationHotkey();
         }
         return;
@@ -304,10 +273,7 @@ export function useWidgetHotkey({
             }).catch(() => {});
           }
         }
-        logInfo(
-          "HOTKEY",
-          `Registered successfully via handy-keys: ${nextHotkey}`,
-        );
+        logInfo("HOTKEY", `Registered successfully via handy-keys: ${nextHotkey}`);
 
         return {
           success: true,
@@ -337,9 +303,7 @@ export function useWidgetHotkey({
       return;
     }
 
-    const result = await attemptHotkeyRegistration(
-      activeSettings.hotkey || DEFAULT_HOTKEY,
-    );
+    const result = await attemptHotkeyRegistration(activeSettings.hotkey || DEFAULT_HOTKEY);
     if (!result.success) {
       showError(result.message || t("widget.hotkey.registerFailedGeneric"));
     }
@@ -358,12 +322,10 @@ export function useWidgetHotkey({
 
     const selectionHotkey =
       normalizeHotkey(
-        activeSettings.translation.selectionHotkey ||
-          DEFAULT_SELECTION_TRANSLATION_HOTKEY,
+        activeSettings.translation.selectionHotkey || DEFAULT_SELECTION_TRANSLATION_HOTKEY,
       ).normalized || DEFAULT_SELECTION_TRANSLATION_HOTKEY;
     const voiceHotkey =
-      normalizeHotkey(activeSettings.hotkey || DEFAULT_HOTKEY).normalized ||
-      DEFAULT_HOTKEY;
+      normalizeHotkey(activeSettings.hotkey || DEFAULT_HOTKEY).normalized || DEFAULT_HOTKEY;
 
     if (selectionHotkey === voiceHotkey) {
       await unregisterHotkeyRef(selectionRegisteredHotkeyRef);
@@ -382,14 +344,7 @@ export function useWidgetHotkey({
     if (!result.success) {
       showError(result.message || t("widget.hotkey.registerFailedGeneric"));
     }
-  }, [
-    attemptHotkeyRegistration,
-    settingsLoaded,
-    settingsRef,
-    showError,
-    t,
-    unregisterHotkeyRef,
-  ]);
+  }, [attemptHotkeyRegistration, settingsLoaded, settingsRef, showError, t, unregisterHotkeyRef]);
 
   useEffect(() => {
     void registerCurrentHotkey();
@@ -458,15 +413,13 @@ export function useWidgetHotkey({
         latestRequestIdsRef.current[payload.target] = payload.requestId;
 
         const runTransaction = async (): Promise<void> => {
-          let result;
+          let result: Awaited<ReturnType<typeof applyHotkeyTransaction>>;
           try {
             result = await applyHotkeyTransaction(payload, {
               loadSettings: () => getSettings({ reload: true }),
               saveSettings,
-              registerHotkey: (hotkey) =>
-                invoke("register_handy_hotkey", { hotkey }),
-              unregisterHotkey: (hotkey) =>
-                invoke("unregister_handy_hotkey", { hotkey }),
+              registerHotkey: (hotkey) => invoke("register_handy_hotkey", { hotkey }),
+              unregisterHotkey: (hotkey) => invoke("unregister_handy_hotkey", { hotkey }),
               getActiveHotkey: (target) =>
                 target === "dictation"
                   ? registeredHotkeyRef.current
@@ -490,8 +443,7 @@ export function useWidgetHotkey({
               },
               messages: {
                 conflict: t("widget.hotkey.conflict"),
-                registerFailed: (hotkey) =>
-                  t("widget.hotkey.registerFailed", { hotkey }),
+                registerFailed: (hotkey) => t("widget.hotkey.registerFailed", { hotkey }),
                 saveFailed: t("settingsGeneralExtra.hotkey.applyFailed"),
                 stale: t("settingsGeneralExtra.hotkey.applyFailed"),
               },

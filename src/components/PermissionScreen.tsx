@@ -1,30 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { useCallback, useEffect, useState } from "react";
+import { useI18n } from "../lib/i18n";
+import { IconAlertCircle, IconCheck, IconKeyboard, IconMicrophone, IconVolume } from "../lib/icons";
+import { logError, logInfo } from "../lib/logger";
 import {
-  IconMicrophone,
-  IconKeyboard,
-  IconCheck,
-  IconAlertCircle,
-  IconVolume,
-} from "../lib/icons";
-import {
-  PermissionStatus,
   checkAccessibilityPermission,
   checkMicrophonePermission,
   checkSystemAudioPermission,
+  type PermissionStatus,
   requestMicrophonePermission,
   requestSystemAudioPermission,
 } from "../lib/permissions";
 import { getSettings } from "../lib/store";
-import { logError, logInfo } from "../lib/logger";
-import { useI18n } from "../lib/i18n";
 import { scaleWidgetDimension } from "../lib/widgetScale";
-import {
-  widgetStackHeight,
-  widgetStackWidth,
-} from "../windows/widget/widgetConstants";
+import { widgetStackHeight, widgetStackWidth } from "../windows/widget/widgetConstants";
 import { OnboardingProgress } from "./onboarding/OnboardingShell";
 
 interface PermissionRowProps {
@@ -92,11 +83,7 @@ function PermissionRow({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{ fontSize: 14, fontWeight: 600, color: "var(--text-hi)" }}
-            >
-              {title}
-            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-hi)" }}>{title}</div>
             {!isGranted && (
               <span
                 style={{
@@ -129,12 +116,8 @@ function PermissionRow({
                 letterSpacing: "0.06em",
                 cursor: actionDisabled ? "wait" : "pointer",
                 border: "none",
-                background: isPrompting
-                  ? "var(--control-muted)"
-                  : "var(--accent)",
-                color: isPrompting
-                  ? "var(--text-hi)"
-                  : "var(--accent-contrast)",
+                background: isPrompting ? "var(--control-muted)" : "var(--accent)",
+                color: isPrompting ? "var(--text-hi)" : "var(--accent-contrast)",
                 fontFamily: "var(--font)",
                 transition: "opacity 0.15s",
                 opacity: actionDisabled ? 0.65 : 1,
@@ -150,11 +133,7 @@ function PermissionRow({
           )}
         </div>
 
-        <div
-          style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}
-        >
-          {description}
-        </div>
+        <div style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}>{description}</div>
         {helpText && (
           <div
             style={{
@@ -192,18 +171,13 @@ function microphoneHelpText(t: TranslateFn): string {
   return t("permission.micHelp.macos");
 }
 
-export function PermissionScreen({
-  onComplete,
-  onboardingStep,
-}: PermissionScreenProps) {
+export function PermissionScreen({ onComplete, onboardingStep }: PermissionScreenProps) {
   const { t } = useI18n();
   const [micStatus, setMicStatus] = useState<PermissionStatus>("unknown");
   const [accStatus, setAccStatus] = useState<PermissionStatus>("unknown");
-  const [systemAudioStatus, setSystemAudioStatus] =
-    useState<PermissionStatus>("unknown");
+  const [systemAudioStatus, setSystemAudioStatus] = useState<PermissionStatus>("unknown");
   const [runtimeInfo, setRuntimeInfo] = useState<AppRuntimeInfo | null>(null);
-  const [accessibilityRestartSuggested, setAccessibilityRestartSuggested] =
-    useState(false);
+  const [accessibilityRestartSuggested, setAccessibilityRestartSuggested] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [restartError, setRestartError] = useState<string | null>(null);
 
@@ -227,17 +201,14 @@ export function PermissionScreen({
   }, []);
 
   const refreshAllPermissions = useCallback(async () => {
-    const [nextMicStatus, nextAccStatus, nextSystemAudioStatus] =
-      await Promise.all([
-        checkMicrophonePermission(),
-        refreshAccessibilityStatus(),
-        checkSystemAudioPermission(),
-      ]);
+    const [nextMicStatus, nextAccStatus, nextSystemAudioStatus] = await Promise.all([
+      checkMicrophonePermission(),
+      refreshAccessibilityStatus(),
+      checkSystemAudioPermission(),
+    ]);
 
     setMicStatus(nextMicStatus);
-    setSystemAudioStatus((current) =>
-      current === "granted" ? "granted" : nextSystemAudioStatus,
-    );
+    setSystemAudioStatus((current) => (current === "granted" ? "granted" : nextSystemAudioStatus));
     return { nextMicStatus, nextAccStatus, nextSystemAudioStatus };
   }, [refreshAccessibilityStatus]);
 
@@ -320,10 +291,7 @@ export function PermissionScreen({
 
     setRestarting(true);
     setRestartError(null);
-    void logInfo(
-      "PERMISSIONS",
-      "Restarting Talkee to refresh Accessibility permission",
-    );
+    void logInfo("PERMISSIONS", "Restarting Talkee to refresh Accessibility permission");
 
     try {
       await relaunch();
@@ -361,19 +329,14 @@ export function PermissionScreen({
       return;
     }
 
-    const { nextMicStatus, nextAccStatus, nextSystemAudioStatus } =
-      await refreshAllPermissions();
+    const { nextMicStatus, nextAccStatus, nextSystemAudioStatus } = await refreshAllPermissions();
 
     if (
       nextMicStatus !== "granted" ||
       (requiresAccessibility && nextAccStatus !== "granted") ||
       (requiresSystemAudio && nextSystemAudioStatus !== "granted")
     ) {
-      if (
-        requiresAccessibility &&
-        accStatus === "prompting" &&
-        nextAccStatus !== "granted"
-      ) {
+      if (requiresAccessibility && accStatus === "prompting" && nextAccStatus !== "granted") {
         setAccessibilityRestartSuggested(true);
       }
       return;
@@ -449,9 +412,7 @@ export function PermissionScreen({
             overflow: "hidden",
           }}
         >
-          {onboardingStep !== undefined && (
-            <OnboardingProgress currentStep={onboardingStep} />
-          )}
+          {onboardingStep !== undefined && <OnboardingProgress currentStep={onboardingStep} />}
           {/* Header */}
           <div style={{ display: "grid", gap: 8 }}>
             <h1
@@ -664,12 +625,8 @@ export function PermissionScreen({
                 letterSpacing: "0.06em",
                 cursor: restarting ? "wait" : "pointer",
                 border: "none",
-                background: canCompleteOnboarding
-                  ? "var(--accent)"
-                  : "var(--control-muted)",
-                color: canCompleteOnboarding
-                  ? "var(--accent-contrast)"
-                  : "var(--text-hi)",
+                background: canCompleteOnboarding ? "var(--accent)" : "var(--control-muted)",
+                color: canCompleteOnboarding ? "var(--accent-contrast)" : "var(--text-hi)",
                 fontFamily: "var(--font)",
                 transition: "opacity 0.15s",
                 minWidth: 140,

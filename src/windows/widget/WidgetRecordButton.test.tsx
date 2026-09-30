@@ -6,12 +6,7 @@ import { WidgetRecordButton } from "./WidgetRecordButton";
 describe("widget record button", () => {
   test("renders the red manual-recording control when the widget is hovered", () => {
     const markup = renderToStaticMarkup(
-      <WidgetRecordButton
-        label="Start recording"
-        left={10}
-        visible={true}
-        onActivate={() => {}}
-      />,
+      <WidgetRecordButton label="Start recording" left={10} visible={true} onActivate={() => {}} />,
     );
 
     expect(markup).toContain('aria-label="Start recording"');

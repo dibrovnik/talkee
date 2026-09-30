@@ -1,12 +1,7 @@
 import type { ReactElement } from "react";
 
 import { useI18n } from "../lib/i18n";
-import {
-  DEFAULT_HOTKEY,
-  formatHotkeyLabel,
-  getSettings,
-  type AppSettings,
-} from "../lib/store";
+import { type AppSettings, DEFAULT_HOTKEY, formatHotkeyLabel, getSettings } from "../lib/store";
 import { useHotkeyCapture } from "../windows/settings/useHotkeyCapture";
 import { HotkeyKeycaps } from "./HotkeyKeycaps";
 import { useLiveHotkeyPreview } from "./useLiveHotkeyPreview";
@@ -65,6 +60,7 @@ export function DictationHotkeyControl({
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
+      {/* biome-ignore lint/a11y/useSemanticElements: custom hotkey-capture surface keeps its grid/keycaps layout; a <button> would change rendering. */}
       <div
         ref={capture.surfaceRef}
         role="button"
@@ -80,8 +76,7 @@ export function DictationHotkeyControl({
           padding: appearance === "keycaps" ? "4px" : "0 10px",
           borderRadius: 8,
           display: appearance === "field" ? "grid" : undefined,
-          gridTemplateColumns:
-            appearance === "field" ? "minmax(0, 1fr) auto" : undefined,
+          gridTemplateColumns: appearance === "field" ? "minmax(0, 1fr) auto" : undefined,
           alignItems: appearance === "field" ? "center" : undefined,
           justifyContent: appearance === "keycaps" ? "center" : undefined,
           gap: appearance === "keycaps" ? 8 : 10,
@@ -94,20 +89,14 @@ export function DictationHotkeyControl({
               : capture.active
                 ? "1px solid rgba(15,118,110,0.28)"
                 : undefined,
-          boxShadow: capture.active
-            ? "0 0 0 4px rgba(15,118,110,0.08)"
-            : undefined,
+          boxShadow: capture.active ? "0 0 0 4px rgba(15,118,110,0.08)" : undefined,
           opacity: capture.submitting ? 0.8 : 1,
           cursor: capture.submitting ? "wait" : "pointer",
           justifySelf: appearance === "keycaps" ? "center" : undefined,
         }}
       >
         {appearance === "keycaps" ? (
-          <HotkeyKeycaps
-            label={displayValue}
-            pressedKeys={pressedKeys}
-            size="large"
-          />
+          <HotkeyKeycaps label={displayValue} pressedKeys={pressedKeys} size="large" />
         ) : (
           <span
             style={{

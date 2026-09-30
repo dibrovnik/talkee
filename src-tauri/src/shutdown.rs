@@ -52,8 +52,7 @@ fn terminate_sidecar_processes() {
         };
 
         if pid == current_pid
-            || !managed_sidecar_process_names()
-                .any(|process_name| command.contains(process_name))
+            || !managed_sidecar_process_names().any(|process_name| command.contains(process_name))
         {
             continue;
         }
@@ -80,7 +79,12 @@ mod tests {
     fn shutdown_covers_every_bundled_sidecar() {
         assert_eq!(
             SIDECAR_PROCESS_NAMES,
-            &["talkee-ffmpeg", "talkee-stt", "talkee-diarize", "talkee-llm"]
+            &[
+                "talkee-ffmpeg",
+                "talkee-stt",
+                "talkee-diarize",
+                "talkee-llm"
+            ]
         );
     }
 

@@ -1,12 +1,8 @@
-import { useEffect, useRef, useState, type ReactElement } from "react";
 import { listen } from "@tauri-apps/api/event";
-
-import { IconCheck, IconLoader2 } from "../../lib/icons";
-import {
-  HISTORY_DELETED_EVENT,
-  HISTORY_UPDATED_EVENT,
-} from "../../lib/hotkeyEvents";
+import { type ReactElement, useEffect, useRef, useState } from "react";
+import { HISTORY_DELETED_EVENT, HISTORY_UPDATED_EVENT } from "../../lib/hotkeyEvents";
 import { useI18n } from "../../lib/i18n";
+import { IconCheck, IconLoader2 } from "../../lib/icons";
 import { logError } from "../../lib/logger";
 import { matchesOnboardingTestPhrase } from "../../lib/onboarding";
 import type { AppSettings, HistoryEntry } from "../../lib/store";
@@ -34,76 +30,65 @@ export function OnboardingTestStep({
 
   useEffect(() => {
     let disposed = false;
-    const unlistenPromise = listen<HistoryEntry>(
-      HISTORY_UPDATED_EVENT,
-      ({ payload: entry }) => {
-        if (
-          disposed ||
-          entry.source !== "voice" ||
-          Date.parse(entry.timestamp) < mountedAtRef.current
-        ) {
-          return;
-        }
+    const unlistenPromise = listen<HistoryEntry>(HISTORY_UPDATED_EVENT, ({ payload: entry }) => {
+      if (
+        disposed ||
+        entry.source !== "voice" ||
+        Date.parse(entry.timestamp) < mountedAtRef.current
+      ) {
+        return;
+      }
 
-        if (entry.status === "processing") {
-          activeEntryIdRef.current = entry.id;
-          setProcessing(true);
-          setTranscript("");
-          setPhraseMatched(false);
-          setError("");
-          return;
-        }
-
-        if (entry.id !== activeEntryIdRef.current) return;
-
-        setProcessing(false);
-        if (entry.status === "failed") {
-          activeEntryIdRef.current = null;
-          setPhraseMatched(false);
-          setError(entry.errorMessage || t("onboarding.test.failed"));
-          return;
-        }
-
-        if (entry.status === "interrupted") {
-          activeEntryIdRef.current = null;
-          setPhraseMatched(false);
-          setError(entry.errorMessage || t("onboarding.test.failed"));
-          return;
-        }
-
-        const recognized = entry.raw.trim() || entry.cleaned.trim();
-        if (entry.status === "completed" && recognized) {
-          activeEntryIdRef.current = null;
-          setTranscript(recognized);
-          setPhraseMatched(
-            matchesOnboardingTestPhrase(
-              recognized,
-              t("onboarding.test.phrase"),
-            ),
-          );
-          setError("");
-          return;
-        }
-
-        if (entry.status === "completed") {
-          activeEntryIdRef.current = null;
-          setPhraseMatched(false);
-          setError(t("onboarding.test.noSpeech"));
-        }
-      },
-    );
-
-    const unlistenDeletedPromise = listen<{ id: string }>(
-      HISTORY_DELETED_EVENT,
-      ({ payload }) => {
-        if (disposed || payload.id !== activeEntryIdRef.current) return;
-        activeEntryIdRef.current = null;
-        setProcessing(false);
+      if (entry.status === "processing") {
+        activeEntryIdRef.current = entry.id;
+        setProcessing(true);
         setTranscript("");
         setPhraseMatched(false);
+        setError("");
+        return;
+      }
+
+      if (entry.id !== activeEntryIdRef.current) return;
+
+      setProcessing(false);
+      if (entry.status === "failed") {
+        activeEntryIdRef.current = null;
+        setPhraseMatched(false);
+        setError(entry.errorMessage || t("onboarding.test.failed"));
+        return;
+      }
+
+      if (entry.status === "interrupted") {
+        activeEntryIdRef.current = null;
+        setPhraseMatched(false);
+        setError(entry.errorMessage || t("onboarding.test.failed"));
+        return;
+      }
+
+      const recognized = entry.raw.trim() || entry.cleaned.trim();
+      if (entry.status === "completed" && recognized) {
+        activeEntryIdRef.current = null;
+        setTranscript(recognized);
+        setPhraseMatched(matchesOnboardingTestPhrase(recognized, t("onboarding.test.phrase")));
+        setError("");
+        return;
+      }
+
+      if (entry.status === "completed") {
+        activeEntryIdRef.current = null;
+        setPhraseMatched(false);
         setError(t("onboarding.test.noSpeech"));
-      },
-    );
+      }
+    });
+
+    const unlistenDeletedPromise = listen<{ id: string }>(HISTORY_DELETED_EVENT, ({ payload }) => {
+      if (disposed || payload.id !== activeEntryIdRef.current) return;
+      activeEntryIdRef.current = null;
+      setProcessing(false);
+      setTranscript("");
+      setPhraseMatched(false);
+      setError(t("onboarding.test.noSpeech"));
+    });
 
     unlistenPromise.catch((cause) => {
       logError(
@@ -121,9 +106,7 @@ export function OnboardingTestStep({
     return () => {
       disposed = true;
       void unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
-      void unlistenDeletedPromise
-        .then((unlisten) => unlisten())
-        .catch(() => {});
+      void unlistenDeletedPromise.then((unlisten) => unlisten()).catch(() => {});
     };
   }, [t]);
 
@@ -231,11 +214,7 @@ export function OnboardingTestStep({
               gap: 9,
             }}
           >
-            <IconLoader2
-              className="onboarding-test-spinner"
-              size={25}
-              stroke={1.8}
-            />
+            <IconLoader2 className="onboarding-test-spinner" size={25} stroke={1.8} />
             <span
               style={{
                 color: "var(--text-mid)",

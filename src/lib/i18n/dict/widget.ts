@@ -224,8 +224,8 @@ export const widget = {
     en: "Invalid hotkey format",
   },
   "widget.hotkey.registerFailed": {
-    ru: "Не удалось зарегистрировать горячую клавишу \"{hotkey}\". Возможно, сочетание занято другим приложением.",
-    en: "Couldn't register the hotkey \"{hotkey}\". The combination may be in use by another app.",
+    ru: 'Не удалось зарегистрировать горячую клавишу "{hotkey}". Возможно, сочетание занято другим приложением.',
+    en: 'Couldn\'t register the hotkey "{hotkey}". The combination may be in use by another app.',
   },
   "widget.hotkey.registerFailedGeneric": {
     ru: "Не удалось зарегистрировать горячую клавишу.",

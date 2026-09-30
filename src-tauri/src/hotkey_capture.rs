@@ -278,8 +278,7 @@ mod macos {
                     runtime_ref.main_key = Some(main_key.to_string());
                     runtime_ref.main_key_code = Some(key_code);
                     runtime_ref.main_released = false;
-                    runtime_ref.captured_flags =
-                        runtime_ref.captured_flags | supported_modifier_flags(flags);
+                    runtime_ref.captured_flags |= supported_modifier_flags(flags);
                     let candidate = build_hotkey_string(
                         runtime_ref.captured_flags,
                         runtime_ref.main_key.as_deref(),
@@ -308,7 +307,7 @@ mod macos {
             let preview = {
                 let mut runtime_ref = runtime.borrow_mut();
                 if runtime_ref.main_key.is_some() && !normalized_flags.is_empty() {
-                    runtime_ref.captured_flags = runtime_ref.captured_flags | normalized_flags;
+                    runtime_ref.captured_flags |= normalized_flags;
                     let candidate = build_hotkey_string(
                         runtime_ref.captured_flags,
                         runtime_ref.main_key.as_deref(),
@@ -449,51 +448,6 @@ mod macos {
         event_ptr.as_ptr()
     }
 
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn waits_until_main_key_and_all_modifiers_are_released() {
-            let command = NSEventModifierFlags::Command;
-            assert_eq!(
-                chord_completion(false, NSEventModifierFlags::empty(), command),
-                ChordCompletion::Wait
-            );
-            assert_eq!(
-                chord_completion(true, command, command),
-                ChordCompletion::Wait
-            );
-            assert_eq!(
-                chord_completion(true, NSEventModifierFlags::empty(), command),
-                ChordCompletion::Complete
-            );
-        }
-
-        #[test]
-        fn rejects_a_main_key_without_modifiers() {
-            assert_eq!(
-                chord_completion(
-                    true,
-                    NSEventModifierFlags::empty(),
-                    NSEventModifierFlags::empty(),
-                ),
-                ChordCompletion::Reject
-            );
-        }
-
-        #[test]
-        fn supports_only_documented_main_keys() {
-            assert_eq!(main_key_from_key_code(0x00), Some("A"));
-            assert_eq!(main_key_from_key_code(0x24), Some("Enter"));
-            assert_eq!(main_key_from_key_code(0x31), Some("Space"));
-            assert_eq!(main_key_from_key_code(0x7b), Some("Left"));
-            assert_eq!(main_key_from_key_code(0x7a), Some("F1"));
-            assert_eq!(main_key_from_key_code(0x30), None);
-            assert_eq!(main_key_from_key_code(0x35), None);
-        }
-    }
-
     pub fn start_capture(
         window: &WebviewWindow,
         request_id: String,
@@ -604,6 +558,51 @@ mod macos {
 
         rx.recv()
             .map_err(|e| format!("Failed to receive hotkey capture stop result: {}", e))?
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn waits_until_main_key_and_all_modifiers_are_released() {
+            let command = NSEventModifierFlags::Command;
+            assert_eq!(
+                chord_completion(false, NSEventModifierFlags::empty(), command),
+                ChordCompletion::Wait
+            );
+            assert_eq!(
+                chord_completion(true, command, command),
+                ChordCompletion::Wait
+            );
+            assert_eq!(
+                chord_completion(true, NSEventModifierFlags::empty(), command),
+                ChordCompletion::Complete
+            );
+        }
+
+        #[test]
+        fn rejects_a_main_key_without_modifiers() {
+            assert_eq!(
+                chord_completion(
+                    true,
+                    NSEventModifierFlags::empty(),
+                    NSEventModifierFlags::empty(),
+                ),
+                ChordCompletion::Reject
+            );
+        }
+
+        #[test]
+        fn supports_only_documented_main_keys() {
+            assert_eq!(main_key_from_key_code(0x00), Some("A"));
+            assert_eq!(main_key_from_key_code(0x24), Some("Enter"));
+            assert_eq!(main_key_from_key_code(0x31), Some("Space"));
+            assert_eq!(main_key_from_key_code(0x7b), Some("Left"));
+            assert_eq!(main_key_from_key_code(0x7a), Some("F1"));
+            assert_eq!(main_key_from_key_code(0x30), None);
+            assert_eq!(main_key_from_key_code(0x35), None);
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 
 interface SpeakerNameInputProps {
   value: string;

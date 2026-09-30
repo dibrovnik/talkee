@@ -2,7 +2,6 @@ import { emit } from "@tauri-apps/api/event";
 import { load } from "@tauri-apps/plugin-store";
 
 import { logError } from "./logger";
-import type { HistoryEntry } from "./store";
 import {
   applyTranscriptionToStats,
   getEmptyView,
@@ -11,6 +10,7 @@ import {
   type TranscriptionStats,
   type TranscriptionStatsView,
 } from "./statsCore";
+import type { HistoryEntry } from "./store";
 
 export type { TranscriptionStats, TranscriptionStatsView } from "./statsCore";
 
@@ -57,17 +57,12 @@ export { getEmptyView };
  * entry id, ignores failed/empty entries, and never throws — statistics must
  * not be able to break the transcription or history pipeline.
  */
-export async function recordTranscriptionStats(
-  entry: HistoryEntry,
-): Promise<void> {
+export async function recordTranscriptionStats(entry: HistoryEntry): Promise<void> {
   try {
-    if (
-      !entry ||
-      (entry.status !== undefined && entry.status !== "completed")
-    ) {
+    if (!entry || (entry.status !== undefined && entry.status !== "completed")) {
       return;
     }
-    if (!entry.cleaned || !entry.cleaned.trim()) {
+    if (!entry.cleaned?.trim()) {
       return;
     }
 
@@ -77,10 +72,7 @@ export async function recordTranscriptionStats(
       id: entry.id,
       text: entry.cleaned,
       source: entry.source,
-      durationSec:
-        typeof entry.duration === "number" && entry.duration > 0
-          ? entry.duration
-          : 0,
+      durationSec: typeof entry.duration === "number" && entry.duration > 0 ? entry.duration : 0,
       timestamp: entry.timestamp,
       status: entry.status,
     });

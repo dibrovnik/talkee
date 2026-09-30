@@ -8,35 +8,21 @@ const NEEDLE = "talkis"; // legacy product name, compared case-insensitively
 const ALLOWLIST_PATH = ["scripts", "naming-allowlist.json"];
 
 // Directory names that never contain shipped source (build output, VCS, deps).
-const IGNORED_SEGMENTS = new Set([
-  "node_modules",
-  ".git",
-  "target",
-  "dist",
-  "dist-ssr",
-]);
+const IGNORED_SEGMENTS = new Set(["node_modules", ".git", "target", "dist", "dist-ssr"]);
 
 // Paths that are excluded outright: sidecar build artifacts, the regenerated
 // lockfile, and the OpenSpec planning workspace (each active change is renamed
 // by its own change, including this one).
-const IGNORED_PREFIXES = [
-  "src-tauri/binaries",
-  "src-tauri/Cargo.lock",
-  "openspec/changes",
-];
+const IGNORED_PREFIXES = ["src-tauri/binaries", "src-tauri/Cargo.lock", "openspec/changes"];
 
 export function normalizeRelative(path) {
   return path.split(sep).join("/");
 }
 
 export function loadAllowlist(baseDir = rootDir) {
-  const parsed = JSON.parse(
-    readFileSync(join(baseDir, ...ALLOWLIST_PATH), "utf8"),
-  );
+  const parsed = JSON.parse(readFileSync(join(baseDir, ...ALLOWLIST_PATH), "utf8"));
   return new Set(
-    [...(parsed.allow ?? []), ...(parsed.temporaryAllow ?? [])].map(
-      normalizeRelative,
-    ),
+    [...(parsed.allow ?? []), ...(parsed.temporaryAllow ?? [])].map(normalizeRelative),
   );
 }
 
@@ -45,9 +31,7 @@ function isIgnored(relPath) {
   if (segments.some((segment) => IGNORED_SEGMENTS.has(segment))) {
     return true;
   }
-  return IGNORED_PREFIXES.some(
-    (prefix) => relPath === prefix || relPath.startsWith(`${prefix}/`),
-  );
+  return IGNORED_PREFIXES.some((prefix) => relPath === prefix || relPath.startsWith(`${prefix}/`));
 }
 
 function looksBinary(buffer) {
@@ -102,15 +86,11 @@ export function scanForLegacyName(baseDir = rootDir, allowlist = loadAllowlist(b
 function main() {
   const matches = scanForLegacyName();
   if (matches.length === 0) {
-    console.log(
-      "check:naming OK — no legacy name found outside scripts/naming-allowlist.json",
-    );
+    console.log("check:naming OK — no legacy name found outside scripts/naming-allowlist.json");
     return;
   }
 
-  console.error(
-    `Found the legacy name "${NEEDLE}" in ${matches.length} place(s):`,
-  );
+  console.error(`Found the legacy name "${NEEDLE}" in ${matches.length} place(s):`);
   for (const match of matches) {
     console.error(`  ${match.file}:${match.line}: ${match.text}`);
   }

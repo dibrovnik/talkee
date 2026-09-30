@@ -1,11 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-
-import { AppSettings, type HistoryEntry } from "./store";
+import { tn } from "./i18n";
 import { logError, logInfo } from "./logger";
 import { beginProcessing, finishProcessing } from "./processingControl";
+import type { AppSettings, HistoryEntry } from "./store";
 import { formatErrorMessage } from "./utils";
-import { tn } from "./i18n";
 
 const fileInterruptedMessage = (): string => tn("fileTranscription.interrupted");
 
@@ -22,9 +21,23 @@ const DIARIZED_WHISPER_MODEL_OPTIONS = [
   "whisper-base",
   "whisper-tiny",
 ] as const;
-const STRONG_DIARIZED_WHISPER_MODELS = new Set(["whisper-large-v3-turbo", "whisper-large-v3", "whisper-medium"]);
+const STRONG_DIARIZED_WHISPER_MODELS = new Set([
+  "whisper-large-v3-turbo",
+  "whisper-large-v3",
+  "whisper-medium",
+]);
 
-const DIRECT_EXTENSIONS = new Set(["flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "wav", "webm"]);
+const DIRECT_EXTENSIONS = new Set([
+  "flac",
+  "mp3",
+  "mp4",
+  "mpeg",
+  "mpga",
+  "m4a",
+  "ogg",
+  "wav",
+  "webm",
+]);
 const MIME_BY_EXTENSION: Record<string, string> = {
   flac: "audio/flac",
   mp3: "audio/mpeg",
@@ -37,7 +50,15 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   webm: "audio/webm",
 };
 
-export type FileTranscriptionStatus = "reading" | "converting" | "uploading" | "preparing" | "diarizing" | "transcribing" | "assembling" | "done";
+export type FileTranscriptionStatus =
+  | "reading"
+  | "converting"
+  | "uploading"
+  | "preparing"
+  | "diarizing"
+  | "transcribing"
+  | "assembling"
+  | "done";
 
 export interface FileTranscriptionProgress {
   status: FileTranscriptionStatus;
@@ -100,9 +121,7 @@ export function identifyFirstFileSpeakerAsUser(
   orderedIds.forEach((speakerId, index) => {
     labels.set(
       speakerId,
-      index === 0
-        ? tn("callCapture.speakerYou")
-        : tn("callCapture.speakerGuestN", { index }),
+      index === 0 ? tn("callCapture.speakerYou") : tn("callCapture.speakerGuestN", { index }),
     );
   });
   const speakers = orderedIds.map((id) => ({
@@ -111,9 +130,7 @@ export function identifyFirstFileSpeakerAsUser(
   }));
   const segments = result.segments.map((segment) => ({
     ...segment,
-    speakerLabel:
-      labels.get(segment.speakerId) ||
-      tn("callCapture.speakerGuestN", { index: 1 }),
+    speakerLabel: labels.get(segment.speakerId) || tn("callCapture.speakerGuestN", { index: 1 }),
   }));
   const text = segments
     .map(
@@ -212,9 +229,7 @@ function shouldConvert(file: File): boolean {
   return isVideo || !isDirectFormat || file.size > TRANSCRIPTION_MAX_BYTES;
 }
 
-function isLocalSttSettings(
-  settings: Pick<AppSettings, "provider" | "whisperEndpoint">,
-): boolean {
+function isLocalSttSettings(settings: Pick<AppSettings, "provider" | "whisperEndpoint">): boolean {
   return /127\.0\.0\.1|localhost/i.test(settings.whisperEndpoint || "");
 }
 
@@ -252,21 +267,30 @@ function buildFilePathRequestSettings(
 
 function getDiarizedWhisperModel(settings: AppSettings): string {
   const currentModel = (settings.whisperModel || "").trim().toLowerCase();
-  const currentOption = DIARIZED_WHISPER_MODEL_OPTIONS.find((model) => (
-    model.toLowerCase() === currentModel && settings.localModels?.[model]?.status === "downloaded"
-  ));
+  const currentOption = DIARIZED_WHISPER_MODEL_OPTIONS.find(
+    (model) =>
+      model.toLowerCase() === currentModel &&
+      settings.localModels?.[model]?.status === "downloaded",
+  );
 
   if (currentOption && STRONG_DIARIZED_WHISPER_MODELS.has(currentOption)) {
     return currentOption;
   }
 
-  const strongestDownloadedOption = DIARIZED_WHISPER_MODEL_OPTIONS.find((model) => (
-    STRONG_DIARIZED_WHISPER_MODELS.has(model) && settings.localModels?.[model]?.status === "downloaded"
-  ));
+  const strongestDownloadedOption = DIARIZED_WHISPER_MODEL_OPTIONS.find(
+    (model) =>
+      STRONG_DIARIZED_WHISPER_MODELS.has(model) &&
+      settings.localModels?.[model]?.status === "downloaded",
+  );
 
-  return strongestDownloadedOption || currentOption || DIARIZED_WHISPER_MODEL_OPTIONS.find((model) => (
-    settings.localModels?.[model]?.status === "downloaded"
-  )) || DIARIZED_WHISPER_MODEL;
+  return (
+    strongestDownloadedOption ||
+    currentOption ||
+    DIARIZED_WHISPER_MODEL_OPTIONS.find(
+      (model) => settings.localModels?.[model]?.status === "downloaded",
+    ) ||
+    DIARIZED_WHISPER_MODEL
+  );
 }
 
 export function formatFileSize(bytes: number): string {
@@ -346,12 +370,10 @@ export function toFileTranscriptionErrorMessage(
 
   if (
     isLocalRuntimeError &&
-    (
-      normalized.includes("403") ||
+    (normalized.includes("403") ||
       normalized.includes("forbidden") ||
       isAuthFailureLike(normalized) ||
-      normalized.includes("отклонил запрос")
-    )
+      normalized.includes("отклонил запрос"))
   ) {
     return tn("fileTranscription.errLocalRuntimeRejected");
   }
@@ -365,15 +387,17 @@ export function toFileTranscriptionErrorMessage(
   }
 
   if (
-    normalized.includes("разделения говорящих ещё не скачана")
-    || normalized.includes("sherpa-diarization-pyannote-titanet-int8") && normalized.includes("ещё не скачана")
+    normalized.includes("разделения говорящих ещё не скачана") ||
+    (normalized.includes("sherpa-diarization-pyannote-titanet-int8") &&
+      normalized.includes("ещё не скачана"))
   ) {
     return tn("fileTranscription.errDownloadDiarizationComponents");
   }
 
   if (
-    normalized.includes("sherpa-onnx установлен")
-    && (normalized.includes("diarization binary") || normalized.includes("binary для разметки говорящих"))
+    normalized.includes("sherpa-onnx установлен") &&
+    (normalized.includes("diarization binary") ||
+      normalized.includes("binary для разметки говорящих"))
   ) {
     return tn("fileTranscription.errRuntimeIncomplete");
   }
@@ -394,7 +418,11 @@ export function toFileTranscriptionErrorMessage(
     return tn("fileTranscription.errAuthFailed");
   }
 
-  if (normalized.includes("429") || normalized.includes("rate limit") || normalized.includes("quota")) {
+  if (
+    normalized.includes("429") ||
+    normalized.includes("rate limit") ||
+    normalized.includes("quota")
+  ) {
     return tn("fileTranscription.errRateLimit");
   }
 
@@ -407,7 +435,11 @@ export function toFileTranscriptionErrorMessage(
     return tn("fileTranscription.errNetwork");
   }
 
-  if (normalized.includes("network") || normalized.includes("fetch") || normalized.includes("timed out")) {
+  if (
+    normalized.includes("network") ||
+    normalized.includes("fetch") ||
+    normalized.includes("timed out")
+  ) {
     return tn("fileTranscription.errNetwork");
   }
 
@@ -567,10 +599,7 @@ export async function transcribeFilePathOnly({
     });
 
     logInfo("FILE_TRANSCRIPTION", `Sending file path ${fileName} through native pipeline`);
-    const requestSettings = buildFilePathRequestSettings(
-      settings,
-      speakerDiarization,
-    );
+    const requestSettings = buildFilePathRequestSettings(settings, speakerDiarization);
 
     const result = await invoke<NativeTranscriptionResult>("transcribe_file_path", {
       req: {

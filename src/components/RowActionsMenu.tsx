@@ -1,19 +1,16 @@
 import {
+  type ReactElement,
+  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
-  type ReactElement,
-  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 
 import { IconDots } from "../lib/icons";
-import {
-  resolveRowActionsMenuPosition,
-  type MenuPosition,
-} from "./rowActionsMenuPosition";
+import { type MenuPosition, resolveRowActionsMenuPosition } from "./rowActionsMenuPosition";
 
 export interface RowActionItem {
   key: string;
@@ -77,8 +74,7 @@ export function RowActionsMenu({
     if (!open) return;
     const onDown = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (ref.current?.contains(target) || menuRef.current?.contains(target))
-        return;
+      if (ref.current?.contains(target) || menuRef.current?.contains(target)) return;
       setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
@@ -128,6 +124,7 @@ export function RowActionsMenu({
 
       {open &&
         createPortal(
+          // biome-ignore lint/a11y/useKeyWithClickEvents: the menu handles keyboard interaction via its own focus management; this handler only stops propagation.
           <div
             ref={menuRef}
             role="menu"
@@ -178,12 +175,9 @@ export function RowActionsMenu({
                 }}
                 onMouseEnter={(event) => {
                   if (!item.disabled)
-                    event.currentTarget.style.background =
-                      "var(--dropdown-hover)";
+                    event.currentTarget.style.background = "var(--dropdown-hover)";
                 }}
-                onMouseLeave={(event) =>
-                  (event.currentTarget.style.background = "transparent")
-                }
+                onMouseLeave={(event) => (event.currentTarget.style.background = "transparent")}
               >
                 {item.icon}
                 <span>{item.label}</span>

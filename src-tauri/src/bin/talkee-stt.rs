@@ -1067,7 +1067,9 @@ fn take_live_pcm16_samples(pending: &mut Vec<u8>, bytes: &[u8]) -> Vec<f32> {
     }
 
     let audio = pending[..sample_bytes]
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|chunk| i16::from_le_bytes([chunk[0], chunk[1]]) as f32 / i16::MAX as f32)
         .collect::<Vec<_>>();
     pending.drain(..sample_bytes);
@@ -1495,7 +1497,9 @@ fn read_wav_mono_16k(bytes: &[u8]) -> Result<Vec<f32>, (u16, String)> {
             .collect())
     } else {
         Ok(samples
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|frame| {
                 let left = frame[0] as f32 / i16::MAX as f32;
                 let right = frame[1] as f32 / i16::MAX as f32;

@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
-
-import { createLiveTranslationOverlayRenderer } from "./liveTranslationOverlayRenderer";
 import { createLiveTranslationOverlayState } from "./liveTranslation";
+import { createLiveTranslationOverlayRenderer } from "./liveTranslationOverlayRenderer";
 
 const wait = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -44,10 +43,7 @@ describe("live translation overlay renderer", () => {
       ...createLiveTranslationOverlayState("session"),
       error: "partial",
     });
-    renderer.schedule(
-      { ...createLiveTranslationOverlayState("session"), error: "final" },
-      true,
-    );
+    renderer.schedule({ ...createLiveTranslationOverlayState("session"), error: "final" }, true);
     await wait(30);
 
     expect(rendered).toEqual(["final"]);

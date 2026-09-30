@@ -25,9 +25,7 @@ interface ProcessingModeSettings {
 
 /** Resolve the active processing mode: local sidecar endpoints (localhost /
  *  127.0.0.1) mean "Локально", everything else (including empty) means "API". */
-export function resolveProcessingMode(
-  settings: ProcessingModeSettings,
-): ProcessingMode {
+export function resolveProcessingMode(settings: ProcessingModeSettings): ProcessingMode {
   const endpoint = settings.whisperEndpoint || "";
   return /127\.0\.0\.1|localhost/i.test(endpoint) ? "local" : "api";
 }
@@ -55,8 +53,7 @@ export function localModelModeSettingsPatch(
     ...extra,
     provider: "custom",
     whisperApiKey: "",
-    whisperEndpoint:
-      selection.endpoint?.trim() || DEFAULT_LOCAL_STT_ENDPOINT,
+    whisperEndpoint: selection.endpoint?.trim() || DEFAULT_LOCAL_STT_ENDPOINT,
     whisperModel: selection.model?.trim() || DEFAULT_LOCAL_STT_MODEL,
   };
 }

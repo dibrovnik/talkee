@@ -142,16 +142,16 @@ pub fn start(
     std::thread::Builder::new()
         .name("talkee-call-microphone".to_string())
         .spawn(move || {
-            run_thread(
+            run_thread(CallThreadParams {
                 app,
                 path,
                 device_label,
                 live_request,
-                thread_paused,
+                paused: thread_paused,
                 started_tx,
                 stop_rx,
                 stopped_tx,
-            )
+            })
         })
         .map_err(|error| format!("Не удалось создать поток микрофона созвона: {}", error))?;
 
@@ -169,7 +169,7 @@ pub fn start(
     })
 }
 
-fn run_thread(
+struct CallThreadParams {
     app: AppHandle,
     path: PathBuf,
     device_label: Option<String>,
@@ -178,7 +178,20 @@ fn run_thread(
     started_tx: mpsc::Sender<Result<StartedCapture, String>>,
     stop_rx: mpsc::Receiver<()>,
     stopped_tx: mpsc::Sender<Result<(), String>>,
-) {
+}
+
+fn run_thread(params: CallThreadParams) {
+    let CallThreadParams {
+        app,
+        path,
+        device_label,
+        live_request,
+        paused,
+        started_tx,
+        stop_rx,
+        stopped_tx,
+    } = params;
+
     let start_result = (|| {
         let host = cpal::default_host();
         let device = select_device(&host, device_label.as_deref())?;
@@ -207,32 +220,38 @@ fn run_thread(
         };
         let stream = match sample_format {
             cpal::SampleFormat::F32 => build_stream(
-                &device,
-                &config,
-                channels,
-                Arc::clone(&writer),
-                Arc::clone(&paused),
-                live_feeder,
+                CallStreamConfig {
+                    device: &device,
+                    config: &config,
+                    channels,
+                    writer: Arc::clone(&writer),
+                    paused: Arc::clone(&paused),
+                    live_feeder,
+                },
                 |sample: f32| sample,
                 error_fn,
             ),
             cpal::SampleFormat::I16 => build_stream(
-                &device,
-                &config,
-                channels,
-                Arc::clone(&writer),
-                Arc::clone(&paused),
-                live_feeder,
+                CallStreamConfig {
+                    device: &device,
+                    config: &config,
+                    channels,
+                    writer: Arc::clone(&writer),
+                    paused: Arc::clone(&paused),
+                    live_feeder,
+                },
                 |sample: i16| sample as f32 / i16::MAX as f32,
                 error_fn,
             ),
             cpal::SampleFormat::U16 => build_stream(
-                &device,
-                &config,
-                channels,
-                Arc::clone(&writer),
-                Arc::clone(&paused),
-                live_feeder,
+                CallStreamConfig {
+                    device: &device,
+                    config: &config,
+                    channels,
+                    writer: Arc::clone(&writer),
+                    paused: Arc::clone(&paused),
+                    live_feeder,
+                },
                 |sample: u16| (sample as f32 - 32_768.0) / 32_768.0,
                 error_fn,
             ),
@@ -317,13 +336,17 @@ fn select_device(host: &cpal::Host, requested_label: Option<&str>) -> Result<cpa
         .ok_or_else(|| "Системный микрофон не найден.".to_string())
 }
 
-fn build_stream<T, F>(
-    device: &cpal::Device,
-    config: &cpal::StreamConfig,
+struct CallStreamConfig<'a> {
+    device: &'a cpal::Device,
+    config: &'a cpal::StreamConfig,
     channels: usize,
     writer: Arc<Mutex<Option<CallMicrophoneWriter>>>,
     paused: Arc<AtomicBool>,
     live_feeder: Option<LiveDictationFeeder>,
+}
+
+fn build_stream<T, F>(
+    params: CallStreamConfig<'_>,
     normalize: F,
     error_fn: impl FnMut(cpal::StreamError) + Send + 'static,
 ) -> Result<cpal::Stream, cpal::BuildStreamError>
@@ -331,6 +354,15 @@ where
     T: cpal::SizedSample,
     F: Fn(T) -> f32 + Send + Sync + 'static,
 {
+    let CallStreamConfig {
+        device,
+        config,
+        channels,
+        writer,
+        paused,
+        live_feeder,
+    } = params;
+
     device.build_input_stream(
         config,
         move |data: &[T], _| {

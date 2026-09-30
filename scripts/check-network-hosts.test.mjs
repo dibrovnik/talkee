@@ -3,12 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import {
-  classifyHost,
-  extractHosts,
-  parseAllowlist,
-  run,
-} from "./check-network-hosts.mjs";
+import { classifyHost, extractHosts, parseAllowlist, run } from "./check-network-hosts.mjs";
 
 const tempDirs = [];
 
@@ -73,9 +68,7 @@ describe("classifyHost", () => {
 describe("extractHosts", () => {
   test("extracts host with line numbers", () => {
     const hosts = extractHosts(
-      ['const a = "https://api.openai.com/v1";', 'const b = "http://localhost:8000";'].join(
-        "\n",
-      ),
+      ['const a = "https://api.openai.com/v1";', 'const b = "http://localhost:8000";'].join("\n"),
     );
 
     expect(hosts).toEqual([
@@ -100,7 +93,12 @@ describe("run", () => {
     const stdout = capture();
     const stderr = capture();
 
-    const code = run({ rootDir: root, allowlistPath, stdout: stdout.stream, stderr: stderr.stream });
+    const code = run({
+      rootDir: root,
+      allowlistPath,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
 
     expect(code).toBe(0);
     expect(stderr.text()).toBe("");
@@ -114,7 +112,12 @@ describe("run", () => {
     const stdout = capture();
     const stderr = capture();
 
-    const code = run({ rootDir: root, allowlistPath, stdout: stdout.stream, stderr: stderr.stream });
+    const code = run({
+      rootDir: root,
+      allowlistPath,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
 
     expect(code).toBe(0);
   });
@@ -127,7 +130,12 @@ describe("run", () => {
     const stdout = capture();
     const stderr = capture();
 
-    const code = run({ rootDir: root, allowlistPath, stdout: stdout.stream, stderr: stderr.stream });
+    const code = run({
+      rootDir: root,
+      allowlistPath,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
 
     expect(code).toBe(1);
     expect(stderr.text()).toContain("src/nested/b.ts:2 evil.example.com");
@@ -141,7 +149,12 @@ describe("run", () => {
     const stdout = capture();
     const stderr = capture();
 
-    const code = run({ rootDir: root, allowlistPath, stdout: stdout.stream, stderr: stderr.stream });
+    const code = run({
+      rootDir: root,
+      allowlistPath,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
 
     expect(code).toBe(0);
   });

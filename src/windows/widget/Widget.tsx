@@ -1,10 +1,48 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { cursorPosition, getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import type { ReactNode, PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  buildCallLiveSpeakerTranscript,
+  type CallCaptureSession,
+  checkpointCallTranscription,
+  formatCallLiveTranscript,
+  pauseCallCaptureMic,
+  restoreInterruptedCallCaptureHistory,
+  resumeCallCaptureMic,
+  saveCallCaptureMicTrack,
+  saveFailedCallCaptureEntry,
+  startCallCapture,
+  stopCallCapture,
+  transcribeCallCaptureSession,
+} from "../../lib/callCapture";
+import {
+  type FileTranscriptionProgress,
+  type FileTranscriptionStatus,
+  fileNameFromPath,
+  getFileTranscriptionPercent,
+  toFileTranscriptionErrorMessage,
+  transcribeFilePathOnly,
+} from "../../lib/fileTranscription";
+import {
+  APP_DATA_MIGRATION_ERROR_EVENT,
+  CALL_CAPTURE_STOP_REQUEST_EVENT,
+  type CallCaptureStopRequestPayload,
+  DICTATION_STREAM_UPDATE_EVENT,
+  type DictationStreamUpdatePayload,
+  HISTORY_CLEARED_EVENT,
+  HISTORY_DELETED_EVENT,
+  HISTORY_UPDATED_EVENT,
+  PROCESSING_CANCEL_REQUEST_EVENT,
+  type ProcessingCancelRequestPayload,
+  SETTINGS_UPDATED_EVENT,
+  WIDGET_RETRY_PROCESSING_EVENT,
+  type WidgetRetryProcessingPayload,
+} from "../../lib/hotkeyEvents";
+import { tn, useI18n } from "../../lib/i18n";
 import {
   IconCheck,
   IconCopy,
@@ -13,32 +51,8 @@ import {
   IconLoader2,
   IconPhoneCall,
 } from "../../lib/icons";
-
-import {
-  CALL_CAPTURE_STOP_REQUEST_EVENT,
-  HISTORY_CLEARED_EVENT,
-  HISTORY_DELETED_EVENT,
-  HISTORY_UPDATED_EVENT,
-  DICTATION_STREAM_UPDATE_EVENT,
-  APP_DATA_MIGRATION_ERROR_EVENT,
-  PROCESSING_CANCEL_REQUEST_EVENT,
-  SETTINGS_UPDATED_EVENT,
-  WIDGET_RETRY_PROCESSING_EVENT,
-  type DictationStreamUpdatePayload,
-  type CallCaptureStopRequestPayload,
-  type ProcessingCancelRequestPayload,
-  type WidgetRetryProcessingPayload,
-} from "../../lib/hotkeyEvents";
-import {
-  DEFAULT_SELECTION_TRANSLATION_HOTKEY,
-  getHistory,
-  getSettings,
-  addHistoryEntry,
-  reconcileInterruptedProcessing,
-  type HistoryEntry,
-  type TranslationSettings,
-  updateHistoryEntry,
-} from "../../lib/store";
+import { logError, logInfo } from "../../lib/logger";
+import { requestSystemAudioPermission, requiresSystemAudioPermission } from "../../lib/permissions";
 import {
   beginProcessing,
   cancelProcessing,
@@ -46,68 +60,47 @@ import {
   isAbortError,
 } from "../../lib/processingControl";
 import {
-  fileNameFromPath,
-  type FileTranscriptionProgress,
-  type FileTranscriptionStatus,
-  getFileTranscriptionPercent,
-  toFileTranscriptionErrorMessage,
-  transcribeFilePathOnly,
-} from "../../lib/fileTranscription";
-import { logError, logInfo } from "../../lib/logger";
-import { tn, useI18n } from "../../lib/i18n";
-import {
-  requestSystemAudioPermission,
-  requiresSystemAudioPermission,
-} from "../../lib/permissions";
+  addHistoryEntry,
+  DEFAULT_SELECTION_TRANSLATION_HOTKEY,
+  getHistory,
+  getSettings,
+  type HistoryEntry,
+  reconcileInterruptedProcessing,
+  type TranslationSettings,
+  updateHistoryEntry,
+} from "../../lib/store";
 import { scaleWidgetDimension } from "../../lib/widgetScale";
-import {
-  buildCallLiveSpeakerTranscript,
-  checkpointCallTranscription,
-  formatCallLiveTranscript,
-  pauseCallCaptureMic,
-  restoreInterruptedCallCaptureHistory,
-  resumeCallCaptureMic,
-  saveFailedCallCaptureEntry,
-  saveCallCaptureMicTrack,
-  startCallCapture,
-  stopCallCapture,
-  transcribeCallCaptureSession,
-  type CallCaptureSession,
-} from "../../lib/callCapture";
 import { useWidgetController } from "./hooks/useWidgetController";
-import { WidgetRecordButton } from "./WidgetRecordButton";
-import { createRecordingRuntimeController } from "./services/recordingRuntime";
-import {
-  applyLiveTranslationEvent,
-  buildLiveTranslationHistoryEntry,
-  createLiveTranslationOverlayState,
-  liveTranslationVisibleSegments,
-  resolveLiveTranslationConnection,
-  type LiveTranslationEventPayload,
-  type LiveTranslationOverlayState,
-} from "./services/liveTranslation";
+import { requestCallMicrophoneStream, resolveCallMicrophoneLabel } from "./services/callMicrophone";
 import {
   createCallLiveDictationOptions,
   warmUpLiveDictationRuntime,
 } from "./services/dictationStreamOverlay";
 import {
-  requestCallMicrophoneStream,
-  resolveCallMicrophoneLabel,
-} from "./services/callMicrophone";
-import { showWidgetErrorOverlay } from "./services/widgetErrorOverlay";
+  applyLiveTranslationEvent,
+  buildLiveTranslationHistoryEntry,
+  createLiveTranslationOverlayState,
+  type LiveTranslationEventPayload,
+  type LiveTranslationOverlayState,
+  liveTranslationVisibleSegments,
+  resolveLiveTranslationConnection,
+} from "./services/liveTranslation";
 import {
   createLiveTranslationOverlayRenderer,
   type LiveTranslationOverlayRenderer,
 } from "./services/liveTranslationOverlayRenderer";
+import { createRecordingRuntimeController } from "./services/recordingRuntime";
+import { showWidgetErrorOverlay } from "./services/widgetErrorOverlay";
+import { WidgetRecordButton } from "./WidgetRecordButton";
 import {
   ACTIVE_WIDGET_SHELL_HEIGHT,
   ACTIVE_WIDGET_SHELL_WIDTH,
   CALL_BUBBLE_SIZE,
   FILE_DROP_WIDGET_HEIGHT,
   FILE_DROP_WIDGET_WIDTH,
+  IDLE_HOVER_SCALE,
   IDLE_HOVER_WIDGET_HEIGHT,
   IDLE_HOVER_WIDGET_WIDTH,
-  IDLE_HOVER_SCALE,
   WIDGET_CONTROL_GAP,
   WIDGET_PRIMARY_INLINE_INSET,
   WIDGET_SHELL_HEIGHT,
@@ -120,12 +113,9 @@ const WIDGET_RECORD_BUTTON_LEFT = 10;
 const FILE_DROP_LEAVE_GRACE_MS = 260;
 const FILE_DROP_CLOSE_ANIMATION_MS = 160;
 
-type WidgetFileDropState =
-  "idle" | "drag-over" | "processing" | "success" | "error" | "closing";
-type WidgetCallState =
-  "idle" | "starting" | "recording" | "processing" | "success" | "error";
-type WidgetLiveTranslationState =
-  "idle" | "starting" | "recording" | "stopping" | "error";
+type WidgetFileDropState = "idle" | "drag-over" | "processing" | "success" | "error" | "closing";
+type WidgetCallState = "idle" | "starting" | "recording" | "processing" | "success" | "error";
+type WidgetLiveTranslationState = "idle" | "starting" | "recording" | "stopping" | "error";
 type WidgetRetryProcessingSource = WidgetRetryProcessingPayload["source"];
 
 interface CallTranscriptRuntime {
@@ -203,9 +193,7 @@ const WIDGET_WAVES = [
   },
 ] as const;
 
-function getCopyableText(
-  entry: HistoryEntry | null | undefined,
-): string | null {
+function getCopyableText(entry: HistoryEntry | null | undefined): string | null {
   if (!entry || entry.status === "failed") {
     return null;
   }
@@ -215,7 +203,9 @@ function getCopyableText(
 }
 
 function stopMediaStream(stream: MediaStream | null): void {
-  stream?.getTracks().forEach((track) => track.stop());
+  stream?.getTracks().forEach((track) => {
+    track.stop();
+  });
 }
 
 function isPermissionDeniedError(error: unknown): boolean {
@@ -231,9 +221,7 @@ function isSelectedMicUnavailableError(error: unknown): boolean {
     return false;
   }
 
-  return (
-    error.name === "NotFoundError" || error.name === "OverconstrainedError"
-  );
+  return error.name === "NotFoundError" || error.name === "OverconstrainedError";
 }
 
 function microphoneStartErrorMessage(error: unknown): string {
@@ -257,10 +245,7 @@ function microphoneStartErrorMessage(error: unknown): string {
 }
 
 function formatCallCaptureRawError(error: unknown): string {
-  const source =
-    error instanceof CallCaptureStartError && error.rawCause
-      ? error.rawCause
-      : error;
+  const source = error instanceof CallCaptureStartError && error.rawCause ? error.rawCause : error;
 
   if (source instanceof DOMException) {
     const constraint =
@@ -324,9 +309,7 @@ export function Widget() {
   const callMicRuntimeRef = useRef(createRecordingRuntimeController());
   const callSessionRef = useRef<CallCaptureSession | null>(null);
   const callTranscriptRuntimeRef = useRef<CallTranscriptRuntime | null>(null);
-  const callTranscriptPersistQueueRef = useRef<Promise<void>>(
-    Promise.resolve(),
-  );
+  const callTranscriptPersistQueueRef = useRef<Promise<void>>(Promise.resolve());
   // Ids of the entries currently being processed in this window, so a stop
   // request from the table can reset the matching widget UI immediately (a local
   // `invoke` keeps running and would otherwise leave the spinner going).
@@ -338,9 +321,7 @@ export function Widget() {
   const liveTranslationStateRef = useRef<WidgetLiveTranslationState>("idle");
   const liveOverlayRef = useRef<LiveTranslationOverlayState | null>(null);
   const pendingLiveEventsRef = useRef<LiveTranslationEventPayload[]>([]);
-  const liveOverlayRendererRef = useRef<LiveTranslationOverlayRenderer | null>(
-    null,
-  );
+  const liveOverlayRendererRef = useRef<LiveTranslationOverlayRenderer | null>(null);
   const liveStartedAtRef = useRef(0);
   const liveAdapterIdRef = useRef("unknown");
   const liveAudioWatchdogTimerRef = useRef<number | null>(null);
@@ -357,10 +338,7 @@ export function Widget() {
       void pauseCallCaptureMic(callSession.id)
         .then((paused) => {
           if (paused) {
-            logInfo(
-              "CALL_CAPTURE",
-              "Paused native call mic while voice recording",
-            );
+            logInfo("CALL_CAPTURE", "Paused native call mic while voice recording");
           }
         })
         .catch((error) => {
@@ -388,10 +366,7 @@ export function Widget() {
       void resumeCallCaptureMic(callSession.id)
         .then((resumed) => {
           if (resumed) {
-            logInfo(
-              "CALL_CAPTURE",
-              "Resumed native call mic after voice recording",
-            );
+            logInfo("CALL_CAPTURE", "Resumed native call mic after voice recording");
           }
         })
         .catch((error) => {
@@ -408,31 +383,21 @@ export function Widget() {
       logInfo("CALL_CAPTURE", "Resumed call mic after voice recording");
     }
   }, []);
-  const {
-    state,
-    stream,
-    lockedRecording,
-    widgetScale,
-    resizeWidget,
-    toggleManualRecording,
-  } = useWidgetController({
-    onVoiceRecordingProcessing: resumeCallMicForVoice,
-    onVoiceRecordingStart: pauseCallMicForVoice,
-    onVoiceRecordingStartFailed: resumeCallMicForVoice,
-  });
+  const { state, stream, lockedRecording, widgetScale, resizeWidget, toggleManualRecording } =
+    useWidgetController({
+      onVoiceRecordingProcessing: resumeCallMicForVoice,
+      onVoiceRecordingStart: pauseCallMicForVoice,
+      onVoiceRecordingStartFailed: resumeCallMicForVoice,
+    });
   const stateRef = useRef(state);
   const fileDropStateRef = useRef<WidgetFileDropState>("idle");
-  const retryProcessingSourceRef = useRef<WidgetRetryProcessingSource | null>(
-    null,
-  );
+  const retryProcessingSourceRef = useRef<WidgetRetryProcessingSource | null>(null);
   const fileResetTimerRef = useRef<number | null>(null);
   const fileDragLeaveTimerRef = useRef<number | null>(null);
   const fileCloseTimerRef = useRef<number | null>(null);
   const fileDragDepthRef = useRef(0);
   const fileDropExpandedRef = useRef(false);
-  const translationSettingsRef = useRef<TranslationSettings>(
-    DEFAULT_TRANSLATION_SETTINGS,
-  );
+  const translationSettingsRef = useRef<TranslationSettings>(DEFAULT_TRANSLATION_SETTINGS);
   if (!liveOverlayRendererRef.current) {
     liveOverlayRendererRef.current = createLiveTranslationOverlayRenderer({
       isActive: (sessionId) => liveOverlayRef.current?.sessionId === sessionId,
@@ -454,37 +419,26 @@ export function Widget() {
       },
     });
   }
-  const fileProcessRef = useRef<(filePath: string) => Promise<void>>(
-    async () => {},
-  );
+  const fileProcessRef = useRef<(filePath: string) => Promise<void>>(async () => {});
   const [latestCopyText, setLatestCopyText] = useState<string | null>(null);
-  const [pendingFileResultId, setPendingFileResultId] = useState<string | null>(
-    null,
-  );
-  const [fileDropState, setFileDropState] =
-    useState<WidgetFileDropState>("idle");
+  const [pendingFileResultId, setPendingFileResultId] = useState<string | null>(null);
+  const [fileDropState, setFileDropState] = useState<WidgetFileDropState>("idle");
   const [fileDropName, setFileDropName] = useState("");
-  const [fileStatus, setFileStatus] = useState<FileTranscriptionStatus | null>(
-    null,
-  );
-  const [fileProgress, setFileProgress] =
-    useState<FileTranscriptionProgress | null>(null);
+  const [fileStatus, setFileStatus] = useState<FileTranscriptionStatus | null>(null);
+  const [fileProgress, setFileProgress] = useState<FileTranscriptionProgress | null>(null);
   const [callState, setCallState] = useState<WidgetCallState>("idle");
-  const [callSession, setCallSession] = useState<CallCaptureSession | null>(
-    null,
-  );
+  const [callSession, setCallSession] = useState<CallCaptureSession | null>(null);
   const [callStartedAt, setCallStartedAt] = useState<number>(0);
   const [callError, setCallError] = useState<string>("");
-  const [callSettings, setCallSettings] = useState<Awaited<
-    ReturnType<typeof getSettings>
-  > | null>(null);
-  const [translationSettings, setTranslationSettings] =
-    useState<TranslationSettings>(DEFAULT_TRANSLATION_SETTINGS);
+  const [callSettings, setCallSettings] = useState<Awaited<ReturnType<typeof getSettings>> | null>(
+    null,
+  );
+  const [translationSettings, setTranslationSettings] = useState<TranslationSettings>(
+    DEFAULT_TRANSLATION_SETTINGS,
+  );
   const [liveTranslationState, setLiveTranslationState] =
     useState<WidgetLiveTranslationState>("idle");
-  const updateLiveTranslationState = (
-    nextState: WidgetLiveTranslationState,
-  ): void => {
+  const updateLiveTranslationState = (nextState: WidgetLiveTranslationState): void => {
     liveTranslationStateRef.current = nextState;
     setLiveTranslationState(nextState);
   };
@@ -571,10 +525,7 @@ export function Widget() {
             runtime.systemText = nextText;
           }
         }
-        const transcript = formatCallLiveTranscript(
-          runtime.micText,
-          runtime.systemText,
-        );
+        const transcript = formatCallLiveTranscript(runtime.micText, runtime.systemText);
         runtime.entry = {
           ...runtime.entry,
           duration,
@@ -615,29 +566,28 @@ export function Widget() {
         runtime.lastCheckpointAt[channel] = now;
         const entrySnapshot = { ...runtime.entry };
         const sessionId = runtime.sessionId;
-        callTranscriptPersistQueueRef.current =
-          callTranscriptPersistQueueRef.current
-            .catch(() => {})
-            .then(async () => {
-              await checkpointCallTranscription({
-                sessionId,
-                channel,
-                status: durableStatus,
-                text: channel === "mic" ? runtime.micText : runtime.systemText,
-                startedAtMs: now,
-                message: payload.message,
-              });
-              await updateHistoryEntry(entrySnapshot);
-              await emit(HISTORY_UPDATED_EVENT, entrySnapshot);
-            })
-            .catch((error) => {
-              logError(
-                "CALL_CAPTURE",
-                `Failed to checkpoint live transcript: ${
-                  error instanceof Error ? error.message : String(error)
-                }`,
-              );
+        callTranscriptPersistQueueRef.current = callTranscriptPersistQueueRef.current
+          .catch(() => {})
+          .then(async () => {
+            await checkpointCallTranscription({
+              sessionId,
+              channel,
+              status: durableStatus,
+              text: channel === "mic" ? runtime.micText : runtime.systemText,
+              startedAtMs: now,
+              message: payload.message,
             });
+            await updateHistoryEntry(entrySnapshot);
+            await emit(HISTORY_UPDATED_EVENT, entrySnapshot);
+          })
+          .catch((error) => {
+            logError(
+              "CALL_CAPTURE",
+              `Failed to checkpoint live transcript: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+          });
       },
     );
     return () => {
@@ -651,10 +601,7 @@ export function Widget() {
       ({ payload }) => {
         const current = liveOverlayRef.current;
         if (!current) {
-          pendingLiveEventsRef.current = [
-            ...pendingLiveEventsRef.current.slice(-15),
-            payload,
-          ];
+          pendingLiveEventsRef.current = [...pendingLiveEventsRef.current.slice(-15), payload];
           return;
         }
         const next = applyLiveTranslationEvent(current, payload);
@@ -738,15 +685,12 @@ export function Widget() {
 
   useEffect(() => {
     let mounted = true;
-    const unlistenPromise = listen<string>(
-      APP_DATA_MIGRATION_ERROR_EVENT,
-      ({ payload }) => {
-        if (!mounted) {
-          return;
-        }
-        showWidgetErrorOverlay(payload);
-      },
-    );
+    const unlistenPromise = listen<string>(APP_DATA_MIGRATION_ERROR_EVENT, ({ payload }) => {
+      if (!mounted) {
+        return;
+      }
+      showWidgetErrorOverlay(payload);
+    });
 
     return () => {
       mounted = false;
@@ -760,10 +704,7 @@ export function Widget() {
     void restoreInterruptedCallCaptureHistory()
       .then((restored) => {
         if (restored.length > 0) {
-          logInfo(
-            "CALL_CAPTURE",
-            `Recovered interrupted call sessions: ${restored.length}`,
-          );
+          logInfo("CALL_CAPTURE", `Recovered interrupted call sessions: ${restored.length}`);
         }
       })
       .catch((error) => {
@@ -850,10 +791,7 @@ export function Widget() {
 
     fileDropExpandedRef.current = active;
     await resizeWidget(
-      widgetStackWidth(
-        active,
-        translationSettingsRef.current.liveWidgetEnabled,
-      ),
+      widgetStackWidth(active, translationSettingsRef.current.liveWidgetEnabled),
       widgetStackHeight(active),
     ).catch((error) => {
       logError(
@@ -971,10 +909,7 @@ export function Widget() {
         );
       }
 
-      if (
-        requiresSystemAudioPermission() &&
-        !callSystemAudioPermissionReadyRef.current
-      ) {
+      if (requiresSystemAudioPermission() && !callSystemAudioPermissionReadyRef.current) {
         await requestSystemAudioPermission();
 
         callSystemAudioPermissionReadyRef.current = true;
@@ -984,21 +919,12 @@ export function Widget() {
       const entryId = crypto.randomUUID();
       const micRequestId = `${entryId}:mic`;
       const systemRequestId = `${entryId}:system`;
-      let micLiveOptions = createCallLiveDictationOptions(
-        settings,
-        micRequestId,
-      );
-      let systemLiveOptions = createCallLiveDictationOptions(
-        settings,
-        systemRequestId,
-      );
+      let micLiveOptions = createCallLiveDictationOptions(settings, micRequestId);
+      let systemLiveOptions = createCallLiveDictationOptions(settings, systemRequestId);
       let liveStreamingReady = true;
       if (micLiveOptions?.provider === "local") {
         try {
-          const runtimeEndpoint = await warmUpLiveDictationRuntime(
-            settings,
-            micLiveOptions.model,
-          );
+          const runtimeEndpoint = await warmUpLiveDictationRuntime(settings, micLiveOptions.model);
           if (runtimeEndpoint) {
             micLiveOptions = {
               ...micLiveOptions,
@@ -1074,10 +1000,7 @@ export function Widget() {
           "Native call mic started without a competing WebView audio session",
         );
       } else {
-        logInfo(
-          "CALL_CAPTURE",
-          "Native call mic unavailable; requesting WebView fallback",
-        );
+        logInfo("CALL_CAPTURE", "Native call mic unavailable; requesting WebView fallback");
         micStream = await requestCallMicrophoneStream(settings.micId);
         callMicRuntimeRef.current.start(micStream);
       }
@@ -1107,13 +1030,12 @@ export function Widget() {
         runtime.entry = recordingEntry;
         runtime.sessionId = session.id;
       }
-      callTranscriptPersistQueueRef.current =
-        callTranscriptPersistQueueRef.current
-          .catch(() => {})
-          .then(async () => {
-            await addHistoryEntry(recordingEntry);
-            await emit(HISTORY_UPDATED_EVENT, recordingEntry);
-          });
+      callTranscriptPersistQueueRef.current = callTranscriptPersistQueueRef.current
+        .catch(() => {})
+        .then(async () => {
+          await addHistoryEntry(recordingEntry);
+          await emit(HISTORY_UPDATED_EVENT, recordingEntry);
+        });
       try {
         await callTranscriptPersistQueueRef.current;
       } catch (error) {
@@ -1142,10 +1064,7 @@ export function Widget() {
         });
       }
       const message = callCaptureStartErrorMessage(error);
-      logError(
-        "CALL_CAPTURE",
-        `Call capture start failed: ${formatCallCaptureRawError(error)}`,
-      );
+      logError("CALL_CAPTURE", `Call capture start failed: ${formatCallCaptureRawError(error)}`);
       callMicRuntimeRef.current.dispose();
       callSessionRef.current = null;
       callTranscriptRuntimeRef.current = null;
@@ -1189,13 +1108,12 @@ export function Widget() {
         };
         callProcessingIdRef.current = runtime.entry.id;
         const finalizingEntry = { ...runtime.entry };
-        callTranscriptPersistQueueRef.current =
-          callTranscriptPersistQueueRef.current
-            .catch(() => {})
-            .then(async () => {
-              await updateHistoryEntry(finalizingEntry);
-              await emit(HISTORY_UPDATED_EVENT, finalizingEntry);
-            });
+        callTranscriptPersistQueueRef.current = callTranscriptPersistQueueRef.current
+          .catch(() => {})
+          .then(async () => {
+            await updateHistoryEntry(finalizingEntry);
+            await emit(HISTORY_UPDATED_EVENT, finalizingEntry);
+          });
         try {
           await callTranscriptPersistQueueRef.current;
         } catch (error) {
@@ -1211,13 +1129,10 @@ export function Widget() {
         await callMicRuntimeRef.current.stop();
       }
       const micBlob =
-        !callSession.nativeMicActive &&
-        callMicRuntimeRef.current.hasAudioChunks()
+        !callSession.nativeMicActive && callMicRuntimeRef.current.hasAudioChunks()
           ? await callMicRuntimeRef.current.getAudioBlob()
           : null;
-      const micFileName = micBlob?.type.includes("wav")
-        ? "call-mic.wav"
-        : "call-mic.webm";
+      const micFileName = micBlob?.type.includes("wav") ? "call-mic.wav" : "call-mic.webm";
       const micFile = micBlob
         ? new File([micBlob], micFileName, {
             type: micBlob.type || "audio/webm",
@@ -1226,19 +1141,11 @@ export function Widget() {
       let micFileForTranscription = micFile;
       if (micBlob) {
         try {
-          const micTrack = await saveCallCaptureMicTrack(
-            callSession.id,
-            micBlob,
-          );
+          const micTrack = await saveCallCaptureMicTrack(callSession.id, micBlob);
           micFileForTranscription = null;
           sessionForFailure = {
             ...sessionForFailure,
-            tracks: [
-              micTrack,
-              ...sessionForFailure.tracks.filter(
-                (track) => track.kind !== "mic",
-              ),
-            ],
+            tracks: [micTrack, ...sessionForFailure.tracks.filter((track) => track.kind !== "mic")],
           };
         } catch (saveError) {
           logError(
@@ -1258,14 +1165,9 @@ export function Widget() {
       await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
       await callTranscriptPersistQueueRef.current.catch(() => {});
       if (runtime && stoppedSession.liveTranscription) {
-        runtime.micText =
-          stoppedSession.liveTranscription.micText || runtime.micText;
-        runtime.systemText =
-          stoppedSession.liveTranscription.systemText || runtime.systemText;
-        const liveText = formatCallLiveTranscript(
-          runtime.micText,
-          runtime.systemText,
-        );
+        runtime.micText = stoppedSession.liveTranscription.micText || runtime.micText;
+        runtime.systemText = stoppedSession.liveTranscription.systemText || runtime.systemText;
+        const liveText = formatCallLiveTranscript(runtime.micText, runtime.systemText);
         runtime.entry = {
           ...runtime.entry,
           raw: liveText || runtime.entry.raw,
@@ -1374,15 +1276,10 @@ export function Widget() {
         const runtime = callTranscriptRuntimeRef.current;
         if (runtime) {
           if (stoppedSession?.liveTranscription) {
-            runtime.micText =
-              stoppedSession.liveTranscription.micText || runtime.micText;
-            runtime.systemText =
-              stoppedSession.liveTranscription.systemText || runtime.systemText;
+            runtime.micText = stoppedSession.liveTranscription.micText || runtime.micText;
+            runtime.systemText = stoppedSession.liveTranscription.systemText || runtime.systemText;
           }
-          const preservedLiveText = formatCallLiveTranscript(
-            runtime.micText,
-            runtime.systemText,
-          );
+          const preservedLiveText = formatCallLiveTranscript(runtime.micText, runtime.systemText);
           const failed: HistoryEntry = {
             ...runtime.entry,
             raw: preservedLiveText || runtime.entry.raw,
@@ -1397,13 +1294,11 @@ export function Widget() {
             status: "failed",
             callCapturePhase: undefined,
             errorMessage: userFacingMessage,
-            callTracks: (stoppedSession ?? sessionForFailure).tracks.map(
-              (track) => ({
-                kind: track.kind,
-                label: track.label,
-                path: track.path,
-              }),
-            ),
+            callTracks: (stoppedSession ?? sessionForFailure).tracks.map((track) => ({
+              kind: track.kind,
+              label: track.label,
+              path: track.path,
+            })),
           };
           await updateHistoryEntry(failed);
           await emit(HISTORY_UPDATED_EVENT, failed);
@@ -1418,9 +1313,7 @@ export function Widget() {
         logError(
           "CALL_CAPTURE",
           `Failed to save failed call history entry: ${
-            historyError instanceof Error
-              ? historyError.message
-              : String(historyError)
+            historyError instanceof Error ? historyError.message : String(historyError)
           }`,
         );
       }
@@ -1575,10 +1468,7 @@ export function Widget() {
         clearFileDragLeaveTimer();
         fileDragLeaveTimerRef.current = window.setTimeout(() => {
           fileDragLeaveTimerRef.current = null;
-          if (
-            fileDragDepthRef.current === 0 &&
-            fileDropStateRef.current === "drag-over"
-          ) {
+          if (fileDragDepthRef.current === 0 && fileDropStateRef.current === "drag-over") {
             closeFileDropUi();
           }
         }, FILE_DROP_LEAVE_GRACE_MS);
@@ -1619,9 +1509,7 @@ export function Widget() {
           return;
         }
 
-        const latestCompleted = history.find(
-          (entry) => getCopyableText(entry) !== null,
-        );
+        const latestCompleted = history.find((entry) => getCopyableText(entry) !== null);
         setLatestCopyText(getCopyableText(latestCompleted));
       } catch (error) {
         logError(
@@ -1633,21 +1521,15 @@ export function Widget() {
 
     void refreshLatestCopyText();
 
-    const unlistenUpdatedPromise = listen<HistoryEntry>(
-      HISTORY_UPDATED_EVENT,
-      ({ payload }) => {
-        const text = getCopyableText(payload);
-        if (text) {
-          setLatestCopyText(text);
-        }
-      },
-    );
-    const unlistenDeletedPromise = listen<{ id: string }>(
-      HISTORY_DELETED_EVENT,
-      () => {
-        void refreshLatestCopyText();
-      },
-    );
+    const unlistenUpdatedPromise = listen<HistoryEntry>(HISTORY_UPDATED_EVENT, ({ payload }) => {
+      const text = getCopyableText(payload);
+      if (text) {
+        setLatestCopyText(text);
+      }
+    });
+    const unlistenDeletedPromise = listen<{ id: string }>(HISTORY_DELETED_EVENT, () => {
+      void refreshLatestCopyText();
+    });
     const unlistenClearedPromise = listen(HISTORY_CLEARED_EVENT, () => {
       setLatestCopyText(null);
     });
@@ -1673,14 +1555,8 @@ export function Widget() {
     dragTriggeredRef.current = false;
   };
 
-  const handleDragPointerMove = async (
-    event: ReactPointerEvent<HTMLDivElement>,
-  ) => {
-    if (
-      !dragStartRef.current ||
-      dragTriggeredRef.current ||
-      (event.buttons & 1) === 0
-    ) {
+  const handleDragPointerMove = async (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragStartRef.current || dragTriggeredRef.current || (event.buttons & 1) === 0) {
       return;
     }
 
@@ -1731,32 +1607,21 @@ export function Widget() {
   const scaledStackWidth = scaleWidgetDimension(stackWidth, widgetScale);
   const scaledStackHeight = scaleWidgetDimension(stackHeight, widgetScale);
   const displayCallState: WidgetCallState =
-    retryProcessingSource === "call" && callState === "idle"
-      ? "processing"
-      : callState;
+    retryProcessingSource === "call" && callState === "idle" ? "processing" : callState;
   const displayWidgetState =
-    retryProcessingSource === "voice" && state === "idle" && !fileDropActive
-      ? "processing"
-      : state;
+    retryProcessingSource === "voice" && state === "idle" && !fileDropActive ? "processing" : state;
   const callBubbleDisabled =
     displayCallState === "idle" &&
-    (displayWidgetState !== "idle" ||
-      fileDropActive ||
-      liveTranslationState !== "idle");
+    (displayWidgetState !== "idle" || fileDropActive || liveTranslationState !== "idle");
   const liveTranslationBubbleDisabled =
     liveTranslationState === "starting" ||
     liveTranslationState === "stopping" ||
     (liveTranslationState === "idle" &&
-      (displayWidgetState !== "idle" ||
-        fileDropActive ||
-        displayCallState !== "idle"));
+      (displayWidgetState !== "idle" || fileDropActive || displayCallState !== "idle"));
 
   useEffect(() => {
     void resizeWidget(
-      widgetStackWidth(
-        fileDropStateRef.current !== "idle",
-        translationSettings.liveWidgetEnabled,
-      ),
+      widgetStackWidth(fileDropStateRef.current !== "idle", translationSettings.liveWidgetEnabled),
       widgetStackHeight(fileDropStateRef.current !== "idle"),
     ).catch((error) => {
       logError(
@@ -1780,26 +1645,16 @@ export function Widget() {
     try {
       const settings = await getSettings({ reload: true });
       const connection = resolveLiveTranslationConnection(settings);
-      if (
-        requiresSystemAudioPermission() &&
-        !callSystemAudioPermissionReadyRef.current
-      ) {
+      if (requiresSystemAudioPermission() && !callSystemAudioPermissionReadyRef.current) {
         await requestSystemAudioPermission();
         callSystemAudioPermissionReadyRef.current = true;
       }
       let micLabel: string | null = null;
-      if (
-        settings.translation.liveMicrophoneEnabled ||
-        settings.saveRecordingAudio
-      ) {
-        const devices = await navigator.mediaDevices
-          .enumerateDevices()
-          .catch(() => []);
+      if (settings.translation.liveMicrophoneEnabled || settings.saveRecordingAudio) {
+        const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
         micLabel =
           devices.find(
-            (device) =>
-              device.kind === "audioinput" &&
-              device.deviceId === settings.micId,
+            (device) => device.kind === "audioinput" && device.deviceId === settings.micId,
           )?.label || null;
       }
       const session = await invoke<{ sessionId: string; startedAt: string }>(
@@ -1811,15 +1666,12 @@ export function Widget() {
             model: connection.model,
             endpoint: connection.endpoint,
             targetLanguage: settings.translation.liveTargetLanguage,
-            voiceEnabled:
-              settings.translation.liveVoiceEnabled &&
-              connection.supportsVoice,
+            voiceEnabled: settings.translation.liveVoiceEnabled && connection.supportsVoice,
             voice: settings.translation.liveVoice,
             voiceVolume: settings.translation.liveVoiceVolume,
             voiceSpeed: settings.translation.liveVoiceSpeed,
             muteOriginal:
-              settings.translation.liveVoiceEnabled &&
-              settings.translation.liveMuteOriginalEnabled,
+              settings.translation.liveVoiceEnabled && settings.translation.liveMuteOriginalEnabled,
             includeMicrophone: settings.translation.liveMicrophoneEnabled,
             micDeviceLabel: micLabel,
             saveAudio: settings.saveRecordingAudio,
@@ -2146,8 +1998,7 @@ function FileDropPill({
           opacity: isClosing ? 0 : 1,
           transform: isClosing ? "scale(0.94)" : "scale(1)",
           transformOrigin: "center center",
-          transition:
-            "opacity 0.16s ease, transform 0.16s cubic-bezier(0.22, 1, 0.36, 1)",
+          transition: "opacity 0.16s ease, transform 0.16s cubic-bezier(0.22, 1, 0.36, 1)",
           animation: isClosing
             ? undefined
             : "widget-file-drop-in 0.18s cubic-bezier(0.22, 1, 0.36, 1)",
@@ -2248,6 +2099,7 @@ function CallBubble({
       width={CALL_BUBBLE_SIZE}
       height={CALL_BUBBLE_SIZE}
     >
+      {/* biome-ignore lint/a11y/useFocusableInteractive lint/a11y/useSemanticElements: the bubble is a visual surface; the surrounding shell handles click and drag. */}
       <div
         aria-label={title}
         title={title}
@@ -2270,11 +2122,7 @@ function CallBubble({
         }}
       >
         {isStarting || isProcessing ? (
-          <IconLoader2
-            className="loading-soft-icon"
-            size={iconSize}
-            stroke={2.2}
-          />
+          <IconLoader2 className="loading-soft-icon" size={iconSize} stroke={2.2} />
         ) : isSuccess ? (
           <IconCheck size={iconSize} stroke={2.6} />
         ) : isError ? (
@@ -2327,6 +2175,7 @@ function LiveTranslationBubble({
       width={CALL_BUBBLE_SIZE}
       height={CALL_BUBBLE_SIZE}
     >
+      {/* biome-ignore lint/a11y/useFocusableInteractive lint/a11y/useSemanticElements: the bubble is a visual surface; the surrounding shell handles click and drag. */}
       <div
         role="button"
         aria-label={title}
@@ -2485,9 +2334,7 @@ function IdlePill({
           <button
             type="button"
             aria-label={t("widget.idle.copyLatest")}
-            title={
-              copySucceeded ? t("widget.idle.copied") : t("widget.idle.copy")
-            }
+            title={copySucceeded ? t("widget.idle.copied") : t("widget.idle.copy")}
             onPointerDown={(event) => {
               event.stopPropagation();
             }}
@@ -2618,15 +2465,11 @@ function FlowRecordingWidget({
       }
 
       const rms = Math.sqrt(sumSquares / dataArray.length);
-      const boostedLevel = Math.pow(Math.min(1, rms * 15), 0.58);
+      const boostedLevel = Math.min(1, rms * 15) ** 0.58;
       const quietFloor = rms > 0.003 ? 0.1 : 0.025;
-      smoothedLevel =
-        smoothedLevel * 0.48 + Math.max(quietFloor, boostedLevel) * 0.52;
+      smoothedLevel = smoothedLevel * 0.48 + Math.max(quietFloor, boostedLevel) * 0.52;
 
-      widgetRef.current?.style.setProperty(
-        "--widget-wave-scale",
-        String(1 + smoothedLevel * 0.42),
-      );
+      widgetRef.current?.style.setProperty("--widget-wave-scale", String(1 + smoothedLevel * 0.42));
       widgetRef.current?.style.setProperty(
         "--widget-wave-opacity",
         String(0.82 + smoothedLevel * 0.18),
@@ -2656,7 +2499,7 @@ function FlowRecordingWidget({
         </div>
       )}
       {showWave && (
-        <svg viewBox="0 0 190 34" preserveAspectRatio="none">
+        <svg viewBox="0 0 190 34" preserveAspectRatio="none" aria-hidden="true">
           {WIDGET_WAVES.map((wave) => (
             <path
               key={wave.className}
@@ -2709,6 +2552,7 @@ function ActiveWidgetShell({
   onPointerLeave?: () => void;
 } & DragHandlers) {
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: this draggable shell handles pointer gestures and clicks; keyboard control is provided by the widget's global hotkeys.
     <div
       style={{
         width,
@@ -2761,14 +2605,8 @@ function RecordingPill({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
     >
-      <WidgetCoreShell
-        width={ACTIVE_WIDGET_SHELL_WIDTH}
-        height={ACTIVE_WIDGET_SHELL_HEIGHT}
-      >
-        <FlowRecordingWidget
-          state={locked ? "long" : "recording"}
-          stream={stream}
-        />
+      <WidgetCoreShell width={ACTIVE_WIDGET_SHELL_WIDTH} height={ACTIVE_WIDGET_SHELL_HEIGHT}>
+        <FlowRecordingWidget state={locked ? "long" : "recording"} stream={stream} />
       </WidgetCoreShell>
       {locked && (
         <button
@@ -2817,10 +2655,7 @@ function ProcessingPill({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
     >
-      <WidgetCoreShell
-        width={ACTIVE_WIDGET_SHELL_WIDTH}
-        height={ACTIVE_WIDGET_SHELL_HEIGHT}
-      >
+      <WidgetCoreShell width={ACTIVE_WIDGET_SHELL_WIDTH} height={ACTIVE_WIDGET_SHELL_HEIGHT}>
         <FlowRecordingWidget state="processing" />
       </WidgetCoreShell>
     </ActiveWidgetShell>

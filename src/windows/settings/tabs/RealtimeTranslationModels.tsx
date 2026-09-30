@@ -1,15 +1,15 @@
-import { useRef, useState, type ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { type ReactElement, useRef, useState } from "react";
 
 import { Dropdown } from "../../../components/Dropdown";
 import { ModelCardDisclosureButton } from "../../../components/ModelCardDisclosureButton";
-import { IconBolt, IconBroadcast, IconCheck } from "../../../lib/icons";
 import { useI18n } from "../../../lib/i18n";
+import { IconBolt, IconBroadcast, IconCheck } from "../../../lib/icons";
 import {
-  REALTIME_TRANSLATION_ADAPTERS,
   hasVerifiedRealtimeCapability,
-  realtimeConfigurationFingerprint,
+  REALTIME_TRANSLATION_ADAPTERS,
   type RealtimeTranslationAdapterId,
+  realtimeConfigurationFingerprint,
 } from "../../../lib/realtimeModels";
 import type { ApiAdapterSettings, AppSettings } from "../../../lib/store";
 
@@ -31,18 +31,14 @@ export function RealtimeTranslationModels({
   const [dirtyAdapters, setDirtyAdapters] = useState<
     Partial<Record<RealtimeTranslationAdapterId, boolean>>
   >({});
-  const editRevisionsRef = useRef<
-    Partial<Record<RealtimeTranslationAdapterId, number>>
-  >({});
+  const editRevisionsRef = useRef<Partial<Record<RealtimeTranslationAdapterId, number>>>({});
 
   const patchAdapter = (
     id: RealtimeTranslationAdapterId,
     patch: Partial<ApiAdapterSettings>,
   ): void => {
     editRevisionsRef.current[id] = (editRevisionsRef.current[id] || 0) + 1;
-    const catalogAdapter = REALTIME_TRANSLATION_ADAPTERS.find(
-      (adapter) => adapter.id === id,
-    );
+    const catalogAdapter = REALTIME_TRANSLATION_ADAPTERS.find((adapter) => adapter.id === id);
     update({
       translationAdapters: {
         ...settings.translationAdapters,
@@ -150,10 +146,8 @@ export function RealtimeTranslationModels({
           model: adapter.recommendedModel,
           endpoint: "",
         };
-        const verified =
-          !dirtyAdapters[id] && hasVerifiedRealtimeCapability(adapter, values);
-        const isSelected =
-          settings.selectedTranslationAdapter === id && verified;
+        const verified = !dirtyAdapters[id] && hasVerifiedRealtimeCapability(adapter, values);
+        const isSelected = settings.selectedTranslationAdapter === id && verified;
         const status = statuses[id]?.status || (verified ? "success" : "idle");
         const isExpanded = expanded === id;
         const knownModel = adapter.models.some((model) => model.id === values.model);
@@ -226,16 +220,26 @@ export function RealtimeTranslationModels({
                 </div>
                 <div style={{ paddingRight: 34 }}>
                   <div style={{ fontSize: 12, lineHeight: 1.45, color: "var(--text-mid)" }}>
-                    {t("models.translation.desc")} {t("models.adapter.recommendedModel", { model: adapter.recommendedModel })}
+                    {t("models.translation.desc")}{" "}
+                    {t("models.adapter.recommendedModel", { model: adapter.recommendedModel })}
                   </div>
                   {verified && (
                     <div
+                      role="img"
                       title={t("models.stat.streaming")}
                       aria-label={t("models.stat.streaming")}
                       style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 9 }}
                     >
                       <IconBroadcast size={14} stroke={1.9} color="var(--text-hi)" />
-                      <span style={{ fontSize: 12, fontWeight: 650, color: "var(--text-hi)", lineHeight: 1, whiteSpace: "nowrap" }}>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 650,
+                          color: "var(--text-hi)",
+                          lineHeight: 1,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {t("models.stat.streaming")}
                       </span>
                     </div>
@@ -249,9 +253,21 @@ export function RealtimeTranslationModels({
               </div>
             </div>
             {isExpanded && (
-              <div style={{ borderTop: "1px solid var(--border-subtle)", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div
+                style={{
+                  borderTop: "1px solid var(--border-subtle)",
+                  padding: "12px 14px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <label className="label" htmlFor={`translation-${id}-key`} style={{ width: 76, flexShrink: 0 }}>
+                  <label
+                    className="label"
+                    htmlFor={`translation-${id}-key`}
+                    style={{ width: 76, flexShrink: 0 }}
+                  >
                     {t("models.field.apiKey")}
                   </label>
                   <input
@@ -261,7 +277,15 @@ export function RealtimeTranslationModels({
                     value={values.apiKey}
                     placeholder="API key"
                     onChange={(event) => patchAdapter(id, { apiKey: event.currentTarget.value })}
-                    style={{ flex: 1, minWidth: 0, height: 36, padding: "8px 10px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", fontSize: 12 }}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      height: 36,
+                      padding: "8px 10px",
+                      fontFamily:
+                        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                      fontSize: 12,
+                    }}
                   />
                 </div>
 
@@ -279,7 +303,9 @@ export function RealtimeTranslationModels({
                         })),
                         { value: CUSTOM_MODEL, label: t("models.field.customModel") },
                       ]}
-                      onChange={(value) => patchAdapter(id, { model: value === CUSTOM_MODEL ? "" : value })}
+                      onChange={(value) =>
+                        patchAdapter(id, { model: value === CUSTOM_MODEL ? "" : value })
+                      }
                     />
                     {selectValue === CUSTOM_MODEL && (
                       <input
@@ -289,17 +315,35 @@ export function RealtimeTranslationModels({
                         aria-label={t("models.field.customModelPlaceholder")}
                         placeholder={t("models.field.customModelPlaceholder")}
                         onChange={(event) => patchAdapter(id, { model: event.currentTarget.value })}
-                        style={{ width: "100%", height: 36, padding: "8px 10px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", fontSize: 12 }}
+                        style={{
+                          width: "100%",
+                          height: 36,
+                          padding: "8px 10px",
+                          fontFamily:
+                            "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                          fontSize: 12,
+                        }}
                       />
                     )}
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--text-low)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "var(--text-low)",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
+                  >
                     {t("models.field.recommended", { model: adapter.recommendedModel })}
                   </div>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <label className="label" htmlFor={`translation-${id}-host`} style={{ width: 76, flexShrink: 0 }}>
+                  <label
+                    className="label"
+                    htmlFor={`translation-${id}-host`}
+                    style={{ width: 76, flexShrink: 0 }}
+                  >
                     {t("models.field.host")}
                   </label>
                   <input
@@ -307,40 +351,122 @@ export function RealtimeTranslationModels({
                     type="url"
                     className="input"
                     value={values.endpoint || ""}
-                    placeholder={t("models.field.hostDefaultPlaceholder", { endpoint: adapter.defaultEndpoint })}
+                    placeholder={t("models.field.hostDefaultPlaceholder", {
+                      endpoint: adapter.defaultEndpoint,
+                    })}
                     onChange={(event) => patchAdapter(id, { endpoint: event.currentTarget.value })}
-                    style={{ flex: 1, minWidth: 0, height: 36, padding: "8px 10px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", fontSize: 12 }}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      height: 36,
+                      padding: "8px 10px",
+                      fontFamily:
+                        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                      fontSize: 12,
+                    }}
                   />
                   {values.endpoint?.trim() ? (
                     <button
                       type="button"
                       onClick={() => patchAdapter(id, { endpoint: "" })}
-                      style={{ border: "1px solid var(--border-dashed)", background: "var(--control-muted)", color: "var(--text-hi)", borderRadius: 8, padding: "7px 9px", fontSize: 11, fontWeight: 700, fontFamily: "var(--font-main)", whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer" }}
+                      style={{
+                        border: "1px solid var(--border-dashed)",
+                        background: "var(--control-muted)",
+                        color: "var(--text-hi)",
+                        borderRadius: 8,
+                        padding: "7px 9px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        fontFamily: "var(--font-main)",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                        cursor: "pointer",
+                      }}
                     >
                       {t("models.common.reset")}
                     </button>
                   ) : (
-                    <div style={{ fontSize: 11, color: "var(--text-low)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--text-low)",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      }}
+                    >
                       {t("models.common.optional")}
                     </div>
                   )}
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: 10,
+                    flexWrap: "wrap",
+                  }}
+                >
                   {isSelected ? (
-                    <div style={{ padding: "9px 12px", borderRadius: 10, border: "1px solid var(--success-border)", background: "var(--success-soft)", color: "var(--success-bright)", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+                    <div
+                      style={{
+                        padding: "9px 12px",
+                        borderRadius: 10,
+                        border: "1px solid var(--success-border)",
+                        background: "var(--success-soft)",
+                        color: "var(--success-bright)",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
                       <IconCheck size={14} stroke={2.5} />
                       {t("models.common.selected")}
                     </div>
                   ) : (
                     <button
                       type="button"
-                      disabled={status === "testing" || !values.apiKey.trim() || !values.model.trim()}
+                      disabled={
+                        status === "testing" || !values.apiKey.trim() || !values.model.trim()
+                      }
                       onClick={() => void test(id)}
-                      style={{ padding: "9px 12px", borderRadius: 10, border: "1px solid var(--border-dashed)", background: status === "testing" || !values.apiKey.trim() || !values.model.trim() ? "var(--control-muted)" : "var(--accent)", color: status === "testing" || !values.apiKey.trim() || !values.model.trim() ? "var(--text-mid)" : "var(--accent-contrast)", fontSize: 12, fontWeight: 700, fontFamily: "var(--font-main)", cursor: status === "testing" ? "wait" : !values.apiKey.trim() || !values.model.trim() ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 8 }}
+                      style={{
+                        padding: "9px 12px",
+                        borderRadius: 10,
+                        border: "1px solid var(--border-dashed)",
+                        background:
+                          status === "testing" || !values.apiKey.trim() || !values.model.trim()
+                            ? "var(--control-muted)"
+                            : "var(--accent)",
+                        color:
+                          status === "testing" || !values.apiKey.trim() || !values.model.trim()
+                            ? "var(--text-mid)"
+                            : "var(--accent-contrast)",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        fontFamily: "var(--font-main)",
+                        cursor:
+                          status === "testing"
+                            ? "wait"
+                            : !values.apiKey.trim() || !values.model.trim()
+                              ? "not-allowed"
+                              : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
                     >
-                      {status === "testing" ? <span className="loading-soft-ring" /> : <IconBolt size={14} stroke={2.2} />}
-                      {status === "testing" ? t("models.test.checking") : t("models.test.testAndSave")}
+                      {status === "testing" ? (
+                        <span className="loading-soft-ring" />
+                      ) : (
+                        <IconBolt size={14} stroke={2.2} />
+                      )}
+                      {status === "testing"
+                        ? t("models.test.checking")
+                        : t("models.test.testAndSave")}
                     </button>
                   )}
                 </div>

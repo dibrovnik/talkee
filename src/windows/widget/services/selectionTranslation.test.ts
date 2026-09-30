@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-
+import type { AppSettings } from "../../../lib/store";
 import {
   buildSelectionTranslationPrompt,
   buildSelectionTranslationSourcePayload,
@@ -7,15 +7,20 @@ import {
   translateSelectedText,
   translateSelectedTextWithBackend,
 } from "./selectionTranslation";
-import type { AppSettings } from "../../../lib/store";
 
-function settings(overrides: Partial<AppSettings> = {}): AppSettings {
+type SettingsOverrides = Partial<Omit<AppSettings, "translation">> & {
+  translation?: Partial<AppSettings["translation"]>;
+};
+
+function settings(overrides: SettingsOverrides = {}): AppSettings {
+  const { translation, ...rest } = overrides;
   return {
     translation: {
       selectionTargetLanguage: "en",
       selectionLocalTranslatorProvider: "",
+      ...translation,
     },
-    ...overrides,
+    ...rest,
   } as AppSettings;
 }
 
@@ -39,9 +44,7 @@ describe("selected text translation prompt", () => {
 
     expect(payload).toContain("ТЕКСТ ДЛЯ ПЕРЕВОДА");
     expect(payload).toContain("<<<TALKEE_TRANSLATION_SOURCE>>>");
-    expect(payload).toContain(
-      "Последние записи доступны для копирования и удаления.",
-    );
+    expect(payload).toContain("Последние записи доступны для копирования и удаления.");
     expect(payload).toContain("<<<END_TALKEE_TRANSLATION_SOURCE>>>");
   });
 
@@ -75,9 +78,7 @@ describe("selected text translation chunking", () => {
     });
 
     expect(calls.length).toBeGreaterThan(1);
-    expect(result).toBe(
-      calls.map((_, index) => `translated-${index + 1}`).join("\n\n"),
-    );
+    expect(result).toBe(calls.map((_, index) => `translated-${index + 1}`).join("\n\n"));
     const translatedSource = calls.join("\n");
     expect(translatedSource.indexOf("Фрагмент 1")).toBeLessThan(
       translatedSource.indexOf("Фрагмент 4"),
@@ -125,9 +126,7 @@ describe("selected text translation backend selection", () => {
         },
       }),
       deps: {
-        listLocalTranslators: async () => [
-          { provider: "nllb-200", status: "ready" },
-        ],
+        listLocalTranslators: async () => [{ provider: "nllb-200", status: "ready" }],
         translateWithLocalTranslator: async ({ text, target_language }) => {
           nllbCalls.push(`${text}:${target_language}`);
           return "Hello";
@@ -161,14 +160,8 @@ describe("selected text translation backend selection", () => {
         },
       }),
       deps: {
-        listLocalTranslators: async () => [
-          { provider: "opus-mt-ru-en", status: "ready" },
-        ],
-        translateWithLocalTranslator: async ({
-          provider,
-          text,
-          target_language,
-        }) => {
+        listLocalTranslators: async () => [{ provider: "opus-mt-ru-en", status: "ready" }],
+        translateWithLocalTranslator: async ({ provider, text, target_language }) => {
           opusCalls.push(`${provider}:${text}:${target_language}`);
           return "Hello";
         },
@@ -200,14 +193,8 @@ describe("selected text translation backend selection", () => {
         },
       }),
       deps: {
-        listLocalTranslators: async () => [
-          { provider: "opus-mt-en-ru", status: "ready" },
-        ],
-        translateWithLocalTranslator: async ({
-          provider,
-          text,
-          target_language,
-        }) => {
+        listLocalTranslators: async () => [{ provider: "opus-mt-en-ru", status: "ready" }],
+        translateWithLocalTranslator: async ({ provider, text, target_language }) => {
           translatorCalls.push(`${provider}:${text}:${target_language}`);
           return "Адвокатам нужен этот человек";
         },
@@ -314,9 +301,7 @@ describe("selected text translation backend selection", () => {
         },
       }),
       deps: {
-        listLocalTranslators: async () => [
-          { provider: "nllb-200", status: "ready" },
-        ],
+        listLocalTranslators: async () => [{ provider: "nllb-200", status: "ready" }],
         translateWithLocalTranslator: async () => {
           throw new Error("unsupported language");
         },
@@ -348,9 +333,7 @@ describe("selected text translation backend selection", () => {
           },
         }),
         deps: {
-          listLocalTranslators: async () => [
-            { provider: "nllb-200", status: "not_installed" },
-          ],
+          listLocalTranslators: async () => [{ provider: "nllb-200", status: "not_installed" }],
           resolveSummaryBackend: () => null,
         },
       }),
@@ -373,9 +356,7 @@ describe("selected text translation backend selection", () => {
         },
       }),
       deps: {
-        listLocalTranslators: async () => [
-          { provider: "nllb-200", status: "ready" },
-        ],
+        listLocalTranslators: async () => [{ provider: "nllb-200", status: "ready" }],
         translateWithLocalTranslator: async ({ text }) => {
           calls.push(text);
           return `translated-${calls.length}`;
@@ -385,9 +366,7 @@ describe("selected text translation backend selection", () => {
     });
 
     expect(calls.length).toBeGreaterThan(1);
-    expect(result).toBe(
-      calls.map((_, index) => `translated-${index + 1}`).join("\n\n"),
-    );
+    expect(result).toBe(calls.map((_, index) => `translated-${index + 1}`).join("\n\n"));
     const translatedSource = calls.join("\n");
     expect(translatedSource.indexOf("Фрагмент 1")).toBeLessThan(
       translatedSource.indexOf("Фрагмент 4"),
@@ -434,9 +413,7 @@ describe("selected text translation backend selection", () => {
         },
       }),
       deps: {
-        listLocalTranslators: async () => [
-          { provider: "nllb-200", status: "ready" },
-        ],
+        listLocalTranslators: async () => [{ provider: "nllb-200", status: "ready" }],
         translateWithLocalTranslator: async ({ text }) => {
           nllbCalls.push(text);
           return "Hello";

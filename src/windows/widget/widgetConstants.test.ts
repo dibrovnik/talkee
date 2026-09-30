@@ -22,19 +22,12 @@ const BUTTON_SLOT_WIDTH = WIDGET_CONTROL_GAP + CALL_BUBBLE_SIZE;
 
 describe("widgetStackWidth", () => {
   test("keeps equal visual gaps between status, call and translation", () => {
-    const statusVisibleRight =
-      WIDGET_PRIMARY_INLINE_INSET + WIDGET_SHELL_WIDTH;
-    const callVisibleLeft =
-      IDLE_WIDGET_WIDTH -
-      WIDGET_PRIMARY_INLINE_INSET +
-      WIDGET_CONTROL_GAP;
-    const translationVisibleLeft =
-      callVisibleLeft + CALL_BUBBLE_SIZE + WIDGET_CONTROL_GAP;
+    const statusVisibleRight = WIDGET_PRIMARY_INLINE_INSET + WIDGET_SHELL_WIDTH;
+    const callVisibleLeft = IDLE_WIDGET_WIDTH - WIDGET_PRIMARY_INLINE_INSET + WIDGET_CONTROL_GAP;
+    const translationVisibleLeft = callVisibleLeft + CALL_BUBBLE_SIZE + WIDGET_CONTROL_GAP;
 
     expect(callVisibleLeft - statusVisibleRight).toBe(WIDGET_CONTROL_GAP);
-    expect(
-      translationVisibleLeft - (callVisibleLeft + CALL_BUBBLE_SIZE),
-    ).toBe(WIDGET_CONTROL_GAP);
+    expect(translationVisibleLeft - (callVisibleLeft + CALL_BUBBLE_SIZE)).toBe(WIDGET_CONTROL_GAP);
   });
 
   test("keeps edge padding around the base widget stack", () => {
@@ -51,18 +44,14 @@ describe("widgetStackWidth", () => {
 
   test("uses the same optional-button slot while file drop is expanded", () => {
     expect(widgetStackWidth(true, true)).toBe(
-      FILE_DROP_STACK_WIDGET_WIDTH +
-        WIDGET_STACK_EDGE_PADDING * 2 +
-        BUTTON_SLOT_WIDTH,
+      FILE_DROP_STACK_WIDGET_WIDTH + WIDGET_STACK_EDGE_PADDING * 2 + BUTTON_SLOT_WIDTH,
     );
   });
 });
 
 describe("widgetStackHeight", () => {
   test("keeps edge padding above and below the compact widget", () => {
-    expect(widgetStackHeight(false)).toBe(
-      CALL_STACK_WIDGET_HEIGHT + WIDGET_STACK_EDGE_PADDING * 2,
-    );
+    expect(widgetStackHeight(false)).toBe(CALL_STACK_WIDGET_HEIGHT + WIDGET_STACK_EDGE_PADDING * 2);
   });
 
   test("keeps the same edge padding around the expanded file widget", () => {
@@ -91,9 +80,7 @@ describe("widget text overlay", () => {
   });
 
   test("builds a dedicated bottom status payload for widget errors", () => {
-    expect(
-      createWidgetErrorOverlayState("  Ошибка вставки  ", "error-1"),
-    ).toEqual({
+    expect(createWidgetErrorOverlayState("  Ошибка вставки  ", "error-1")).toEqual({
       status: "error",
       sourceText: "",
       translatedText: "",

@@ -1,20 +1,19 @@
 import { describe, expect, test } from "bun:test";
-
+import {
+  realtimeConfigurationFingerprint,
+  STREAMING_STT_ADAPTERS,
+} from "../../../lib/realtimeModels";
+import type { AppSettings } from "../../../lib/store";
 import {
   createCallLiveDictationOptions,
-  createNativeLiveDictationOptions,
   createDictationOverlayState,
+  createNativeLiveDictationOptions,
   dictationOverlayStateFromStreamUpdate,
   isLocalSttStreamingEnabled,
   isSttStreamingEnabled,
   resolveLiveDictationRuntimeEndpoint,
   shouldApplyDictationStreamUpdate,
 } from "./dictationStreamOverlay";
-import type { AppSettings } from "../../../lib/store";
-import {
-  realtimeConfigurationFingerprint,
-  STREAMING_STT_ADAPTERS,
-} from "../../../lib/realtimeModels";
 
 describe("dictation stream overlay state", () => {
   test("maps partial, final and inserting states without losing request id", () => {
@@ -107,9 +106,8 @@ describe("dictation stream overlay state", () => {
   });
 
   test("does not inherit API streaming capability for a batch-only local model", () => {
-    const adapter = STREAMING_STT_ADAPTERS.find(
-      (item) => item.id === "openai",
-    )!;
+    const adapter = STREAMING_STT_ADAPTERS.find((item) => item.id === "openai");
+    if (!adapter) throw new Error("openai streaming adapter is missing");
     const apiValues = {
       apiKey: "secret",
       model: "gpt-realtime-whisper",
@@ -133,7 +131,7 @@ describe("dictation stream overlay state", () => {
           streamingCapabilityFingerprint: fingerprint,
         },
       },
-    } as AppSettings;
+    } as unknown as AppSettings;
 
     expect(isLocalSttStreamingEnabled(settings)).toBe(false);
     expect(isSttStreamingEnabled(settings)).toBe(false);
@@ -149,7 +147,7 @@ describe("dictation stream overlay state", () => {
         "gigaam-v3-e2e-rnnt": { status: "downloaded" },
         "nemotron-35-asr-streaming-06b": { status: "downloaded" },
       },
-    } as AppSettings;
+    } as unknown as AppSettings;
 
     expect(createNativeLiveDictationOptions(settings, "dictation")).toBeNull();
     expect(createCallLiveDictationOptions(settings, "call")).toEqual({
@@ -165,20 +163,16 @@ describe("dictation stream overlay state", () => {
 
   test("uses the effective managed runtime endpoint returned by warm-up", () => {
     expect(
-      resolveLiveDictationRuntimeEndpoint(
-        "http://127.0.0.1:8000",
-        "http://127.0.0.1:18018",
-      ),
+      resolveLiveDictationRuntimeEndpoint("http://127.0.0.1:8000", "http://127.0.0.1:18018"),
     ).toBe("http://127.0.0.1:18018");
-    expect(
-      resolveLiveDictationRuntimeEndpoint("http://127.0.0.1:8000", null),
-    ).toBe("http://127.0.0.1:8000");
+    expect(resolveLiveDictationRuntimeEndpoint("http://127.0.0.1:8000", null)).toBe(
+      "http://127.0.0.1:8000",
+    );
   });
 
   test("enables an API streaming model after its exact configuration was verified", () => {
-    const adapter = STREAMING_STT_ADAPTERS.find(
-      (item) => item.id === "openai",
-    )!;
+    const adapter = STREAMING_STT_ADAPTERS.find((item) => item.id === "openai");
+    if (!adapter) throw new Error("openai streaming adapter is missing");
     const values = {
       apiKey: "secret",
       model: "gpt-realtime-whisper",
@@ -196,7 +190,7 @@ describe("dictation stream overlay state", () => {
           realtimeTranscriptionEnabled: true,
           language: "ru",
           apiAdapters: { openai: values },
-        } as AppSettings,
+        } as unknown as AppSettings,
         "req-unverified",
       ),
     ).toBeNull();
@@ -213,17 +207,14 @@ describe("dictation stream overlay state", () => {
           streamingCapabilityFingerprint: fingerprint,
         },
       },
-    } as AppSettings;
+    } as unknown as AppSettings;
 
-    expect(createNativeLiveDictationOptions(settings, "req-api")).toMatchObject(
-      {
-        requestId: "req-api",
-        provider: "openai",
-        model: "gpt-realtime-whisper",
-        endpoint: "https://api.openai.com",
-        streamingEnabled: true,
-      },
-    );
+    expect(createNativeLiveDictationOptions(settings, "req-api")).toMatchObject({
+      requestId: "req-api",
+      provider: "openai",
+      model: "gpt-realtime-whisper",
+      endpoint: "https://api.openai.com",
+      streamingEnabled: true,
+    });
   });
-
 });

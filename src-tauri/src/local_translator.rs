@@ -81,7 +81,7 @@ struct LocalTranslatorDefinition {
 
 impl LocalTranslatorDefinition {
     fn matches(&self, provider: &str) -> bool {
-        self.provider == provider || self.legacy_providers.iter().any(|item| *item == provider)
+        self.provider == provider || self.legacy_providers.contains(&provider)
     }
 }
 

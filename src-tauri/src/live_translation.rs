@@ -186,7 +186,9 @@ impl PlaybackBuffer {
 
     fn push_pcm16(&mut self, pcm: &[u8]) -> bool {
         let source = pcm
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|bytes| i16::from_le_bytes([bytes[0], bytes[1]]) as f32 / i16::MAX as f32)
             .collect::<Vec<_>>();
         if source.is_empty() {
@@ -697,7 +699,7 @@ fn feed_mic_samples<T, F>(
     for chunk in chunks {
         if let Ok(mut guard) = writer.lock() {
             if let Some(writer) = guard.as_mut() {
-                for sample in chunk.chunks_exact(2) {
+                for sample in chunk.as_chunks::<2>().0 {
                     let _ = writer.write_sample(i16::from_le_bytes([sample[0], sample[1]]));
                 }
             }
@@ -708,48 +710,134 @@ fn feed_mic_samples<T, F>(
     }
 }
 
+type MicCaptureHandle = (mpsc::Sender<()>, mpsc::Receiver<Result<(), String>>);
+
+type MicCaptureStart = (
+    cpal::Stream,
+    Arc<Mutex<PcmEncoder>>,
+    Arc<Mutex<Option<hound::WavWriter<BufWriter<File>>>>>,
+);
+
 fn start_mic_capture(
     label: Option<String>,
     audio_tx: Option<tokio::sync::mpsc::Sender<RealtimeAudioCommand>>,
     wav_path: Option<PathBuf>,
-) -> Result<(mpsc::Sender<()>, mpsc::Receiver<Result<(), String>>), String> {
+) -> Result<MicCaptureHandle, String> {
     let (stop_tx, stop_rx) = mpsc::channel();
     let (started_tx, started_rx) = mpsc::channel();
     let (stopped_tx, stopped_rx) = mpsc::channel();
-    thread::Builder::new().name("talkee-live-translation-mic".to_string()).spawn(move || {
-        let start = (|| -> Result<(cpal::Stream, Arc<Mutex<PcmEncoder>>, Arc<Mutex<Option<hound::WavWriter<BufWriter<File>>>>>), String> {
-            let device = select_microphone(label.as_deref())?;
-            let supported = device.default_input_config().map_err(|error| format!("Failed to read microphone format: {}", error))?;
-            let format = supported.sample_format();
-            let config: cpal::StreamConfig = supported.into();
-            let channels = config.channels as usize;
-            let encoder = Arc::new(Mutex::new(PcmEncoder::new(config.sample_rate.0)));
-            let writer = Arc::new(Mutex::new(match wav_path {
-                Some(path) => Some(hound::WavWriter::create(path, hound::WavSpec { channels: 1, sample_rate: SAMPLE_RATE, bits_per_sample: 16, sample_format: hound::SampleFormat::Int }).map_err(|error| format!("Failed to create mic WAV: {}", error))?),
-                None => None,
-            }));
-            let error_fn = |error| logger::log_error("LIVE_TRANSLATION", &format!("Microphone stream error: {}", error));
-            let stream = match format {
-                cpal::SampleFormat::F32 => { let e=encoder.clone(); let s=audio_tx.clone(); let w=writer.clone(); device.build_input_stream(&config, move |d:&[f32],_| feed_mic_samples(d,channels,&e,s.as_ref(),&w,|v|v), error_fn, None) },
-                cpal::SampleFormat::I16 => { let e=encoder.clone(); let s=audio_tx.clone(); let w=writer.clone(); device.build_input_stream(&config, move |d:&[i16],_| feed_mic_samples(d,channels,&e,s.as_ref(),&w,|v|v as f32/i16::MAX as f32), error_fn, None) },
-                cpal::SampleFormat::U16 => { let e=encoder.clone(); let s=audio_tx.clone(); let w=writer.clone(); device.build_input_stream(&config, move |d:&[u16],_| feed_mic_samples(d,channels,&e,s.as_ref(),&w,|v|(v as f32-32768.0)/32768.0), error_fn, None) },
-                other => return Err(format!("Unsupported microphone sample format: {:?}", other)),
-            }.map_err(|error| format!("Failed to open microphone: {}", error))?;
-            stream.play().map_err(|error| format!("Failed to start microphone: {}", error))?;
-            Ok((stream, encoder, writer))
-        })();
-        let (stream, encoder, writer) = match start { Ok(value) => value, Err(error) => { let _=started_tx.send(Err(error)); return; } };
-        if started_tx.send(Ok(())).is_err() { return; }
-        let _ = stop_rx.recv();
-        drop(stream);
-        if let Ok(mut encoder) = encoder.lock() {
-            if let (Some(chunk), Some(audio_tx)) = (encoder.flush(), audio_tx.as_ref()) { let _ = audio_tx.blocking_send(RealtimeAudioCommand::Pcm(chunk)); }
-        }
-        if let Ok(mut guard) = writer.lock() {
-            if let Some(writer) = guard.take() { let _ = writer.finalize(); }
-        }
-        let _ = stopped_tx.send(Ok(()));
-    }).map_err(|error| format!("Failed to spawn microphone capture: {}", error))?;
+    thread::Builder::new()
+        .name("talkee-live-translation-mic".to_string())
+        .spawn(move || {
+            let start = (|| -> Result<MicCaptureStart, String> {
+                let device = select_microphone(label.as_deref())?;
+                let supported = device
+                    .default_input_config()
+                    .map_err(|error| format!("Failed to read microphone format: {}", error))?;
+                let format = supported.sample_format();
+                let config: cpal::StreamConfig = supported.into();
+                let channels = config.channels as usize;
+                let encoder = Arc::new(Mutex::new(PcmEncoder::new(config.sample_rate.0)));
+                let writer = Arc::new(Mutex::new(match wav_path {
+                    Some(path) => Some(
+                        hound::WavWriter::create(
+                            path,
+                            hound::WavSpec {
+                                channels: 1,
+                                sample_rate: SAMPLE_RATE,
+                                bits_per_sample: 16,
+                                sample_format: hound::SampleFormat::Int,
+                            },
+                        )
+                        .map_err(|error| format!("Failed to create mic WAV: {}", error))?,
+                    ),
+                    None => None,
+                }));
+                let error_fn = |error| {
+                    logger::log_error(
+                        "LIVE_TRANSLATION",
+                        &format!("Microphone stream error: {}", error),
+                    )
+                };
+                let stream = match format {
+                    cpal::SampleFormat::F32 => {
+                        let e = encoder.clone();
+                        let s = audio_tx.clone();
+                        let w = writer.clone();
+                        device.build_input_stream(
+                            &config,
+                            move |d: &[f32], _| {
+                                feed_mic_samples(d, channels, &e, s.as_ref(), &w, |v| v)
+                            },
+                            error_fn,
+                            None,
+                        )
+                    }
+                    cpal::SampleFormat::I16 => {
+                        let e = encoder.clone();
+                        let s = audio_tx.clone();
+                        let w = writer.clone();
+                        device.build_input_stream(
+                            &config,
+                            move |d: &[i16], _| {
+                                feed_mic_samples(d, channels, &e, s.as_ref(), &w, |v| {
+                                    v as f32 / i16::MAX as f32
+                                })
+                            },
+                            error_fn,
+                            None,
+                        )
+                    }
+                    cpal::SampleFormat::U16 => {
+                        let e = encoder.clone();
+                        let s = audio_tx.clone();
+                        let w = writer.clone();
+                        device.build_input_stream(
+                            &config,
+                            move |d: &[u16], _| {
+                                feed_mic_samples(d, channels, &e, s.as_ref(), &w, |v| {
+                                    (v as f32 - 32768.0) / 32768.0
+                                })
+                            },
+                            error_fn,
+                            None,
+                        )
+                    }
+                    other => {
+                        return Err(format!("Unsupported microphone sample format: {:?}", other))
+                    }
+                }
+                .map_err(|error| format!("Failed to open microphone: {}", error))?;
+                stream
+                    .play()
+                    .map_err(|error| format!("Failed to start microphone: {}", error))?;
+                Ok((stream, encoder, writer))
+            })();
+            let (stream, encoder, writer) = match start {
+                Ok(value) => value,
+                Err(error) => {
+                    let _ = started_tx.send(Err(error));
+                    return;
+                }
+            };
+            if started_tx.send(Ok(())).is_err() {
+                return;
+            }
+            let _ = stop_rx.recv();
+            drop(stream);
+            if let Ok(mut encoder) = encoder.lock() {
+                if let (Some(chunk), Some(audio_tx)) = (encoder.flush(), audio_tx.as_ref()) {
+                    let _ = audio_tx.blocking_send(RealtimeAudioCommand::Pcm(chunk));
+                }
+            }
+            if let Ok(mut guard) = writer.lock() {
+                if let Some(writer) = guard.take() {
+                    let _ = writer.finalize();
+                }
+            }
+            let _ = stopped_tx.send(Ok(()));
+        })
+        .map_err(|error| format!("Failed to spawn microphone capture: {}", error))?;
     started_rx
         .recv()
         .map_err(|_| "Microphone capture ended before startup.".to_string())??;

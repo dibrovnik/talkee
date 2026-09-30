@@ -9,21 +9,15 @@ import { normalizeSavedSettings } from "./store";
 
 describe("resolveProcessingMode", () => {
   it("detects localhost endpoint as local mode", () => {
-    expect(
-      resolveProcessingMode({ whisperEndpoint: "http://localhost:8000" }),
-    ).toBe("local");
+    expect(resolveProcessingMode({ whisperEndpoint: "http://localhost:8000" })).toBe("local");
   });
 
   it("detects 127.0.0.1 endpoint as local mode", () => {
-    expect(
-      resolveProcessingMode({ whisperEndpoint: "http://127.0.0.1:8000" }),
-    ).toBe("local");
+    expect(resolveProcessingMode({ whisperEndpoint: "http://127.0.0.1:8000" })).toBe("local");
   });
 
   it("detects remote URL as api mode", () => {
-    expect(
-      resolveProcessingMode({ whisperEndpoint: "https://api.openai.com" }),
-    ).toBe("api");
+    expect(resolveProcessingMode({ whisperEndpoint: "https://api.openai.com" })).toBe("api");
   });
 
   it("treats empty endpoint as api mode", () => {

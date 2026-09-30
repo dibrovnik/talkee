@@ -1,46 +1,41 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-
+import { LANGUAGES } from "../../../config/languages";
 import {
-  AppSettings,
-  deleteHistoryEntry,
+  DICTATION_STREAM_UPDATE_EVENT,
+  type DictationStreamUpdatePayload,
+  HISTORY_DELETED_EVENT,
+} from "../../../lib/hotkeyEvents";
+import { tn } from "../../../lib/i18n";
+import { logError, logInfo } from "../../../lib/logger";
+import { beginProcessing, finishProcessing, isAbortError } from "../../../lib/processingControl";
+import {
+  type AppSettings,
   deleteHistoryAudio,
-  HistoryEntry,
+  deleteHistoryEntry,
+  type HistoryEntry,
   readHistoryAudio,
   saveHistoryAudio,
 } from "../../../lib/store";
-import { logError, logInfo } from "../../../lib/logger";
-import { tn } from "../../../lib/i18n";
-import { formatErrorMessage } from "../../../lib/utils";
-import {
-  DICTATION_STREAM_UPDATE_EVENT,
-  HISTORY_DELETED_EVENT,
-  type DictationStreamUpdatePayload,
-} from "../../../lib/hotkeyEvents";
-import {
-  beginProcessing,
-  finishProcessing,
-  isAbortError,
-} from "../../../lib/processingControl";
 import { resolveSummaryBackend } from "../../../lib/summarize";
-import { LANGUAGES } from "../../../config/languages";
+import { formatErrorMessage } from "../../../lib/utils";
+import type { LiveTranscriptionResult } from "./dictationStreamOverlay";
 import {
   createDictationOverlayState,
   dictationOverlayStateFromStreamUpdate,
   isSttStreamingEnabled,
   shouldApplyDictationStreamUpdate,
 } from "./dictationStreamOverlay";
-import type { LiveTranscriptionResult } from "./dictationStreamOverlay";
+import {
+  type AudioSignalStats,
+  guardTranscriptionResult,
+  isClearlySilentAudio,
+} from "./transcriptionGuard";
+import { resolveBatchTranscriptionModel } from "./transcriptionModel";
 import {
   resolveLiveTranscriptionReconciliationMode,
   shouldAcceptLiveTranscription,
 } from "./transcriptionReconciliation";
-import {
-  guardTranscriptionResult,
-  isClearlySilentAudio,
-  type AudioSignalStats,
-} from "./transcriptionGuard";
-import { resolveBatchTranscriptionModel } from "./transcriptionModel";
 
 export interface ProcessRecordingBlobParams {
   blob: Blob;
@@ -67,10 +62,7 @@ interface RecordingAudioSource {
   audioFileName: string;
 }
 
-type TranscriptionResult = Pick<
-  HistoryEntry,
-  "raw" | "cleaned" | "dictationTranslation"
->;
+type TranscriptionResult = Pick<HistoryEntry, "raw" | "cleaned" | "dictationTranslation">;
 
 export interface DictationStreamOverlaySession {
   requestId: string;
@@ -103,9 +95,7 @@ async function saveCompletedRecordingAudio({
 }: RecordingAudioSource & {
   entryId: string;
   settings: AppSettings;
-}): Promise<
-  Pick<HistoryEntry, "audioPath" | "audioMimeType" | "audioFileName">
-> {
+}): Promise<Pick<HistoryEntry, "audioPath" | "audioMimeType" | "audioFileName">> {
   if (!settings.saveRecordingAudio) {
     return {
       audioPath: undefined,
@@ -128,10 +118,7 @@ async function saveCompletedRecordingAudio({
       audioFileName: saved.fileName || audioFileName,
     };
   } catch (error) {
-    logError(
-      "HISTORY",
-      `Failed to save recording audio: ${formatErrorMessage(error)}`,
-    );
+    logError("HISTORY", `Failed to save recording audio: ${formatErrorMessage(error)}`);
     return {
       audioPath: undefined,
       audioMimeType: undefined,
@@ -140,9 +127,7 @@ async function saveCompletedRecordingAudio({
   }
 }
 
-async function loadRecordingAudioSource(
-  entry: HistoryEntry,
-): Promise<RecordingAudioSource> {
+async function loadRecordingAudioSource(entry: HistoryEntry): Promise<RecordingAudioSource> {
   if (entry.audioPath) {
     const audio = await readHistoryAudio(entry.audioPath);
     return {
@@ -285,17 +270,12 @@ function isAuthFailureLike(normalized: string): boolean {
   );
 }
 
-function toUserFacingErrorMessage(
-  error: unknown,
-  settings: AppSettings,
-): string {
+function toUserFacingErrorMessage(error: unknown, settings: AppSettings): string {
   const raw = formatErrorMessage(error);
   const normalized = raw.toLowerCase();
   const isLocalStt = isLocalSttSettings(settings);
 
-  const missingModelMatch = raw.match(
-    /Model ['"]([^'"]+)['"] is not installed locally/i,
-  );
+  const missingModelMatch = raw.match(/Model ['"]([^'"]+)['"] is not installed locally/i);
   if (missingModelMatch) {
     const model = missingModelMatch[1];
     return tn("widget.error.modelNotDownloaded", { model });
@@ -385,28 +365,25 @@ async function transcribeViaBackend({
   const whisperModel = resolveBatchTranscriptionModel(settings);
   logInfo("API", `Sending to backend, audio_size: ${audioBase64.length} chars`);
 
-  const result = await invoke<{ raw: string; cleaned: string }>(
-    "transcribe_and_clean",
-    {
-      req: {
-        audio_base64: audioBase64,
-        language: settings.language,
-        api_key: settings.apiKey,
-        whisper_api_key: settings.whisperApiKey || null,
-        llm_api_key: null,
-        style: settings.style || "classic",
-        whisper_endpoint: settings.whisperEndpoint || null,
-        local_models_dir: settings.localModelsDir || null,
-        llm_endpoint: null,
-        whisper_model: whisperModel || null,
-        llm_model: "none",
-        file_name: audioFileName,
-        mime_type: audioMimeType,
-        streaming_enabled: isSttStreamingEnabled(settings),
-        streaming_request_id: streamingRequestId ?? null,
-      },
+  const result = await invoke<{ raw: string; cleaned: string }>("transcribe_and_clean", {
+    req: {
+      audio_base64: audioBase64,
+      language: settings.language,
+      api_key: settings.apiKey,
+      whisper_api_key: settings.whisperApiKey || null,
+      llm_api_key: null,
+      style: settings.style || "classic",
+      whisper_endpoint: settings.whisperEndpoint || null,
+      local_models_dir: settings.localModelsDir || null,
+      llm_endpoint: null,
+      whisper_model: whisperModel || null,
+      llm_model: "none",
+      file_name: audioFileName,
+      mime_type: audioMimeType,
+      streaming_enabled: isSttStreamingEnabled(settings),
+      streaming_request_id: streamingRequestId ?? null,
     },
-  );
+  });
 
   return result;
 }
@@ -458,7 +435,7 @@ async function resolveFinalTranscription({
     Boolean(liveResult),
   );
 
-  if (!reconciliationMode) {
+  if (!reconciliationMode || !liveResult) {
     return (
       liveResult ||
       transcribeAudio({
@@ -475,7 +452,7 @@ async function resolveFinalTranscription({
     const sourceLabel = "OpenAI";
     logInfo(
       "DICTATION_STREAM",
-      `Reconciling ${sourceLabel} realtime text with full-audio batch result: realtime_chars=${liveResult!.cleaned.length}`,
+      `Reconciling ${sourceLabel} realtime text with full-audio batch result: realtime_chars=${liveResult.cleaned.length}`,
     );
     const batchResult = await transcribeAudio({
       audioBase64,
@@ -484,16 +461,13 @@ async function resolveFinalTranscription({
       settings,
       signal,
     });
-    const guardedBatch = guardTranscriptionResult(
-      batchResult,
-      settings.language,
-    );
+    const guardedBatch = guardTranscriptionResult(batchResult, settings.language);
     if (!guardedBatch.transcription) {
       logInfo(
         "DICTATION_STREAM",
         `Batch reconciliation rejected text: reason=${guardedBatch.rejectionReason}; keeping ${sourceLabel} realtime text`,
       );
-      return liveResult!;
+      return liveResult;
     }
     if (guardedBatch.cleanedFallbackReason) {
       logInfo(
@@ -511,7 +485,7 @@ async function resolveFinalTranscription({
       "DICTATION_STREAM",
       `Batch reconciliation failed, keeping ${reconciliationMode} realtime text: ${formatErrorMessage(error)}`,
     );
-    return liveResult!;
+    return liveResult;
   }
 }
 
@@ -588,13 +562,13 @@ export async function processRecordingBlob({
   dictationStream = null,
   audioStats = null,
 }: ProcessRecordingBlobParams): Promise<ProcessRecordingBlobResult> {
-  const durationSeconds = Math.floor(
-    (Date.now() - recordingStartTimestamp) / 1000,
-  );
+  const durationSeconds = Math.floor((Date.now() - recordingStartTimestamp) / 1000);
   if (isClearlySilentAudio(audioStats)) {
+    const peak = audioStats?.peak ?? 0;
+    const rms = audioStats?.rms ?? 0;
     logInfo(
       "API",
-      `Skipping STT for silent recording: peak=${audioStats!.peak.toFixed(6)}, rms=${audioStats!.rms.toFixed(6)}`,
+      `Skipping STT for silent recording: peak=${peak.toFixed(6)}, rms=${rms.toFixed(6)}`,
     );
     await dictationStream?.hide().catch(() => {});
     dictationStream?.dispose();
@@ -604,9 +578,7 @@ export async function processRecordingBlob({
   const buffer = await blob.arrayBuffer();
   const base64Audio = arrayBufferToBase64(buffer);
   const audioMimeType = blob.type || "audio/webm";
-  const audioFileName = audioMimeType.includes("wav")
-    ? "recording.wav"
-    : "recording.webm";
+  const audioFileName = audioMimeType.includes("wav") ? "recording.wav" : "recording.webm";
 
   // Persist a lightweight "processing" entry up front so the recording shows as
   // a live row without keeping the audio payload in history/UI memory.
@@ -701,10 +673,7 @@ export async function processRecordingBlob({
       return { durationSeconds, hasTranscription: false };
     }
 
-    logInfo(
-      "API",
-      `Transcription complete in ${processingTime}ms: "${result.cleaned}"`,
-    );
+    logInfo("API", `Transcription complete in ${processingTime}ms: "${result.cleaned}"`);
     await finishProcessing({
       ...entryWithSavedAudio,
       raw: result.raw,
@@ -851,10 +820,7 @@ export async function retryHistoryEntry(
       );
     }
 
-    const result = await applyDictationTranslation(
-      transcription,
-      retrySettings,
-    );
+    const result = await applyDictationTranslation(transcription, retrySettings);
 
     if (handle.isCancelled()) {
       const interrupted = buildInterruptedEntry(entry);
@@ -902,10 +868,7 @@ export async function retryHistoryEntry(
       try {
         await pasteCleanedText(result.cleaned);
       } catch (pasteError) {
-        logError(
-          "PASTE",
-          `Retry paste failed: ${formatErrorMessage(pasteError)}`,
-        );
+        logError("PASTE", `Retry paste failed: ${formatErrorMessage(pasteError)}`);
       }
     }
 
@@ -920,10 +883,7 @@ export async function retryHistoryEntry(
       return { hasTranscription: false, updatedEntry: interrupted };
     }
 
-    const userFacingErrorMessage = toUserFacingErrorMessage(
-      error,
-      retrySettings,
-    );
+    const userFacingErrorMessage = toUserFacingErrorMessage(error, retrySettings);
     const failedEntry: HistoryEntry = {
       ...entry,
       status: "failed",

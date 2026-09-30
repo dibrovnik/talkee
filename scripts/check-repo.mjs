@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 import { execFileSync } from "node:child_process";
 import { statSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = resolve(SCRIPT_DIR, "..");
@@ -35,11 +35,7 @@ export function findForbiddenPaths(files) {
   return files.filter(isForbiddenPath);
 }
 
-export function findLargeFiles(
-  rootDir,
-  files,
-  { maxBytes = MAX_BYTES, stat = statSync } = {},
-) {
+export function findLargeFiles(rootDir, files, { maxBytes = MAX_BYTES, stat = statSync } = {}) {
   const large = [];
   for (const relPath of files) {
     let size;
@@ -81,8 +77,7 @@ export function run({
 }
 
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : "";
-const isDirectRun =
-  import.meta.main === true || invokedPath === fileURLToPath(import.meta.url);
+const isDirectRun = import.meta.main === true || invokedPath === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
   process.exit(run({ rootDir: process.cwd() }));

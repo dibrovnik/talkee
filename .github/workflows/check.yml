@@ -1,8 +1,7 @@
 name: CI
 
-# Compile-check the macOS-only codebase. Runs on every push and PR so the
-# Rust workspace and frontend are validated without waiting for a `v*`
-# release tag.
+# Runs the full local quality gate (`bun run gate`) and a frontend build on
+# every push to main and every pull request, on macOS only.
 
 on:
   push:
@@ -16,58 +15,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  rust-check:
-    name: cargo check (macos)
+  gate:
+    name: gate (macos)
     runs-on: macos-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Create sidecar placeholders
-        # tauri-build resolves the externalBin entries from tauri.conf.json and
-        # hard-errors if a `binaries/<name>-<target-triple>` file is missing.
-        # `cargo check` does not bundle, so empty placeholders are enough to
-        # satisfy the existence check without downloading the real ffmpeg/STT
-        # sidecars.
-        shell: bash
-        run: |
-          TRIPLE=$(rustc -vV | sed -n 's/^host: //p')
-          mkdir -p src-tauri/binaries
-          for name in talkee-ffmpeg talkee-stt talkee-diarize talkee-llm; do
-            : > "src-tauri/binaries/${name}-${TRIPLE}"
-          done
-          ls -la src-tauri/binaries
-
-      - name: Cache Rust build output
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/git
-            ~/.cargo/registry
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-check-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-check-
-            ${{ runner.os }}-cargo-
-
-      - name: cargo check
-        run: cargo check --manifest-path src-tauri/Cargo.toml
-
-  frontend-check:
-    name: tsc + hotkey smoke
-    runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Bun
+        # Version is read from the `packageManager` field in package.json.
         uses: oven-sh/setup-bun@v2
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          bun-version: 1.2.13
+          components: rustfmt, clippy
 
       - name: Cache Bun dependencies
         uses: actions/cache@v4
@@ -77,14 +40,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
 
+      - name: Cache Rust build output
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/git
+            ~/.cargo/registry
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
 
-      - name: Check version sync
-        run: bun run version:check
+      - name: Run quality gate
+        run: bun run gate
 
-      - name: TypeScript type check
-        run: bunx tsc --noEmit
-
-      - name: Hotkey FSM smoke test
-        run: bun run smoke:hotkey
+      - name: Build frontend
+        run: bun run build

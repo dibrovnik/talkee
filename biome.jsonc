@@ -1,0 +1,41 @@
+{
+  // Single formatter + linter for TS/JS/JSON, replacing eslint + prettier.
+  // See docs/quality.md and openspec/changes/quality-gates/design.md.
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "files": {
+    // Whitelist: only the frontend sources and repo scripts are managed here.
+    // `src-tauri/**` (Rust), `openspec/**`, `.claude/**`, `.agents/**` and
+    // `dist/**` never match these patterns, so they stay out of scope.
+    "includes": ["src/**", "scripts/**", "*.json", "*.ts"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        // Fired 66 times: the widget hooks deliberately omit dependencies to
+        // avoid restarting imperative runtimes. Fixing this is deferred; see
+        // the "Отложенное" section in docs/quality.md.
+        "useExhaustiveDependencies": "off"
+      },
+      "a11y": {
+        // Fired 25 times: these buttons inherit their type from context and a
+        // blanket `type="button"` is tracked as a separate cleanup. Deferred;
+        // see the "Отложенное" section in docs/quality.md.
+        "useButtonType": "off"
+      }
+    }
+  }
+}

@@ -1,26 +1,21 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, ReactElement, RefObject, SetStateAction } from "react";
-import { createPortal } from "react-dom";
 import { emit, listen } from "@tauri-apps/api/event";
-
-import { LANGUAGES } from "../../../config/languages";
+import type { Dispatch, ReactElement, RefObject, SetStateAction } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Dropdown } from "../../../components/Dropdown";
+import { LANGUAGES } from "../../../config/languages";
 import { SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
+import { useI18n } from "../../../lib/i18n";
+import { IconCheck, IconChevronDown, IconSearch } from "../../../lib/icons";
+import { logError } from "../../../lib/logger";
 import {
-  IconCheck,
-  IconChevronDown,
-  IconSearch,
-} from "../../../lib/icons";
-import {
+  type AppSettings,
   DEFAULT_SELECTION_TRANSLATION_HOTKEY,
   formatHotkeyLabel,
   getSettings,
   saveSettings,
-  type AppSettings,
   type TranslationSettings,
 } from "../../../lib/store";
-import { useI18n } from "../../../lib/i18n";
-import { logError } from "../../../lib/logger";
 import { useHotkeyCapture } from "../useHotkeyCapture";
 
 const SETTING_ROW_COLUMNS = "minmax(0, 1fr) 280px";
@@ -109,16 +104,11 @@ function LanguageDropdownPortal({
         Math.max(viewportPadding, rect.right - width),
         window.innerWidth - width - viewportPadding,
       );
-      const availableBelow =
-        window.innerHeight - rect.bottom - viewportPadding - gap;
+      const availableBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
       const availableAbove = rect.top - viewportPadding - gap;
-      const shouldFlip =
-        availableBelow < 220 && availableAbove > availableBelow;
+      const shouldFlip = availableBelow < 220 && availableAbove > availableBelow;
 
-      let maxHeight = Math.min(
-        320,
-        Math.max(120, shouldFlip ? availableAbove : availableBelow),
-      );
+      let maxHeight = Math.min(320, Math.max(120, shouldFlip ? availableAbove : availableBelow));
       let top = shouldFlip ? rect.top - gap - maxHeight : rect.bottom + gap;
 
       if (top < viewportPadding) {
@@ -146,6 +136,7 @@ function LanguageDropdownPortal({
   }
 
   return createPortal(
+    // biome-ignore lint/a11y/noStaticElementInteractions: the mousedown handler only stops propagation for the popover container.
     <div
       onMouseDown={(event) => event.stopPropagation()}
       style={{
@@ -173,12 +164,11 @@ function LanguageDropdownPortal({
           gap: 8,
         }}
       >
-        <IconSearch
-          size={13}
-          style={{ color: "var(--text-low)", flexShrink: 0 }}
-        />
+        <IconSearch size={13} style={{ color: "var(--text-low)", flexShrink: 0 }} />
         <input
-          autoFocus
+          ref={(el) => {
+            el?.focus();
+          }}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder={placeholder}
@@ -220,13 +210,8 @@ function LanguageDropdownPortal({
                 alignItems: "center",
                 gap: 10,
                 background:
-                  selectedCode === language.code
-                    ? "var(--dropdown-active)"
-                    : "transparent",
-                color:
-                  selectedCode === language.code
-                    ? "var(--text-hi)"
-                    : "var(--text-mid)",
+                  selectedCode === language.code ? "var(--dropdown-active)" : "transparent",
+                color: selectedCode === language.code ? "var(--text-hi)" : "var(--text-mid)",
                 fontSize: 12,
                 transition: "background 0.1s",
               }}
@@ -235,9 +220,7 @@ function LanguageDropdownPortal({
               }}
               onMouseLeave={(event) => {
                 event.currentTarget.style.background =
-                  selectedCode === language.code
-                    ? "var(--dropdown-active)"
-                    : "transparent";
+                  selectedCode === language.code ? "var(--dropdown-active)" : "transparent";
               }}
             >
               <span
@@ -251,9 +234,7 @@ function LanguageDropdownPortal({
                 {language.code}
               </span>
               <span style={{ flex: 1 }}>{language.native}</span>
-              <span style={{ fontSize: 10, color: "var(--text-low)" }}>
-                {language.name}
-              </span>
+              <span style={{ fontSize: 10, color: "var(--text-low)" }}>{language.name}</span>
               {selectedCode === language.code && (
                 <IconCheck
                   size={12}
@@ -274,10 +255,7 @@ function fallbackTargetLanguage(sourceLanguage: string): string {
   return sourceLanguage === "en" ? "ru" : "en";
 }
 
-function normalizeTargetLanguage(
-  sourceLanguage: string,
-  targetLanguage: string,
-): string {
+function normalizeTargetLanguage(sourceLanguage: string, targetLanguage: string): string {
   if (
     targetLanguage &&
     targetLanguage !== "auto" &&
@@ -293,10 +271,7 @@ function fallbackSelectionTargetLanguage(sourceLanguage: string): string {
   return sourceLanguage && sourceLanguage !== "auto" ? sourceLanguage : "en";
 }
 
-function normalizeSelectionTargetLanguage(
-  sourceLanguage: string,
-  targetLanguage: string,
-): string {
+function normalizeSelectionTargetLanguage(sourceLanguage: string, targetLanguage: string): string {
   if (targetLanguage && targetLanguage !== "auto") {
     return targetLanguage;
   }
@@ -308,9 +283,7 @@ export function TranslationTab(): ReactElement {
   const { t } = useI18n();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [activeView, setActiveView] = useState<TranslationView>("live");
-  const [liveVoiceVolumeDraft, setLiveVoiceVolumeDraft] = useState<
-    number | null
-  >(null);
+  const [liveVoiceVolumeDraft, setLiveVoiceVolumeDraft] = useState<number | null>(null);
   const liveVoiceVolumeDraftRef = useRef<number | null>(null);
   const [targetSearch, setTargetSearch] = useState("");
   const [targetOpen, setTargetOpen] = useState(false);
@@ -384,10 +357,7 @@ export function TranslationTab(): ReactElement {
 
   useEffect(() => {
     const handler = (event: MouseEvent): void => {
-      if (
-        targetRef.current &&
-        !targetRef.current.contains(event.target as Node)
-      ) {
+      if (targetRef.current && !targetRef.current.contains(event.target as Node)) {
         setTargetOpen(false);
       }
       if (
@@ -396,10 +366,7 @@ export function TranslationTab(): ReactElement {
       ) {
         setSelectionTargetOpen(false);
       }
-      if (
-        liveTargetRef.current &&
-        !liveTargetRef.current.contains(event.target as Node)
-      ) {
+      if (liveTargetRef.current && !liveTargetRef.current.contains(event.target as Node)) {
         setLiveTargetOpen(false);
       }
     };
@@ -450,19 +417,11 @@ export function TranslationTab(): ReactElement {
     );
   }, [selectionTargetOptions, liveTargetSearch]);
   const targetLanguage = settings
-    ? normalizeTargetLanguage(
-        sourceLanguage,
-        settings.translation.targetLanguage,
-      )
+    ? normalizeTargetLanguage(sourceLanguage, settings.translation.targetLanguage)
     : fallbackTargetLanguage(sourceLanguage);
-  const currentTargetLanguage = targetOptions.find(
-    (language) => language.code === targetLanguage,
-  );
+  const currentTargetLanguage = targetOptions.find((language) => language.code === targetLanguage);
   const selectionTargetLanguage = settings
-    ? normalizeSelectionTargetLanguage(
-        sourceLanguage,
-        settings.translation.selectionTargetLanguage,
-      )
+    ? normalizeSelectionTargetLanguage(sourceLanguage, settings.translation.selectionTargetLanguage)
     : fallbackSelectionTargetLanguage(sourceLanguage);
   const currentSelectionTargetLanguage = selectionTargetOptions.find(
     (language) => language.code === selectionTargetLanguage,
@@ -471,16 +430,11 @@ export function TranslationTab(): ReactElement {
   const currentLiveTargetLanguage = selectionTargetOptions.find(
     (language) => language.code === liveTargetLanguage,
   );
-  const localModelMode = Boolean(
-    /127\.0\.0\.1|localhost/i.test(settings?.whisperEndpoint || ""),
-  );
+  const localModelMode = Boolean(/127\.0\.0\.1|localhost/i.test(settings?.whisperEndpoint || ""));
   const liveVoiceSupported = Boolean(
-    settings &&
-      !localModelMode &&
-      settings.selectedTranslationAdapter === "openai",
+    settings && !localModelMode && settings.selectedTranslationAdapter === "openai",
   );
-  const liveVoiceActive =
-    liveVoiceSupported && Boolean(settings?.translation.liveVoiceEnabled);
+  const liveVoiceActive = liveVoiceSupported && Boolean(settings?.translation.liveVoiceEnabled);
 
   const updateTranslation = async (
     patch: Partial<TranslationSettings>,
@@ -550,26 +504,19 @@ export function TranslationTab(): ReactElement {
     }
 
     await selectionHotkeyCapture.submit(
-      settings.translation.selectionHotkey ||
-        DEFAULT_SELECTION_TRANSLATION_HOTKEY,
-      );
+      settings.translation.selectionHotkey || DEFAULT_SELECTION_TRANSLATION_HOTKEY,
+    );
   };
 
   if (!settings) {
     return (
-      <div
-        className="card"
-        style={{ ...SETTINGS_CARD_STYLE, padding: "18px 20px" }}
-      >
-        <div style={{ color: "var(--text-mid)", fontSize: 13 }}>
-          {t("translation.loading")}
-        </div>
+      <div className="card" style={{ ...SETTINGS_CARD_STYLE, padding: "18px 20px" }}>
+        <div style={{ color: "var(--text-mid)", fontSize: 13 }}>{t("translation.loading")}</div>
       </div>
     );
   }
 
-  const displayedLiveVoiceVolume =
-    liveVoiceVolumeDraft ?? settings.translation.liveVoiceVolume;
+  const displayedLiveVoiceVolume = liveVoiceVolumeDraft ?? settings.translation.liveVoiceVolume;
 
   return (
     <div
@@ -587,16 +534,18 @@ export function TranslationTab(): ReactElement {
           background: "var(--control-track)",
         }}
       >
-        {([
-          {
-            id: "live",
-            label: t("translation.view.live"),
-          },
-          {
-            id: "other",
-            label: t("translation.view.other"),
-          },
-        ] as const).map((view) => {
+        {(
+          [
+            {
+              id: "live",
+              label: t("translation.view.live"),
+            },
+            {
+              id: "other",
+              label: t("translation.view.other"),
+            },
+          ] as const
+        ).map((view) => {
           const active = activeView === view.id;
           return (
             <button
@@ -640,803 +589,858 @@ export function TranslationTab(): ReactElement {
           zIndex: targetOpen || selectionTargetOpen || liveTargetOpen ? 1000 : 1,
         }}
       >
-      <div
-        style={{
-          ...TRANSLATION_GROUP_FIRST_SECTION_STYLE,
-          display: activeView === "other" ? "grid" : "none",
-          position: "relative",
-          zIndex: targetOpen ? 2 : 1,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: "var(--text-hi)",
-              margin: 0,
-            }}
-          >
-            {t("translation.dictation.title")}
-          </div>
-        </div>
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: SETTING_ROW_COLUMNS,
-            alignItems: "center",
-            gap: SETTING_ROW_GAP,
+            ...TRANSLATION_GROUP_FIRST_SECTION_STYLE,
+            display: activeView === "other" ? "grid" : "none",
+            position: "relative",
+            zIndex: targetOpen ? 2 : 1,
           }}
         >
-          <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div
               style={{
                 fontSize: 13,
-                fontWeight: 600,
-                color: "var(--text-mid)",
-                margin: 0,
-              }}
-            >
-              {t("translation.target.title")}
-            </div>
-          </div>
-          <div
-            ref={targetRef}
-            style={{ position: "relative", width: "100%", justifySelf: "end" }}
-          >
-            <button
-              type="button"
-              onClick={() => setTargetOpen((open) => !open)}
-              className="btn"
-              style={{
-                width: "100%",
-                justifyContent: "space-between",
-                gap: 8,
-                minHeight: CONTROL_HEIGHT,
-                padding: "0 10px",
-                borderRadius: CONTROL_RADIUS,
-                fontSize: CONTROL_FONT_SIZE,
-              }}
-            >
-              <span
-                style={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {currentTargetLanguage
-                  ? `${currentTargetLanguage.native} (${currentTargetLanguage.name})`
-                  : targetLanguage}
-              </span>
-              <IconChevronDown
-                size={13}
-                stroke={2}
-                style={{
-                  flexShrink: 0,
-                  transform: targetOpen ? "rotate(180deg)" : "none",
-                  transition: "transform 0.15s",
-                }}
-              />
-            </button>
-            {targetOpen && (
-              <LanguageDropdownPortal
-                anchorRef={targetRef}
-                options={filteredTargetOptions}
-                selectedCode={targetLanguage}
-                search={targetSearch}
-                setSearch={setTargetSearch}
-                placeholder={t("settings.recognitionLang.searchPlaceholder")}
-                notFoundLabel={t("common.notFound")}
-                onSelect={(code) => {
-                  void updateTranslation({ targetLanguage: code });
-                  setTargetOpen(false);
-                  setTargetSearch("");
-                }}
-              />
-            )}
-          </div>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: SETTING_ROW_COLUMNS,
-            alignItems: "center",
-            gap: SETTING_ROW_GAP,
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--text-mid)",
-                margin: 0,
-              }}
-            >
-              {t("translation.widget.title")}
-            </div>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={settings.translation.active}
-            onClick={() => {
-              void updateTranslation({
-                active: !settings.translation.active,
-              });
-            }}
-            className="btn"
-            style={{
-              width: "100%",
-              minHeight: CONTROL_HEIGHT,
-              padding: "0 10px",
-              borderRadius: CONTROL_RADIUS,
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) 34px",
-              alignItems: "center",
-              gap: 10,
-              transform: "none",
-              justifySelf: "end",
-            }}
-          >
-            <span
-              style={{
-                color: "var(--text-hi)",
-                fontSize: CONTROL_FONT_SIZE,
                 fontWeight: 700,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                minWidth: 0,
+                color: "var(--text-hi)",
+                margin: 0,
               }}
             >
-              {settings.translation.active
-                ? t("translation.widget.on")
-                : t("translation.widget.off")}
-            </span>
-            <span
-              aria-hidden="true"
-              style={{
-                width: 34,
-                height: 20,
-                borderRadius: 999,
-                background: settings.translation.active
-                  ? "var(--text-hi)"
-                  : "rgba(0,0,0,0.12)",
-                padding: 2,
-                display: "flex",
-                justifyContent: settings.translation.active
-                  ? "flex-end"
-                  : "flex-start",
-                transition: "background 0.16s ease",
-              }}
-            >
-              <span
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 999,
-                  background: "#fff",
-                  display: "block",
-                }}
-              />
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <div
-        style={{
-          ...TRANSLATION_GROUP_FIRST_SECTION_STYLE,
-          display: activeView === "live" ? "grid" : "none",
-          position: "relative",
-          zIndex: liveTargetOpen ? 3 : 1,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-hi)" }}>
-            {t("translation.live.title")}
-          </div>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: SETTING_ROW_COLUMNS,
-            alignItems: "center",
-            gap: SETTING_ROW_GAP,
-          }}
-        >
-          <div
-            style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}
-          >
-            {t("translation.live.target")}
+              {t("translation.dictation.title")}
+            </div>
           </div>
           <div
-            ref={liveTargetRef}
-            style={{ position: "relative", width: "100%" }}
-          >
-            <button
-              type="button"
-              onClick={() => setLiveTargetOpen((open) => !open)}
-              className="btn"
-              style={{
-                width: "100%",
-                justifyContent: "space-between",
-                minHeight: CONTROL_HEIGHT,
-                padding: "0 10px",
-                borderRadius: CONTROL_RADIUS,
-                fontSize: CONTROL_FONT_SIZE,
-              }}
-            >
-              <span>
-                {currentLiveTargetLanguage
-                  ? `${currentLiveTargetLanguage.native} (${currentLiveTargetLanguage.name})`
-                  : liveTargetLanguage}
-              </span>
-              <IconChevronDown size={13} stroke={2} />
-            </button>
-            {liveTargetOpen && (
-              <LanguageDropdownPortal
-                anchorRef={liveTargetRef}
-                options={filteredLiveTargetOptions}
-                selectedCode={liveTargetLanguage}
-                search={liveTargetSearch}
-                setSearch={setLiveTargetSearch}
-                placeholder={t("settings.recognitionLang.searchPlaceholder")}
-                notFoundLabel={t("common.notFound")}
-                onSelect={(code) => {
-                  void updateTranslation({ liveTargetLanguage: code });
-                  setLiveTargetOpen(false);
-                  setLiveTargetSearch("");
-                }}
-              />
-            )}
-          </div>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: SETTING_ROW_COLUMNS,
-            alignItems: "center",
-            gap: SETTING_ROW_GAP,
-          }}
-        >
-          <div
-            style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}
-          >
-            {t("translation.live.widget")}
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={settings.translation.liveWidgetEnabled}
-            onClick={() => {
-              void updateTranslation({
-                liveWidgetEnabled: !settings.translation.liveWidgetEnabled,
-              });
-            }}
-            className="btn"
             style={{
-              width: "100%",
-              minHeight: CONTROL_HEIGHT,
-              padding: "0 10px",
-              borderRadius: CONTROL_RADIUS,
               display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) 34px",
+              gridTemplateColumns: SETTING_ROW_COLUMNS,
               alignItems: "center",
-              gap: 10,
-              transform: "none",
+              gap: SETTING_ROW_GAP,
             }}
           >
-            <span style={{ fontSize: CONTROL_FONT_SIZE, fontWeight: 700 }}>
-              {settings.translation.liveWidgetEnabled
-                ? t("translation.widget.on")
-                : t("translation.widget.off")}
-            </span>
-            <span
-              aria-hidden="true"
-              style={{
-                width: 34,
-                height: 20,
-                borderRadius: 999,
-                background: settings.translation.liveWidgetEnabled
-                  ? "var(--text-hi)"
-                  : "rgba(0,0,0,0.12)",
-                padding: 2,
-                display: "flex",
-                justifyContent: settings.translation.liveWidgetEnabled
-                  ? "flex-end"
-                  : "flex-start",
-              }}
-            >
-              <span
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 999,
-                  background: "#fff",
-                }}
-              />
-            </span>
-          </button>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: SETTING_ROW_COLUMNS,
-            alignItems: "center",
-            gap: SETTING_ROW_GAP,
-          }}
-        >
-          <div
-            style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}
-          >
-            {t("translation.live.microphone")}
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={settings.translation.liveMicrophoneEnabled}
-            onClick={() => {
-              void updateTranslation({
-                liveMicrophoneEnabled:
-                  !settings.translation.liveMicrophoneEnabled,
-              });
-            }}
-            className="btn"
-            style={{
-              width: "100%",
-              minHeight: CONTROL_HEIGHT,
-              padding: "0 10px",
-              borderRadius: CONTROL_RADIUS,
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) 34px",
-              alignItems: "center",
-              gap: 10,
-              transform: "none",
-            }}
-          >
-            <span style={{ fontSize: CONTROL_FONT_SIZE, fontWeight: 700 }}>
-              {settings.translation.liveMicrophoneEnabled
-                ? t("translation.widget.on")
-                : t("translation.widget.off")}
-            </span>
-            <span
-              aria-hidden="true"
-              style={{
-                width: 34,
-                height: 20,
-                borderRadius: 999,
-                background: settings.translation.liveMicrophoneEnabled
-                  ? "var(--text-hi)"
-                  : "rgba(0,0,0,0.12)",
-                padding: 2,
-                display: "flex",
-                justifyContent: settings.translation.liveMicrophoneEnabled
-                  ? "flex-end"
-                  : "flex-start",
-              }}
-            >
-              <span
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 999,
-                  background: "#fff",
-                  display: "block",
-                }}
-              />
-            </span>
-          </button>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: SETTING_ROW_COLUMNS,
-            alignItems: "center",
-            gap: SETTING_ROW_GAP,
-          }}
-        >
-          <div
-            style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}
-          >
-            {t("translation.live.voice")}
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={liveVoiceActive}
-            aria-describedby="translation-live-voice-help"
-            disabled={!liveVoiceSupported}
-            onClick={() => {
-              void updateTranslation({
-                liveVoiceEnabled: !settings.translation.liveVoiceEnabled,
-              });
-            }}
-            className="btn"
-            style={{
-              width: "100%",
-              minHeight: CONTROL_HEIGHT,
-              padding: "0 10px",
-              borderRadius: CONTROL_RADIUS,
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) 34px",
-              alignItems: "center",
-              gap: 10,
-              transform: "none",
-              opacity: liveVoiceSupported ? 1 : 0.55,
-              cursor: liveVoiceSupported ? "pointer" : "not-allowed",
-            }}
-          >
-            <span style={{ fontSize: CONTROL_FONT_SIZE, fontWeight: 700 }}>
-              {liveVoiceActive
-                ? t("translation.widget.on")
-                : t("translation.widget.off")}
-            </span>
-            <span
-              aria-hidden="true"
-              style={{
-                width: 34,
-                height: 20,
-                borderRadius: 999,
-                background: liveVoiceActive
-                  ? "var(--text-hi)"
-                  : "rgba(0,0,0,0.12)",
-                padding: 2,
-                display: "flex",
-                justifyContent: liveVoiceActive
-                  ? "flex-end"
-                  : "flex-start",
-              }}
-            >
-              <span
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 999,
-                  background: "#fff",
-                }}
-              />
-            </span>
-          </button>
-        </div>
-        {liveVoiceActive && (
-          <>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: SETTING_ROW_COLUMNS,
-                alignItems: "center",
-                gap: SETTING_ROW_GAP,
-              }}
-            >
+            <div style={{ minWidth: 0 }}>
               <div
-                style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--text-mid)",
+                  margin: 0,
+                }}
               >
-                {t("translation.live.muteOriginal")}
+                {t("translation.target.title")}
               </div>
+            </div>
+            <div
+              ref={targetRef}
+              style={{ position: "relative", width: "100%", justifySelf: "end" }}
+            >
               <button
                 type="button"
-                role="switch"
-                aria-checked={settings.translation.liveMuteOriginalEnabled}
-                aria-describedby="translation-live-mute-original-help"
-                onClick={() => {
-                  void updateTranslation({
-                    liveMuteOriginalEnabled:
-                      !settings.translation.liveMuteOriginalEnabled,
-                  });
-                }}
+                onClick={() => setTargetOpen((open) => !open)}
                 className="btn"
                 style={{
                   width: "100%",
+                  justifyContent: "space-between",
+                  gap: 8,
                   minHeight: CONTROL_HEIGHT,
                   padding: "0 10px",
                   borderRadius: CONTROL_RADIUS,
-                  display: "grid",
-                  gridTemplateColumns: "minmax(0, 1fr) 34px",
-                  alignItems: "center",
-                  gap: 10,
-                  transform: "none",
+                  fontSize: CONTROL_FONT_SIZE,
                 }}
               >
-                <span style={{ fontSize: CONTROL_FONT_SIZE, fontWeight: 700 }}>
-                  {settings.translation.liveMuteOriginalEnabled
-                    ? t("translation.widget.on")
-                    : t("translation.widget.off")}
-                </span>
                 <span
-                  aria-hidden="true"
                   style={{
-                    width: 34,
-                    height: 20,
-                    borderRadius: 999,
-                    background: settings.translation.liveMuteOriginalEnabled
-                      ? "var(--text-hi)"
-                      : "rgba(0,0,0,0.12)",
-                    padding: 2,
-                    display: "flex",
-                    justifyContent: settings.translation.liveMuteOriginalEnabled
-                      ? "flex-end"
-                      : "flex-start",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  <span
-                    style={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: 999,
-                      background: "#fff",
-                    }}
-                  />
+                  {currentTargetLanguage
+                    ? `${currentTargetLanguage.native} (${currentTargetLanguage.name})`
+                    : targetLanguage}
                 </span>
+                <IconChevronDown
+                  size={13}
+                  stroke={2}
+                  style={{
+                    flexShrink: 0,
+                    transform: targetOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.15s",
+                  }}
+                />
               </button>
-            </div>
-            <div
-              id="translation-live-mute-original-help"
-              style={{ fontSize: 12, color: "var(--text-low)", lineHeight: 1.5 }}
-            >
-              {t("translation.live.muteOriginalDesc")}
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: SETTING_ROW_COLUMNS,
-                alignItems: "center",
-                gap: SETTING_ROW_GAP,
-              }}
-            >
-              <div
-                style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}
-              >
-                {t("translation.live.voiceName")}
-              </div>
-              <div style={{ width: "100%" }}>
-                <Dropdown
-                  value={settings.translation.liveVoice}
-                  options={LIVE_VOICES.map((voice) => ({
-                    value: voice,
-                    label: t(`translation.live.voice.${voice}`),
-                  }))}
-                  onChange={(voice) => {
-                    void updateTranslation({ liveVoice: voice });
+              {targetOpen && (
+                <LanguageDropdownPortal
+                  anchorRef={targetRef}
+                  options={filteredTargetOptions}
+                  selectedCode={targetLanguage}
+                  search={targetSearch}
+                  setSearch={setTargetSearch}
+                  placeholder={t("settings.recognitionLang.searchPlaceholder")}
+                  notFoundLabel={t("common.notFound")}
+                  onSelect={(code) => {
+                    void updateTranslation({ targetLanguage: code });
+                    setTargetOpen(false);
+                    setTargetSearch("");
                   }}
                 />
-              </div>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: SETTING_ROW_COLUMNS,
-                alignItems: "center",
-                gap: SETTING_ROW_GAP,
-              }}
-            >
-              <label
-                htmlFor="translation-live-volume"
-                style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}
-              >
-                {t("translation.live.volume")}
-              </label>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "minmax(0, 1fr) 56px",
-                  alignItems: "center",
-                  gap: 12,
-                }}
-              >
-                <input
-                  id="translation-live-volume"
-                  type="range"
-                  min={0.1}
-                  max={1}
-                  step={0.05}
-                  value={displayedLiveVoiceVolume}
-                  onChange={(event) => {
-                    previewLiveVoiceVolume(Number(event.currentTarget.value));
-                  }}
-                  onPointerUp={() => void commitLiveVoiceVolume()}
-                  onPointerCancel={() => void commitLiveVoiceVolume()}
-                  onKeyUp={() => void commitLiveVoiceVolume()}
-                  onBlur={() => void commitLiveVoiceVolume()}
-                  style={{
-                    width: "100%",
-                    accentColor: "var(--text-hi)",
-                    cursor: "pointer",
-                  }}
-                />
-                <div
-                  style={{
-                    height: CONTROL_HEIGHT,
-                    borderRadius: CONTROL_RADIUS,
-                    background: "var(--control-muted)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--text-hi)",
-                    fontSize: CONTROL_FONT_SIZE,
-                    fontWeight: 700,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {Math.round(displayedLiveVoiceVolume * 100)}%
-                </div>
-              </div>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: SETTING_ROW_COLUMNS,
-                alignItems: "center",
-                gap: SETTING_ROW_GAP,
-              }}
-            >
-              <div
-                style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}
-              >
-                {t("translation.live.speed")}
-              </div>
-              <div style={{ width: "100%" }}>
-                <Dropdown
-                  value={String(settings.translation.liveVoiceSpeed)}
-                  options={LIVE_VOICE_SPEEDS.map((speed) => ({
-                    value: String(speed),
-                    label: `${speed.toFixed(2).replace(/0$/, "")}×`,
-                  }))}
-                  onChange={(speed) => {
-                    void updateTranslation({ liveVoiceSpeed: Number(speed) });
-                  }}
-                />
-              </div>
-            </div>
-          </>
-        )}
-        <div
-          id="translation-live-voice-help"
-          style={{ fontSize: 12, color: "var(--text-low)", lineHeight: 1.5 }}
-        >
-          {liveVoiceSupported
-            ? t("translation.live.voiceDesc")
-            : t("translation.live.voiceOpenAiOnly")}
-        </div>
-        <div
-          style={{ fontSize: 12, color: "var(--text-low)", lineHeight: 1.5 }}
-        >
-          {t("translation.live.desc")}
-        </div>
-      </div>
-
-      <div
-        style={{
-          ...TRANSLATION_GROUP_LAST_SECTION_STYLE,
-          display: activeView === "other" ? "grid" : "none",
-          position: "relative",
-          zIndex: selectionTargetOpen ? 2 : 1,
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: SETTING_ROW_COLUMNS,
-            alignItems: "center",
-            gap: SETTING_ROW_GAP,
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "var(--text-hi)",
-                margin: 0,
-              }}
-            >
-              {t("translation.selection.title")}
+              )}
             </div>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={settings.translation.selectionEnabled}
-            onClick={() => {
-              void toggleSelectionTranslation();
-            }}
-            className="btn"
+          <div
             style={{
-              width: "100%",
-              minHeight: CONTROL_HEIGHT,
-              padding: "0 10px",
-              borderRadius: CONTROL_RADIUS,
               display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) 34px",
+              gridTemplateColumns: SETTING_ROW_COLUMNS,
               alignItems: "center",
-              gap: 10,
-              transform: "none",
-              justifySelf: "end",
-              opacity: selectionHotkeySubmitting ? 0.72 : 1,
+              gap: SETTING_ROW_GAP,
             }}
           >
-            <span
-              style={{
-                color: "var(--text-hi)",
-                fontSize: CONTROL_FONT_SIZE,
-                fontWeight: 700,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                minWidth: 0,
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--text-mid)",
+                  margin: 0,
+                }}
+              >
+                {t("translation.widget.title")}
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.translation.active}
+              onClick={() => {
+                void updateTranslation({
+                  active: !settings.translation.active,
+                });
               }}
-            >
-              {settings.translation.selectionEnabled
-                ? t("translation.selection.on")
-                : t("translation.selection.off")}
-            </span>
-            <span
-              aria-hidden="true"
+              className="btn"
               style={{
-                width: 34,
-                height: 20,
-                borderRadius: 999,
-                background: settings.translation.selectionEnabled
-                  ? "var(--text-hi)"
-                  : "rgba(0,0,0,0.12)",
-                padding: 2,
-                display: "flex",
-                justifyContent: settings.translation.selectionEnabled
-                  ? "flex-end"
-                  : "flex-start",
-                transition: "background 0.16s ease",
+                width: "100%",
+                minHeight: CONTROL_HEIGHT,
+                padding: "0 10px",
+                borderRadius: CONTROL_RADIUS,
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) 34px",
+                alignItems: "center",
+                gap: 10,
+                transform: "none",
+                justifySelf: "end",
               }}
             >
               <span
                 style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 999,
-                  background: "#fff",
-                  display: "block",
+                  color: "var(--text-hi)",
+                  fontSize: CONTROL_FONT_SIZE,
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  minWidth: 0,
                 }}
-              />
-            </span>
-          </button>
+              >
+                {settings.translation.active
+                  ? t("translation.widget.on")
+                  : t("translation.widget.off")}
+              </span>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 34,
+                  height: 20,
+                  borderRadius: 999,
+                  background: settings.translation.active ? "var(--text-hi)" : "rgba(0,0,0,0.12)",
+                  padding: 2,
+                  display: "flex",
+                  justifyContent: settings.translation.active ? "flex-end" : "flex-start",
+                  transition: "background 0.16s ease",
+                }}
+              >
+                <span
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 999,
+                    background: "#fff",
+                    display: "block",
+                  }}
+                />
+              </span>
+            </button>
+          </div>
         </div>
+
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: SETTING_ROW_COLUMNS,
-            alignItems: "center",
-            gap: SETTING_ROW_GAP,
+            ...TRANSLATION_GROUP_FIRST_SECTION_STYLE,
+            display: activeView === "live" ? "grid" : "none",
+            position: "relative",
+            zIndex: liveTargetOpen ? 3 : 1,
           }}
         >
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--text-mid)",
-                margin: 0,
-              }}
-            >
-              {t("translation.target.title")}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-hi)" }}>
+              {t("translation.live.title")}
             </div>
           </div>
           <div
-            ref={selectionTargetRef}
-            style={{ position: "relative", width: "100%", justifySelf: "end" }}
+            style={{
+              display: "grid",
+              gridTemplateColumns: SETTING_ROW_COLUMNS,
+              alignItems: "center",
+              gap: SETTING_ROW_GAP,
+            }}
           >
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}>
+              {t("translation.live.target")}
+            </div>
+            <div ref={liveTargetRef} style={{ position: "relative", width: "100%" }}>
+              <button
+                type="button"
+                onClick={() => setLiveTargetOpen((open) => !open)}
+                className="btn"
+                style={{
+                  width: "100%",
+                  justifyContent: "space-between",
+                  minHeight: CONTROL_HEIGHT,
+                  padding: "0 10px",
+                  borderRadius: CONTROL_RADIUS,
+                  fontSize: CONTROL_FONT_SIZE,
+                }}
+              >
+                <span>
+                  {currentLiveTargetLanguage
+                    ? `${currentLiveTargetLanguage.native} (${currentLiveTargetLanguage.name})`
+                    : liveTargetLanguage}
+                </span>
+                <IconChevronDown size={13} stroke={2} />
+              </button>
+              {liveTargetOpen && (
+                <LanguageDropdownPortal
+                  anchorRef={liveTargetRef}
+                  options={filteredLiveTargetOptions}
+                  selectedCode={liveTargetLanguage}
+                  search={liveTargetSearch}
+                  setSearch={setLiveTargetSearch}
+                  placeholder={t("settings.recognitionLang.searchPlaceholder")}
+                  notFoundLabel={t("common.notFound")}
+                  onSelect={(code) => {
+                    void updateTranslation({ liveTargetLanguage: code });
+                    setLiveTargetOpen(false);
+                    setLiveTargetSearch("");
+                  }}
+                />
+              )}
+            </div>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: SETTING_ROW_COLUMNS,
+              alignItems: "center",
+              gap: SETTING_ROW_GAP,
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}>
+              {t("translation.live.widget")}
+            </div>
             <button
               type="button"
-              onClick={() => setSelectionTargetOpen((open) => !open)}
+              role="switch"
+              aria-checked={settings.translation.liveWidgetEnabled}
+              onClick={() => {
+                void updateTranslation({
+                  liveWidgetEnabled: !settings.translation.liveWidgetEnabled,
+                });
+              }}
               className="btn"
               style={{
                 width: "100%",
-                justifyContent: "space-between",
-                gap: 8,
                 minHeight: CONTROL_HEIGHT,
                 padding: "0 10px",
                 borderRadius: CONTROL_RADIUS,
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) 34px",
+                alignItems: "center",
+                gap: 10,
+                transform: "none",
+              }}
+            >
+              <span style={{ fontSize: CONTROL_FONT_SIZE, fontWeight: 700 }}>
+                {settings.translation.liveWidgetEnabled
+                  ? t("translation.widget.on")
+                  : t("translation.widget.off")}
+              </span>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 34,
+                  height: 20,
+                  borderRadius: 999,
+                  background: settings.translation.liveWidgetEnabled
+                    ? "var(--text-hi)"
+                    : "rgba(0,0,0,0.12)",
+                  padding: 2,
+                  display: "flex",
+                  justifyContent: settings.translation.liveWidgetEnabled
+                    ? "flex-end"
+                    : "flex-start",
+                }}
+              >
+                <span
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 999,
+                    background: "#fff",
+                  }}
+                />
+              </span>
+            </button>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: SETTING_ROW_COLUMNS,
+              alignItems: "center",
+              gap: SETTING_ROW_GAP,
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}>
+              {t("translation.live.microphone")}
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.translation.liveMicrophoneEnabled}
+              onClick={() => {
+                void updateTranslation({
+                  liveMicrophoneEnabled: !settings.translation.liveMicrophoneEnabled,
+                });
+              }}
+              className="btn"
+              style={{
+                width: "100%",
+                minHeight: CONTROL_HEIGHT,
+                padding: "0 10px",
+                borderRadius: CONTROL_RADIUS,
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) 34px",
+                alignItems: "center",
+                gap: 10,
+                transform: "none",
+              }}
+            >
+              <span style={{ fontSize: CONTROL_FONT_SIZE, fontWeight: 700 }}>
+                {settings.translation.liveMicrophoneEnabled
+                  ? t("translation.widget.on")
+                  : t("translation.widget.off")}
+              </span>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 34,
+                  height: 20,
+                  borderRadius: 999,
+                  background: settings.translation.liveMicrophoneEnabled
+                    ? "var(--text-hi)"
+                    : "rgba(0,0,0,0.12)",
+                  padding: 2,
+                  display: "flex",
+                  justifyContent: settings.translation.liveMicrophoneEnabled
+                    ? "flex-end"
+                    : "flex-start",
+                }}
+              >
+                <span
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 999,
+                    background: "#fff",
+                    display: "block",
+                  }}
+                />
+              </span>
+            </button>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: SETTING_ROW_COLUMNS,
+              alignItems: "center",
+              gap: SETTING_ROW_GAP,
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}>
+              {t("translation.live.voice")}
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={liveVoiceActive}
+              aria-describedby="translation-live-voice-help"
+              disabled={!liveVoiceSupported}
+              onClick={() => {
+                void updateTranslation({
+                  liveVoiceEnabled: !settings.translation.liveVoiceEnabled,
+                });
+              }}
+              className="btn"
+              style={{
+                width: "100%",
+                minHeight: CONTROL_HEIGHT,
+                padding: "0 10px",
+                borderRadius: CONTROL_RADIUS,
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) 34px",
+                alignItems: "center",
+                gap: 10,
+                transform: "none",
+                opacity: liveVoiceSupported ? 1 : 0.55,
+                cursor: liveVoiceSupported ? "pointer" : "not-allowed",
+              }}
+            >
+              <span style={{ fontSize: CONTROL_FONT_SIZE, fontWeight: 700 }}>
+                {liveVoiceActive ? t("translation.widget.on") : t("translation.widget.off")}
+              </span>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 34,
+                  height: 20,
+                  borderRadius: 999,
+                  background: liveVoiceActive ? "var(--text-hi)" : "rgba(0,0,0,0.12)",
+                  padding: 2,
+                  display: "flex",
+                  justifyContent: liveVoiceActive ? "flex-end" : "flex-start",
+                }}
+              >
+                <span
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 999,
+                    background: "#fff",
+                  }}
+                />
+              </span>
+            </button>
+          </div>
+          {liveVoiceActive && (
+            <>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: SETTING_ROW_COLUMNS,
+                  alignItems: "center",
+                  gap: SETTING_ROW_GAP,
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}>
+                  {t("translation.live.muteOriginal")}
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={settings.translation.liveMuteOriginalEnabled}
+                  aria-describedby="translation-live-mute-original-help"
+                  onClick={() => {
+                    void updateTranslation({
+                      liveMuteOriginalEnabled: !settings.translation.liveMuteOriginalEnabled,
+                    });
+                  }}
+                  className="btn"
+                  style={{
+                    width: "100%",
+                    minHeight: CONTROL_HEIGHT,
+                    padding: "0 10px",
+                    borderRadius: CONTROL_RADIUS,
+                    display: "grid",
+                    gridTemplateColumns: "minmax(0, 1fr) 34px",
+                    alignItems: "center",
+                    gap: 10,
+                    transform: "none",
+                  }}
+                >
+                  <span style={{ fontSize: CONTROL_FONT_SIZE, fontWeight: 700 }}>
+                    {settings.translation.liveMuteOriginalEnabled
+                      ? t("translation.widget.on")
+                      : t("translation.widget.off")}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 34,
+                      height: 20,
+                      borderRadius: 999,
+                      background: settings.translation.liveMuteOriginalEnabled
+                        ? "var(--text-hi)"
+                        : "rgba(0,0,0,0.12)",
+                      padding: 2,
+                      display: "flex",
+                      justifyContent: settings.translation.liveMuteOriginalEnabled
+                        ? "flex-end"
+                        : "flex-start",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: 999,
+                        background: "#fff",
+                      }}
+                    />
+                  </span>
+                </button>
+              </div>
+              <div
+                id="translation-live-mute-original-help"
+                style={{ fontSize: 12, color: "var(--text-low)", lineHeight: 1.5 }}
+              >
+                {t("translation.live.muteOriginalDesc")}
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: SETTING_ROW_COLUMNS,
+                  alignItems: "center",
+                  gap: SETTING_ROW_GAP,
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}>
+                  {t("translation.live.voiceName")}
+                </div>
+                <div style={{ width: "100%" }}>
+                  <Dropdown
+                    value={settings.translation.liveVoice}
+                    options={LIVE_VOICES.map((voice) => ({
+                      value: voice,
+                      label: t(`translation.live.voice.${voice}`),
+                    }))}
+                    onChange={(voice) => {
+                      void updateTranslation({ liveVoice: voice });
+                    }}
+                  />
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: SETTING_ROW_COLUMNS,
+                  alignItems: "center",
+                  gap: SETTING_ROW_GAP,
+                }}
+              >
+                <label
+                  htmlFor="translation-live-volume"
+                  style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}
+                >
+                  {t("translation.live.volume")}
+                </label>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "minmax(0, 1fr) 56px",
+                    alignItems: "center",
+                    gap: 12,
+                  }}
+                >
+                  <input
+                    id="translation-live-volume"
+                    type="range"
+                    min={0.1}
+                    max={1}
+                    step={0.05}
+                    value={displayedLiveVoiceVolume}
+                    onChange={(event) => {
+                      previewLiveVoiceVolume(Number(event.currentTarget.value));
+                    }}
+                    onPointerUp={() => void commitLiveVoiceVolume()}
+                    onPointerCancel={() => void commitLiveVoiceVolume()}
+                    onKeyUp={() => void commitLiveVoiceVolume()}
+                    onBlur={() => void commitLiveVoiceVolume()}
+                    style={{
+                      width: "100%",
+                      accentColor: "var(--text-hi)",
+                      cursor: "pointer",
+                    }}
+                  />
+                  <div
+                    style={{
+                      height: CONTROL_HEIGHT,
+                      borderRadius: CONTROL_RADIUS,
+                      background: "var(--control-muted)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--text-hi)",
+                      fontSize: CONTROL_FONT_SIZE,
+                      fontWeight: 700,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {Math.round(displayedLiveVoiceVolume * 100)}%
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: SETTING_ROW_COLUMNS,
+                  alignItems: "center",
+                  gap: SETTING_ROW_GAP,
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-mid)" }}>
+                  {t("translation.live.speed")}
+                </div>
+                <div style={{ width: "100%" }}>
+                  <Dropdown
+                    value={String(settings.translation.liveVoiceSpeed)}
+                    options={LIVE_VOICE_SPEEDS.map((speed) => ({
+                      value: String(speed),
+                      label: `${speed.toFixed(2).replace(/0$/, "")}×`,
+                    }))}
+                    onChange={(speed) => {
+                      void updateTranslation({ liveVoiceSpeed: Number(speed) });
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+          <div
+            id="translation-live-voice-help"
+            style={{ fontSize: 12, color: "var(--text-low)", lineHeight: 1.5 }}
+          >
+            {liveVoiceSupported
+              ? t("translation.live.voiceDesc")
+              : t("translation.live.voiceOpenAiOnly")}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--text-low)", lineHeight: 1.5 }}>
+            {t("translation.live.desc")}
+          </div>
+        </div>
+
+        <div
+          style={{
+            ...TRANSLATION_GROUP_LAST_SECTION_STYLE,
+            display: activeView === "other" ? "grid" : "none",
+            position: "relative",
+            zIndex: selectionTargetOpen ? 2 : 1,
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: SETTING_ROW_COLUMNS,
+              alignItems: "center",
+              gap: SETTING_ROW_GAP,
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "var(--text-hi)",
+                  margin: 0,
+                }}
+              >
+                {t("translation.selection.title")}
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.translation.selectionEnabled}
+              onClick={() => {
+                void toggleSelectionTranslation();
+              }}
+              className="btn"
+              style={{
+                width: "100%",
+                minHeight: CONTROL_HEIGHT,
+                padding: "0 10px",
+                borderRadius: CONTROL_RADIUS,
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) 34px",
+                alignItems: "center",
+                gap: 10,
+                transform: "none",
+                justifySelf: "end",
+                opacity: selectionHotkeySubmitting ? 0.72 : 1,
+              }}
+            >
+              <span
+                style={{
+                  color: "var(--text-hi)",
+                  fontSize: CONTROL_FONT_SIZE,
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  minWidth: 0,
+                }}
+              >
+                {settings.translation.selectionEnabled
+                  ? t("translation.selection.on")
+                  : t("translation.selection.off")}
+              </span>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 34,
+                  height: 20,
+                  borderRadius: 999,
+                  background: settings.translation.selectionEnabled
+                    ? "var(--text-hi)"
+                    : "rgba(0,0,0,0.12)",
+                  padding: 2,
+                  display: "flex",
+                  justifyContent: settings.translation.selectionEnabled ? "flex-end" : "flex-start",
+                  transition: "background 0.16s ease",
+                }}
+              >
+                <span
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 999,
+                    background: "#fff",
+                    display: "block",
+                  }}
+                />
+              </span>
+            </button>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: SETTING_ROW_COLUMNS,
+              alignItems: "center",
+              gap: SETTING_ROW_GAP,
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--text-mid)",
+                  margin: 0,
+                }}
+              >
+                {t("translation.target.title")}
+              </div>
+            </div>
+            <div
+              ref={selectionTargetRef}
+              style={{ position: "relative", width: "100%", justifySelf: "end" }}
+            >
+              <button
+                type="button"
+                onClick={() => setSelectionTargetOpen((open) => !open)}
+                className="btn"
+                style={{
+                  width: "100%",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  minHeight: CONTROL_HEIGHT,
+                  padding: "0 10px",
+                  borderRadius: CONTROL_RADIUS,
+                  fontSize: CONTROL_FONT_SIZE,
+                }}
+              >
+                <span
+                  style={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {currentSelectionTargetLanguage
+                    ? `${currentSelectionTargetLanguage.native} (${currentSelectionTargetLanguage.name})`
+                    : selectionTargetLanguage}
+                </span>
+                <IconChevronDown
+                  size={13}
+                  stroke={2}
+                  style={{
+                    flexShrink: 0,
+                    transform: selectionTargetOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.15s",
+                  }}
+                />
+              </button>
+              {selectionTargetOpen && (
+                <LanguageDropdownPortal
+                  anchorRef={selectionTargetRef}
+                  options={filteredSelectionTargetOptions}
+                  selectedCode={selectionTargetLanguage}
+                  search={selectionTargetSearch}
+                  setSearch={setSelectionTargetSearch}
+                  placeholder={t("settings.recognitionLang.searchPlaceholder")}
+                  notFoundLabel={t("common.notFound")}
+                  onSelect={(code) => {
+                    void updateTranslation({ selectionTargetLanguage: code });
+                    setSelectionTargetOpen(false);
+                    setSelectionTargetSearch("");
+                  }}
+                />
+              )}
+            </div>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: SETTING_ROW_COLUMNS,
+              alignItems: "center",
+              gap: SETTING_ROW_GAP,
+            }}
+          >
+            <label
+              htmlFor="selection-translation-hotkey"
+              style={{ fontSize: 13, color: "var(--text-mid)", fontWeight: 600 }}
+            >
+              {t("translation.selection.hotkeyLabel")}
+            </label>
+            {/* biome-ignore lint/a11y/useSemanticElements: custom hotkey-capture surface keeps its grid layout; a <button> would change rendering. */}
+            <div
+              id="selection-translation-hotkey"
+              ref={selectionHotkeyRef}
+              role="button"
+              tabIndex={0}
+              className="btn"
+              onMouseDown={handleSelectionHotkeyCaptureSurfaceMouseDown}
+              onKeyDown={handleSelectionHotkeyCaptureSurfaceKeyDown}
+              onFocus={() => {
+                if (selectionHotkeyCaptureActive || selectionHotkeySubmitting) return;
+                selectionHotkeyCapture.showIdleFeedback(t("translation.selection.hotkeyIdle"));
+              }}
+              style={{
+                width: "100%",
+                minHeight: CONTROL_HEIGHT,
+                padding: "0 10px",
+                borderRadius: CONTROL_RADIUS,
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) auto",
+                alignItems: "center",
+                gap: 10,
+                justifySelf: "end",
+                transform: "none",
                 fontSize: CONTROL_FONT_SIZE,
+                border: selectionHotkeyCaptureActive
+                  ? "1px solid rgba(15,118,110,0.28)"
+                  : undefined,
+                boxShadow: selectionHotkeyCaptureActive
+                  ? "0 0 0 4px rgba(15,118,110,0.08)"
+                  : undefined,
+                cursor: selectionHotkeySubmitting ? "default" : "pointer",
+                opacity: selectionHotkeySubmitting ? 0.72 : 1,
               }}
             >
               <span
@@ -1444,145 +1448,55 @@ export function TranslationTab(): ReactElement {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
+                  minWidth: 0,
+                  color: "var(--text-hi)",
+                  fontWeight: 700,
                 }}
               >
-                {currentSelectionTargetLanguage
-                  ? `${currentSelectionTargetLanguage.native} (${currentSelectionTargetLanguage.name})`
-                  : selectionTargetLanguage}
+                {selectionHotkeyDraft
+                  ? formatHotkeyLabel(selectionHotkeyDraft)
+                  : selectionHotkeyCaptureActive
+                    ? t("settings.hotkey.press")
+                    : selectionHotkeySubmitting
+                      ? t("settingsGeneralExtra.hotkey.checkingFree")
+                      : formatHotkeyLabel(
+                          settings.translation.selectionHotkey ||
+                            DEFAULT_SELECTION_TRANSLATION_HOTKEY,
+                        )}
               </span>
-              <IconChevronDown
-                size={13}
-                stroke={2}
+              <span
                 style={{
-                  flexShrink: 0,
-                  transform: selectionTargetOpen ? "rotate(180deg)" : "none",
-                  transition: "transform 0.15s",
+                  color: "var(--text-low)",
+                  fontSize: 11,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  fontWeight: 600,
                 }}
-              />
-            </button>
-            {selectionTargetOpen && (
-              <LanguageDropdownPortal
-                anchorRef={selectionTargetRef}
-                options={filteredSelectionTargetOptions}
-                selectedCode={selectionTargetLanguage}
-                search={selectionTargetSearch}
-                setSearch={setSelectionTargetSearch}
-                placeholder={t("settings.recognitionLang.searchPlaceholder")}
-                notFoundLabel={t("common.notFound")}
-                onSelect={(code) => {
-                  void updateTranslation({ selectionTargetLanguage: code });
-                  setSelectionTargetOpen(false);
-                  setSelectionTargetSearch("");
-                }}
-              />
-            )}
+              >
+                {selectionHotkeyCaptureActive
+                  ? t("settings.hotkey.recording")
+                  : t("translation.selection.hotkeyChange")}
+              </span>
+            </div>
           </div>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: SETTING_ROW_COLUMNS,
-            alignItems: "center",
-            gap: SETTING_ROW_GAP,
-          }}
-        >
-          <label
-            htmlFor="selection-translation-hotkey"
-            style={{ fontSize: 13, color: "var(--text-mid)", fontWeight: 600 }}
-          >
-            {t("translation.selection.hotkeyLabel")}
-          </label>
-          <div
-            id="selection-translation-hotkey"
-            ref={selectionHotkeyRef}
-            role="button"
-            tabIndex={0}
-            className="btn"
-            onMouseDown={handleSelectionHotkeyCaptureSurfaceMouseDown}
-            onKeyDown={handleSelectionHotkeyCaptureSurfaceKeyDown}
-            onFocus={() => {
-              if (selectionHotkeyCaptureActive || selectionHotkeySubmitting)
-                return;
-              selectionHotkeyCapture.showIdleFeedback(
-                t("translation.selection.hotkeyIdle"),
-              );
-            }}
-            style={{
-              width: "100%",
-              minHeight: CONTROL_HEIGHT,
-              padding: "0 10px",
-              borderRadius: CONTROL_RADIUS,
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) auto",
-              alignItems: "center",
-              gap: 10,
-              justifySelf: "end",
-              transform: "none",
-              fontSize: CONTROL_FONT_SIZE,
-              border: selectionHotkeyCaptureActive
-                ? "1px solid rgba(15,118,110,0.28)"
-                : undefined,
-              boxShadow: selectionHotkeyCaptureActive
-                ? "0 0 0 4px rgba(15,118,110,0.08)"
-                : undefined,
-              cursor: selectionHotkeySubmitting ? "default" : "pointer",
-              opacity: selectionHotkeySubmitting ? 0.72 : 1,
-            }}
-          >
-            <span
+          {selectionHotkeyFeedback && (
+            <div
+              aria-live="polite"
               style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                minWidth: 0,
-                color: "var(--text-hi)",
-                fontWeight: 700,
+                fontSize: 13,
+                color:
+                  selectionHotkeyTone === "error"
+                    ? "var(--danger)"
+                    : selectionHotkeyTone === "success"
+                      ? "var(--success)"
+                      : "var(--text-low)",
+                lineHeight: 1.6,
               }}
             >
-              {selectionHotkeyDraft
-                ? formatHotkeyLabel(selectionHotkeyDraft)
-                : selectionHotkeyCaptureActive
-                  ? t("settings.hotkey.press")
-                  : selectionHotkeySubmitting
-                    ? t("settingsGeneralExtra.hotkey.checkingFree")
-                  : formatHotkeyLabel(
-                      settings.translation.selectionHotkey ||
-                        DEFAULT_SELECTION_TRANSLATION_HOTKEY,
-                    )}
-            </span>
-            <span
-              style={{
-                color: "var(--text-low)",
-                fontSize: 11,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                fontWeight: 600,
-              }}
-            >
-              {selectionHotkeyCaptureActive
-                ? t("settings.hotkey.recording")
-                : t("translation.selection.hotkeyChange")}
-            </span>
-          </div>
+              {selectionHotkeyFeedback}
+            </div>
+          )}
         </div>
-        {selectionHotkeyFeedback && (
-          <div
-            aria-live="polite"
-            style={{
-              fontSize: 13,
-              color:
-                selectionHotkeyTone === "error"
-                  ? "var(--danger)"
-                  : selectionHotkeyTone === "success"
-                    ? "var(--success)"
-                    : "var(--text-low)",
-              lineHeight: 1.6,
-            }}
-          >
-            {selectionHotkeyFeedback}
-          </div>
-        )}
-      </div>
       </div>
     </div>
   );

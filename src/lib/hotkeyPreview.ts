@@ -49,7 +49,6 @@ export function hotkeyPreviewMatches(left: string, right: string): boolean {
   const leftKeys = [...hotkeyPreviewKeys(left)].sort();
   const rightKeys = [...hotkeyPreviewKeys(right)].sort();
   return (
-    leftKeys.length === rightKeys.length &&
-    leftKeys.every((key, index) => key === rightKeys[index])
+    leftKeys.length === rightKeys.length && leftKeys.every((key, index) => key === rightKeys[index])
   );
 }

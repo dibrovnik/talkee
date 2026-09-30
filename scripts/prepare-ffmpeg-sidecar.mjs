@@ -36,7 +36,7 @@ function readTargetTriple() {
 }
 
 function resolveSourceBinary() {
-  if (process.env.FFMPEG_PATH && process.env.FFMPEG_PATH.trim()) {
+  if (process.env.FFMPEG_PATH?.trim()) {
     return process.env.FFMPEG_PATH.trim();
   }
 

@@ -7,21 +7,12 @@ import { OnboardingTestStep } from "./OnboardingTestStep";
 
 type OnboardingStep = "permissions" | "model" | "test";
 
-export function OnboardingFlow({
-  onComplete,
-}: {
-  onComplete: () => Promise<void> | void;
-}) {
+export function OnboardingFlow({ onComplete }: { onComplete: () => Promise<void> | void }) {
   const [step, setStep] = useState<OnboardingStep>("permissions");
   const [settings, setSettings] = useState<AppSettings | null>(null);
 
   if (step === "permissions") {
-    return (
-      <PermissionScreen
-        onboardingStep={0}
-        onComplete={() => setStep("model")}
-      />
-    );
+    return <PermissionScreen onboardingStep={0} onComplete={() => setStep("model")} />;
   }
 
   if (step === "model") {
@@ -37,12 +28,7 @@ export function OnboardingFlow({
   }
 
   if (!settings) {
-    return (
-      <OnboardingModelStep
-        onContinue={setSettings}
-        onSkip={() => void onComplete()}
-      />
-    );
+    return <OnboardingModelStep onContinue={setSettings} onSkip={() => void onComplete()} />;
   }
 
   return (

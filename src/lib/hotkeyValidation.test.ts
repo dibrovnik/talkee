@@ -1,13 +1,14 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_SELECTION_TRANSLATION_HOTKEY,
-  validateHotkey,
-  normalizeHotkey,
   formatHotkeyLabel,
-  normalizeSavedSettings,
   isReservedMacSystemHotkey,
   isUnsafeMacGlobalHotkey,
   needsHotkeySettingsMigration,
+  normalizeHotkey,
+  normalizeSavedSettings,
+  type TranslationSettings,
+  validateHotkey,
 } from "./store";
 
 describe("validateHotkey", () => {
@@ -285,18 +286,11 @@ describe("translation selection hotkey settings", () => {
     });
 
     expect(normalized.translation?.selectionEnabled).toBe(true);
-    expect(normalized.translation?.selectionHotkey).toBe(
-      DEFAULT_SELECTION_TRANSLATION_HOTKEY,
-    );
+    expect(normalized.translation?.selectionHotkey).toBe(DEFAULT_SELECTION_TRANSLATION_HOTKEY);
   });
 
   test("persists migration for legacy selected-text translation hotkeys", () => {
-    for (const selectionHotkey of [
-      "cmd+alt+y",
-      "Control+Command+T",
-      "Alt+T",
-      "Control+Alt+Y",
-    ]) {
+    for (const selectionHotkey of ["cmd+alt+y", "Control+Command+T", "Alt+T", "Control+Alt+Y"]) {
       const saved = {
         translation: {
           widgetEnabled: false,
@@ -308,9 +302,7 @@ describe("translation selection hotkey settings", () => {
       };
       const normalized = normalizeSavedSettings(saved);
 
-      expect(normalized.translation?.selectionHotkey).toBe(
-        DEFAULT_SELECTION_TRANSLATION_HOTKEY,
-      );
+      expect(normalized.translation?.selectionHotkey).toBe(DEFAULT_SELECTION_TRANSLATION_HOTKEY);
       expect(
         needsHotkeySettingsMigration(saved, {
           translation: normalized.translation,
@@ -452,7 +444,7 @@ describe("translation selection hotkey settings", () => {
               selectionEnabled: false,
               selectionTargetLanguage: "en",
               selectionHotkey: DEFAULT_SELECTION_TRANSLATION_HOTKEY,
-            },
+            } as TranslationSettings,
           },
         ),
       ).toBe(true);

@@ -1,13 +1,8 @@
-import { useCallback, useEffect, useRef } from "react";
-import type { MutableRefObject } from "react";
 import { invoke } from "@tauri-apps/api/core";
-
-import {
-  NOTICE_TIMEOUT_MS,
-  WidgetNoticeTone,
-  WidgetState,
-} from "../widgetConstants";
+import type { MutableRefObject } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { showWidgetErrorOverlay } from "../services/widgetErrorOverlay";
+import { NOTICE_TIMEOUT_MS, type WidgetNoticeTone, type WidgetState } from "../widgetConstants";
 
 interface UseWidgetNoticeParams {
   stateRef: MutableRefObject<WidgetState>;

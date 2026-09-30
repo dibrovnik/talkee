@@ -1,9 +1,8 @@
 import { emit } from "@tauri-apps/api/event";
-
-import { addHistoryEntry, updateHistoryEntry, type HistoryEntry } from "./store";
 import { HISTORY_UPDATED_EVENT } from "./hotkeyEvents";
-import { logError, logInfo } from "./logger";
 import { tn } from "./i18n";
+import { logError, logInfo } from "./logger";
+import { addHistoryEntry, type HistoryEntry, updateHistoryEntry } from "./store";
 
 // Cancellation registry for in-flight transcription jobs. Lives in the widget
 // process (where all transcription runs). The history table in the Settings

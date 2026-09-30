@@ -1,7 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent, ReactElement, UIEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LANGUAGES } from "../../../config/languages";
+import {
+  buildDevChatHistoryContext,
+  type DevChatHistoryContext,
+  type DevChatHistorySource,
+  getCachedHistorySearchIndex,
+  shouldUseDevChatHistory,
+} from "../../../lib/devChatHistoryContext";
+import {
+  DEV_CHAT_LONG_TEXT_PROMPT,
+  DEV_CHAT_SYSTEM_PROMPT,
+  devChatCapabilitiesAnswer,
+  devChatCodeRefusal,
+  isDevChatCapabilitiesQuestion,
+  isDevChatCodeGenerationRequest,
+} from "../../../lib/devChatScope";
+import { embedHistoryQuery, ensureHistorySearchEmbeddings } from "../../../lib/historyEmbeddings";
+import { useI18n } from "../../../lib/i18n";
 import {
   IconArrowUp,
   IconCheck,
@@ -11,28 +28,8 @@ import {
   IconLoader2,
   IconRotate2,
 } from "../../../lib/icons";
-import {
-  buildDevChatHistoryContext,
-  getCachedHistorySearchIndex,
-  shouldUseDevChatHistory,
-  type DevChatHistoryContext,
-  type DevChatHistorySource,
-} from "../../../lib/devChatHistoryContext";
-import {
-  embedHistoryQuery,
-  ensureHistorySearchEmbeddings,
-} from "../../../lib/historyEmbeddings";
-import {
-  DEV_CHAT_LONG_TEXT_PROMPT,
-  DEV_CHAT_SYSTEM_PROMPT,
-  devChatCapabilitiesAnswer,
-  devChatCodeRefusal,
-  isDevChatCapabilitiesQuestion,
-  isDevChatCodeGenerationRequest,
-} from "../../../lib/devChatScope";
-import { getHistory, getSettings, type AppSettings } from "../../../lib/store";
+import { type AppSettings, getHistory, getSettings } from "../../../lib/store";
 import { LOCAL_TEXT_PROCESSING_LIMITS, processLongTextWithPrompt } from "../../../lib/summarize";
-import { useI18n } from "../../../lib/i18n";
 import { formatDurationMs, formatErrorMessage } from "../../../lib/utils";
 import { translateSelectedText } from "../../widget/services/selectionTranslation";
 
@@ -244,8 +241,10 @@ function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
 function transactionToPromise(transaction: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB transaction failed"));
-    transaction.onabort = () => reject(transaction.error ?? new Error("IndexedDB transaction aborted"));
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error("IndexedDB transaction failed"));
+    transaction.onabort = () =>
+      reject(transaction.error ?? new Error("IndexedDB transaction aborted"));
   });
 }
 
@@ -277,7 +276,7 @@ function normalizeStoredMessages(value: unknown): ChatMessage[] {
     if (
       !item ||
       typeof item !== "object" ||
-      role !== "user" && role !== "assistant" ||
+      (role !== "user" && role !== "assistant") ||
       typeof text !== "string"
     ) {
       return [];
@@ -286,7 +285,10 @@ function normalizeStoredMessages(value: unknown): ChatMessage[] {
     const message = item as Partial<ChatMessage>;
     return [
       {
-        id: typeof message.id === "string" && message.id.length > 0 ? message.id : crypto.randomUUID(),
+        id:
+          typeof message.id === "string" && message.id.length > 0
+            ? message.id
+            : crypto.randomUUID(),
         role,
         text,
         durationMs:
@@ -356,7 +358,10 @@ async function clearStoredMessages(): Promise<void> {
   }
 }
 
-function splitEmbeddedInstruction(text: string): { sourceText: string; instruction: string | null } {
+function splitEmbeddedInstruction(text: string): {
+  sourceText: string;
+  instruction: string | null;
+} {
   const match = /(?:^|\n)\s*Роль модели\s*:/i.exec(text);
   if (!match || match.index < 1000) {
     return { sourceText: text, instruction: null };
@@ -513,8 +518,7 @@ export function DevChatTab({
         translation: {
           ...settings.translation,
           selectionTargetLanguage:
-            translationRequest.targetLanguage ||
-            settings.translation.selectionTargetLanguage,
+            translationRequest.targetLanguage || settings.translation.selectionTargetLanguage,
         },
       };
       const translated = await translateSelectedText({
@@ -572,14 +576,14 @@ export function DevChatTab({
     }
 
     setRunningStatus("thinking");
-    const nextSettings = resolvedSettings ?? await getSettings({ reload: true });
+    const nextSettings = resolvedSettings ?? (await getSettings({ reload: true }));
     const promptText = isLongText
       ? [
           DEV_CHAT_LONG_TEXT_PROMPT,
           embedded.instruction
             ? `Инструкция пользователя к большому тексту:\n${embedded.instruction}`
             : null,
-          ]
+        ]
           .filter(Boolean)
           .join("\n\n")
       : [
@@ -593,10 +597,7 @@ export function DevChatTab({
     const result = await processLongTextWithPrompt({
       text: isLongText
         ? embedded.sourceText
-        : [
-            historyContext.contextText,
-            `Диалог:\n${chatPayload(contextMessages)}`,
-          ]
+        : [historyContext.contextText, `Диалог:\n${chatPayload(contextMessages)}`]
             .filter(Boolean)
             .join("\n\n"),
       prompt: {
@@ -662,9 +663,7 @@ export function DevChatTab({
     } catch (caughtError) {
       setError(formatErrorMessage(caughtError));
     } finally {
-      setTranslatingMessageId((current) =>
-        current === message.id ? null : current,
-      );
+      setTranslatingMessageId((current) => (current === message.id ? null : current));
     }
   };
 
@@ -1010,8 +1009,7 @@ export function DevChatTab({
                       <div
                         style={{
                           padding: message.role === "user" ? "10px 13px" : "0",
-                          borderRadius:
-                            message.role === "user" ? "18px 18px 4px 18px" : 0,
+                          borderRadius: message.role === "user" ? "18px 18px 4px 18px" : 0,
                           border:
                             message.role === "user" ? "1px solid var(--border-subtle)" : "none",
                           background:
@@ -1185,10 +1183,7 @@ export function DevChatTab({
                                 display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                cursor:
-                                  running || translatingMessageId
-                                    ? "default"
-                                    : "pointer",
+                                cursor: running || translatingMessageId ? "default" : "pointer",
                                 opacity: running || translatingMessageId ? 0.5 : 1,
                               }}
                             >

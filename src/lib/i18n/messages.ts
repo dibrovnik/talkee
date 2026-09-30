@@ -3,15 +3,15 @@
 // here into one typed lookup. To add a new area: create ./dict/<area>.ts exporting
 // `as const`, import it, and spread it into MESSAGES below.
 import { common } from "./dict/common";
-import { settingsGeneral } from "./dict/settingsGeneral";
-import { settingsModels } from "./dict/settingsModels";
-import { settingsTabsMisc } from "./dict/settingsTabsMisc";
-import { settingsRest } from "./dict/settingsRest";
-import { widget } from "./dict/widget";
 import { components } from "./dict/components";
 import { libMessages } from "./dict/libMessages";
-import { summary } from "./dict/summary";
 import { onboarding } from "./dict/onboarding";
+import { settingsGeneral } from "./dict/settingsGeneral";
+import { settingsModels } from "./dict/settingsModels";
+import { settingsRest } from "./dict/settingsRest";
+import { settingsTabsMisc } from "./dict/settingsTabsMisc";
+import { summary } from "./dict/summary";
+import { widget } from "./dict/widget";
 
 export const MESSAGES = {
   ...common,

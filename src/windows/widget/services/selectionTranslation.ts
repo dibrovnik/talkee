@@ -1,15 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
-
-import type { AppSettings } from "../../../lib/store";
+import { LANGUAGES } from "../../../config/languages";
 import { tn } from "../../../lib/i18n";
 import { logInfo } from "../../../lib/logger";
+import type { AppSettings } from "../../../lib/store";
 import {
   LOCAL_TEXT_PROCESSING_LIMITS,
   resolveSummaryBackend,
-  splitIntoChunks,
   type SummaryBackendKind,
+  splitIntoChunks,
 } from "../../../lib/summarize";
-import { LANGUAGES } from "../../../config/languages";
 
 const DIRECT_LIMIT_CHARS = 12000;
 const CHUNK_LIMIT_CHARS = 9000;
@@ -47,9 +46,7 @@ interface LocalTranslatorRequest {
 interface SelectionTranslationDependencies {
   resolveSummaryBackend?: typeof resolveSummaryBackend;
   listLocalTranslators?: () => Promise<LocalTranslatorInfo[]>;
-  translateWithLocalTranslator?: (
-    req: LocalTranslatorRequest,
-  ) => Promise<string>;
+  translateWithLocalTranslator?: (req: LocalTranslatorRequest) => Promise<string>;
 }
 
 export interface SelectionTranslationProgress {
@@ -65,9 +62,7 @@ function throwIfTranslationAborted(signal?: AbortSignal): void {
   }
 }
 
-export function selectionTranslationLanguageLabel(
-  languageCode: string,
-): string {
+export function selectionTranslationLanguageLabel(languageCode: string): string {
   if (languageCode === "auto") {
     return "auto";
   }
@@ -76,9 +71,7 @@ export function selectionTranslationLanguageLabel(
   return language ? `${language.native} (${language.name})` : languageCode;
 }
 
-export function buildSelectionTranslationPrompt(
-  targetLanguage: string,
-): string {
+export function buildSelectionTranslationPrompt(targetLanguage: string): string {
   return (
     `Переведи текст на язык "${selectionTranslationLanguageLabel(targetLanguage)}". ` +
     "Исходный язык определи автоматически. " +
@@ -93,20 +86,13 @@ export function buildSelectionTranslationPrompt(
 }
 
 export function sanitizeSelectionTranslationOutput(output: string): string {
-  return output
-    .replace(/^(?:\s*<think\b[^>]*>[\s\S]*?<\/think>\s*)+/i, "")
-    .trim();
+  return output.replace(/^(?:\s*<think\b[^>]*>[\s\S]*?<\/think>\s*)+/i, "").trim();
 }
 
-export function buildSelectionTranslationSourcePayload(
-  sourceText: string,
-): string {
-  return [
-    "ТЕКСТ ДЛЯ ПЕРЕВОДА:",
-    TRANSLATION_SOURCE_START,
-    sourceText,
-    TRANSLATION_SOURCE_END,
-  ].join("\n");
+export function buildSelectionTranslationSourcePayload(sourceText: string): string {
+  return ["ТЕКСТ ДЛЯ ПЕРЕВОДА:", TRANSLATION_SOURCE_START, sourceText, TRANSLATION_SOURCE_END].join(
+    "\n",
+  );
 }
 
 function textForSelectionTranslationBackend(
@@ -207,9 +193,7 @@ async function listLocalTranslators(): Promise<LocalTranslatorInfo[]> {
   return invoke<LocalTranslatorInfo[]>("list_local_translators");
 }
 
-async function translateWithLocalTranslator(
-  req: LocalTranslatorRequest,
-): Promise<string> {
+async function translateWithLocalTranslator(req: LocalTranslatorRequest): Promise<string> {
   return invoke<string>("translate_with_local_translator", { req });
 }
 
@@ -235,16 +219,13 @@ async function resolveLocalTranslatorBackend(
 ): Promise<SelectionTranslationBackend | null> {
   const selectedProvider =
     providerOverride ||
-    resolveLocalTranslatorProvider(
-      settings.translation.selectionLocalTranslatorProvider,
-    );
+    resolveLocalTranslatorProvider(settings.translation.selectionLocalTranslatorProvider);
   if (!selectedProvider) {
     return null;
   }
 
   const list = deps.listLocalTranslators || listLocalTranslators;
-  const translate =
-    deps.translateWithLocalTranslator || translateWithLocalTranslator;
+  const translate = deps.translateWithLocalTranslator || translateWithLocalTranslator;
 
   let translators: LocalTranslatorInfo[];
   try {
@@ -257,17 +238,12 @@ async function resolveLocalTranslatorBackend(
     return null;
   }
 
-  const localTranslator = translators.find(
-    (item) => item.provider === selectedProvider,
-  );
-  if (!localTranslator || localTranslator.status !== "ready") {
+  const localTranslator = translators.find((item) => item.provider === selectedProvider);
+  if (localTranslator?.status !== "ready") {
     const reason = localTranslator
       ? `${localTranslator.status}${localTranslator.message ? `: ${localTranslator.message}` : ""}`
       : "not listed";
-    logInfo(
-      "TRANSLATION",
-      `${selectedProvider} unavailable, fallback candidate: ${reason}`,
-    );
+    logInfo("TRANSLATION", `${selectedProvider} unavailable, fallback candidate: ${reason}`);
     return null;
   }
 

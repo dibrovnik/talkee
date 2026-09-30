@@ -33,9 +33,7 @@ export function isBundledLocalLlmModelId(modelId?: string): boolean {
   return BUNDLED_LOCAL_LLM_MODEL_IDS.has((modelId || "").trim());
 }
 
-export function selectedLocalLlmModelId(
-  settings: LocalLlmSelectionSettings,
-): string {
+export function selectedLocalLlmModelId(settings: LocalLlmSelectionSettings): string {
   if (!isLocalLlmEndpoint(settings.llmEndpoint)) {
     return "";
   }
@@ -46,10 +44,7 @@ export function selectedLocalLlmModelId(
   }
 
   const legacyModel = settings.llmModel?.trim() || "";
-  if (
-    isBundledLocalLlmEndpoint(settings.llmEndpoint) &&
-    isBundledLocalLlmModelId(legacyModel)
-  ) {
+  if (isBundledLocalLlmEndpoint(settings.llmEndpoint) && isBundledLocalLlmModelId(legacyModel)) {
     return legacyModel;
   }
 

@@ -3,13 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
-const tauriScript = join(
-  rootDir,
-  "node_modules",
-  "@tauri-apps",
-  "cli",
-  "tauri.js",
-);
+const tauriScript = join(rootDir, "node_modules", "@tauri-apps", "cli", "tauri.js");
 const args = process.argv.slice(2);
 const isDev = args[0] === "dev";
 const isMacDev = process.platform === "darwin" && args[0] === "dev";
@@ -18,12 +12,7 @@ const hasCustomRunner = args.includes("--runner") || args.includes("-r");
 const childEnv = { ...process.env };
 
 if (isMacDev && !hasCustomRunner) {
-  args.splice(
-    1,
-    0,
-    "--runner",
-    join(rootDir, "scripts", "run-macos-dev-app.sh"),
-  );
+  args.splice(1, 0, "--runner", join(rootDir, "scripts", "run-macos-dev-app.sh"));
 }
 
 function run(command, commandArgs) {

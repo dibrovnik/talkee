@@ -187,18 +187,10 @@ export function LocalSttModelCard({
                 lineHeight: 1.6,
                 padding: "8px 10px",
                 borderRadius: 8,
-                background:
-                  notice.tone === "error"
-                    ? "var(--danger-soft)"
-                    : "var(--control-muted)",
-                color:
-                  notice.tone === "error"
-                    ? "var(--error-bright)"
-                    : "var(--text-mid)",
+                background: notice.tone === "error" ? "var(--danger-soft)" : "var(--control-muted)",
+                color: notice.tone === "error" ? "var(--error-bright)" : "var(--text-mid)",
                 border: `1px solid ${
-                  notice.tone === "error"
-                    ? "var(--danger-border)"
-                    : "var(--border-subtle)"
+                  notice.tone === "error" ? "var(--danger-border)" : "var(--border-subtle)"
                 }`,
               }}
             >
@@ -250,11 +242,7 @@ export function LocalSttModelCard({
   );
 }
 
-function ModelStats({
-  stats,
-}: {
-  stats: LocalSttModelCardStats;
-}): ReactElement {
+function ModelStats({ stats }: { stats: LocalSttModelCardStats }): ReactElement {
   const items = [
     {
       key: "storage",
@@ -297,6 +285,7 @@ function ModelStats({
       {items.map(({ key, title, value, Icon }) => (
         <div
           key={key}
+          role="img"
           title={title}
           aria-label={title}
           style={{
@@ -322,6 +311,7 @@ function ModelStats({
       ))}
       {stats.streamingLabel && (
         <div
+          role="img"
           title={stats.streamingLabel}
           aria-label={stats.streamingLabel}
           style={{
@@ -349,16 +339,9 @@ function ModelStats({
   );
 }
 
-function ModelProgress({
-  progress,
-}: {
-  progress: LocalSttModelCardProgress;
-}): ReactElement {
+function ModelProgress({ progress }: { progress: LocalSttModelCardProgress }): ReactElement {
   return (
-    <div
-      role="status"
-      style={{ display: "flex", flexDirection: "column", gap: 7 }}
-    >
+    <div role="status" style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       <div
         style={{
           display: "flex",
@@ -399,13 +382,9 @@ function ModelProgress({
         />
       </div>
       {(progress.downloadedLabel || progress.totalLabel) && (
-        <div
-          style={{ fontSize: 11, color: "var(--text-low)", lineHeight: 1.4 }}
-        >
+        <div style={{ fontSize: 11, color: "var(--text-low)", lineHeight: 1.4 }}>
           {progress.downloadedLabel}
-          {progress.totalLabel
-            ? ` ${progress.totalTemplate || progress.totalLabel}`
-            : ""}
+          {progress.totalLabel ? ` ${progress.totalTemplate || progress.totalLabel}` : ""}
         </div>
       )}
     </div>

@@ -51,9 +51,7 @@ export const STREAMING_STT_ADAPTERS: RealtimeAdapterCatalogEntry[] = [
     name: "Mistral AI",
     defaultEndpoint: "https://api.mistral.ai",
     recommendedModel: "voxtral-mini-transcribe-realtime-2602",
-    models: [
-      { id: "voxtral-mini-transcribe-realtime-2602", supportsStreaming: true },
-    ],
+    models: [{ id: "voxtral-mini-transcribe-realtime-2602", supportsStreaming: true }],
   },
   {
     id: "elevenlabs",
@@ -97,9 +95,7 @@ export const REALTIME_TRANSLATION_ADAPTERS: RealtimeAdapterCatalogEntry[] = [
     name: "Gemini API",
     defaultEndpoint: "https://generativelanguage.googleapis.com",
     recommendedModel: "gemini-3.5-live-translate-preview",
-    models: [
-      { id: "gemini-3.5-live-translate-preview", supportsStreaming: true },
-    ],
+    models: [{ id: "gemini-3.5-live-translate-preview", supportsStreaming: true }],
   },
 ];
 

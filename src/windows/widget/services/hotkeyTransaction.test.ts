@@ -1,13 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import type {
-  HotkeyChangeRequestPayload,
-  HotkeyTarget,
-} from "../../../lib/hotkeyEvents";
-import {
-  mergeAppSettingsPatch,
-  type AppSettings,
-} from "../../../lib/store";
+import type { HotkeyChangeRequestPayload, HotkeyTarget } from "../../../lib/hotkeyEvents";
+import { type AppSettings, mergeAppSettingsPatch } from "../../../lib/store";
 import {
   applyHotkeyTransaction,
   type HotkeyTransactionDependencies,
@@ -34,10 +28,10 @@ function request(
 
 function setup(
   options: {
-  registerError?: Error;
-  saveError?: Error;
-  unregisterErrorFor?: string;
-  staleAtStage?: HotkeyTransactionStage;
+    registerError?: Error;
+    saveError?: Error;
+    unregisterErrorFor?: string;
+    staleAtStage?: HotkeyTransactionStage;
   } = {},
 ) {
   let stored = settings();
@@ -107,13 +101,7 @@ describe("applyHotkeyTransaction", () => {
     expect(fixture.active.dictation).toBe("Alt+K");
     expect(fixture.registered).toEqual(["Alt+K"]);
     expect(fixture.unregistered).toEqual(["Alt+Space"]);
-    expect(fixture.stages).toEqual([
-      "validate",
-      "register",
-      "save",
-      "unregister-old",
-      "complete",
-    ]);
+    expect(fixture.stages).toEqual(["validate", "register", "save", "unregister-old", "complete"]);
   });
 
   test("commits and enables selection hotkey through the same path", async () => {
@@ -128,7 +116,7 @@ describe("applyHotkeyTransaction", () => {
     expect(result.success).toBe(true);
     expect(fixture.getStored().translation.selectionEnabled).toBe(true);
     expect(fixture.getStored().translation.selectionHotkey).toBe("Alt+Enter");
-    expect(fixture.active.selection).toBe("Alt+Enter");
+    expect(fixture.dependencies.getActiveHotkey("selection")).toBe("Alt+Enter");
   });
 
   test("registers a configured selection hotkey when runtime registration is missing", async () => {
@@ -143,7 +131,7 @@ describe("applyHotkeyTransaction", () => {
 
     expect(result.success).toBe(true);
     expect(fixture.registered).toEqual(["Control+Shift+Y"]);
-    expect(fixture.active.selection).toBe("Control+Shift+Y");
+    expect(fixture.dependencies.getActiveHotkey("selection")).toBe("Control+Shift+Y");
     expect(fixture.getStored().translation.selectionEnabled).toBe(true);
   });
 
@@ -205,9 +193,7 @@ describe("applyHotkeyTransaction", () => {
     );
 
     expect(result.success).toBe(false);
-    expect(fixture.getStored().translation.selectionHotkey).toBe(
-      "Control+Shift+Y",
-    );
+    expect(fixture.getStored().translation.selectionHotkey).toBe("Control+Shift+Y");
     expect(fixture.unregistered).toEqual(["Control+Shift+U"]);
   });
 

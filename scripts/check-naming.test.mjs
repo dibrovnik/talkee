@@ -1,10 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import {
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -33,7 +28,7 @@ afterEach(() => {
 describe("check-naming", () => {
   test("finds the legacy name and reports file and line", () => {
     const root = makeTree();
-    write(root, "src/app.ts", "const a = 1;\nconst name = \"Talkis\";\n");
+    write(root, "src/app.ts", 'const a = 1;\nconst name = "Talkis";\n');
 
     const matches = scanForLegacyName(root, new Set());
 
@@ -73,7 +68,7 @@ describe("check-naming", () => {
 
   test("returns nothing for a clean tree", () => {
     const root = makeTree();
-    write(root, "src/app.ts", "const name = \"Talkee\";\n");
+    write(root, "src/app.ts", 'const name = "Talkee";\n');
 
     expect(scanForLegacyName(root, new Set())).toHaveLength(0);
   });

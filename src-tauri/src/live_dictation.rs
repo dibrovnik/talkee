@@ -166,9 +166,7 @@ pub fn start_live_dictation_session(
     req: Option<LiveDictationStartRequest>,
     source_sample_rate: u32,
 ) -> Option<LiveDictationSession> {
-    let Some(req) = req else {
-        return None;
-    };
+    let req = req?;
 
     if !req.streaming_enabled {
         return None;
@@ -680,5 +678,4 @@ mod tests {
             "mock realtime failure"
         );
     }
-
 }

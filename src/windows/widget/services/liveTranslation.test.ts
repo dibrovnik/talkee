@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { AppSettings } from "../../../lib/store";
 import { realtimeConfigurationFingerprint } from "../../../lib/realtimeModels";
+import type { AppSettings } from "../../../lib/store";
 
 import {
   applyLiveTranslationEvent,
@@ -10,9 +10,7 @@ import {
   resolveLiveTranslationConnection,
 } from "./liveTranslation";
 
-function connectionSettings(
-  patch: Partial<AppSettings> = {},
-): AppSettings {
+function connectionSettings(patch: Partial<AppSettings> = {}): AppSettings {
   return {
     whisperEndpoint: "https://api.openai.com",
     selectedTranslationAdapter: "openai",
@@ -64,24 +62,46 @@ describe("live translation overlay", () => {
   test("assembles two channels and ignores stale sessions", () => {
     let state = createLiveTranslationOverlayState("current");
     const stale = applyLiveTranslationEvent(state, {
-      sessionId: "old", channel: "mic", status: "partial", original: "old", translated: "", startedAtMs: 1,
+      sessionId: "old",
+      channel: "mic",
+      status: "partial",
+      original: "old",
+      translated: "",
+      startedAtMs: 1,
     });
     expect(stale).toBe(state);
     state = applyLiveTranslationEvent(state, {
-      sessionId: "current", channel: "mic", status: "partial", original: "hello", translated: "bonjour", startedAtMs: 1,
+      sessionId: "current",
+      channel: "mic",
+      status: "partial",
+      original: "hello",
+      translated: "bonjour",
+      startedAtMs: 1,
     });
     state = applyLiveTranslationEvent(state, {
-      sessionId: "current", channel: "system", status: "partial", original: "yes", translated: "oui", startedAtMs: 2,
+      sessionId: "current",
+      channel: "system",
+      status: "partial",
+      original: "yes",
+      translated: "oui",
+      startedAtMs: 2,
     });
-    expect(liveTranslationVisibleSegments(state).map((segment) => segment.channel)).toEqual(["mic", "system"]);
+    expect(liveTranslationVisibleSegments(state).map((segment) => segment.channel)).toEqual([
+      "mic",
+      "system",
+    ]);
   });
 
   test("keeps only eight final utterances", () => {
     let state = createLiveTranslationOverlayState("session");
     for (let index = 0; index < 10; index += 1) {
       state = applyLiveTranslationEvent(state, {
-        sessionId: "session", channel: index % 2 ? "system" : "mic", status: "final",
-        original: `source-${index}`, translated: `target-${index}`, startedAtMs: index,
+        sessionId: "session",
+        channel: index % 2 ? "system" : "mic",
+        status: "final",
+        original: `source-${index}`,
+        translated: `target-${index}`,
+        startedAtMs: index,
       });
     }
     expect(state.finals).toHaveLength(8);
@@ -91,12 +111,20 @@ describe("live translation overlay", () => {
   test("groups consecutive chunks from the same channel into one speaker turn", () => {
     let state = createLiveTranslationOverlayState("session");
     state = applyLiveTranslationEvent(state, {
-      sessionId: "session", channel: "system", status: "final",
-      original: "a long", translated: "длинная", startedAtMs: 1,
+      sessionId: "session",
+      channel: "system",
+      status: "final",
+      original: "a long",
+      translated: "длинная",
+      startedAtMs: 1,
     });
     state = applyLiveTranslationEvent(state, {
-      sessionId: "session", channel: "system", status: "final",
-      original: "sentence continues", translated: "фраза продолжается", startedAtMs: 2,
+      sessionId: "session",
+      channel: "system",
+      status: "final",
+      original: "sentence continues",
+      translated: "фраза продолжается",
+      startedAtMs: 2,
     });
 
     expect(state.finals).toHaveLength(1);
@@ -104,24 +132,33 @@ describe("live translation overlay", () => {
     expect(state.finals[0].translated).toBe("длинная фраза продолжается");
 
     state = applyLiveTranslationEvent(state, {
-      sessionId: "session", channel: "mic", status: "final",
-      original: "reply", translated: "ответ", startedAtMs: 3,
+      sessionId: "session",
+      channel: "mic",
+      status: "final",
+      original: "reply",
+      translated: "ответ",
+      startedAtMs: 3,
     });
-    expect(state.finals.map((segment) => segment.channel)).toEqual([
-      "system",
-      "mic",
-    ]);
+    expect(state.finals.map((segment) => segment.channel)).toEqual(["system", "mic"]);
   });
 
   test("shows a partial continuation inside the current speaker turn", () => {
     let state = createLiveTranslationOverlayState("session");
     state = applyLiveTranslationEvent(state, {
-      sessionId: "session", channel: "system", status: "final",
-      original: "first", translated: "первая часть", startedAtMs: 1,
+      sessionId: "session",
+      channel: "system",
+      status: "final",
+      original: "first",
+      translated: "первая часть",
+      startedAtMs: 1,
     });
     state = applyLiveTranslationEvent(state, {
-      sessionId: "session", channel: "system", status: "partial",
-      original: "second", translated: "продолжение", startedAtMs: 2,
+      sessionId: "session",
+      channel: "system",
+      status: "partial",
+      original: "second",
+      translated: "продолжение",
+      startedAtMs: 2,
     });
 
     const visible = liveTranslationVisibleSegments(state);
@@ -131,12 +168,14 @@ describe("live translation overlay", () => {
     expect(visible[0].stableTranslatedLength).toBe("первая часть".length);
 
     state = applyLiveTranslationEvent(state, {
-      sessionId: "session", channel: "system", status: "final",
-      original: "second", translated: "продолжение полностью", startedAtMs: 2,
+      sessionId: "session",
+      channel: "system",
+      status: "final",
+      original: "second",
+      translated: "продолжение полностью",
+      startedAtMs: 2,
     });
-    expect(state.finals[0].translated).toBe(
-      "первая часть продолжение полностью",
-    );
+    expect(state.finals[0].translated).toBe("первая часть продолжение полностью");
     expect(state.finals[0].stableTranslatedLength).toBeUndefined();
   });
 

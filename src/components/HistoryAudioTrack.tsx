@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-
+import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
+import { useI18n } from "../lib/i18n";
 import { IconLoader2, IconPause, IconPlayerPlay } from "../lib/icons";
 import { logError } from "../lib/logger";
-import { readHistoryAudio, type HistoryEntry } from "../lib/store";
-import { useI18n } from "../lib/i18n";
+import { type HistoryEntry, readHistoryAudio } from "../lib/store";
 
 export interface AudioTrackSource {
   id: string;
@@ -185,13 +184,8 @@ export function HistoryAudioTrackPlaceholder({
   );
 }
 
-export function buildHistoryAudioTrackSources(
-  entry: HistoryEntry,
-): AudioTrackSource[] {
-  if (
-    (entry.source === "call" || entry.source === "liveTranslation") &&
-    entry.callTracks?.length
-  ) {
+export function buildHistoryAudioTrackSources(entry: HistoryEntry): AudioTrackSource[] {
+  if ((entry.source === "call" || entry.source === "liveTranslation") && entry.callTracks?.length) {
     const tracks = [...entry.callTracks].sort((a, b) => {
       if (a.kind === b.kind) return 0;
       return a.kind === "system" ? -1 : 1;
@@ -201,9 +195,7 @@ export function buildHistoryAudioTrackSources(
       id: track.kind,
       label: track.label,
       path: track.path,
-      mimeType: track.path.toLowerCase().endsWith(".webm")
-        ? "audio/webm"
-        : "audio/wav",
+      mimeType: track.path.toLowerCase().endsWith(".webm") ? "audio/webm" : "audio/wav",
       fileName: track.path.split(/[\\/]/).pop() || `${track.kind}.wav`,
     }));
   }
@@ -324,10 +316,7 @@ export function HistoryAudioTrack({
 
       const nextUrls = audioData.map((data, index) =>
         URL.createObjectURL(
-          base64ToBlob(
-            data.audioBase64,
-            data.mimeType || sources[index]?.mimeType || "audio/webm",
-          ),
+          base64ToBlob(data.audioBase64, data.mimeType || sources[index]?.mimeType || "audio/webm"),
         ),
       );
       revokeObjectUrls();
@@ -422,6 +411,7 @@ export function HistoryAudioTrack({
       />
 
       {sources.map((source, index) => (
+        // biome-ignore lint/a11y/useMediaCaption: local microphone recordings have no caption track.
         <audio
           key={source.id}
           ref={(audio) => {
@@ -441,11 +431,7 @@ export function HistoryAudioTrack({
                   const nextTime = event.currentTarget.currentTime || 0;
                   setCurrentTime(nextTime);
                   for (const audio of audioRefs.current.slice(1)) {
-                    if (
-                      audio &&
-                      !audio.paused &&
-                      Math.abs(audio.currentTime - nextTime) > 0.25
-                    ) {
+                    if (audio && !audio.paused && Math.abs(audio.currentTime - nextTime) > 0.25) {
                       audio.currentTime = nextTime;
                     }
                   }

@@ -55,10 +55,7 @@ function isKnownSilenceHallucination(normalized: string): boolean {
   );
 }
 
-function isUnexpectedShortHangul(
-  normalized: string,
-  language: string,
-): boolean {
+function isUnexpectedShortHangul(normalized: string, language: string): boolean {
   const selectedLanguage = language.trim().toLowerCase();
   if (selectedLanguage === "auto" || selectedLanguage === "ko") {
     return false;
@@ -146,9 +143,7 @@ export function guardTranscriptionResult<T extends TranscriptionText>(
   };
 }
 
-export function isClearlySilentAudio(
-  stats: AudioSignalStats | null | undefined,
-): boolean {
+export function isClearlySilentAudio(stats: AudioSignalStats | null | undefined): boolean {
   if (!stats) return false;
   if (!Number.isFinite(stats.peak) || !Number.isFinite(stats.rms)) return false;
   return stats.peak < 0.001 && stats.rms < 0.0001;

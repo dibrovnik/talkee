@@ -26,9 +26,7 @@ export function resolveLiveTranslationConnection(
   settings: AppSettings,
 ): LiveTranslationConnectionConfig {
   if (isLocalModelMode(settings)) {
-    throw new Error(
-      "Синхронный перевод недоступен для локальных моделей. Выберите «API».",
-    );
+    throw new Error("Синхронный перевод недоступен для локальных моделей. Выберите «API».");
   }
 
   const catalogAdapter = REALTIME_TRANSLATION_ADAPTERS.find(
@@ -78,11 +76,12 @@ function mergeConsecutiveSegments(
   incoming: LiveTranslationSegment,
 ): LiveTranslationSegment {
   const translated = mergeText(previous.translated, incoming.translated);
-  const stableTranslatedLength = incoming.state === "partial"
-    ? previous.state === "final"
-      ? previous.translated.length
-      : previous.stableTranslatedLength || 0
-    : undefined;
+  const stableTranslatedLength =
+    incoming.state === "partial"
+      ? previous.state === "final"
+        ? previous.translated.length
+        : previous.stableTranslatedLength || 0
+      : undefined;
   return {
     ...previous,
     original: mergeText(previous.original, incoming.original),
@@ -93,9 +92,7 @@ function mergeConsecutiveSegments(
   };
 }
 
-function coalesceConsecutiveSegments(
-  segments: LiveTranslationSegment[],
-): LiveTranslationSegment[] {
+function coalesceConsecutiveSegments(segments: LiveTranslationSegment[]): LiveTranslationSegment[] {
   return segments.reduce<LiveTranslationSegment[]>((result, segment) => {
     const previous = result[result.length - 1];
     if (previous?.channel === segment.channel) {
@@ -107,9 +104,7 @@ function coalesceConsecutiveSegments(
   }, []);
 }
 
-export function createLiveTranslationOverlayState(
-  sessionId: string,
-): LiveTranslationOverlayState {
+export function createLiveTranslationOverlayState(sessionId: string): LiveTranslationOverlayState {
   return { sessionId, finals: [], partials: {} };
 }
 
@@ -119,7 +114,8 @@ export function applyLiveTranslationEvent(
 ): LiveTranslationOverlayState {
   if (event.sessionId !== state.sessionId) return state;
   if (event.status === "started") return state;
-  if (event.status === "error") return { ...state, error: event.message || "Live translation error" };
+  if (event.status === "error")
+    return { ...state, error: event.message || "Live translation error" };
 
   const previous = state.partials[event.channel];
   const segment: LiveTranslationSegment = {
@@ -153,12 +149,10 @@ export function applyLiveTranslationEvent(
   const partials = { ...state.partials };
   delete partials[event.channel];
   const lastFinal = state.finals[state.finals.length - 1];
-  const finals = lastFinal?.channel === finalSegment.channel
-    ? [
-        ...state.finals.slice(0, -1),
-        mergeConsecutiveSegments(lastFinal, finalSegment),
-      ]
-    : [...state.finals, finalSegment].slice(-8);
+  const finals =
+    lastFinal?.channel === finalSegment.channel
+      ? [...state.finals.slice(0, -1), mergeConsecutiveSegments(lastFinal, finalSegment)]
+      : [...state.finals, finalSegment].slice(-8);
   return {
     ...state,
     finals,
@@ -201,9 +195,7 @@ export function buildLiveTranslationHistoryEntry({
       endedAtMs: Date.now(),
     }));
   const segments = coalesceConsecutiveSegments(
-    [...state.finals, ...partials].sort(
-      (left, right) => left.startedAtMs - right.startedAtMs,
-    ),
+    [...state.finals, ...partials].sort((left, right) => left.startedAtMs - right.startedAtMs),
   ).slice(-8);
   const label = (channel: LiveTranslationChannel): string =>
     channel === "mic" ? "Вы" : "Системный звук";
@@ -212,7 +204,9 @@ export function buildLiveTranslationHistoryEntry({
     timestamp: new Date(startedAt).toISOString(),
     duration: Math.max(0, Math.round((Date.now() - startedAt) / 1000)),
     raw: segments.map((segment) => `${label(segment.channel)}: ${segment.original}`).join("\n"),
-    cleaned: segments.map((segment) => `${label(segment.channel)}: ${segment.translated}`).join("\n"),
+    cleaned: segments
+      .map((segment) => `${label(segment.channel)}: ${segment.translated}`)
+      .join("\n"),
     source: "liveTranslation",
     status: state.error ? "failed" : "completed",
     errorMessage: state.error,

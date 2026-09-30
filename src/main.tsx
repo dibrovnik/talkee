@@ -12,7 +12,8 @@ import { I18nProvider } from "./lib/i18n";
 const isSettings =
   window.location.pathname.includes("settings") ||
   new URLSearchParams(window.location.search).get("window") === "settings";
-const isWidgetNotice = new URLSearchParams(window.location.search).get("window") === "widget-notice";
+const isWidgetNotice =
+  new URLSearchParams(window.location.search).get("window") === "widget-notice";
 const isWidgetText = new URLSearchParams(window.location.search).get("window") === "widget-text";
 
 applyThemePreference("system");
@@ -20,6 +21,14 @@ void applySavedTheme();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <I18nProvider>
-    {isSettings ? <SettingsApp /> : isWidgetNotice ? <WidgetNoticeOverlay /> : isWidgetText ? <WidgetTextOverlay /> : <Widget />}
-  </I18nProvider>
+    {isSettings ? (
+      <SettingsApp />
+    ) : isWidgetNotice ? (
+      <WidgetNoticeOverlay />
+    ) : isWidgetText ? (
+      <WidgetTextOverlay />
+    ) : (
+      <Widget />
+    )}
+  </I18nProvider>,
 );

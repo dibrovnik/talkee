@@ -1,9 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import {
-  getSystemAudioPermissionVerifiedV2,
-  setSystemAudioPermissionVerifiedV2,
-} from "./store";
+import { getSystemAudioPermissionVerifiedV2, setSystemAudioPermissionVerifiedV2 } from "./store";
 
 export type PermissionStatus = "unknown" | "granted" | "denied" | "prompting";
 
@@ -18,9 +15,7 @@ export async function checkMicrophonePermission(): Promise<PermissionStatus> {
   // lag behind TCC after the app is relaunched and may report the old process
   // state even though the checkbox is already enabled in System Settings.
   try {
-    const nativeStatus = await invoke<PermissionStatus>(
-      "check_microphone_permission",
-    );
+    const nativeStatus = await invoke<PermissionStatus>("check_microphone_permission");
     if (nativeStatus !== "unknown") {
       return nativeStatus;
     }
@@ -106,9 +101,7 @@ export async function requestSystemAudioPermission(): Promise<void> {
     throw error;
   } finally {
     if (session) {
-      await invoke("stop_call_capture", { sessionId: session.id }).catch(
-        () => undefined,
-      );
+      await invoke("stop_call_capture", { sessionId: session.id }).catch(() => undefined);
     }
   }
 }

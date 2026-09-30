@@ -25,11 +25,9 @@ describe("resolveSummaryBackend local LLM behavior", () => {
       settings({ apiKey: "transcription-key", llmModel: "none" }),
     );
     expect(backend).toBeNull();
-    expect(
-      isSummaryAvailable(
-        settings({ apiKey: "transcription-key", llmModel: "none" }),
-      ),
-    ).toBe(false);
+    expect(isSummaryAvailable(settings({ apiKey: "transcription-key", llmModel: "none" }))).toBe(
+      false,
+    );
   });
 
   it("requires a text model even when a custom endpoint is configured", () => {
@@ -44,20 +42,14 @@ describe("resolveSummaryBackend local LLM behavior", () => {
   });
 
   it("treats bundled runtime port 8011 without a selected model as unavailable", () => {
-    const backend = resolveSummaryBackend(
-      settings({ llmEndpoint: "http://127.0.0.1:8011/v1" }),
-    );
+    const backend = resolveSummaryBackend(settings({ llmEndpoint: "http://127.0.0.1:8011/v1" }));
     expect(backend).toBeNull();
-    expect(
-      isSummaryAvailable(settings({ llmEndpoint: "http://127.0.0.1:8011/v1" })),
-    ).toBe(false);
+    expect(isSummaryAvailable(settings({ llmEndpoint: "http://127.0.0.1:8011/v1" }))).toBe(false);
   });
 
   it("treats bundled fallback ports without a selected model as unavailable", () => {
     expect(
-      resolveSummaryBackend(
-        settings({ llmEndpoint: "http://127.0.0.1:18210/v1" }),
-      ),
+      resolveSummaryBackend(settings({ llmEndpoint: "http://127.0.0.1:18210/v1" })),
     ).toBeNull();
   });
 
@@ -182,6 +174,8 @@ describe("long text map-reduce processing", () => {
     expect(Math.max(...calls.map((call) => call.text.length))).toBeLessThan(source.length);
     expect(calls[0].prompt).toContain("НЕ пиши финальное саммари");
     expect(calls[0].maxTokens).toBeLessThan(calls[calls.length - 1]?.maxTokens ?? 0);
-    expect(calls[calls.length - 1]?.prompt).toContain("Объедини их в один связный итоговый результат");
+    expect(calls[calls.length - 1]?.prompt).toContain(
+      "Объедини их в один связный итоговый результат",
+    );
   });
 });

@@ -7,13 +7,7 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = resolve(SCRIPT_DIR, "..");
 const DEFAULT_ALLOWLIST_PATH = join(SCRIPT_DIR, "network-allowlist.json");
 
-const SCAN_TARGETS = [
-  "src",
-  "src-tauri/src",
-  "src-tauri/sidecars",
-  "index.html",
-  "src/index.css",
-];
+const SCAN_TARGETS = ["src", "src-tauri/src", "src-tauri/sidecars", "index.html", "src/index.css"];
 
 const SCAN_EXTENSIONS = new Set([
   ".ts",
@@ -188,9 +182,7 @@ export function run({
 }
 
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : "";
-const isDirectRun =
-  import.meta.main === true ||
-  invokedPath === fileURLToPath(import.meta.url);
+const isDirectRun = import.meta.main === true || invokedPath === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
   process.exit(run({ rootDir: process.cwd() }));

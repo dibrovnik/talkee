@@ -92,7 +92,12 @@ describe("dev chat history context", () => {
 
   it("filters context by known file names", () => {
     const fileEntry = {
-      ...historyEntry("file-match", "2026-07-05T10:00:00.000Z", "Обсуждали бюджет проекта.", "file"),
+      ...historyEntry(
+        "file-match",
+        "2026-07-05T10:00:00.000Z",
+        "Обсуждали бюджет проекта.",
+        "file",
+      ),
       fileName: "client-budget.m4a",
     };
     const otherEntry = {
@@ -116,9 +121,22 @@ describe("dev chat history context", () => {
       ...historyEntry("speaker-match", "2026-07-05T10:00:00.000Z", "", "call"),
       mode: "speakers",
       speakers: [{ id: "s1", label: "Анна" }],
-      segments: [{ start: 0, end: 4, speakerId: "s1", speakerLabel: "Анна", text: "Нужно подготовить договор." }],
+      segments: [
+        {
+          start: 0,
+          end: 4,
+          speakerId: "s1",
+          speakerLabel: "Анна",
+          text: "Нужно подготовить договор.",
+        },
+      ],
     };
-    const otherEntry = historyEntry("other", "2026-07-05T11:00:00.000Z", "Борис обсуждал отпуск.", "call");
+    const otherEntry = historyEntry(
+      "other",
+      "2026-07-05T11:00:00.000Z",
+      "Борис обсуждал отпуск.",
+      "call",
+    );
 
     const result = buildDevChatHistoryContext(
       "что говорила Анна?",
@@ -157,7 +175,11 @@ describe("dev chat history context", () => {
       "найди все записи, в которых я описывал баги",
       [
         historyEntry("reported-bug", "2026-07-16T19:34:34.691Z", reportedBug),
-        historyEntry("unrelated", "2026-07-16T20:00:00.000Z", "Обсудили планы публикации новой версии."),
+        historyEntry(
+          "unrelated",
+          "2026-07-16T20:00:00.000Z",
+          "Обсудили планы публикации новой версии.",
+        ),
       ],
       "ru",
     );
@@ -229,7 +251,11 @@ describe("dev chat history context", () => {
         item.question,
         [
           historyEntry(`match-${index}`, "2026-07-16T10:00:00.000Z", item.text),
-          historyEntry(`other-${index}`, "2026-07-16T11:00:00.000Z", "Обсуждали расписание отпуска."),
+          historyEntry(
+            `other-${index}`,
+            "2026-07-16T11:00:00.000Z",
+            "Обсуждали расписание отпуска.",
+          ),
         ],
         "ru",
       );
@@ -273,13 +299,7 @@ describe("dev chat history context", () => {
       embedding: [1, 0],
     }));
 
-    const result = buildDevChatHistoryContext(
-      "как дела?",
-      history,
-      "ru",
-      searchIndex,
-      [1, 0],
-    );
+    const result = buildDevChatHistoryContext("как дела?", history, "ru", searchIndex, [1, 0]);
 
     expect(result.directAnswer).toBeUndefined();
     expect(result.contextText).toBeUndefined();
@@ -357,7 +377,11 @@ describe("dev chat history context", () => {
 
   it("ranks records by vector similarity when lexical matching is not enough", () => {
     const history = [
-      historyEntry("match", "2026-07-05T10:00:00.000Z", "Коммерческое предложение отправили клиенту."),
+      historyEntry(
+        "match",
+        "2026-07-05T10:00:00.000Z",
+        "Коммерческое предложение отправили клиенту.",
+      ),
       historyEntry("other", "2026-07-05T11:00:00.000Z", "Планировали отпуск команды."),
     ];
     const searchIndex = buildHistorySearchIndex(history).map((chunk) => ({

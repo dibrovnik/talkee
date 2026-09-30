@@ -10,7 +10,7 @@
 
 ## 2. Нормализация кодовой базы (каждый пункт — отдельный коммит)
 
-- [ ] 2.1 `bunx biome format --write .` → коммит `style: apply biome formatting`
+- [x] 2.1 `bunx biome format --write .` → коммит `style: apply biome formatting`
 - [ ] 2.2 `cargo fmt --all --manifest-path src-tauri/Cargo.toml` → коммит `style: apply rustfmt`
 - [ ] 2.3 Создать `.git-blame-ignore-revs` с хешами коммитов 2.1 и 2.2
 - [ ] 2.4 `bunx biome check --write .` (safe fixes); оставшиеся ошибки — по правилу из design.md, решение 1; `bun test` после исправлений → коммит `refactor: fix biome lint findings`

@@ -107,9 +107,7 @@ describe("dictation stream overlay state", () => {
   });
 
   test("does not inherit API streaming capability for a batch-only local model", () => {
-    const adapter = STREAMING_STT_ADAPTERS.find(
-      (item) => item.id === "openai",
-    )!;
+    const adapter = STREAMING_STT_ADAPTERS.find((item) => item.id === "openai")!;
     const apiValues = {
       apiKey: "secret",
       model: "gpt-realtime-whisper",
@@ -165,20 +163,15 @@ describe("dictation stream overlay state", () => {
 
   test("uses the effective managed runtime endpoint returned by warm-up", () => {
     expect(
-      resolveLiveDictationRuntimeEndpoint(
-        "http://127.0.0.1:8000",
-        "http://127.0.0.1:18018",
-      ),
+      resolveLiveDictationRuntimeEndpoint("http://127.0.0.1:8000", "http://127.0.0.1:18018"),
     ).toBe("http://127.0.0.1:18018");
-    expect(
-      resolveLiveDictationRuntimeEndpoint("http://127.0.0.1:8000", null),
-    ).toBe("http://127.0.0.1:8000");
+    expect(resolveLiveDictationRuntimeEndpoint("http://127.0.0.1:8000", null)).toBe(
+      "http://127.0.0.1:8000",
+    );
   });
 
   test("enables an API streaming model after its exact configuration was verified", () => {
-    const adapter = STREAMING_STT_ADAPTERS.find(
-      (item) => item.id === "openai",
-    )!;
+    const adapter = STREAMING_STT_ADAPTERS.find((item) => item.id === "openai")!;
     const values = {
       apiKey: "secret",
       model: "gpt-realtime-whisper",
@@ -215,15 +208,12 @@ describe("dictation stream overlay state", () => {
       },
     } as AppSettings;
 
-    expect(createNativeLiveDictationOptions(settings, "req-api")).toMatchObject(
-      {
-        requestId: "req-api",
-        provider: "openai",
-        model: "gpt-realtime-whisper",
-        endpoint: "https://api.openai.com",
-        streamingEnabled: true,
-      },
-    );
+    expect(createNativeLiveDictationOptions(settings, "req-api")).toMatchObject({
+      requestId: "req-api",
+      provider: "openai",
+      model: "gpt-realtime-whisper",
+      endpoint: "https://api.openai.com",
+      streamingEnabled: true,
+    });
   });
-
 });

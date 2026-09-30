@@ -6,5 +6,5 @@ import { I18nProvider } from "../../lib/i18n";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <I18nProvider>
     <Widget />
-  </I18nProvider>
+  </I18nProvider>,
 );

@@ -75,9 +75,7 @@ export function run({
   const missing = findMissingPaths({ rootDir, docPath });
 
   if (missing.length > 0) {
-    stderr.write(
-      `Found ${missing.length} path(s) in ${docPath} that do not exist:\n`,
-    );
+    stderr.write(`Found ${missing.length} path(s) in ${docPath} that do not exist:\n`);
     for (const token of missing) {
       stderr.write(`  ${token}\n`);
     }
@@ -89,8 +87,7 @@ export function run({
 }
 
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : "";
-const isDirectRun =
-  import.meta.main === true || invokedPath === fileURLToPath(import.meta.url);
+const isDirectRun = import.meta.main === true || invokedPath === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
   process.exit(run({ rootDir: process.cwd() }));

@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 
-import {
-  HANDY_HOTKEY_EVENT,
-  type HandyHotkeyEventPayload,
-} from "../lib/hotkeyEvents";
+import { HANDY_HOTKEY_EVENT, type HandyHotkeyEventPayload } from "../lib/hotkeyEvents";
 import {
   hotkeyPreviewKeyFromKeyboardEvent,
   hotkeyPreviewKeys,
@@ -18,9 +15,7 @@ export function useLiveHotkeyPreview({
   enabled: boolean;
   hotkeyLabel: string;
 }): ReadonlySet<string> {
-  const [pressedKeys, setPressedKeys] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
+  const [pressedKeys, setPressedKeys] = useState<ReadonlySet<string>>(() => new Set());
 
   useEffect(() => {
     if (!enabled) {
@@ -52,17 +47,12 @@ export function useLiveHotkeyPreview({
     window.addEventListener("blur", clear);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    const unlistenPromise = listen<HandyHotkeyEventPayload>(
-      HANDY_HOTKEY_EVENT,
-      ({ payload }) => {
-        if (!hotkeyPreviewMatches(payload.hotkey, hotkeyLabel)) return;
-        setPressedKeys(
-          payload.state === "Pressed"
-            ? new Set(hotkeyPreviewKeys(hotkeyLabel))
-            : new Set(),
-        );
-      },
-    );
+    const unlistenPromise = listen<HandyHotkeyEventPayload>(HANDY_HOTKEY_EVENT, ({ payload }) => {
+      if (!hotkeyPreviewMatches(payload.hotkey, hotkeyLabel)) return;
+      setPressedKeys(
+        payload.state === "Pressed" ? new Set(hotkeyPreviewKeys(hotkeyLabel)) : new Set(),
+      );
+    });
     void unlistenPromise.catch(() => {});
 
     return () => {

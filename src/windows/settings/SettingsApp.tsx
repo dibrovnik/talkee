@@ -131,9 +131,7 @@ function SidebarLogo() {
           marginBottom: 6,
         }}
       >
-        <div
-          style={{ display: "flex", alignItems: "center", gap: 3, height: 22 }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: 3, height: 22 }}>
           {[8, 16, 11, 19, 10].map((height, index) => (
             <span
               key={index}
@@ -166,10 +164,7 @@ function SidebarLogo() {
 }
 
 function getTextControlSelection(element: Element | null): string {
-  if (
-    element instanceof HTMLTextAreaElement ||
-    element instanceof HTMLInputElement
-  ) {
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
     const start = element.selectionStart ?? 0;
     const end = element.selectionEnd ?? 0;
     if (end > start) {
@@ -185,9 +180,7 @@ function getCurrentDomSelectionText(): string {
     return "";
   }
 
-  const activeElementSelection = getTextControlSelection(
-    document.activeElement,
-  );
+  const activeElementSelection = getTextControlSelection(document.activeElement);
   if (activeElementSelection.trim()) {
     return activeElementSelection;
   }
@@ -202,15 +195,12 @@ export function SettingsApp() {
     import.meta.env.DEV && initialQuery.get("onboarding") === "1" ? 1 : 0,
   );
   const [activeTab, setActiveTab] = useState<Tab>(resolveInitialTab);
-  const [focusedFileResultId, setFocusedFileResultId] = useState<string | null>(
-    () => new URLSearchParams(window.location.search).get("resultId"),
+  const [focusedFileResultId, setFocusedFileResultId] = useState<string | null>(() =>
+    new URLSearchParams(window.location.search).get("resultId"),
   );
-  const [focusedHistoryEntryId, setFocusedHistoryEntryId] = useState<
-    string | null
-  >(null);
+  const [focusedHistoryEntryId, setFocusedHistoryEntryId] = useState<string | null>(null);
   const [focusedHistoryEntryNonce, setFocusedHistoryEntryNonce] = useState(0);
-  const [themePreference, setThemePreference] =
-    useState<ThemePreference>("system");
+  const [themePreference, setThemePreference] = useState<ThemePreference>("system");
   const [navigationNonce, setNavigationNonce] = useState(0);
   const [showPermissions, setShowPermissions] = useState<boolean | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -240,8 +230,7 @@ export function SettingsApp() {
     Promise.all([getPermissionsPassed(), checkAllPermissions()])
       .then(async ([passed, permissions]) => {
         const hasRequiredStartupPermissions =
-          permissions.microphone !== "denied" &&
-          permissions.accessibility === "granted";
+          permissions.microphone !== "denied" && permissions.accessibility === "granted";
         const shouldRecoverExistingInstall =
           !passed &&
           hasRequiredStartupPermissions &&
@@ -254,10 +243,7 @@ export function SettingsApp() {
         }
 
         setShowPermissions(
-          !(
-            (passed || shouldRecoverExistingInstall) &&
-            hasRequiredStartupPermissions
-          ),
+          !((passed || shouldRecoverExistingInstall) && hasRequiredStartupPermissions),
         );
         setLoadError(null);
       })
@@ -284,23 +270,16 @@ export function SettingsApp() {
   }, []);
 
   useEffect(() => {
-    const unlisten = listen<SettingsNavigatePayload>(
-      SETTINGS_NAVIGATE_EVENT,
-      ({ payload }) => {
-        const nextTab = isSettingsTab(payload.tab) ? payload.tab : "main";
-        setActiveTab(nextTab);
-        setFocusedFileResultId(
-          nextTab === "file" ? payload.resultId || null : null,
-        );
-        setNavigationNonce((current) => current + 1);
+    const unlisten = listen<SettingsNavigatePayload>(SETTINGS_NAVIGATE_EVENT, ({ payload }) => {
+      const nextTab = isSettingsTab(payload.tab) ? payload.tab : "main";
+      setActiveTab(nextTab);
+      setFocusedFileResultId(nextTab === "file" ? payload.resultId || null : null);
+      setNavigationNonce((current) => current + 1);
 
-        requestAnimationFrame(() => {
-          document
-            .querySelector("main")
-            ?.scrollTo({ top: 0, left: 0, behavior: "auto" });
-        });
-      },
-    );
+      requestAnimationFrame(() => {
+        document.querySelector("main")?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      });
+    });
 
     return () => {
       unlisten.then((dispose) => dispose());
@@ -348,9 +327,7 @@ export function SettingsApp() {
         }}
       >
         <div className="card" style={{ width: 420, textAlign: "center" }}>
-          <div style={{ fontSize: 14, color: "var(--text-mid)" }}>
-            {t("settingsApp.loading")}
-          </div>
+          <div style={{ fontSize: 14, color: "var(--text-mid)" }}>{t("settingsApp.loading")}</div>
         </div>
       </div>
     );
@@ -447,17 +424,13 @@ export function SettingsApp() {
                   minHeight: isChatActive ? 0 : undefined,
                 }}
               >
-                <div
-                  style={{ display: activeTab === "main" ? "block" : "none" }}
-                >
+                <div style={{ display: activeTab === "main" ? "block" : "none" }}>
                   <MainTab
                     focusedEntryId={focusedHistoryEntryId}
                     focusedEntryNonce={focusedHistoryEntryNonce}
                   />
                 </div>
-                <div
-                  style={{ display: activeTab === "file" ? "block" : "none" }}
-                >
+                <div style={{ display: activeTab === "file" ? "block" : "none" }}>
                   <FileTranscriptionTab focusedEntryId={focusedFileResultId} />
                 </div>
                 <div

@@ -1,8 +1,4 @@
-import type {
-  ComponentPropsWithoutRef,
-  ForwardRefExoticComponent,
-  RefAttributes,
-} from "react";
+import type { ComponentPropsWithoutRef, ForwardRefExoticComponent, RefAttributes } from "react";
 
 import { ArrowUpIcon as RawIconArrowUp } from "@phosphor-icons/react/ArrowUp";
 import { SlidersHorizontalIcon as RawIconAdjustmentsHorizontal } from "@phosphor-icons/react/SlidersHorizontal";

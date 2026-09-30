@@ -21,8 +21,7 @@ export const DEV_CHAT_SCOPE_PROMPT = [
   "Не выдумывай факты. При работе с историей указывай источники из переданного контекста.",
 ].join("\n");
 
-export const DEV_CHAT_SYSTEM_PROMPT =
-  `${DEV_CHAT_SCOPE_PROMPT}\n\nНиже дана история диалога. Ответь только на последнее сообщение пользователя: прямо, кратко и на языке пользователя.`;
+export const DEV_CHAT_SYSTEM_PROMPT = `${DEV_CHAT_SCOPE_PROMPT}\n\nНиже дана история диалога. Ответь только на последнее сообщение пользователя: прямо, кратко и на языке пользователя.`;
 
 export const DEV_CHAT_LONG_TEXT_PROMPT =
   `${DEV_CHAT_SCOPE_PROMPT}\n\nНиже дан большой текст, расшифровка или документ. ` +
@@ -34,8 +33,10 @@ export function isDevChatCapabilitiesQuestion(text: string): boolean {
 }
 
 export function isDevChatCodeGenerationRequest(text: string): boolean {
-  return DEV_CHAT_RUSSIAN_CODE_GENERATION_PATTERN.test(text)
-    || DEV_CHAT_ENGLISH_CODE_GENERATION_PATTERN.test(text);
+  return (
+    DEV_CHAT_RUSSIAN_CODE_GENERATION_PATTERN.test(text) ||
+    DEV_CHAT_ENGLISH_CODE_GENERATION_PATTERN.test(text)
+  );
 }
 
 export function devChatCapabilitiesAnswer(lang: string): string {

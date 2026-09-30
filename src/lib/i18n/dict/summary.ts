@@ -10,7 +10,10 @@ export const summary = {
   "summary.regenerate": { ru: "Новое саммари", en: "New summary" },
 
   "summary.progress.preparing": { ru: "Готовим саммари…", en: "Preparing summary…" },
-  "summary.progress.map": { ru: "Обрабатываем часть {current} из {total}…", en: "Processing part {current} of {total}…" },
+  "summary.progress.map": {
+    ru: "Обрабатываем часть {current} из {total}…",
+    en: "Processing part {current} of {total}…",
+  },
   "summary.progress.reduce": { ru: "Объединяем части…", en: "Merging parts…" },
 
   "summary.noModel": {
@@ -29,7 +32,10 @@ export const summary = {
   },
 
   "summary.history.title": { ru: "История саммари", en: "Summary history" },
-  "summary.history.empty": { ru: "Здесь появятся сгенерированные саммари.", en: "Generated summaries will appear here." },
+  "summary.history.empty": {
+    ru: "Здесь появятся сгенерированные саммари.",
+    en: "Generated summaries will appear here.",
+  },
   "summary.history.duration": { ru: "{seconds} с", en: "{seconds} s" },
 
   "summary.copy": { ru: "Скопировать", en: "Copy" },
@@ -53,19 +59,31 @@ export const summary = {
   "devChat.suggestionLatest": { ru: "Последняя запись", en: "Latest record" },
   "devChat.suggestionToday": { ru: "Что обсуждали сегодня?", en: "What did we discuss today?" },
   "devChat.suggestionTasks": { ru: "Найди задачи", en: "Find tasks" },
-  "devChat.suggestionLastCallSummary": { ru: "Саммари последнего созвона", en: "Summary of the latest call" },
+  "devChat.suggestionLastCallSummary": {
+    ru: "Саммари последнего созвона",
+    en: "Summary of the latest call",
+  },
   "devChat.scrollToLatest": { ru: "К последнему сообщению", en: "Jump to latest message" },
   "devChat.loadEarlier": { ru: "Показать предыдущие ({count})", en: "Load earlier ({count})" },
   "devChat.showFullMessage": { ru: "Показать полностью", en: "Show full message" },
   "devChat.collapseMessage": { ru: "Свернуть", en: "Collapse" },
-  "devChat.copyResponse": { ru: "Скопировать ответ в буфер обмена", en: "Copy response to clipboard" },
+  "devChat.copyResponse": {
+    ru: "Скопировать ответ в буфер обмена",
+    en: "Copy response to clipboard",
+  },
   "devChat.copied": { ru: "Ответ скопирован", en: "Response copied" },
   "devChat.translateMessage": { ru: "Перевести сообщение", en: "Translate message" },
   "devChat.translating": { ru: "Переводим…", en: "Translating…" },
-  "devChat.regenerateResponse": { ru: "Сгенерировать этот ответ заново", en: "Regenerate this response" },
+  "devChat.regenerateResponse": {
+    ru: "Сгенерировать этот ответ заново",
+    en: "Regenerate this response",
+  },
   "devChat.usedSources": { ru: "Использованы записи:", en: "Used records:" },
   "devChat.openSource": { ru: "Открыть запись {title}", en: "Open record {title}" },
-  "devChat.emptyResponse": { ru: "Модель вернула пустой ответ.", en: "The model returned an empty response." },
+  "devChat.emptyResponse": {
+    ru: "Модель вернула пустой ответ.",
+    en: "The model returned an empty response.",
+  },
   "devChat.noModel": {
     ru: "Для чата выберите текстовую модель во вкладке «Модели» → «API» → «Текстовая».",
     en: "Select a text model in Models → API → Text to use the chat.",

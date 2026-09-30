@@ -152,14 +152,16 @@ function hashText(text: string): string {
 }
 
 function entryContentHash(entry: HistoryEntry): string {
-  return hashText([
-    entryText(entry),
-    entry.timestamp,
-    entry.source ?? "voice",
-    entry.fileName ?? "",
-    entry.duration,
-    entry.status ?? "",
-  ].join("\n"));
+  return hashText(
+    [
+      entryText(entry),
+      entry.timestamp,
+      entry.source ?? "voice",
+      entry.fileName ?? "",
+      entry.duration,
+      entry.status ?? "",
+    ].join("\n"),
+  );
 }
 
 function normalizeMetadataText(text: string): string {
@@ -181,7 +183,11 @@ function splitTextIntoSearchChunks(text: string): string[] {
       const breakStart = start + Math.floor(SEARCH_CHUNK_MAX_CHARS * 0.65);
       const slice = trimmed.slice(breakStart, end);
       const paragraphBreak = slice.lastIndexOf("\n\n");
-      const sentenceBreak = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("! "), slice.lastIndexOf("? "));
+      const sentenceBreak = Math.max(
+        slice.lastIndexOf(". "),
+        slice.lastIndexOf("! "),
+        slice.lastIndexOf("? "),
+      );
       const whitespaceBreak = slice.lastIndexOf(" ");
       const breakAt = Math.max(paragraphBreak, sentenceBreak, whitespaceBreak);
       if (breakAt > 0) {
@@ -235,7 +241,7 @@ function isStoredChunk(value: unknown): value is HistorySearchChunk {
     typeof chunk.duration === "number" &&
     typeof chunk.text === "string" &&
     (chunk.embedding === undefined ||
-      Array.isArray(chunk.embedding) && chunk.embedding.every((item) => typeof item === "number"))
+      (Array.isArray(chunk.embedding) && chunk.embedding.every((item) => typeof item === "number")))
   );
 }
 
@@ -283,8 +289,10 @@ function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
 function transactionToPromise(transaction: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB transaction failed"));
-    transaction.onabort = () => reject(transaction.error ?? new Error("IndexedDB transaction aborted"));
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error("IndexedDB transaction failed"));
+    transaction.onabort = () =>
+      reject(transaction.error ?? new Error("IndexedDB transaction aborted"));
   });
 }
 
@@ -412,10 +420,8 @@ function parseFilters(question: string, history: HistoryEntry[] = []): HistoryQu
       const normalizedFileName = normalizeMetadataText(fileName);
       const fileStem = normalizeMetadataText(fileName.replace(/\.[^.]+$/, ""));
       if (
-        (normalizedFileName.length > 2 &&
-          normalizedForMetadata.includes(normalizedFileName)) ||
-        (fileStem.length > 2 &&
-          normalizedForMetadata.includes(fileStem))
+        (normalizedFileName.length > 2 && normalizedForMetadata.includes(normalizedFileName)) ||
+        (fileStem.length > 2 && normalizedForMetadata.includes(fileStem))
       ) {
         filters.fileName = fileName;
       }
@@ -443,10 +449,7 @@ function parseFilters(question: string, history: HistoryEntry[] = []): HistoryQu
   return filters;
 }
 
-function filterHistory(
-  history: HistoryEntry[],
-  filters: HistoryQuestionFilters,
-): HistoryEntry[] {
+function filterHistory(history: HistoryEntry[], filters: HistoryQuestionFilters): HistoryEntry[] {
   const now = new Date();
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
@@ -491,18 +494,20 @@ function sortOldestFirst(history: HistoryEntry[]): HistoryEntry[] {
   );
 }
 
-function uniqueChunksByEntry(chunks: HistorySearchChunk[], newestFirst: boolean): HistorySearchChunk[] {
+function uniqueChunksByEntry(
+  chunks: HistorySearchChunk[],
+  newestFirst: boolean,
+): HistorySearchChunk[] {
   const entries = new Map<string, HistorySearchChunk>();
   for (const chunk of chunks) {
     if (!entries.has(chunk.entryId)) {
       entries.set(chunk.entryId, chunk);
     }
   }
-  return [...entries.values()].sort(
-    (a, b) =>
-      newestFirst
-        ? new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        : new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  return [...entries.values()].sort((a, b) =>
+    newestFirst
+      ? new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      : new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );
 }
 
@@ -541,9 +546,7 @@ function scoredEntryFromChunk(
 }
 
 function mentionsLatest(question: string): boolean {
-  return (
-    /(последн|последняя|последнюю|крайн|latest|last|most recent)/i.test(question)
-  );
+  return /(последн|последняя|последнюю|крайн|latest|last|most recent)/i.test(question);
 }
 
 function mentionsFirst(question: string): boolean {
@@ -557,41 +560,47 @@ function mentionsAll(question: string): boolean {
 export const historySearchEmbeddingQuery = buildOfflineHistoryEmbeddingQuery;
 
 function mentionsHistoryTarget(question: string): boolean {
-  return /(запис|транскриб|расшифр|созвон|звонк|диктов|файл|record|transcript|transcription|call|meeting|file)/i.test(question);
+  return /(запис|транскриб|расшифр|созвон|звонк|диктов|файл|record|transcript|transcription|call|meeting|file)/i.test(
+    question,
+  );
 }
 
 function asksForContextTask(question: string): boolean {
-  return /(саммари|суммар|суммир|summary|summar|сравн|compare|задач|задачи|task|tasks|action item)/i.test(question);
+  return /(саммари|суммар|суммир|summary|summar|сравн|compare|задач|задачи|task|tasks|action item)/i.test(
+    question,
+  );
 }
 
 function asksForRecordedSpeech(question: string): boolean {
-  return /(говорил|говорила|говорили|сказал|сказала|обсуждал|обсуждали|обсуждалось|said|discussed)/i.test(question);
+  return /(говорил|говорила|говорили|сказал|сказала|обсуждал|обсуждали|обсуждалось|said|discussed)/i.test(
+    question,
+  );
 }
 
 function asksToFindInHistory(question: string): boolean {
   return (
     /(найди|найти|покажи|отыщи|find|show)/i.test(question) &&
-    /(задач|задачи|task|tasks|что|про|говор|обсужд|саммари|summary|summar|баг|ошиб|проблем|дефект|bug|error|issue|problem)/i.test(question)
+    /(задач|задачи|task|tasks|что|про|говор|обсужд|саммари|summary|summar|баг|ошиб|проблем|дефект|bug|error|issue|problem)/i.test(
+      question,
+    )
   );
 }
 
 function asksAboutHistoryTopic(question: string): boolean {
-  return /(что\s+было\s+про|что\s+было\s+по|what\s+was\s+said\s+about|what\s+about)/i.test(question);
+  return /(что\s+было\s+про|что\s+было\s+по|what\s+was\s+said\s+about|what\s+about)/i.test(
+    question,
+  );
 }
 
 function asksForLatest(question: string): boolean {
   return (
-    mentionsLatest(question) &&
-    mentionsHistoryTarget(question) &&
-    !asksForContextTask(question)
+    mentionsLatest(question) && mentionsHistoryTarget(question) && !asksForContextTask(question)
   );
 }
 
 function asksForFirst(question: string): boolean {
   return (
-    mentionsFirst(question) &&
-    mentionsHistoryTarget(question) &&
-    !asksForContextTask(question)
+    mentionsFirst(question) && mentionsHistoryTarget(question) && !asksForContextTask(question)
   );
 }
 
@@ -645,7 +654,9 @@ function latestAnswer(
   const source = sourceLabel(entrySource(latest), lang);
   const date = formatEntryDate(latest.timestamp, lang);
   const duration =
-    latest.duration > 0 ? `, ${lang === "en" ? "duration" : "длительность"} ${formatDurationMs(latest.duration * 1000, lang)}` : "";
+    latest.duration > 0
+      ? `, ${lang === "en" ? "duration" : "длительность"} ${formatDurationMs(latest.duration * 1000, lang)}`
+      : "";
 
   if (lang === "en") {
     return {
@@ -679,7 +690,9 @@ function firstAnswer(
   const source = sourceLabel(entrySource(first), lang);
   const date = formatEntryDate(first.timestamp, lang);
   const duration =
-    first.duration > 0 ? `, ${lang === "en" ? "duration" : "длительность"} ${formatDurationMs(first.duration * 1000, lang)}` : "";
+    first.duration > 0
+      ? `, ${lang === "en" ? "duration" : "длительность"} ${formatDurationMs(first.duration * 1000, lang)}`
+      : "";
 
   if (lang === "en") {
     return {
@@ -710,8 +723,9 @@ function countAnswer(
 
 function tokenize(text: string, lang: UiLanguage): string[] {
   const stopWords = lang === "en" ? EN_STOP_WORDS : RU_STOP_WORDS;
-  return (text.toLowerCase().match(/[a-zа-яё0-9]+/gi) ?? [])
-    .filter((token) => token.length > 2 && !stopWords.has(token));
+  return (text.toLowerCase().match(/[a-zа-яё0-9]+/gi) ?? []).filter(
+    (token) => token.length > 2 && !stopWords.has(token),
+  );
 }
 
 function compactMatchExcerpt(
@@ -789,9 +803,7 @@ function scoreChunk(
   }
 
   const vectorSimilarity =
-    queryEmbedding && chunk.embedding
-      ? cosineSimilarity(queryEmbedding, chunk.embedding)
-      : 0;
+    queryEmbedding && chunk.embedding ? cosineSimilarity(queryEmbedding, chunk.embedding) : 0;
   const vectorScore =
     vectorSimilarity >= MIN_VECTOR_SIMILARITY
       ? 6 + (vectorSimilarity - MIN_VECTOR_SIMILARITY) * 20
@@ -903,7 +915,10 @@ function truncateEntryText(text: string, maxChars = MAX_ENTRY_CONTEXT_CHARS): st
 }
 
 function sourceReference(
-  item: Pick<ScoredHistoryEntry, "entryId" | "timestamp" | "source" | "fileName" | "duration" | "text">,
+  item: Pick<
+    ScoredHistoryEntry,
+    "entryId" | "timestamp" | "source" | "fileName" | "duration" | "text"
+  >,
   index: number,
   lang: UiLanguage,
 ): DevChatHistorySource {
@@ -956,9 +971,7 @@ function buildContextText(
       : "Контекст из истории транскрибаций Talkee. Используй только эти записи для ответов об истории транскрибаций. Если ответа нет в этих записях, скажи, что подходящая запись не найдена.";
 
   let total = intro.length;
-  const maxTotalChars = allowAllMatches
-    ? MAX_ALL_TOTAL_CONTEXT_CHARS
-    : MAX_TOTAL_CONTEXT_CHARS;
+  const maxTotalChars = allowAllMatches ? MAX_ALL_TOTAL_CONTEXT_CHARS : MAX_TOTAL_CONTEXT_CHARS;
   const lines: string[] = [intro];
 
   for (const [index, item] of items.entries()) {

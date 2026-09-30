@@ -94,15 +94,11 @@ export async function listCallCaptureTargets(): Promise<CaptureTarget[]> {
   return invoke<CaptureTarget[]>("list_call_capture_targets");
 }
 
-export async function startCallCapture(
-  req: StartCallCaptureRequest,
-): Promise<CallCaptureSession> {
+export async function startCallCapture(req: StartCallCaptureRequest): Promise<CallCaptureSession> {
   return invoke<CallCaptureSession>("start_call_capture", { req });
 }
 
-export async function stopCallCapture(
-  sessionId: string,
-): Promise<CallCaptureSession> {
+export async function stopCallCapture(sessionId: string): Promise<CallCaptureSession> {
   return invoke<CallCaptureSession>("stop_call_capture", { sessionId });
 }
 
@@ -110,9 +106,7 @@ export async function pauseCallCaptureMic(sessionId: string): Promise<boolean> {
   return invoke<boolean>("pause_call_capture_mic", { sessionId });
 }
 
-export async function resumeCallCaptureMic(
-  sessionId: string,
-): Promise<boolean> {
+export async function resumeCallCaptureMic(sessionId: string): Promise<boolean> {
   return invoke<boolean>("resume_call_capture_mic", { sessionId });
 }
 
@@ -141,9 +135,7 @@ export async function checkpointCallTranscription({
   });
 }
 
-export async function recoverCallCaptureSessions(): Promise<
-  CallCaptureSession[]
-> {
+export async function recoverCallCaptureSessions(): Promise<CallCaptureSession[]> {
   return invoke<CallCaptureSession[]>("recover_call_capture_sessions");
 }
 
@@ -153,9 +145,7 @@ export function formatCallLiveTranscript(
 ): string {
   const guestLabel = tn("callCapture.speakerGuestN", { index: 1 });
   return [
-    micText?.trim()
-      ? `${tn("callCapture.speakerYou")}:\n${micText.trim()}`
-      : "",
+    micText?.trim() ? `${tn("callCapture.speakerYou")}:\n${micText.trim()}` : "",
     systemText?.trim() ? `${guestLabel}:\n${systemText.trim()}` : "",
   ]
     .filter(Boolean)
@@ -176,10 +166,7 @@ export function buildCallLiveSpeakerTranscript({
   micStartedAt = 0,
   systemStartedAt = 0,
   duration = 0,
-}: CallLiveSpeakerTranscriptOptions): Pick<
-  HistoryEntry,
-  "mode" | "speakers" | "segments"
-> {
+}: CallLiveSpeakerTranscriptOptions): Pick<HistoryEntry, "mode" | "speakers" | "segments"> {
   const you = {
     id: "call_live_you",
     label: tn("callCapture.speakerYou"),
@@ -221,9 +208,7 @@ export function buildCallLiveSpeakerTranscript({
   };
 }
 
-export async function restoreInterruptedCallCaptureHistory(): Promise<
-  HistoryEntry[]
-> {
+export async function restoreInterruptedCallCaptureHistory(): Promise<HistoryEntry[]> {
   const sessions = await recoverCallCaptureSessions();
   if (sessions.length === 0) {
     return [];
@@ -232,12 +217,9 @@ export async function restoreInterruptedCallCaptureHistory(): Promise<
   const restored: HistoryEntry[] = [];
 
   for (const session of sessions) {
-    const existing = history.find(
-      (entry) => entry.callSessionId === session.id,
-    );
+    const existing = history.find((entry) => entry.callSessionId === session.id);
     const sessionDuration = Math.round(
-      (Date.parse(session.endedAt || new Date().toISOString()) -
-        Date.parse(session.startedAt)) /
+      (Date.parse(session.endedAt || new Date().toISOString()) - Date.parse(session.startedAt)) /
         1000,
     );
     const liveText = formatCallLiveTranscript(
@@ -311,15 +293,11 @@ export async function saveCallCaptureMicTrack(
   });
 }
 
-export async function getCallCaptureStatus(
-  sessionId: string,
-): Promise<CallCaptureSession> {
+export async function getCallCaptureStatus(sessionId: string): Promise<CallCaptureSession> {
   return invoke<CallCaptureSession>("get_call_capture_status", { sessionId });
 }
 
-export async function getCallCaptureDurationMs(
-  sessionId: string,
-): Promise<number> {
+export async function getCallCaptureDurationMs(sessionId: string): Promise<number> {
   return invoke<number>("get_call_capture_duration_ms", { sessionId });
 }
 
@@ -335,9 +313,7 @@ export async function saveFailedCallCaptureEntry({
   const entry: HistoryEntry = {
     id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
-    duration: startedAt
-      ? Math.max(0, Math.round((Date.now() - startedAt) / 1000))
-      : 0,
+    duration: startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : 0,
     raw: "",
     cleaned: "",
     source: "call",
@@ -359,9 +335,7 @@ export async function saveFailedCallCaptureEntry({
 }
 
 function callTrackTitle(track: CallCaptureTrack): string {
-  return track.kind === "mic"
-    ? tn("callCapture.speakerYou")
-    : tn("callCapture.speakerCall");
+  return track.kind === "mic" ? tn("callCapture.speakerYou") : tn("callCapture.speakerCall");
 }
 
 function formatTrackTranscript(track: CallCaptureTrack, text: string): string {
@@ -369,10 +343,7 @@ function formatTrackTranscript(track: CallCaptureTrack, text: string): string {
 }
 
 function micPlainText(part: string): string {
-  const label = tn("callCapture.speakerYou").replace(
-    /[.*+?^${}()|[\]\\]/g,
-    "\\$&",
-  );
+  const label = tn("callCapture.speakerYou").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return part.replace(new RegExp(`^${label}:\\s*`, "i"), "").trim();
 }
 
@@ -426,8 +397,7 @@ function normalizeCallSpeakerResult(
     return result;
   }
 
-  const firstMicSpeakerId =
-    source === "micFallback" ? result.segments[0]?.speakerId : null;
+  const firstMicSpeakerId = source === "micFallback" ? result.segments[0]?.speakerId : null;
   const labelsById = new Map<string, string>();
   let guestIndex = 1;
 
@@ -437,18 +407,13 @@ function normalizeCallSpeakerResult(
       return;
     }
 
-    labelsById.set(
-      speakerId,
-      tn("callCapture.speakerGuestN", { index: guestIndex }),
-    );
+    labelsById.set(speakerId, tn("callCapture.speakerGuestN", { index: guestIndex }));
     guestIndex += 1;
   });
 
   const speakers = orderedSpeakerIds(result).map((speakerId) => ({
     id: speakerId,
-    label:
-      labelsById.get(speakerId) ||
-      tn("callCapture.speakerGuestN", { index: 1 }),
+    label: labelsById.get(speakerId) || tn("callCapture.speakerGuestN", { index: 1 }),
   }));
   const segments = result.segments.map((segment) => ({
     ...segment,
@@ -520,10 +485,7 @@ async function buildCallCaptureHistoryEntry(
 
   const parts: string[] = [];
   const speakerSegments: NonNullable<HistoryEntry["segments"]> = [];
-  const speakersById = new Map<
-    string,
-    NonNullable<HistoryEntry["speakers"]>[number]
-  >();
+  const speakersById = new Map<string, NonNullable<HistoryEntry["speakers"]>[number]>();
   let mode: HistoryEntry["mode"] = "plain";
   let requiredSystemDiarizationFailed = false;
   let micPlainPart: string | null = null;
@@ -543,16 +505,11 @@ async function buildCallCaptureHistoryEntry(
     } catch (error) {
       const message = toFileTranscriptionErrorMessage(error, { settings });
       failedTracks.push(`${tn("callCapture.trackMic")}: ${message}`);
-      void logError(
-        "CALL_CAPTURE",
-        `Mic track transcription failed: ${errorMessage(error)}`,
-      );
+      void logError("CALL_CAPTURE", `Mic track transcription failed: ${errorMessage(error)}`);
     }
   }
 
-  for (const track of orderedTracks.filter(
-    (track) => !(track.kind === "mic" && micFile),
-  )) {
+  for (const track of orderedTracks.filter((track) => !(track.kind === "mic" && micFile))) {
     if (track.kind === "mic") {
       micPathTrack = track;
     }
@@ -593,8 +550,7 @@ async function buildCallCaptureHistoryEntry(
     } catch (error) {
       const message = toFileTranscriptionErrorMessage(error, { settings });
       failedTracks.push(`${callTrackTitle(track).toLowerCase()}: ${message}`);
-      requiredSystemDiarizationFailed =
-        requiredSystemDiarizationFailed || shouldDiarizeSystemTrack;
+      requiredSystemDiarizationFailed = requiredSystemDiarizationFailed || shouldDiarizeSystemTrack;
       void logError(
         "CALL_CAPTURE",
         `${track.kind} track transcription failed: ${errorMessage(error)}`,
@@ -669,9 +625,7 @@ async function buildCallCaptureHistoryEntry(
     .join("\n\n");
   if (!text) {
     throw new Error(
-      failedTracks.length > 0
-        ? failedTracks.join("; ")
-        : tn("callCapture.errNoSpeech"),
+      failedTracks.length > 0 ? failedTracks.join("; ") : tn("callCapture.errNoSpeech"),
     );
   }
 
@@ -746,12 +700,8 @@ export async function transcribeCallCaptureSession(
 
   const shouldReuseEntry = Boolean(params.baseEntry || params.entryId);
   const entryAlreadyPersisted =
-    shouldReuseEntry &&
-    (await getHistory()).some((entry) => entry.id === baseEntry.id);
-  const handle = await beginProcessing(
-    baseEntry,
-    entryAlreadyPersisted ? "update" : "add",
-  );
+    shouldReuseEntry && (await getHistory()).some((entry) => entry.id === baseEntry.id);
+  const handle = await beginProcessing(baseEntry, entryAlreadyPersisted ? "update" : "add");
   params.onStarted?.(id);
 
   try {
@@ -778,10 +728,7 @@ export async function transcribeCallCaptureSession(
       return interrupted;
     }
 
-    void logError(
-      "CALL_CAPTURE",
-      `Call transcription failed: ${errorMessage(error)}`,
-    );
+    void logError("CALL_CAPTURE", `Call transcription failed: ${errorMessage(error)}`);
     const failed: HistoryEntry = {
       ...baseEntry,
       status: "failed",
@@ -872,10 +819,7 @@ export async function retryCallCaptureHistoryEntry(
     };
 
     await finishProcessing(failedEntry);
-    void logError(
-      "CALL_CAPTURE",
-      `Retry call capture failed: ${errorMessage(error)}`,
-    );
+    void logError("CALL_CAPTURE", `Retry call capture failed: ${errorMessage(error)}`);
     throw new Error(userFacingMessage);
   } finally {
     handle.finish();

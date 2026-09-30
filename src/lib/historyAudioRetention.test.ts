@@ -53,7 +53,9 @@ describe("history audio settings", () => {
   it("normalizes saveRecordingAudio only when it is boolean", () => {
     expect(normalizeSavedSettings({ saveRecordingAudio: true }).saveRecordingAudio).toBe(true);
     expect(normalizeSavedSettings({ saveRecordingAudio: false }).saveRecordingAudio).toBe(false);
-    expect(normalizeSavedSettings({ saveRecordingAudio: "true" }).saveRecordingAudio).toBeUndefined();
+    expect(
+      normalizeSavedSettings({ saveRecordingAudio: "true" }).saveRecordingAudio,
+    ).toBeUndefined();
   });
 });
 

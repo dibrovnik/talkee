@@ -3,14 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import type { DictationStreamUpdatePayload } from "../../../lib/hotkeyEvents";
 import { logInfo } from "../../../lib/logger";
 import type { AppSettings } from "../../../lib/store";
-import {
-  canUseConfiguredRealtimeModel,
-  STREAMING_STT_ADAPTERS,
-} from "../../../lib/realtimeModels";
-import type {
-  WidgetTextOverlayState,
-  WidgetTextOverlayStatus,
-} from "../widgetConstants";
+import { canUseConfiguredRealtimeModel, STREAMING_STT_ADAPTERS } from "../../../lib/realtimeModels";
+import type { WidgetTextOverlayState, WidgetTextOverlayStatus } from "../widgetConstants";
 
 export interface NativeLiveDictationOptions {
   requestId: string;
@@ -29,17 +23,11 @@ export interface LiveTranscriptionResult {
 
 const LOCAL_STREAMING_STT_MODELS = [
   {
-    catalogIds: [
-      "nemotron-35-asr-streaming-06b",
-      "nvidia/nemotron-3.5-asr-streaming-0.6b",
-    ],
+    catalogIds: ["nemotron-35-asr-streaming-06b", "nvidia/nemotron-3.5-asr-streaming-0.6b"],
     model: "nvidia/nemotron-3.5-asr-streaming-0.6b",
   },
   {
-    catalogIds: [
-      "nemotron-speech-streaming-en-06b",
-      "nvidia/nemotron-speech-streaming-en-0.6b",
-    ],
+    catalogIds: ["nemotron-speech-streaming-en-06b", "nvidia/nemotron-speech-streaming-en-0.6b"],
     model: "nvidia/nemotron-speech-streaming-en-0.6b",
   },
   {
@@ -68,12 +56,7 @@ function isManagedLocalSttEndpoint(endpoint: string): boolean {
     }
 
     const port = Number(url.port || "80");
-    return (
-      port === 8000 ||
-      port === 8001 ||
-      port === 8002 ||
-      (port >= 18000 && port <= 18149)
-    );
+    return port === 8000 || port === 8001 || port === 8002 || (port >= 18000 && port <= 18149);
   } catch {
     return false;
   }
@@ -117,9 +100,7 @@ export async function warmUpLiveDictationRuntime(
   }
   if (
     requiredModel &&
-    !result.models.some(
-      (model) => model.trim().toLowerCase() === requiredModel.toLowerCase(),
-    )
+    !result.models.some((model) => model.trim().toLowerCase() === requiredModel.toLowerCase())
   ) {
     throw new Error(`Local streaming model is unavailable: ${requiredModel}`);
   }
@@ -130,9 +111,7 @@ export async function warmUpLiveDictationRuntime(
   );
 }
 
-export function resolveLocalCallStreamingModel(
-  settings: AppSettings,
-): string | null {
+export function resolveLocalCallStreamingModel(settings: AppSettings): string | null {
   const selectedModel = (settings.whisperModel || "").trim();
   if (STREAMING_LOCAL_STT_MODELS.has(selectedModel)) {
     return selectedModel;
@@ -182,17 +161,11 @@ export function isApiSttStreamingEnabled(settings: AppSettings): boolean {
     (candidate) => candidate.id === settings.selectedApiAdapter,
   );
   if (!adapter) return false;
-  return canUseConfiguredRealtimeModel(
-    adapter,
-    settings.apiAdapters[settings.selectedApiAdapter],
-  );
+  return canUseConfiguredRealtimeModel(adapter, settings.apiAdapters[settings.selectedApiAdapter]);
 }
 
 export function isSttStreamingEnabled(settings: AppSettings): boolean {
-  return (
-    isLocalSttStreamingEnabled(settings) ||
-    isApiSttStreamingEnabled(settings)
-  );
+  return isLocalSttStreamingEnabled(settings) || isApiSttStreamingEnabled(settings);
 }
 
 export function createNativeLiveDictationOptions(
@@ -204,9 +177,7 @@ export function createNativeLiveDictationOptions(
   }
 
   const isLocal = isLocalSttSettings(settings);
-  const adapter = isLocal
-    ? null
-    : settings.apiAdapters[settings.selectedApiAdapter];
+  const adapter = isLocal ? null : settings.apiAdapters[settings.selectedApiAdapter];
 
   return {
     requestId,
@@ -215,9 +186,8 @@ export function createNativeLiveDictationOptions(
     endpoint: isLocal
       ? settings.whisperEndpoint || ""
       : adapter?.endpoint ||
-        STREAMING_STT_ADAPTERS.find(
-          (candidate) => candidate.id === settings.selectedApiAdapter,
-        )?.defaultEndpoint ||
+        STREAMING_STT_ADAPTERS.find((candidate) => candidate.id === settings.selectedApiAdapter)
+          ?.defaultEndpoint ||
         "",
     streamingEnabled: true,
     provider: isLocal ? "local" : settings.selectedApiAdapter,
@@ -232,10 +202,7 @@ export function createDictationOverlayState({
   message,
 }: {
   requestId: string;
-  status: Extract<
-    WidgetTextOverlayStatus,
-    "dictating" | "inserting" | "done" | "error"
-  >;
+  status: Extract<WidgetTextOverlayStatus, "dictating" | "inserting" | "done" | "error">;
   text: string;
   message?: string;
 }): WidgetTextOverlayState {
@@ -252,15 +219,8 @@ export function createDictationOverlayState({
 export function dictationOverlayStateFromStreamUpdate(
   payload: DictationStreamUpdatePayload,
 ): WidgetTextOverlayState {
-  const status: Extract<
-    WidgetTextOverlayStatus,
-    "dictating" | "done" | "error"
-  > =
-    payload.status === "error"
-      ? "error"
-      : payload.status === "final"
-        ? "done"
-        : "dictating";
+  const status: Extract<WidgetTextOverlayStatus, "dictating" | "done" | "error"> =
+    payload.status === "error" ? "error" : payload.status === "final" ? "done" : "dictating";
 
   return createDictationOverlayState({
     requestId: payload.requestId,

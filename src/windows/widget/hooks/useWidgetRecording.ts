@@ -20,10 +20,7 @@ import {
   startDictationStreamOverlaySession,
   type DictationStreamOverlaySession,
 } from "../services/transcriptionPipeline";
-import {
-  getVoiceAudioConstraints,
-  resolveSelectedMicLabel,
-} from "../services/recordingDevice";
+import { getVoiceAudioConstraints, resolveSelectedMicLabel } from "../services/recordingDevice";
 import {
   createNativeLiveDictationOptions,
   isLocalSttStreamingEnabled,
@@ -31,10 +28,7 @@ import {
   warmUpLiveDictationRuntime,
 } from "../services/dictationStreamOverlay";
 import { waitForRuntimeWarmUpWithinBudget } from "../services/runtimeWarmup";
-import type {
-  WidgetAction,
-  WidgetMachineState,
-} from "../services/widgetMachine";
+import type { WidgetAction, WidgetMachineState } from "../services/widgetMachine";
 
 const LOW_MIC_GRACE_MS = 1800;
 const LOW_MIC_SUSTAINED_MS = 2600;
@@ -62,10 +56,7 @@ interface UseWidgetRecordingResult {
   stopAndProcess: () => Promise<void>;
 }
 
-async function waitForTrackReady(
-  stream: MediaStream,
-  timeoutMs: number,
-): Promise<void> {
+async function waitForTrackReady(stream: MediaStream, timeoutMs: number): Promise<void> {
   const [track] = stream.getAudioTracks();
   if (!track || (!track.muted && track.readyState === "live")) {
     return;
@@ -149,26 +140,23 @@ export function useWidgetRecording({
     recordingLimitTimerRef.current = null;
   }, []);
 
-  const clearDictationStreamSession = useCallback(
-    async (hideOverlay: boolean) => {
-      const session = dictationStreamRef.current;
-      dictationStreamRef.current = null;
-      if (!session) {
-        return;
-      }
+  const clearDictationStreamSession = useCallback(async (hideOverlay: boolean) => {
+    const session = dictationStreamRef.current;
+    dictationStreamRef.current = null;
+    if (!session) {
+      return;
+    }
 
-      if (hideOverlay) {
-        await session.hide().catch((error) => {
-          logError(
-            "DICTATION_STREAM",
-            `Failed to hide live dictation overlay: ${formatErrorMessage(error)}`,
-          );
-        });
-      }
-      session.dispose();
-    },
-    [],
-  );
+    if (hideOverlay) {
+      await session.hide().catch((error) => {
+        logError(
+          "DICTATION_STREAM",
+          `Failed to hide live dictation overlay: ${formatErrorMessage(error)}`,
+        );
+      });
+    }
+    session.dispose();
+  }, []);
 
   const scheduleRecordingLimitTimer = useCallback(() => {
     clearRecordingLimitTimer();
@@ -217,11 +205,7 @@ export function useWidgetRecording({
           }
           const now = Date.now();
 
-          if (
-            now - startedAt < LOW_MIC_GRACE_MS ||
-            noticeShown ||
-            normalSignalSamples >= 3
-          ) {
+          if (now - startedAt < LOW_MIC_GRACE_MS || noticeShown || normalSignalSamples >= 3) {
             if (rms >= LOW_MIC_RMS_THRESHOLD) {
               lowStartedAt = null;
             }
@@ -248,10 +232,7 @@ export function useWidgetRecording({
           void audioContext.close();
         };
       } catch (error) {
-        logError(
-          "RECORDING",
-          `Low mic monitor failed: ${formatErrorMessage(error)}`,
-        );
+        logError("RECORDING", `Low mic monitor failed: ${formatErrorMessage(error)}`);
       }
     },
     [showNotice, stopLowMicMonitor, t],
@@ -296,9 +277,7 @@ export function useWidgetRecording({
     // In local STT mode the whisper server runs on localhost and requires no API key.
     // Detect this case by the local-looking endpoint; provider can be stale after upgrades.
     const isLocalSttMode =
-      (activeSettings.whisperEndpoint || "").match(
-        /127\.0\.0\.1|localhost/i,
-      ) !== null &&
+      (activeSettings.whisperEndpoint || "").match(/127\.0\.0\.1|localhost/i) !== null &&
       (activeSettings.whisperApiKey || "").trim().length === 0;
 
     if (!hasKey && !isLocalSttMode) {
@@ -317,27 +296,25 @@ export function useWidgetRecording({
       await clearTextOverlayPromise;
 
       const liveStreamingEnabled = isSttStreamingEnabled(activeSettings);
-      const localLiveStreamingEnabled =
-        isLocalSttStreamingEnabled(activeSettings);
-      const startLiveOverlay =
-        (): Promise<DictationStreamOverlaySession | null> =>
-          startDictationStreamOverlaySession(activeSettings)
-            .then((session) => {
-              if (session) {
-                logInfo(
-                  "DICTATION_STREAM",
-                  `Live dictation overlay ready after ${Date.now() - startRequestedAt}ms`,
-                );
-              }
-              return session;
-            })
-            .catch((error) => {
-              logError(
+      const localLiveStreamingEnabled = isLocalSttStreamingEnabled(activeSettings);
+      const startLiveOverlay = (): Promise<DictationStreamOverlaySession | null> =>
+        startDictationStreamOverlaySession(activeSettings)
+          .then((session) => {
+            if (session) {
+              logInfo(
                 "DICTATION_STREAM",
-                `Failed to start live dictation overlay session: ${formatErrorMessage(error)}`,
+                `Live dictation overlay ready after ${Date.now() - startRequestedAt}ms`,
               );
-              return null;
-            });
+            }
+            return session;
+          })
+          .catch((error) => {
+            logError(
+              "DICTATION_STREAM",
+              `Failed to start live dictation overlay session: ${formatErrorMessage(error)}`,
+            );
+            return null;
+          });
       const warmUpLiveRuntime = (): Promise<string | null | false> =>
         warmUpLiveDictationRuntime(activeSettings)
           .then((runtimeEndpoint) => {
@@ -355,23 +332,15 @@ export function useWidgetRecording({
             return false;
           });
 
-      let dictationStreamPromise: Promise<DictationStreamOverlaySession | null> | null =
-        null;
-      const liveWarmUpPromise = localLiveStreamingEnabled
-        ? warmUpLiveRuntime()
-        : null;
+      let dictationStreamPromise: Promise<DictationStreamOverlaySession | null> | null = null;
+      const liveWarmUpPromise = localLiveStreamingEnabled ? warmUpLiveRuntime() : null;
       if (liveStreamingEnabled && !activeSettings.micId) {
         dictationStreamPromise = startLiveOverlay();
       }
 
-      const nativeMicLabel = await resolveSelectedMicLabel(
-        activeSettings.micId,
-      );
+      const nativeMicLabel = await resolveSelectedMicLabel(activeSettings.micId);
       if (activeSettings.micId && nativeMicLabel) {
-        logInfo(
-          "RECORDING",
-          `Using preferred native mic label: ${nativeMicLabel}`,
-        );
+        logInfo("RECORDING", `Using preferred native mic label: ${nativeMicLabel}`);
       } else if (activeSettings.micId) {
         logInfo(
           "RECORDING",
@@ -383,14 +352,9 @@ export function useWidgetRecording({
         dictationStreamPromise = startLiveOverlay();
       }
 
-      let dictationStream = dictationStreamPromise
-        ? await dictationStreamPromise
-        : null;
+      let dictationStream = dictationStreamPromise ? await dictationStreamPromise : null;
       let liveDictation = dictationStream
-        ? createNativeLiveDictationOptions(
-            activeSettings,
-            dictationStream.requestId,
-          )
+        ? createNativeLiveDictationOptions(activeSettings, dictationStream.requestId)
         : null;
 
       try {
@@ -412,10 +376,7 @@ export function useWidgetRecording({
             dictationStream.dispose();
             dictationStream = null;
             liveDictation = null;
-          } else if (
-            warmUpResult.value &&
-            liveDictation.provider === "local"
-          ) {
+          } else if (warmUpResult.value && liveDictation.provider === "local") {
             liveDictation = {
               ...liveDictation,
               endpoint: warmUpResult.value,
@@ -439,9 +400,7 @@ export function useWidgetRecording({
         }
         logInfo(
           "RECORDING",
-          codec === "native-wav"
-            ? "Using native wav recorder"
-            : "Using native recorder",
+          codec === "native-wav" ? "Using native wav recorder" : "Using native recorder",
         );
         setStream(null);
         logInfo("RECORDING", "Recording started successfully");
@@ -525,16 +484,10 @@ export function useWidgetRecording({
       void clearDictationStreamSession(true);
       recordingSettingsRef.current = null;
       setStream(null);
-      logError(
-        "RECORDING",
-        `Start error: ${error instanceof Error ? error.message : "unknown"}`,
-      );
+      logError("RECORDING", `Start error: ${error instanceof Error ? error.message : "unknown"}`);
       showError(
         t("widget.recording.startError", {
-          error:
-            error instanceof Error
-              ? error.message
-              : t("widget.recording.unknownError"),
+          error: error instanceof Error ? error.message : t("widget.recording.unknownError"),
         }),
       );
     }
@@ -562,11 +515,7 @@ export function useWidgetRecording({
 
     const machine = machineRef.current;
     const activeSettings = recordingSettingsRef.current ?? settings;
-    if (
-      !runtimeRef.current.hasRecorder() ||
-      !activeSettings ||
-      !machine.recordingActive
-    ) {
+    if (!runtimeRef.current.hasRecorder() || !activeSettings || !machine.recordingActive) {
       logError("RECORDING", "No active recording");
       return;
     }
@@ -611,10 +560,7 @@ export function useWidgetRecording({
       );
       const durationMs = Date.now() - machine.recordingStartTimestamp;
 
-      if (
-        durationMs < MIN_RECORDING_DURATION_MS ||
-        blob.size < MIN_AUDIO_BLOB_BYTES
-      ) {
+      if (durationMs < MIN_RECORDING_DURATION_MS || blob.size < MIN_AUDIO_BLOB_BYTES) {
         logInfo(
           "RECORDING",
           `Recording too short, skipping API request. duration_ms=${durationMs}, blob_size=${blob.size}`,
@@ -694,11 +640,7 @@ export function useWidgetRecording({
       runtimeRef.current.dispose();
       void clearDictationStreamSession(true);
     };
-  }, [
-    clearDictationStreamSession,
-    clearRecordingLimitTimer,
-    stopLowMicMonitor,
-  ]);
+  }, [clearDictationStreamSession, clearRecordingLimitTimer, stopLowMicMonitor]);
 
   return { startRecording, stopAndProcess };
 }

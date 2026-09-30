@@ -98,11 +98,26 @@ export function Waveform({ stream, isActive }: WaveformProps) {
           const edgeFade = Math.sin(progress * Math.PI);
           const envelope = Math.pow(Math.max(0, edgeFade), 1.08);
           const drift = Math.sin(time * 0.37 + line.phase) * 0.18;
-          const primary = Math.sin(progress * Math.PI * (3.1 + line.wobble * 0.18) + time * line.speed + line.phase);
-          const secondary = Math.sin(progress * Math.PI * (7.3 + line.wobble * 0.42) - time * (line.speed * 0.83) + line.phase * 1.37);
-          const tertiary = Math.cos(progress * Math.PI * (13.4 + line.wobble * 0.31) + time * (0.56 + line.wobble * 0.04) + line.phase);
-          const grain = Math.sin((progress + line.phase) * 38 + time * (1.1 + line.wobble * 0.11)) * 0.055;
-          const displacement = ((primary * 0.52) + (secondary * 0.31) + (tertiary * 0.12) + grain + drift) * baseAmplitude * line.amplitude * envelope;
+          const primary = Math.sin(
+            progress * Math.PI * (3.1 + line.wobble * 0.18) + time * line.speed + line.phase,
+          );
+          const secondary = Math.sin(
+            progress * Math.PI * (7.3 + line.wobble * 0.42) -
+              time * (line.speed * 0.83) +
+              line.phase * 1.37,
+          );
+          const tertiary = Math.cos(
+            progress * Math.PI * (13.4 + line.wobble * 0.31) +
+              time * (0.56 + line.wobble * 0.04) +
+              line.phase,
+          );
+          const grain =
+            Math.sin((progress + line.phase) * 38 + time * (1.1 + line.wobble * 0.11)) * 0.055;
+          const displacement =
+            (primary * 0.52 + secondary * 0.31 + tertiary * 0.12 + grain + drift) *
+            baseAmplitude *
+            line.amplitude *
+            envelope;
           const y = centerY + displacement;
 
           if (x === 0) {
@@ -139,10 +154,5 @@ export function Waveform({ stream, isActive }: WaveformProps) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ width: "100%", height: "100%", display: "block" }}
-    />
-  );
+  return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />;
 }

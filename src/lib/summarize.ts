@@ -50,9 +50,7 @@ export function transcriptToText(
   entry: Pick<HistoryEntry, "cleaned" | "mode" | "segments">,
 ): string {
   if (entry.mode === "speakers" && entry.segments?.length) {
-    return entry.segments
-      .map((segment) => `${segment.speakerLabel}: ${segment.text}`)
-      .join("\n");
+    return entry.segments.map((segment) => `${segment.speakerLabel}: ${segment.text}`).join("\n");
   }
 
   return entry.cleaned ?? "";
@@ -215,9 +213,7 @@ function localLlmRunner(
 }
 
 function formatPartialBlocks(blocks: string[]): string {
-  return blocks
-    .map((partial, index) => `Часть ${index + 1}:\n${partial}`)
-    .join("\n\n");
+  return blocks.map((partial, index) => `Часть ${index + 1}:\n${partial}`).join("\n\n");
 }
 
 function groupBlocksByLimit(blocks: string[], maxChars: number): string[][] {
@@ -257,9 +253,7 @@ function isBundledLocalRuntime(endpoint: string): boolean {
  * Pick the summary backend from settings: a custom [OI]-compatible endpoint,
  * or a local runtime (127.0.0.1). Returns null when nothing is configured yet.
  */
-export function resolveSummaryBackend(
-  settings: AppSettings,
-): ResolvedSummaryBackend | null {
+export function resolveSummaryBackend(settings: AppSettings): ResolvedSummaryBackend | null {
   const endpoint = settings.llmEndpoint?.trim() ?? "";
   const model = settings.llmModel?.trim() ?? "";
   const apiKey = (settings.llmApiKey?.trim() || settings.apiKey?.trim()) ?? "";

@@ -11,34 +11,23 @@ import { ONBOARDING_STT_MODELS } from "../config/onboardingSttModels";
 
 describe("onboarding local STT helpers", () => {
   it("normalizes casing, spacing and е/ё without removing punctuation", () => {
-    expect(
-      normalizeOnboardingTestPhrase(
-        "  СЕГОДНЯ   ХОРОШАЯ ПОГОДА , и я говорю ясно.  ",
-      ),
-    ).toBe("сегодня хорошая погода, и я говорю ясно.");
+    expect(normalizeOnboardingTestPhrase("  СЕГОДНЯ   ХОРОШАЯ ПОГОДА , и я говорю ясно.  ")).toBe(
+      "сегодня хорошая погода, и я говорю ясно.",
+    );
   });
 
   it("requires the recognized words and punctuation to match", () => {
     const expected = "Сегодня хорошая погода, и я говорю ясно.";
 
-    expect(
-      matchesOnboardingTestPhrase(
-        "сегодня хорошая погода, и я говорю ясно.",
-        expected,
-      ),
-    ).toBe(true);
-    expect(
-      matchesOnboardingTestPhrase(
-        "Сегодня хорошая погода и я говорю ясно.",
-        expected,
-      ),
-    ).toBe(false);
-    expect(
-      matchesOnboardingTestPhrase(
-        "Сегодня плохая погода, и я говорю ясно.",
-        expected,
-      ),
-    ).toBe(false);
+    expect(matchesOnboardingTestPhrase("сегодня хорошая погода, и я говорю ясно.", expected)).toBe(
+      true,
+    );
+    expect(matchesOnboardingTestPhrase("Сегодня хорошая погода и я говорю ясно.", expected)).toBe(
+      false,
+    );
+    expect(matchesOnboardingTestPhrase("Сегодня плохая погода, и я говорю ясно.", expected)).toBe(
+      false,
+    );
   });
 
   it("keeps the active bundled model when onboarding is reopened", () => {
@@ -91,9 +80,7 @@ describe("onboarding local STT helpers", () => {
   });
 
   it("formats determinate download progress", () => {
-    expect(formatOnboardingDownloadProgress(50_000_000, 200_000_000)).toBe(
-      "50 / 200 MB",
-    );
+    expect(formatOnboardingDownloadProgress(50_000_000, 200_000_000)).toBe("50 / 200 MB");
     expect(formatOnboardingDownloadProgress(0, null)).toBe("");
   });
 });

@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 
 import { getSettings } from "../store";
@@ -18,8 +12,7 @@ const LS_KEY = "talkee.uiLanguage";
 
 /** Best-effort OS language guess from the webview locale (RU is the fallback). */
 export function detectOsLanguage(): UiLanguage {
-  const nav =
-    (typeof navigator !== "undefined" && navigator.language) || "";
+  const nav = (typeof navigator !== "undefined" && navigator.language) || "";
   return /^en/i.test(nav) ? "en" : "ru";
 }
 
@@ -33,7 +26,7 @@ export type TFunc = (key: MsgKey, vars?: Vars) => string;
 
 export function translate(lang: UiLanguage, key: MsgKey, vars?: Vars): string {
   const entry = MESSAGES[key] as { ru: string; en: string } | undefined;
-  let text = entry ? entry[lang] ?? entry.ru : (key as string);
+  let text = entry ? (entry[lang] ?? entry.ru) : (key as string);
   if (vars) {
     for (const name of Object.keys(vars)) {
       text = text.split(`{${name}}`).join(String(vars[name]));
@@ -104,9 +97,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const t: TFunc = (key, vars) => translate(lang, key, vars);
 
-  return (
-    <I18nContext.Provider value={{ lang, t }}>{children}</I18nContext.Provider>
-  );
+  return <I18nContext.Provider value={{ lang, t }}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n(): I18nValue {

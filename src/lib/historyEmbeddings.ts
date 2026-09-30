@@ -67,13 +67,12 @@ function resolveHistoryEmbeddingBackend(settings: AppSettings): HistoryEmbedding
 }
 
 function validEmbedding(value: unknown): value is number[] {
-  return Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "number");
+  return (
+    Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "number")
+  );
 }
 
-async function embedTexts(
-  texts: string[],
-  backend: HistoryEmbeddingBackend,
-): Promise<number[][]> {
+async function embedTexts(texts: string[], backend: HistoryEmbeddingBackend): Promise<number[][]> {
   const response = await invoke<EmbedTextResponse>("embed_text", {
     req: {
       input: texts,
@@ -127,7 +126,10 @@ export async function ensureHistorySearchEmbeddings(
   try {
     for (let start = 0; start < target.length; start += HISTORY_EMBEDDING_BATCH_SIZE) {
       const batch = target.slice(start, start + HISTORY_EMBEDDING_BATCH_SIZE);
-      const embeddings = await embedTexts(batch.map((chunk) => chunk.text), backend);
+      const embeddings = await embedTexts(
+        batch.map((chunk) => chunk.text),
+        backend,
+      );
       if (embeddings.length !== batch.length) {
         return index;
       }

@@ -3,11 +3,7 @@ import type {
   HotkeyRegistrationResultPayload,
   HotkeyTarget,
 } from "../../../lib/hotkeyEvents";
-import {
-  normalizeHotkey,
-  type AppSettingsPatch,
-  type AppSettings,
-} from "../../../lib/store";
+import { normalizeHotkey, type AppSettingsPatch, type AppSettings } from "../../../lib/store";
 
 export type HotkeyTransactionStage =
   | "validate"
@@ -41,15 +37,10 @@ export interface HotkeyTransactionDependencies {
 }
 
 function configuredHotkey(settings: AppSettings, target: HotkeyTarget): string {
-  return target === "dictation"
-    ? settings.hotkey
-    : settings.translation.selectionHotkey;
+  return target === "dictation" ? settings.hotkey : settings.translation.selectionHotkey;
 }
 
-function settingsPatch(
-  target: HotkeyTarget,
-  hotkey: string,
-): AppSettingsPatch {
+function settingsPatch(target: HotkeyTarget, hotkey: string): AppSettingsPatch {
   if (target === "dictation") {
     return { hotkey };
   }
@@ -62,10 +53,7 @@ function settingsPatch(
   };
 }
 
-function rollbackPatch(
-  settings: AppSettings,
-  target: HotkeyTarget,
-): AppSettingsPatch {
+function rollbackPatch(settings: AppSettings, target: HotkeyTarget): AppSettingsPatch {
   return target === "dictation"
     ? { hotkey: settings.hotkey }
     : {
@@ -101,11 +89,7 @@ async function safeUnregister(
   try {
     await dependencies.unregisterHotkey(hotkey);
   } catch (error) {
-    dependencies.log(
-      "rollback",
-      request,
-      `unregister failed: ${String(error)}`,
-    );
+    dependencies.log("rollback", request, `unregister failed: ${String(error)}`);
   }
 }
 
@@ -117,49 +101,29 @@ export async function applyHotkeyTransaction(
   const normalized = normalizeHotkey(request.hotkey);
   const initialSettings = await dependencies.loadSettings();
   const configuredCurrent =
-    normalizeHotkey(configuredHotkey(initialSettings, request.target))
-      .normalized ?? configuredHotkey(initialSettings, request.target);
+    normalizeHotkey(configuredHotkey(initialSettings, request.target)).normalized ??
+    configuredHotkey(initialSettings, request.target);
   const registeredCurrent = dependencies.getActiveHotkey(request.target);
-  const activeCurrent =
-    registeredCurrent ?? configuredCurrent;
+  const activeCurrent = registeredCurrent ?? configuredCurrent;
 
   if (!normalized.valid || !normalized.normalized) {
-    return result(
-      request,
-      false,
-      request.hotkey,
-      activeCurrent,
-      normalized.error,
-    );
+    return result(request, false, request.hotkey, activeCurrent, normalized.error);
   }
 
   const nextHotkey = normalized.normalized;
   if (!dependencies.isCurrentRequest(request.target, request.requestId)) {
     dependencies.log("stale", request, "ignored before registration");
-    return result(
-      request,
-      false,
-      nextHotkey,
-      activeCurrent,
-      dependencies.messages.stale,
-    );
+    return result(request, false, nextHotkey, activeCurrent, dependencies.messages.stale);
   }
 
-  const otherTarget: HotkeyTarget =
-    request.target === "dictation" ? "selection" : "dictation";
+  const otherTarget: HotkeyTarget = request.target === "dictation" ? "selection" : "dictation";
   const configuredOther =
-    normalizeHotkey(configuredHotkey(initialSettings, otherTarget))
-      .normalized ?? configuredHotkey(initialSettings, otherTarget);
+    normalizeHotkey(configuredHotkey(initialSettings, otherTarget)).normalized ??
+    configuredHotkey(initialSettings, otherTarget);
   const activeOther = dependencies.getActiveHotkey(otherTarget);
   if (nextHotkey === configuredOther || nextHotkey === activeOther) {
     dependencies.log("conflict", request, `conflictsWith=${otherTarget}`);
-    return result(
-      request,
-      false,
-      nextHotkey,
-      activeCurrent,
-      dependencies.messages.conflict,
-    );
+    return result(request, false, nextHotkey, activeCurrent, dependencies.messages.conflict);
   }
 
   // Persistent settings are not evidence that the shortcut is currently
@@ -188,57 +152,31 @@ export async function applyHotkeyTransaction(
     if (registeredNew) {
       await safeUnregister(nextHotkey, dependencies, request);
     }
-    return result(
-      request,
-      false,
-      nextHotkey,
-      activeCurrent,
-      dependencies.messages.stale,
-    );
+    return result(request, false, nextHotkey, activeCurrent, dependencies.messages.stale);
   }
 
   dependencies.log("save", request, `hotkey=${nextHotkey}`);
   try {
-    await dependencies.saveSettings(
-      settingsPatch(request.target, nextHotkey),
-    );
+    await dependencies.saveSettings(settingsPatch(request.target, nextHotkey));
   } catch (error) {
     dependencies.log("rollback", request, `save failed: ${String(error)}`);
     if (registeredNew) {
       await safeUnregister(nextHotkey, dependencies, request);
     }
-    return result(
-      request,
-      false,
-      nextHotkey,
-      activeCurrent,
-      dependencies.messages.saveFailed,
-    );
+    return result(request, false, nextHotkey, activeCurrent, dependencies.messages.saveFailed);
   }
 
   if (!dependencies.isCurrentRequest(request.target, request.requestId)) {
     dependencies.log("stale", request, "rolling back saved candidate");
     try {
-      await dependencies.saveSettings(
-        rollbackPatch(initialSettings, request.target),
-      );
+      await dependencies.saveSettings(rollbackPatch(initialSettings, request.target));
     } catch (error) {
-      dependencies.log(
-        "rollback",
-        request,
-        `settings rollback failed: ${String(error)}`,
-      );
+      dependencies.log("rollback", request, `settings rollback failed: ${String(error)}`);
     }
     if (registeredNew) {
       await safeUnregister(nextHotkey, dependencies, request);
     }
-    return result(
-      request,
-      false,
-      nextHotkey,
-      activeCurrent,
-      dependencies.messages.stale,
-    );
+    return result(request, false, nextHotkey, activeCurrent, dependencies.messages.stale);
   }
 
   if (registeredNew && registeredCurrent && registeredCurrent !== nextHotkey) {
@@ -246,21 +184,11 @@ export async function applyHotkeyTransaction(
     try {
       await dependencies.unregisterHotkey(registeredCurrent);
     } catch (error) {
-      dependencies.log(
-        "rollback",
-        request,
-        `old unregister failed: ${String(error)}`,
-      );
+      dependencies.log("rollback", request, `old unregister failed: ${String(error)}`);
       try {
-        await dependencies.saveSettings(
-          rollbackPatch(initialSettings, request.target),
-        );
+        await dependencies.saveSettings(rollbackPatch(initialSettings, request.target));
       } catch (rollbackError) {
-        dependencies.log(
-          "rollback",
-          request,
-          `settings rollback failed: ${String(rollbackError)}`,
-        );
+        dependencies.log("rollback", request, `settings rollback failed: ${String(rollbackError)}`);
       }
       await safeUnregister(nextHotkey, dependencies, request);
       return result(

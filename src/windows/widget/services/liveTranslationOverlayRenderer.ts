@@ -24,15 +24,15 @@ export function createLiveTranslationOverlayRenderer({
   let pending: LiveTranslationOverlayState | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
-  const enqueueRender = (
-    state: LiveTranslationOverlayState,
-  ): Promise<void> =>
-    queue.enqueue(async () => {
-      if (!isActive(state.sessionId)) return;
-      await render(state);
-    }).catch((error) => {
-      onError?.(error);
-    });
+  const enqueueRender = (state: LiveTranslationOverlayState): Promise<void> =>
+    queue
+      .enqueue(async () => {
+        if (!isActive(state.sessionId)) return;
+        await render(state);
+      })
+      .catch((error) => {
+        onError?.(error);
+      });
 
   const flush = (): void => {
     const next = pending;

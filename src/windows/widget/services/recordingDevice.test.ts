@@ -14,10 +14,7 @@ describe("requestVoiceAudioStream", () => {
       },
     } as Pick<MediaDevices, "getUserMedia">;
 
-    const stream = await requestVoiceAudioStream(
-      "stale-device-id",
-      mediaDevices,
-    );
+    const stream = await requestVoiceAudioStream("stale-device-id", mediaDevices);
 
     expect(stream).toBe(fallbackStream);
     expect(calls).toHaveLength(2);
@@ -37,10 +34,7 @@ describe("requestVoiceAudioStream", () => {
       },
     } as Pick<MediaDevices, "getUserMedia">;
 
-    const stream = await requestVoiceAudioStream(
-      "selected-device",
-      mediaDevices,
-    );
+    const stream = await requestVoiceAudioStream("selected-device", mediaDevices);
 
     expect(stream).toBe(selectedStream);
     expect(calls).toHaveLength(1);

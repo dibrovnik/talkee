@@ -139,5 +139,4 @@ export const components = {
   "titleBar.close": { ru: "Закрыть", en: "Close" },
   "titleBar.minimize": { ru: "Свернуть", en: "Minimize" },
   "titleBar.maximize": { ru: "Развернуть", en: "Maximize" },
-
 } as const;

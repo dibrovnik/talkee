@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  requestCallMicrophoneStream,
-  resolveCallMicrophoneLabel,
-} from "./callMicrophone";
+import { requestCallMicrophoneStream, resolveCallMicrophoneLabel } from "./callMicrophone";
 
 function audioInput(deviceId: string, label: string): MediaDeviceInfo {
   return {
@@ -27,9 +24,7 @@ describe("call microphone selection", () => {
       },
     };
 
-    await expect(
-      requestCallMicrophoneStream("selected-mic", mediaDevices),
-    ).resolves.toBe(stream);
+    await expect(requestCallMicrophoneStream("selected-mic", mediaDevices)).resolves.toBe(stream);
     expect(calls).toEqual([{ audio: { deviceId: { exact: "selected-mic" } } }]);
   });
 
@@ -44,9 +39,9 @@ describe("call microphone selection", () => {
       },
     };
 
-    await expect(
-      requestCallMicrophoneStream("missing-mic", mediaDevices),
-    ).rejects.toBe(unavailable);
+    await expect(requestCallMicrophoneStream("missing-mic", mediaDevices)).rejects.toBe(
+      unavailable,
+    );
     expect(calls).toHaveLength(1);
     expect(calls[0]).toEqual({
       audio: { deviceId: { exact: "missing-mic" } },
@@ -64,9 +59,7 @@ describe("call microphone selection", () => {
       },
     };
 
-    await expect(requestCallMicrophoneStream("", mediaDevices)).resolves.toBe(
-      stream,
-    );
+    await expect(requestCallMicrophoneStream("", mediaDevices)).resolves.toBe(stream);
     expect(calls).toEqual([{ audio: true }]);
   });
 
@@ -83,27 +76,25 @@ describe("call microphone selection", () => {
       },
     };
 
-    await expect(
-      resolveCallMicrophoneLabel("selected-mic", mediaDevices),
-    ).resolves.toBe("Studio microphone");
+    await expect(resolveCallMicrophoneLabel("selected-mic", mediaDevices)).resolves.toBe(
+      "Studio microphone",
+    );
     expect(getUserMediaCalls).toBe(0);
   });
 
   test("rejects a missing selected microphone without opening the default", async () => {
     let getUserMediaCalls = 0;
     const mediaDevices = {
-      enumerateDevices: async () => [
-        audioInput("other-mic", "Other microphone"),
-      ],
+      enumerateDevices: async () => [audioInput("other-mic", "Other microphone")],
       getUserMedia: async () => {
         getUserMediaCalls += 1;
         return {} as MediaStream;
       },
     };
 
-    await expect(
-      resolveCallMicrophoneLabel("missing-mic", mediaDevices),
-    ).rejects.toThrow("Selected microphone is unavailable");
+    await expect(resolveCallMicrophoneLabel("missing-mic", mediaDevices)).rejects.toThrow(
+      "Selected microphone is unavailable",
+    );
     expect(getUserMediaCalls).toBe(0);
   });
 
@@ -121,9 +112,7 @@ describe("call microphone selection", () => {
       },
     };
 
-    await expect(resolveCallMicrophoneLabel("", mediaDevices)).resolves.toBe(
-      null,
-    );
+    await expect(resolveCallMicrophoneLabel("", mediaDevices)).resolves.toBe(null);
     expect(enumerateCalls).toBe(0);
     expect(getUserMediaCalls).toBe(0);
   });

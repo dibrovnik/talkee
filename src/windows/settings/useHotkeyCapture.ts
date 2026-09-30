@@ -119,14 +119,9 @@ export function useHotkeyCapture({
         }).catch(() => null);
       }
       if (requestId) {
-        await invoke("stop_native_hotkey_capture", { requestId, target }).catch(
-          (error) => {
-            void logError(
-              logTag,
-              `Failed to stop native hotkey capture: ${String(error)}`,
-            );
-          },
-        );
+        await invoke("stop_native_hotkey_capture", { requestId, target }).catch((error) => {
+          void logError(logTag, `Failed to stop native hotkey capture: ${String(error)}`);
+        });
       }
       if (message) {
         setTone("idle");
@@ -223,10 +218,7 @@ export function useHotkeyCapture({
     const resultListener = listen<HotkeyRegistrationResultPayload>(
       HOTKEY_REGISTRATION_RESULT_EVENT,
       async ({ payload }) => {
-        if (
-          payload.target !== target ||
-          payload.requestId !== pendingRequestIdRef.current
-        ) {
+        if (payload.target !== target || payload.requestId !== pendingRequestIdRef.current) {
           return;
         }
 
@@ -293,10 +285,7 @@ export function useHotkeyCapture({
       if (document.visibilityState === "hidden") cancel();
     };
     const handleMouseDown = (event: MouseEvent): void => {
-      if (
-        surfaceRef.current &&
-        !surfaceRef.current.contains(event.target as Node)
-      ) {
+      if (surfaceRef.current && !surfaceRef.current.contains(event.target as Node)) {
         cancel();
       }
     };
@@ -325,8 +314,7 @@ export function useHotkeyCapture({
         return;
       }
       if (event.key !== "Enter" && event.key !== " ") return;
-      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
-        return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       event.preventDefault();
       event.stopPropagation();
       void start();

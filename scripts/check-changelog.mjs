@@ -22,9 +22,7 @@ export function run({
   stdout = process.stdout,
   stderr = process.stderr,
 } = {}) {
-  const version = JSON.parse(
-    readFileSync(resolve(rootDir, "package.json"), "utf8"),
-  ).version;
+  const version = JSON.parse(readFileSync(resolve(rootDir, "package.json"), "utf8")).version;
 
   let changelog;
   try {
@@ -43,15 +41,12 @@ export function run({
     return 1;
   }
 
-  stdout.write(
-    `check:changelog OK — CHANGELOG.md has a section for ${version}.\n`,
-  );
+  stdout.write(`check:changelog OK — CHANGELOG.md has a section for ${version}.\n`);
   return 0;
 }
 
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : "";
-const isDirectRun =
-  import.meta.main === true || invokedPath === fileURLToPath(import.meta.url);
+const isDirectRun = import.meta.main === true || invokedPath === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
   process.exit(run({ rootDir: process.cwd() }));

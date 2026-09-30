@@ -72,8 +72,7 @@ export function normalizeStats(
   return {
     version: STATS_VERSION,
     allTimeWords: Number.isFinite(raw.allTimeWords) ? Number(raw.allTimeWords) : 0,
-    dailyWords:
-      raw.dailyWords && typeof raw.dailyWords === "object" ? { ...raw.dailyWords } : {},
+    dailyWords: raw.dailyWords && typeof raw.dailyWords === "object" ? { ...raw.dailyWords } : {},
     monthlyWords:
       raw.monthlyWords && typeof raw.monthlyWords === "object" ? { ...raw.monthlyWords } : {},
     voiceWords: Number.isFinite(raw.voiceWords) ? Number(raw.voiceWords) : 0,
@@ -120,9 +119,7 @@ export function dayKeyOf(value: string | Date): string {
 }
 
 function normalizeSource(source: StatSource): "voice" | "file" | "call" | "liveTranslation" {
-  return source === "file" || source === "call" || source === "liveTranslation"
-    ? source
-    : "voice";
+  return source === "file" || source === "call" || source === "liveTranslation" ? source : "voice";
 }
 
 /**
@@ -195,9 +192,7 @@ export function statsToView(
   const month = monthKeyOf(now);
   const day = dayKeyOf(now);
   const hasSpeed = stats.voiceDurationSec > 0 && stats.voiceWords > 0;
-  const averageWpm = hasSpeed
-    ? Math.round(stats.voiceWords / (stats.voiceDurationSec / 60))
-    : 0;
+  const averageWpm = hasSpeed ? Math.round(stats.voiceWords / (stats.voiceDurationSec / 60)) : 0;
 
   return {
     todayWords: stats.dailyWords[day] || 0,

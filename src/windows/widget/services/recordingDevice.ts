@@ -1,9 +1,7 @@
 import { logError } from "../../../lib/logger";
 import { formatErrorMessage } from "../../../lib/utils";
 
-export function getVoiceAudioConstraints(
-  micId: string,
-): MediaTrackConstraints | true {
+export function getVoiceAudioConstraints(micId: string): MediaTrackConstraints | true {
   const constraints: MediaTrackConstraints = {
     echoCancellation: false,
     noiseSuppression: false,
@@ -35,9 +33,7 @@ export async function requestVoiceAudioStream(
   }
 }
 
-export async function resolveSelectedMicLabel(
-  micId: string,
-): Promise<string | null> {
+export async function resolveSelectedMicLabel(micId: string): Promise<string | null> {
   if (!micId || !navigator.mediaDevices?.enumerateDevices) {
     return null;
   }
@@ -60,15 +56,10 @@ export async function resolveSelectedMicLabel(
     }
 
     devices = await navigator.mediaDevices.enumerateDevices();
-    selected = devices.find(
-      (device) => device.kind === "audioinput" && device.deviceId === micId,
-    );
+    selected = devices.find((device) => device.kind === "audioinput" && device.deviceId === micId);
     return selected?.label?.trim() || null;
   } catch (error) {
-    logError(
-      "RECORDING",
-      `Failed to resolve selected mic label: ${formatErrorMessage(error)}`,
-    );
+    logError("RECORDING", `Failed to resolve selected mic label: ${formatErrorMessage(error)}`);
     return null;
   } finally {
     permissionStream?.getTracks().forEach((track) => track.stop());

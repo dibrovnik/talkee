@@ -37,7 +37,11 @@ export function watchThemePreference(
 
   apply();
 
-  if (preference !== "system" || typeof window === "undefined" || typeof window.matchMedia !== "function") {
+  if (
+    preference !== "system" ||
+    typeof window === "undefined" ||
+    typeof window.matchMedia !== "function"
+  ) {
     return () => {};
   }
 

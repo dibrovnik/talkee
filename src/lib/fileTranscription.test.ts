@@ -72,9 +72,7 @@ describe("file transcription error messages", () => {
       new Error("Proxy error (502 Bad Gateway): upstream unavailable"),
     );
 
-    expect(message).toBe(
-      "Не удалось связаться с сервером. Проверьте интернет и попробуйте снова.",
-    );
+    expect(message).toBe("Не удалось связаться с сервером. Проверьте интернет и попробуйте снова.");
   });
 });
 
@@ -112,10 +110,7 @@ describe("file speaker identity", () => {
       { id: "speaker_0", label: "Вы" },
       { id: "speaker_1", label: "Гость 1" },
     ]);
-    expect(result.segments?.map((segment) => segment.speakerLabel)).toEqual([
-      "Вы",
-      "Гость 1",
-    ]);
+    expect(result.segments?.map((segment) => segment.speakerLabel)).toEqual(["Вы", "Гость 1"]);
     expect(result.text).toContain("[00:00:00] Вы: Здравствуйте");
   });
 });

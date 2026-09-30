@@ -1,11 +1,4 @@
-export type SettingsTab =
-  | "main"
-  | "file"
-  | "interpreter"
-  | "chat"
-  | "settings"
-  | "model"
-  | "style";
+export type SettingsTab = "main" | "file" | "interpreter" | "chat" | "settings" | "model" | "style";
 
 const SETTINGS_TABS = new Set<SettingsTab>([
   "main",

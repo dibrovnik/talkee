@@ -2,18 +2,9 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 
-import {
-  ONBOARDING_STT_MODELS,
-  type OnboardingSttModel,
-} from "../../config/onboardingSttModels";
+import { ONBOARDING_STT_MODELS, type OnboardingSttModel } from "../../config/onboardingSttModels";
 import { SETTINGS_UPDATED_EVENT } from "../../lib/hotkeyEvents";
-import {
-  IconCheck,
-  IconDownload,
-  IconLoader2,
-  IconTrash,
-  IconX,
-} from "../../lib/icons";
+import { IconCheck, IconDownload, IconLoader2, IconTrash, IconX } from "../../lib/icons";
 import { useI18n } from "../../lib/i18n";
 import { logError, logInfo } from "../../lib/logger";
 import {
@@ -56,14 +47,11 @@ interface ModelActionState {
   progressBytes?: string;
 }
 
-function isLocalModelActive(
-  settings: AppSettings | null,
-  model: OnboardingSttModel,
-): boolean {
+function isLocalModelActive(settings: AppSettings | null, model: OnboardingSttModel): boolean {
   return Boolean(
     settings &&
-    /127\.0\.0\.1|localhost/i.test(settings.whisperEndpoint || "") &&
-    settings.whisperModel === model.model,
+      /127\.0\.0\.1|localhost/i.test(settings.whisperEndpoint || "") &&
+      settings.whisperModel === model.model,
   );
 }
 
@@ -77,15 +65,11 @@ export function OnboardingModelStep({
   const { t } = useI18n();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [installedModels, setInstalledModels] = useState<string[]>([]);
-  const [effectiveEndpoint, setEffectiveEndpoint] = useState<string | null>(
-    null,
-  );
+  const [effectiveEndpoint, setEffectiveEndpoint] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState(ONBOARDING_STT_MODELS[0].id);
   const [checking, setChecking] = useState(true);
   const [action, setAction] = useState<ModelActionState | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<OnboardingSttModel | null>(
-    null,
-  );
+  const [pendingDelete, setPendingDelete] = useState<OnboardingSttModel | null>(null);
 
   const onboardingModel = ONBOARDING_STT_MODELS[0];
   const activeInstalledModel =
@@ -143,8 +127,7 @@ export function OnboardingModelStep({
 
           return {
             modelId: payload.model,
-            status:
-              payload.status === "downloaded" ? "activating" : "downloading",
+            status: payload.status === "downloaded" ? "activating" : "downloading",
             message:
               payload.message ||
               (payload.status === "downloaded"
@@ -248,9 +231,7 @@ export function OnboardingModelStep({
   };
 
   const cancelDownload = async (model: OnboardingSttModel): Promise<void> => {
-    await invoke("cancel_local_model_download", { modelId: model.model }).catch(
-      () => {},
-    );
+    await invoke("cancel_local_model_download", { modelId: model.model }).catch(() => {});
   };
 
   const deleteModel = async (model: OnboardingSttModel): Promise<void> => {
@@ -263,18 +244,15 @@ export function OnboardingModelStep({
     });
 
     try {
-      const result = await invoke<{ success: boolean; message: string }>(
-        "delete_stt_model",
-        {
-          req: {
-            api_key: settings.apiKey || "",
-            whisper_api_key: null,
-            whisper_endpoint: ONBOARDING_LOCAL_STT_ENDPOINT,
-            local_models_dir: settings.localModelsDir || null,
-            whisper_model: model.model,
-          },
+      const result = await invoke<{ success: boolean; message: string }>("delete_stt_model", {
+        req: {
+          api_key: settings.apiKey || "",
+          whisper_api_key: null,
+          whisper_endpoint: ONBOARDING_LOCAL_STT_ENDPOINT,
+          local_models_dir: settings.localModelsDir || null,
+          whisper_model: model.model,
         },
-      );
+      });
       if (!result.success) throw new Error(result.message);
 
       const nextLocalModels = {
@@ -287,9 +265,7 @@ export function OnboardingModelStep({
       await saveSettings({ localModels: nextLocalModels });
       const nextSettings = await getSettings({ reload: true });
       setSettings(nextSettings);
-      setInstalledModels((current) =>
-        current.filter((installed) => installed !== model.model),
-      );
+      setInstalledModels((current) => current.filter((installed) => installed !== model.model));
       setAction(null);
       logInfo("ONBOARDING", `Deleted local STT model: ${model.model}`);
     } catch (error) {
@@ -351,10 +327,7 @@ export function OnboardingModelStep({
               border: "none",
               background: "var(--accent)",
               color: "var(--accent-contrast)",
-              cursor:
-                settings && activeInstalledModel && !isBusy
-                  ? "pointer"
-                  : "default",
+              cursor: settings && activeInstalledModel && !isBusy ? "pointer" : "default",
               opacity: settings && activeInstalledModel && !isBusy ? 1 : 0.45,
               fontWeight: 750,
             }}
@@ -376,11 +349,7 @@ export function OnboardingModelStep({
               fontSize: 12,
             }}
           >
-            <IconLoader2
-              size={15}
-              stroke={2}
-              style={{ animation: "spin 1s linear infinite" }}
-            />
+            <IconLoader2 size={15} stroke={2} style={{ animation: "spin 1s linear infinite" }} />
             {t("onboarding.model.checking")}
           </div>
         )}
@@ -393,9 +362,7 @@ export function OnboardingModelStep({
           statusColor={selected ? "var(--success)" : "var(--text-low)"}
           expanded={expandedId === onboardingModel.id}
           onToggle={() =>
-            setExpandedId(
-              expandedId === onboardingModel.id ? "" : onboardingModel.id,
-            )
+            setExpandedId(expandedId === onboardingModel.id ? "" : onboardingModel.id)
           }
           disclosureLabel={t(
             expandedId === onboardingModel.id
@@ -471,20 +438,14 @@ export function OnboardingModelStep({
                       : void installModel(onboardingModel)
                   }
                   disabled={isBusy}
-                  style={
-                    installed
-                      ? secondaryActionStyle(isBusy)
-                      : primaryActionStyle(isBusy)
-                  }
+                  style={installed ? secondaryActionStyle(isBusy) : primaryActionStyle(isBusy)}
                 >
                   {installed ? (
                     <IconTrash size={14} stroke={2.2} />
                   ) : (
                     <IconDownload size={14} stroke={2.2} />
                   )}
-                  {installed
-                    ? t("onboarding.model.delete")
-                    : t("onboarding.model.download")}
+                  {installed ? t("onboarding.model.delete") : t("onboarding.model.download")}
                 </button>
               )}
               {downloading && (
@@ -549,9 +510,7 @@ export function OnboardingModelStep({
             >
               {t("onboarding.model.deleteBody", { name: pendingDelete.name })}
             </p>
-            <div
-              style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}
-            >
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
               <button
                 type="button"
                 onClick={() => setPendingDelete(null)}

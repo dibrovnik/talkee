@@ -80,8 +80,7 @@ const LOCAL_RUNTIME_ENDPOINTS: Record<LocalRuntimeKind, string> = {
 };
 const LOCAL_STT_PRESET_ENDPOINT = LOCAL_RUNTIME_ENDPOINTS.whisper;
 const LOCAL_STT_PRESET_MODEL = DEFAULT_LOCAL_STT_MODEL;
-const LOCAL_STT_MODEL_DOWNLOAD_PROGRESS_EVENT =
-  "local-stt-model-download-progress";
+const LOCAL_STT_MODEL_DOWNLOAD_PROGRESS_EVENT = "local-stt-model-download-progress";
 
 function isLocalSttEndpoint(endpoint?: string | null): boolean {
   return /127\.0\.0\.1|localhost/i.test(endpoint || "");
@@ -389,8 +388,7 @@ const LOCAL_MODEL_OPTIONS: LocalModelOption[] = [
   {
     id: "whisper-small",
     name: "Whisper Small",
-    description:
-      "Баланс скорости и качества для слабых машин и быстрых коротких диктовок.",
+    description: "Баланс скорости и качества для слабых машин и быстрых коротких диктовок.",
     model: "whisper-small",
     engineLabel: "Whisper",
     runtime: "Talkee Local / transcribe.cpp",
@@ -407,8 +405,7 @@ const LOCAL_MODEL_OPTIONS: LocalModelOption[] = [
   {
     id: "whisper-large-v3",
     name: "Whisper Large V3",
-    description:
-      "Максимальное качество Whisper, но выше требования к памяти и времени обработки.",
+    description: "Максимальное качество Whisper, но выше требования к памяти и времени обработки.",
     model: "whisper-large-v3",
     engineLabel: "Whisper",
     runtime: "Talkee Local / transcribe.cpp",
@@ -443,8 +440,7 @@ const LOCAL_MODEL_OPTIONS: LocalModelOption[] = [
   {
     id: "whisper-base",
     name: "Whisper Base",
-    description:
-      "Быстрая и легкая модель для простых сценариев и слабых машин.",
+    description: "Быстрая и легкая модель для простых сценариев и слабых машин.",
     model: "whisper-base",
     engineLabel: "Whisper",
     runtime: "Talkee Local / transcribe.cpp",
@@ -479,8 +475,7 @@ const LOCAL_MODEL_OPTIONS: LocalModelOption[] = [
   {
     id: "parakeet-tdt-06b-v3",
     name: "NVIDIA Parakeet TDT 0.6B v3",
-    description:
-      "Быстрая локальная ASR-модель Parakeet через transcribe.cpp GGUF runtime.",
+    description: "Быстрая локальная ASR-модель Parakeet через transcribe.cpp GGUF runtime.",
     model: "nvidia/parakeet-tdt-0.6b-v3",
     engineLabel: "Parakeet",
     runtime: "Talkee Local / transcribe.cpp",
@@ -497,8 +492,7 @@ const LOCAL_MODEL_OPTIONS: LocalModelOption[] = [
   {
     id: "parakeet-tdt-06b-v2",
     name: "NVIDIA Parakeet TDT 0.6B v2",
-    description:
-      "Стабильная английская Parakeet TDT-модель через transcribe.cpp GGUF runtime.",
+    description: "Стабильная английская Parakeet TDT-модель через transcribe.cpp GGUF runtime.",
     model: "nvidia/parakeet-tdt-0.6b-v2",
     engineLabel: "Parakeet",
     runtime: "Talkee Local / transcribe.cpp",
@@ -665,14 +659,10 @@ const LOCAL_MODEL_DESCRIPTION_KEYS: Record<string, MsgKey> = {
   "whisper-tiny": "models.local.whisper-tiny.description",
   "parakeet-tdt-06b-v3": "models.local.parakeet-tdt-06b-v3.description",
   "parakeet-tdt-06b-v2": "models.local.parakeet-tdt-06b-v2.description",
-  "nemotron-35-asr-streaming-06b":
-    "models.local.nemotron-35-asr-streaming-06b.description",
-  "nemotron-speech-streaming-en-06b":
-    "models.local.nemotron-speech-streaming-en-06b.description",
-  "moonshine-streaming-tiny":
-    "models.local.moonshine-streaming-tiny.description",
-  "moonshine-streaming-small":
-    "models.local.moonshine-streaming-small.description",
+  "nemotron-35-asr-streaming-06b": "models.local.nemotron-35-asr-streaming-06b.description",
+  "nemotron-speech-streaming-en-06b": "models.local.nemotron-speech-streaming-en-06b.description",
+  "moonshine-streaming-tiny": "models.local.moonshine-streaming-tiny.description",
+  "moonshine-streaming-small": "models.local.moonshine-streaming-small.description",
   "qwen3-asr-06b": "models.local.qwen3-asr-06b.description",
   "gigaam-v3-e2e-rnnt": "models.local.gigaam-v3-e2e-rnnt.description",
 };
@@ -699,14 +689,10 @@ function CollapsibleCardText({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
   const tooLong = text.length > CARD_TEXT_PREVIEW_LIMIT;
   const visible =
-    tooLong && !expanded
-      ? `${text.slice(0, CARD_TEXT_PREVIEW_LIMIT).trimEnd()}...`
-      : text;
+    tooLong && !expanded ? `${text.slice(0, CARD_TEXT_PREVIEW_LIMIT).trimEnd()}...` : text;
   return (
     <div style={{ display: "grid", gap: 3 }}>
-      <span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-        {visible}
-      </span>
+      <span style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{visible}</span>
       {tooLong && (
         <button
           type="button"
@@ -753,13 +739,11 @@ function OptionCard({
         border: `1px solid ${active ? "var(--border-strong)" : "var(--border)"}`,
         color: "var(--text-hi)",
         cursor: disabled ? "not-allowed" : onClick ? "pointer" : "default",
-        transition:
-          "transform 0.16s ease, border-color 0.16s ease, background 0.16s ease",
+        transition: "transform 0.16s ease, border-color 0.16s ease, background 0.16s ease",
         opacity: disabled ? 0.72 : 1,
       }}
       onMouseEnter={(e) => {
-        if (!disabled && onClick && !active)
-          e.currentTarget.style.transform = "translateY(-1px)";
+        if (!disabled && onClick && !active) e.currentTarget.style.transform = "translateY(-1px)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateY(0)";
@@ -771,9 +755,7 @@ function OptionCard({
             width: 42,
             height: 42,
             borderRadius: 999,
-            background: active
-              ? "var(--control-muted-strong)"
-              : "var(--avatar-bg)",
+            background: active ? "var(--control-muted-strong)" : "var(--avatar-bg)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -809,9 +791,7 @@ function OptionCard({
               </div>
             )}
           </div>
-          <div
-            style={{ fontSize: 13, lineHeight: 1.65, color: "var(--text-mid)" }}
-          >
+          <div style={{ fontSize: 13, lineHeight: 1.65, color: "var(--text-mid)" }}>
             {description}
           </div>
         </div>
@@ -888,8 +868,7 @@ function PromptLibrary({
 
   const canGenerate = isSummaryAvailable(settings);
   const handleGenerate = async (): Promise<void> => {
-    if (!editor || generating || (!editor.prompt.trim() && !editor.name.trim()))
-      return;
+    if (!editor || generating || (!editor.prompt.trim() && !editor.name.trim())) return;
     setGenerating(true);
     setError(null);
     try {
@@ -908,9 +887,7 @@ function PromptLibrary({
 
   const summaryPrompts = listPromptsByKind(settings, "summary");
   const defaultId = settings.defaultSummaryPromptId;
-  const selectedPreset = summaryPrompts.find(
-    (preset) => preset.id === defaultId,
-  );
+  const selectedPreset = summaryPrompts.find((preset) => preset.id === defaultId);
   const selectedIsCustom = selectedPreset ? !selectedPreset.builtin : false;
 
   const startNew = () => {
@@ -996,11 +973,7 @@ function PromptLibrary({
           />
         </div>
         {error && (
-          <div
-            style={{ fontSize: 12, color: "var(--danger)", lineHeight: 1.5 }}
-          >
-            {error}
-          </div>
+          <div style={{ fontSize: 12, color: "var(--danger)", lineHeight: 1.5 }}>{error}</div>
         )}
         <div
           style={{
@@ -1015,9 +988,7 @@ function PromptLibrary({
             <button
               type="button"
               onClick={() => void handleGenerate()}
-              disabled={
-                generating || (!editor.prompt.trim() && !editor.name.trim())
-              }
+              disabled={generating || (!editor.prompt.trim() && !editor.name.trim())}
               style={{
                 padding: "9px 16px",
                 borderRadius: 10,
@@ -1030,16 +1001,11 @@ function PromptLibrary({
                   generating || (!editor.prompt.trim() && !editor.name.trim())
                     ? "default"
                     : "pointer",
-                opacity:
-                  generating || (!editor.prompt.trim() && !editor.name.trim())
-                    ? 0.6
-                    : 1,
+                opacity: generating || (!editor.prompt.trim() && !editor.name.trim()) ? 0.6 : 1,
                 fontFamily: "var(--font-main)",
               }}
             >
-              {generating
-                ? t("models.prompt.improving")
-                : t("models.prompt.improve")}
+              {generating ? t("models.prompt.improving") : t("models.prompt.improve")}
             </button>
           ) : (
             <div
@@ -1120,9 +1086,7 @@ function PromptLibrary({
       })}
 
       {error && (
-        <div style={{ fontSize: 12, color: "var(--danger)", lineHeight: 1.5 }}>
-          {error}
-        </div>
+        <div style={{ fontSize: 12, color: "var(--danger)", lineHeight: 1.5 }}>{error}</div>
       )}
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1220,9 +1184,7 @@ function TextModelCard({
   const hasSelectedModel = Boolean(model) && model.toLowerCase() !== "none";
   const configured = hasSelectedModel && (isLocalEndpoint || Boolean(apiKey));
   const isKnownModel = TEXT_MODEL_OPTIONS.includes(settings.llmModel);
-  const modelSelectValue = isKnownModel
-    ? settings.llmModel
-    : CUSTOM_API_MODEL_VALUE;
+  const modelSelectValue = isKnownModel ? settings.llmModel : CUSTOM_API_MODEL_VALUE;
   const statusLabel =
     testState.status === "testing"
       ? t("models.textModel.statusTesting")
@@ -1242,8 +1204,7 @@ function TextModelCard({
     minWidth: 0,
     height: 36,
     padding: "8px 10px",
-    fontFamily:
-      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
     fontSize: 12,
   };
   // Editing a custom text model means it's no longer the bundled local runtime, so
@@ -1327,9 +1288,7 @@ function TextModelCard({
               marginBottom: 3,
             }}
           >
-            <div
-              style={{ fontSize: 15, fontWeight: 700, color: "var(--text-hi)" }}
-            >
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-hi)" }}>
               {t("models.textModel.title")}
             </div>
             <div
@@ -1416,9 +1375,7 @@ function TextModelCard({
                 <input
                   type="text"
                   value={settings.llmModel}
-                  onChange={(event) =>
-                    editField({ llmModel: event.currentTarget.value })
-                  }
+                  onChange={(event) => editField({ llmModel: event.currentTarget.value })}
                   className="input"
                   placeholder={t("models.field.customModelPlaceholder")}
                   aria-label={t("models.field.customModelPlaceholder")}
@@ -1494,13 +1451,9 @@ function TextModelCard({
                 borderRadius: 10,
                 border: "1px solid var(--border-dashed)",
                 background:
-                  testState.status === "testing"
-                    ? "var(--control-muted)"
-                    : "var(--accent)",
+                  testState.status === "testing" ? "var(--control-muted)" : "var(--accent)",
                 color:
-                  testState.status === "testing"
-                    ? "var(--text-mid)"
-                    : "var(--accent-contrast)",
+                  testState.status === "testing" ? "var(--text-mid)" : "var(--accent-contrast)",
                 fontSize: 12,
                 fontWeight: 700,
                 fontFamily: "var(--font-main)",
@@ -1532,51 +1485,31 @@ function TextModelCard({
 export function SettingsTabs({ type }: SettingsTabsProps) {
   const { t } = useI18n();
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [promptPreview, setPromptPreview] = useState<PromptPreview | null>(
-    null,
-  );
-  const [promptPreviewError, setPromptPreviewError] = useState<string | null>(
-    null,
-  );
-  const [testStatus, setTestStatus] = useState<
-    "idle" | "testing" | "success" | "error"
-  >("idle");
+  const [promptPreview, setPromptPreview] = useState<PromptPreview | null>(null);
+  const [promptPreviewError, setPromptPreviewError] = useState<string | null>(null);
+  const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [testMessage, setTestMessage] = useState<string | null>(null);
   const [modelModeView, setModelModeView] = useState<ModelMode | null>(null);
-  const [styleTabView, setStyleTabView] = useState<"style" | "prompts">(
-    "style",
+  const [styleTabView, setStyleTabView] = useState<"style" | "prompts">("style");
+  const [localModelKind, setLocalModelKind] = useState<LocalModelKind>("transcription");
+  const [apiModelKind, setApiModelKind] = useState<"transcription" | "text" | "translation">(
+    "transcription",
   );
-  const [localModelKind, setLocalModelKind] =
-    useState<LocalModelKind>("transcription");
-  const [apiModelKind, setApiModelKind] = useState<
-    "transcription" | "text" | "translation"
-  >("transcription");
-  const [expandedApiAdapter, setExpandedApiAdapter] =
-    useState<ApiAdapterId | null>(null);
-  const [expandedLocalModel, setExpandedLocalModel] = useState<string | null>(
+  const [expandedApiAdapter, setExpandedApiAdapter] = useState<ApiAdapterId | null>(null);
+  const [expandedLocalModel, setExpandedLocalModel] = useState<string | null>(null);
+  const [expandedLocalOtherComponent, setExpandedLocalOtherComponent] = useState<string | null>(
     null,
   );
-  const [expandedLocalOtherComponent, setExpandedLocalOtherComponent] =
-    useState<string | null>(null);
-  const [pendingDeleteModel, setPendingDeleteModel] =
-    useState<LocalModelOption | null>(null);
-  const [localInstalledModels, setLocalInstalledModels] = useState<string[]>(
-    [],
-  );
-  const [localTranslators, setLocalTranslators] = useState<
-    Record<string, LocalTranslatorInfo>
-  >({});
+  const [pendingDeleteModel, setPendingDeleteModel] = useState<LocalModelOption | null>(null);
+  const [localInstalledModels, setLocalInstalledModels] = useState<string[]>([]);
+  const [localTranslators, setLocalTranslators] = useState<Record<string, LocalTranslatorInfo>>({});
   const [apiAdapterTestStates, setApiAdapterTestStates] = useState<
-    Partial<
-      Record<ApiAdapterId, { status: AdapterTestStatus; message: string }>
-    >
+    Partial<Record<ApiAdapterId, { status: AdapterTestStatus; message: string }>>
   >({});
-  const [dirtyApiAdapters, setDirtyApiAdapters] = useState<
-    Partial<Record<ApiAdapterId, boolean>>
-  >({});
-  const apiAdapterEditRevisionsRef = useRef<
-    Partial<Record<ApiAdapterId, number>>
-  >({});
+  const [dirtyApiAdapters, setDirtyApiAdapters] = useState<Partial<Record<ApiAdapterId, boolean>>>(
+    {},
+  );
+  const apiAdapterEditRevisionsRef = useRef<Partial<Record<ApiAdapterId, number>>>({});
   const [localModelActionStates, setLocalModelActionStates] = useState<
     Partial<Record<string, LocalModelActionState>>
   >({});
@@ -1590,11 +1523,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
   }, []);
 
   const refreshLocalInstalledModels = useCallback(async () => {
-    if (
-      !settings ||
-      type !== "model" ||
-      !isLocalSttEndpoint(settings.whisperEndpoint)
-    ) {
+    if (!settings || type !== "model" || !isLocalSttEndpoint(settings.whisperEndpoint)) {
       return;
     }
 
@@ -1607,8 +1536,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
         req: {
           api_key: settings.apiKey || "",
           whisper_api_key: settings.whisperApiKey || null,
-          whisper_endpoint:
-            settings.whisperEndpoint || LOCAL_STT_PRESET_ENDPOINT,
+          whisper_endpoint: settings.whisperEndpoint || LOCAL_STT_PRESET_ENDPOINT,
           local_models_dir: settings.localModelsDir || null,
         },
       });
@@ -1618,10 +1546,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
         optimisticLocalInstalledModelsRef.current.delete(modelId);
       }
       const installedModels = Array.from(
-        new Set([
-          ...confirmedInstalledModels,
-          ...optimisticLocalInstalledModelsRef.current,
-        ]),
+        new Set([...confirmedInstalledModels, ...optimisticLocalInstalledModelsRef.current]),
       );
       setLocalInstalledModels(installedModels);
 
@@ -1635,10 +1560,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
 
       for (const model of LOCAL_MODEL_OPTIONS) {
         const current = nextLocalModels[model.id];
-        if (
-          current?.status === "downloaded" &&
-          !installedModelSet.has(model.model)
-        ) {
+        if (current?.status === "downloaded" && !installedModelSet.has(model.model)) {
           delete nextLocalModels[model.id];
           changed = true;
         }
@@ -1672,9 +1594,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       }
     } catch (err) {
       setLocalInstalledModels((prev) =>
-        Array.from(
-          new Set([...prev, ...optimisticLocalInstalledModelsRef.current]),
-        ),
+        Array.from(new Set([...prev, ...optimisticLocalInstalledModelsRef.current])),
       );
     }
   }, [
@@ -1693,13 +1613,9 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
     }
 
     try {
-      const translators = await invoke<LocalTranslatorInfo[]>(
-        "list_local_translators",
-      );
+      const translators = await invoke<LocalTranslatorInfo[]>("list_local_translators");
       setLocalTranslators(
-        Object.fromEntries(
-          translators.map((translator) => [translator.provider, translator]),
-        ),
+        Object.fromEntries(translators.map((translator) => [translator.provider, translator])),
       );
     } catch (err) {
       logInfo(
@@ -1755,9 +1671,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       .catch((error) => {
         if (cancelled) return;
         setPromptPreview(null);
-        setPromptPreviewError(
-          error instanceof Error ? error.message : String(error),
-        );
+        setPromptPreviewError(error instanceof Error ? error.message : String(error));
       });
 
     return () => {
@@ -1803,9 +1717,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
 
         setLocalModelActionStates((prev) => {
           const modelOption =
-            modelOptions.find(
-              (model) => prev[model.id]?.status === "installing",
-            ) ||
+            modelOptions.find((model) => prev[model.id]?.status === "installing") ||
             modelOptions.find((model) => model.runtimeReady === true) ||
             modelOptions[0];
 
@@ -1813,10 +1725,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
             ...prev,
             [modelOption.id]: {
               ...(prev[modelOption.id] || { status: "installing", message }),
-              status:
-                event.payload.status === "downloaded"
-                  ? "success"
-                  : "installing",
+              status: event.payload.status === "downloaded" ? "success" : "installing",
               message:
                 event.payload.status === "downloaded"
                   ? event.payload.message || t("models.download.done")
@@ -1855,22 +1764,17 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
     const visibleModelMode = modelModeView ?? activeModelMode;
     const isApiMode = visibleModelMode === "api";
     const isLocalMode = visibleModelMode === "local";
-    const selectedApiAdapterId = (settings.selectedApiAdapter ||
-      "openai") as ApiAdapterId;
+    const selectedApiAdapterId = (settings.selectedApiAdapter || "openai") as ApiAdapterId;
     // In Local mode a local text (LLM) model is "selected" once llmEndpoint points
     // at a local runtime. Without it, transcription works but summarization can't.
-    const localTextModelSelected = /127\.0\.0\.1|localhost/i.test(
-      settings.llmEndpoint || "",
-    );
+    const localTextModelSelected = /127\.0\.0\.1|localhost/i.test(settings.llmEndpoint || "");
     // In API mode the text model is "set up" once its own endpoint or API key is
     // filled. The model name has a built-in default ("gpt-4o-mini"), so it can't
     // signal configuration on its own.
     const apiTextModelConfigured =
-      Boolean((settings.llmEndpoint || "").trim()) ||
-      Boolean((settings.llmApiKey || "").trim());
+      Boolean((settings.llmEndpoint || "").trim()) || Boolean((settings.llmApiKey || "").trim());
     const localSttTargetModel =
-      (settings.whisperModel || LOCAL_STT_PRESET_MODEL).trim() ||
-      LOCAL_STT_PRESET_MODEL;
+      (settings.whisperModel || LOCAL_STT_PRESET_MODEL).trim() || LOCAL_STT_PRESET_MODEL;
     const localInstalledModelSet = new Set(localInstalledModels);
     const localModelsDir = (settings.localModelsDir || "").trim();
     const modeOptions: Array<{
@@ -1907,22 +1811,15 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
         const parsed = new URL(endpoint);
         const port = Number(parsed.port);
         if (
-          (parsed.hostname !== "127.0.0.1" &&
-            parsed.hostname !== "localhost") ||
+          (parsed.hostname !== "127.0.0.1" && parsed.hostname !== "localhost") ||
           !Number.isFinite(port)
         ) {
           return null;
         }
 
-        if (
-          port === 8000 ||
-          port === 8001 ||
-          port === 8002 ||
-          (port >= 18000 && port <= 18149)
-        )
+        if (port === 8000 || port === 8001 || port === 8002 || (port >= 18000 && port <= 18149))
           return "whisper";
-        if (port === 8003 || (port >= 18150 && port <= 18199))
-          return "diarization";
+        if (port === 8003 || (port >= 18150 && port <= 18199)) return "diarization";
       } catch {
         return null;
       }
@@ -1932,10 +1829,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
 
     const getLocalModelEndpoint = (model: LocalModelOption) => {
       const currentEndpoint = settings.whisperEndpoint.trim();
-      if (
-        currentEndpoint &&
-        getRuntimeKindFromEndpoint(currentEndpoint) === model.runtimeKind
-      ) {
+      if (currentEndpoint && getRuntimeKindFromEndpoint(currentEndpoint) === model.runtimeKind) {
         return currentEndpoint;
       }
 
@@ -1956,18 +1850,14 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
 
       const savedAdapter = settings.apiAdapters?.[adapter.id];
       return {
-        apiKey:
-          savedAdapter?.apiKey ||
-          (adapter.id === "openai" ? settings.apiKey || "" : ""),
+        apiKey: savedAdapter?.apiKey || (adapter.id === "openai" ? settings.apiKey || "" : ""),
         model: savedAdapter?.model || adapter.recommendedModel,
         endpoint: savedAdapter?.endpoint || "",
       };
     };
 
-    const getApiAdapterModelOption = (
-      adapter: ApiAdapterOption,
-      model: string,
-    ) => adapter.models.find((option) => option.id === model.trim());
+    const getApiAdapterModelOption = (adapter: ApiAdapterOption, model: string) =>
+      adapter.models.find((option) => option.id === model.trim());
 
     const getPersistedAdapterStatus = (
       adapter: ApiAdapterOption,
@@ -1980,11 +1870,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       const normalizedModel = model.trim();
       const normalizedEndpoint = endpoint.trim();
 
-      if (
-        !savedAdapter?.connectionStatus ||
-        !normalizedApiKey ||
-        !normalizedModel
-      ) {
+      if (!savedAdapter?.connectionStatus || !normalizedApiKey || !normalizedModel) {
         return null;
       }
 
@@ -2043,16 +1929,9 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       model: string,
       endpoint: string,
     ) => {
-      const persistedStatus = getPersistedAdapterStatus(
-        adapter,
-        apiKey,
-        model,
-        endpoint,
-      );
+      const persistedStatus = getPersistedAdapterStatus(adapter, apiKey, model, endpoint);
       const isSelected =
-        isApiAdapterSelected(adapter) &&
-        Boolean(persistedStatus) &&
-        !dirtyApiAdapters[adapter.id];
+        isApiAdapterSelected(adapter) && Boolean(persistedStatus) && !dirtyApiAdapters[adapter.id];
 
       if (adapter.id === "openai") {
         const adapterState = apiAdapterTestStates[adapter.id];
@@ -2084,13 +1963,8 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
 
         return {
           label,
-          message:
-            effectiveStatus === "error"
-              ? adapterState?.message || testMessage
-              : null,
-          status: isSelected
-            ? ("success" as AdapterTestStatus)
-            : effectiveStatus,
+          message: effectiveStatus === "error" ? adapterState?.message || testMessage : null,
+          status: isSelected ? ("success" as AdapterTestStatus) : effectiveStatus,
           color,
           isSelected,
         };
@@ -2142,19 +2016,16 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
         }));
         return;
       }
-      const testedRevision =
-        apiAdapterEditRevisionsRef.current[adapter.id] || 0;
+      const testedRevision = apiAdapterEditRevisionsRef.current[adapter.id] || 0;
       const configurationChanged = () =>
-        (apiAdapterEditRevisionsRef.current[adapter.id] || 0) !==
-        testedRevision;
+        (apiAdapterEditRevisionsRef.current[adapter.id] || 0) !== testedRevision;
 
       const modelOption = getApiAdapterModelOption(adapter, values.model);
       const realtimeCatalogAdapter = STREAMING_STT_ADAPTERS.find(
         (candidate) => candidate.id === adapter.id,
       );
       const shouldTestRealtime = Boolean(
-        realtimeCatalogAdapter &&
-        (modelOption?.supportsStreaming || !modelOption),
+        realtimeCatalogAdapter && (modelOption?.supportsStreaming || !modelOption),
       );
       let streamingCapability: "supported" | "unsupported" | undefined;
       let streamingCapabilityFingerprint: string | undefined;
@@ -2176,8 +2047,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                 provider: adapter.id,
                 apiKey: values.apiKey,
                 model: values.model,
-                endpoint:
-                  values.endpoint || realtimeCatalogAdapter.defaultEndpoint,
+                endpoint: values.endpoint || realtimeCatalogAdapter.defaultEndpoint,
                 purpose: "stt",
               },
             },
@@ -2298,8 +2168,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
             apiKey: values.apiKey,
             model: values.model,
             endpoint: values.endpoint,
-            connectionStatus:
-              shouldTestRealtime || adapter.testable ? "verified" : "saved",
+            connectionStatus: shouldTestRealtime || adapter.testable ? "verified" : "saved",
             lastConnectedAt: new Date().toISOString(),
             lastTestedApiKey: values.apiKey.trim(),
             lastTestedModel: values.model.trim(),
@@ -2369,17 +2238,12 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
             apiKey,
             model,
             endpoint,
-            connectionStatus:
-              settings.apiAdapters?.[adapter.id]?.connectionStatus || "saved",
+            connectionStatus: settings.apiAdapters?.[adapter.id]?.connectionStatus || "saved",
             lastConnectedAt:
-              settings.apiAdapters?.[adapter.id]?.lastConnectedAt ||
-              new Date().toISOString(),
-            lastTestedApiKey:
-              settings.apiAdapters?.[adapter.id]?.lastTestedApiKey,
-            lastTestedModel:
-              settings.apiAdapters?.[adapter.id]?.lastTestedModel,
-            lastTestedEndpoint:
-              settings.apiAdapters?.[adapter.id]?.lastTestedEndpoint,
+              settings.apiAdapters?.[adapter.id]?.lastConnectedAt || new Date().toISOString(),
+            lastTestedApiKey: settings.apiAdapters?.[adapter.id]?.lastTestedApiKey,
+            lastTestedModel: settings.apiAdapters?.[adapter.id]?.lastTestedModel,
+            lastTestedEndpoint: settings.apiAdapters?.[adapter.id]?.lastTestedEndpoint,
           },
         },
       });
@@ -2402,8 +2266,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
     // single source of truth; the specific adapter / model is still picked below.
     const handleSelectApiMode = () => {
       const adapter =
-        API_ADAPTERS.find((candidate) => candidate.id === selectedApiAdapterId) ||
-        API_ADAPTERS[0];
+        API_ADAPTERS.find((candidate) => candidate.id === selectedApiAdapterId) || API_ADAPTERS[0];
       const values = getApiAdapterValues(adapter);
       update(
         apiModelModeSettingsPatch({
@@ -2421,18 +2284,14 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
     const handleSelectLocalMode = () => {
       const preferredModel =
         LOCAL_MODEL_OPTIONS.find(
-          (model) =>
-            model.purpose !== "diarization" &&
-            localInstalledModelSet.has(model.model),
+          (model) => model.purpose !== "diarization" && localInstalledModelSet.has(model.model),
         ) ||
         LOCAL_MODEL_OPTIONS.find(
           (model) =>
             model.purpose !== "diarization" &&
             settings.localModels?.[model.id]?.status === "downloaded",
         ) ||
-        LOCAL_MODEL_OPTIONS.find(
-          (model) => model.model === LOCAL_STT_PRESET_MODEL,
-        ) ||
+        LOCAL_MODEL_OPTIONS.find((model) => model.model === LOCAL_STT_PRESET_MODEL) ||
         LOCAL_MODEL_OPTIONS[0];
 
       update(
@@ -2485,9 +2344,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
           {!isActive && (
             <button
               type="button"
-              onClick={
-                mode === "api" ? handleSelectApiMode : handleSelectLocalMode
-              }
+              onClick={mode === "api" ? handleSelectApiMode : handleSelectLocalMode}
               style={{
                 padding: "8px 14px",
                 borderRadius: 8,
@@ -2508,10 +2365,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       );
     };
 
-    const updateLocalModelCache = (
-      modelId: string,
-      patch: Partial<LocalModelSettings>,
-    ) => {
+    const updateLocalModelCache = (modelId: string, patch: Partial<LocalModelSettings>) => {
       const current = settings.localModels?.[modelId] || {
         status: "not_downloaded" as const,
       };
@@ -2526,10 +2380,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       });
     };
 
-    const handleSelectLocalTranslator = (
-      component: LocalOtherComponent,
-      selected: boolean,
-    ) => {
+    const handleSelectLocalTranslator = (component: LocalOtherComponent, selected: boolean) => {
       update({
         translation: {
           ...settings.translation,
@@ -2542,18 +2393,12 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       const actionState = localModelActionStates[model.id];
       const cachedState = settings.localModels?.[model.id];
       const isRuntimeReady = model.runtimeReady === true;
-      const isInstalled =
-        isRuntimeReady && localInstalledModelSet.has(model.model);
+      const isInstalled = isRuntimeReady && localInstalledModelSet.has(model.model);
       const isSelected =
-        activeModelMode === "local" &&
-        localSttTargetModel === model.model &&
-        isInstalled;
+        activeModelMode === "local" && localSttTargetModel === model.model && isInstalled;
 
       if (!isRuntimeReady) {
-        const runtimeName =
-          model.runtimeKind === "diarization"
-            ? "Diarization"
-            : "transcribe.cpp";
+        const runtimeName = model.runtimeKind === "diarization" ? "Diarization" : "transcribe.cpp";
         const isRuntimeSlotReady = model.runtimeKind === "diarization";
         return {
           label: isRuntimeSlotReady
@@ -2565,8 +2410,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
           status: "unsupported" as const,
           color: "var(--text-low)",
           message:
-            model.unavailableReason ||
-            t("models.local.sidecarPending", { runtime: runtimeName }),
+            model.unavailableReason || t("models.local.sidecarPending", { runtime: runtimeName }),
           isInstalled: false,
           isSelected: false,
         };
@@ -2586,8 +2430,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
 
       if (
         !isInstalled &&
-        (actionState?.status === "installing" ||
-          cachedState?.status === "downloading")
+        (actionState?.status === "installing" || cachedState?.status === "downloading")
       ) {
         return {
           label: t("models.local.downloading"),
@@ -2654,8 +2497,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
         localTranslators[component.id] ||
         (component.id === "nllb-200" ? localTranslators.trad : undefined);
       const isSelected =
-        settings.translation.selectionLocalTranslatorProvider ===
-          component.id ||
+        settings.translation.selectionLocalTranslatorProvider === component.id ||
         (component.id === "nllb-200" &&
           settings.translation.selectionLocalTranslatorProvider === "trad");
 
@@ -2664,30 +2506,19 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
           label: t("models.local.deleting"),
           status: "deleting" as const,
           color: "var(--text-hi)",
-          message:
-            actionState.message ||
-            cachedState?.message ||
-            backendState?.message ||
-            null,
+          message: actionState.message || cachedState?.message || backendState?.message || null,
           isInstalled: backendState?.status === "ready",
           isSelected,
           canDelete: backendState?.managed === true,
         };
       }
 
-      if (
-        actionState?.status === "installing" ||
-        backendState?.status === "downloading"
-      ) {
+      if (actionState?.status === "installing" || backendState?.status === "downloading") {
         return {
           label: t("models.localOther.status.downloading"),
           status: "installing" as const,
           color: "var(--text-hi)",
-          message:
-            actionState?.message ||
-            cachedState?.message ||
-            backendState?.message ||
-            null,
+          message: actionState?.message || cachedState?.message || backendState?.message || null,
           isInstalled: false,
           isSelected: false,
           canDelete: false,
@@ -2711,11 +2542,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
           label: t("models.localOther.status.error"),
           status: "error" as const,
           color: "var(--error-bright)",
-          message:
-            actionState?.message ||
-            cachedState?.message ||
-            backendState?.message ||
-            null,
+          message: actionState?.message || cachedState?.message || backendState?.message || null,
           isInstalled: false,
           isSelected: false,
           canDelete: false,
@@ -2733,12 +2560,8 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       };
     };
 
-    const formatLocalDownloadBytes = (
-      bytes?: number,
-      options: { showZero?: boolean } = {},
-    ) => {
-      if (!bytes || bytes <= 0)
-        return options.showZero ? t("models.size.zero") : "";
+    const formatLocalDownloadBytes = (bytes?: number, options: { showZero?: boolean } = {}) => {
+      if (!bytes || bytes <= 0) return options.showZero ? t("models.size.zero") : "";
       const mb = bytes / (1024 * 1024);
       if (mb >= 1024) {
         const gb = mb / 1024;
@@ -2757,9 +2580,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
     ) => {
       return (
         formatLocalDownloadBytes(model.downloadBytes) ||
-        (model.runtimeReady
-          ? t("models.size.unknown")
-          : t("models.size.notConnected"))
+        (model.runtimeReady ? t("models.size.unknown") : t("models.size.notConnected"))
       );
     };
 
@@ -2817,23 +2638,22 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       const speedValueLabel = translateSpeedValue(model.speed);
       const accuracyValueLabel = translateAccuracyValue(model.accuracy);
       const languageValueLabel = translateLanguageValue(model.languageLabel);
-      const stats: { key: string; title: string; Icon: Icon; value: string }[] =
-        [
-          {
-            key: "speed",
-            title: t("models.stat.speedTitle", { value: speedValueLabel }),
-            Icon: IconGauge,
-            value: speedValueLabel,
-          },
-          {
-            key: "accuracy",
-            title: t("models.stat.accuracyTitle", {
-              value: accuracyValueLabel,
-            }),
-            Icon: IconTargetArrow,
+      const stats: { key: string; title: string; Icon: Icon; value: string }[] = [
+        {
+          key: "speed",
+          title: t("models.stat.speedTitle", { value: speedValueLabel }),
+          Icon: IconGauge,
+          value: speedValueLabel,
+        },
+        {
+          key: "accuracy",
+          title: t("models.stat.accuracyTitle", {
             value: accuracyValueLabel,
-          },
-        ];
+          }),
+          Icon: IconTargetArrow,
+          value: accuracyValueLabel,
+        },
+      ];
       const storageLabel = getLocalModelStorageLabel(model);
 
       return (
@@ -2958,10 +2778,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       );
     };
 
-    const handleSelectLocalModel = (
-      model: LocalModelOption,
-      endpointOverride?: string,
-    ) => {
+    const handleSelectLocalModel = (model: LocalModelOption, endpointOverride?: string) => {
       update({
         ...buildActiveApiAdapterSnapshot(),
         provider: "custom",
@@ -2976,9 +2793,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       if (localInstalledModelSet.has(model.model)) {
         updateLocalModelCache(model.id, {
           status: "downloaded",
-          downloadedAt:
-            settings.localModels?.[model.id]?.downloadedAt ||
-            new Date().toISOString(),
+          downloadedAt: settings.localModels?.[model.id]?.downloadedAt || new Date().toISOString(),
           lastCheckedAt: new Date().toISOString(),
           message: undefined,
         });
@@ -3093,18 +2908,15 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       }));
 
       try {
-        const result = await invoke<{ success: boolean; message: string }>(
-          "delete_stt_model",
-          {
-            req: {
-              api_key: settings.apiKey || "",
-              whisper_api_key: settings.whisperApiKey || null,
-              whisper_endpoint: getLocalModelEndpoint(model),
-              local_models_dir: localModelsDir || null,
-              whisper_model: model.model,
-            },
+        const result = await invoke<{ success: boolean; message: string }>("delete_stt_model", {
+          req: {
+            api_key: settings.apiKey || "",
+            whisper_api_key: settings.whisperApiKey || null,
+            whisper_endpoint: getLocalModelEndpoint(model),
+            local_models_dir: localModelsDir || null,
+            whisper_model: model.model,
           },
-        );
+        });
 
         setLocalModelActionStates((prev) => ({
           ...prev,
@@ -3121,9 +2933,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
         });
 
         if (result.success) {
-          setLocalInstalledModels((prev) =>
-            prev.filter((id) => id !== model.model),
-          );
+          setLocalInstalledModels((prev) => prev.filter((id) => id !== model.model));
           await refreshLocalInstalledModels();
         }
       } catch (err) {
@@ -3140,9 +2950,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       }
     };
 
-    const handleInstallLocalTranslator = async (
-      component: LocalOtherComponent,
-    ) => {
+    const handleInstallLocalTranslator = async (component: LocalOtherComponent) => {
       setLocalModelActionStates((prev) => ({
         ...prev,
         [component.id]: {
@@ -3192,9 +3000,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       }
     };
 
-    const handleDeleteLocalTranslator = async (
-      component: LocalOtherComponent,
-    ) => {
+    const handleDeleteLocalTranslator = async (component: LocalOtherComponent) => {
       setLocalModelActionStates((prev) => ({
         ...prev,
         [component.id]: {
@@ -3225,8 +3031,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
         });
         if (
           result.success &&
-          (settings.translation.selectionLocalTranslatorProvider ===
-            component.id ||
+          (settings.translation.selectionLocalTranslatorProvider === component.id ||
             (component.id === "nllb-200" &&
               settings.translation.selectionLocalTranslatorProvider === "trad"))
         ) {
@@ -3297,9 +3102,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                       fontSize: 13,
                       fontWeight: active ? 700 : 500,
                       fontFamily: "var(--font-main)",
-                      background: active
-                        ? "var(--dropdown-active)"
-                        : "transparent",
+                      background: active ? "var(--dropdown-active)" : "transparent",
                       color: active ? "var(--text-hi)" : "var(--text-mid)",
                       cursor: "pointer",
                       transition: "all 0.18s ease",
@@ -3361,9 +3164,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                         fontSize: 13,
                         fontWeight: active ? 700 : 500,
                         fontFamily: "var(--font-main)",
-                        background: active
-                          ? "var(--dropdown-active)"
-                          : "transparent",
+                        background: active ? "var(--dropdown-active)" : "transparent",
                         color: active ? "var(--text-hi)" : "var(--text-mid)",
                         cursor: "pointer",
                         transition: "all 0.18s ease",
@@ -3417,9 +3218,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                       {t("models.apiSection.desc")}
                     </div>
                   </div>
-                  <div
-                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                  >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {API_ADAPTERS.map((adapter) => {
                       const isExpanded = expandedApiAdapter === adapter.id;
                       const adapterValues = getApiAdapterValues(adapter);
@@ -3433,28 +3232,24 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                         adapter,
                         adapterValues.model,
                       );
-                      const realtimeCatalogAdapter =
-                        STREAMING_STT_ADAPTERS.find(
-                          (candidate) => candidate.id === adapter.id,
-                        );
+                      const realtimeCatalogAdapter = STREAMING_STT_ADAPTERS.find(
+                        (candidate) => candidate.id === adapter.id,
+                      );
                       const streamingVerified = Boolean(
                         !dirtyApiAdapters[adapter.id] &&
-                        realtimeCatalogAdapter &&
-                        hasVerifiedRealtimeCapability(
-                          realtimeCatalogAdapter,
-                          settings.apiAdapters?.[adapter.id],
-                        ),
+                          realtimeCatalogAdapter &&
+                          hasVerifiedRealtimeCapability(
+                            realtimeCatalogAdapter,
+                            settings.apiAdapters?.[adapter.id],
+                          ),
                       );
-                      const modelSelectValue =
-                        selectedModelOption?.id || CUSTOM_API_MODEL_VALUE;
+                      const modelSelectValue = selectedModelOption?.id || CUSTOM_API_MODEL_VALUE;
                       const isAdapterSelected = adapterStatus.isSelected;
                       const isAdapterReady = adapterStatus.status === "success";
                       const canSelectApiAdapter =
-                        Boolean(adapterValues.apiKey.trim()) &&
-                        Boolean(adapterValues.model.trim());
+                        Boolean(adapterValues.apiKey.trim()) && Boolean(adapterValues.model.trim());
                       const isAdapterTestDisabled =
-                        adapterStatus.status === "testing" ||
-                        !canSelectApiAdapter;
+                        adapterStatus.status === "testing" || !canSelectApiAdapter;
 
                       return (
                         <div
@@ -3567,15 +3362,9 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                               <ModelCardDisclosureButton
                                 expanded={isExpanded}
                                 onToggle={() =>
-                                  setExpandedApiAdapter(
-                                    isExpanded ? null : adapter.id,
-                                  )
+                                  setExpandedApiAdapter(isExpanded ? null : adapter.id)
                                 }
-                                label={t(
-                                  isExpanded
-                                    ? "mainTab.collapse"
-                                    : "mainTab.expand",
-                                )}
+                                label={t(isExpanded ? "mainTab.collapse" : "mainTab.expand")}
                               />
                             </div>
                           </div>
@@ -3597,10 +3386,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                   gap: 10,
                                 }}
                               >
-                                <div
-                                  className="label"
-                                  style={{ width: 76, flexShrink: 0 }}
-                                >
+                                <div className="label" style={{ width: 76, flexShrink: 0 }}>
                                   {t("models.field.apiKey")}
                                 </div>
                                 <input
@@ -3632,10 +3418,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                   gap: 10,
                                 }}
                               >
-                                <div
-                                  className="label"
-                                  style={{ width: 76, flexShrink: 0 }}
-                                >
+                                <div className="label" style={{ width: 76, flexShrink: 0 }}>
                                   {t("models.field.model")}
                                 </div>
                                 <div
@@ -3660,15 +3443,11 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                     ]}
                                     onChange={(value) => {
                                       updateApiAdapterValues(adapter, {
-                                        model:
-                                          value === CUSTOM_API_MODEL_VALUE
-                                            ? ""
-                                            : value,
+                                        model: value === CUSTOM_API_MODEL_VALUE ? "" : value,
                                       });
                                     }}
                                   />
-                                  {modelSelectValue ===
-                                    CUSTOM_API_MODEL_VALUE && (
+                                  {modelSelectValue === CUSTOM_API_MODEL_VALUE && (
                                     <input
                                       type="text"
                                       value={adapterValues.model}
@@ -3678,12 +3457,8 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                         })
                                       }
                                       className="input"
-                                      placeholder={t(
-                                        "models.field.customModelPlaceholder",
-                                      )}
-                                      aria-label={t(
-                                        "models.field.customModelPlaceholder",
-                                      )}
+                                      placeholder={t("models.field.customModelPlaceholder")}
+                                      aria-label={t("models.field.customModelPlaceholder")}
                                       style={{
                                         width: "100%",
                                         height: 36,
@@ -3716,10 +3491,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                   gap: 10,
                                 }}
                               >
-                                <div
-                                  className="label"
-                                  style={{ width: 76, flexShrink: 0 }}
-                                >
+                                <div className="label" style={{ width: 76, flexShrink: 0 }}>
                                   {t("models.field.host")}
                                 </div>
                                 <input
@@ -3733,10 +3505,9 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                   className="input"
                                   placeholder={
                                     adapter.defaultEndpoint
-                                      ? t(
-                                          "models.field.hostDefaultPlaceholder",
-                                          { endpoint: adapter.defaultEndpoint },
-                                        )
+                                      ? t("models.field.hostDefaultPlaceholder", {
+                                          endpoint: adapter.defaultEndpoint,
+                                        })
                                       : t("models.field.hostPlaceholder")
                                   }
                                   style={{
@@ -3825,15 +3596,12 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                   >
                                     {isAdapterReady && (
                                       <button
-                                        onClick={() =>
-                                          handleSelectApiAdapter(adapter)
-                                        }
+                                        onClick={() => handleSelectApiAdapter(adapter)}
                                         disabled={!canSelectApiAdapter}
                                         style={{
                                           padding: "9px 12px",
                                           borderRadius: 10,
-                                          border:
-                                            "1px solid var(--border-dashed)",
+                                          border: "1px solid var(--border-dashed)",
                                           background: canSelectApiAdapter
                                             ? "var(--control-muted)"
                                             : "var(--control-muted)",
@@ -3843,9 +3611,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                           fontSize: 12,
                                           fontWeight: 700,
                                           fontFamily: "var(--font-main)",
-                                          cursor: canSelectApiAdapter
-                                            ? "pointer"
-                                            : "not-allowed",
+                                          cursor: canSelectApiAdapter ? "pointer" : "not-allowed",
                                           display: "flex",
                                           alignItems: "center",
                                           gap: 8,
@@ -3857,15 +3623,12 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                     )}
 
                                     <button
-                                      onClick={() =>
-                                        void handleApiAdapterTest(adapter)
-                                      }
+                                      onClick={() => void handleApiAdapterTest(adapter)}
                                       disabled={isAdapterTestDisabled}
                                       style={{
                                         padding: "9px 12px",
                                         borderRadius: 10,
-                                        border:
-                                          "1px solid var(--border-dashed)",
+                                        border: "1px solid var(--border-dashed)",
                                         background: isAdapterTestDisabled
                                           ? "var(--control-muted)"
                                           : "var(--accent)",
@@ -3912,14 +3675,9 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                 </>
               )}
 
-              {apiModelKind === "text" && (
-                <TextModelCard settings={settings} update={update} />
-              )}
+              {apiModelKind === "text" && <TextModelCard settings={settings} update={update} />}
               {apiModelKind === "translation" && (
-                <RealtimeTranslationModels
-                  settings={settings}
-                  update={update}
-                />
+                <RealtimeTranslationModels settings={settings} update={update} />
               )}
             </div>
           )}
@@ -3968,9 +3726,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                         fontSize: 13,
                         fontWeight: active ? 700 : 500,
                         fontFamily: "var(--font-main)",
-                        background: active
-                          ? "var(--dropdown-active)"
-                          : "transparent",
+                        background: active ? "var(--dropdown-active)" : "transparent",
                         color: active ? "var(--text-hi)" : "var(--text-mid)",
                         cursor: "pointer",
                         transition: "all 0.18s ease",
@@ -4025,20 +3781,16 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                     </div>
                   </div>
 
-                  <div
-                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                  >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {LOCAL_MODEL_OPTIONS.map((model) => {
                       const isExpanded = expandedLocalModel === model.id;
                       const modelStatus = getLocalModelStatus(model);
                       const modelActionState = localModelActionStates[model.id];
                       const isRuntimeReady =
-                        modelStatus.status !== "unsupported" &&
-                        model.runtimeReady === true;
+                        modelStatus.status !== "unsupported" && model.runtimeReady === true;
                       const isDownloaded = modelStatus.isInstalled;
                       const isModelBusy =
-                        modelStatus.status === "installing" ||
-                        modelStatus.status === "deleting";
+                        modelStatus.status === "installing" || modelStatus.status === "deleting";
                       const isInstallDisabled = isModelBusy || !isRuntimeReady;
                       const canSelect =
                         isRuntimeReady &&
@@ -4052,51 +3804,35 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                         modelActionState?.downloadedBytes,
                         { showZero: Boolean(modelActionState?.totalBytes) },
                       );
-                      const totalLabel = formatLocalDownloadBytes(
-                        modelActionState?.totalBytes,
-                      );
+                      const totalLabel = formatLocalDownloadBytes(modelActionState?.totalBytes);
 
                       return (
                         <LocalSttModelCard
                           key={model.id}
                           name={model.name}
-                          description={t(
-                            LOCAL_MODEL_DESCRIPTION_KEYS[model.id],
-                          )}
+                          description={t(LOCAL_MODEL_DESCRIPTION_KEYS[model.id])}
                           recommendedLabel={
-                            model.recommended
-                              ? t("models.local.recommendedBadge")
-                              : undefined
+                            model.recommended ? t("models.local.recommendedBadge") : undefined
                           }
                           statusLabel={modelStatus.label}
                           statusColor={modelStatus.color}
                           expanded={isExpanded}
-                          onToggle={() =>
-                            setExpandedLocalModel(isExpanded ? null : model.id)
-                          }
-                          disclosureLabel={t(
-                            isExpanded ? "mainTab.collapse" : "mainTab.expand",
-                          )}
+                          onToggle={() => setExpandedLocalModel(isExpanded ? null : model.id)}
+                          disclosureLabel={t(isExpanded ? "mainTab.collapse" : "mainTab.expand")}
                           stats={{
                             storageLabel: getLocalModelStorageLabel(model),
                             storageTitle: t("models.stat.downloadSizeTitle", {
                               value: getLocalModelStorageLabel(model),
                             }),
-                            languageLabel: translateLanguageValue(
-                              model.languageLabel,
-                            ),
+                            languageLabel: translateLanguageValue(model.languageLabel),
                             languageTitle: t("models.stat.languagesTitle", {
-                              value: translateLanguageValue(
-                                model.languageLabel,
-                              ),
+                              value: translateLanguageValue(model.languageLabel),
                             }),
                             speedLabel: translateSpeedValue(model.speed),
                             speedTitle: t("models.stat.speedTitle", {
                               value: translateSpeedValue(model.speed),
                             }),
-                            accuracyLabel: translateAccuracyValue(
-                              model.accuracy,
-                            ),
+                            accuracyLabel: translateAccuracyValue(model.accuracy),
                             accuracyTitle: t("models.stat.accuracyTitle", {
                               value: translateAccuracyValue(model.accuracy),
                             }),
@@ -4111,10 +3847,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                             modelStatus.status !== "selected"
                               ? {
                                   message: modelStatus.message,
-                                  tone:
-                                    modelStatus.status === "error"
-                                      ? "error"
-                                      : "neutral",
+                                  tone: modelStatus.status === "error" ? "error" : "neutral",
                                 }
                               : undefined
                           }
@@ -4122,12 +3855,9 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                             modelStatus.status === "installing"
                               ? {
                                   message:
-                                    modelActionState?.message ||
-                                    t("models.download.loading"),
+                                    modelActionState?.message || t("models.download.loading"),
                                   percent: downloadProgress,
-                                  valueLabel:
-                                    downloadedLabel ||
-                                    t("models.download.preparing"),
+                                  valueLabel: downloadedLabel || t("models.download.preparing"),
                                   downloadedLabel,
                                   totalLabel,
                                   totalTemplate: totalLabel
@@ -4138,13 +3868,10 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                 }
                               : undefined
                           }
-                          connectionLabel={
-                            modelStatus.connectionLabel || undefined
-                          }
+                          connectionLabel={modelStatus.connectionLabel || undefined}
                           connectionColor={modelStatus.color}
                           showConnectionCheck={
-                            modelStatus.status === "installed" ||
-                            modelStatus.status === "selected"
+                            modelStatus.status === "installed" || modelStatus.status === "selected"
                           }
                           actions={
                             <>
@@ -4201,9 +3928,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                     fontSize: 12,
                                     fontWeight: 700,
                                     fontFamily: "var(--font-main)",
-                                    cursor: isInstallDisabled
-                                      ? "not-allowed"
-                                      : "pointer",
+                                    cursor: isInstallDisabled ? "not-allowed" : "pointer",
                                     display: "flex",
                                     alignItems: "center",
                                     gap: 8,
@@ -4228,9 +3953,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                               {modelStatus.status === "installing" && (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    void handleCancelLocalSttDownload(model)
-                                  }
+                                  onClick={() => void handleCancelLocalSttDownload(model)}
                                   style={{
                                     padding: "9px 12px",
                                     borderRadius: 10,
@@ -4333,9 +4056,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                           </button>
                           <button
                             type="button"
-                            onClick={() =>
-                              void handleDeleteLocalSttModel(pendingDeleteModel)
-                            }
+                            onClick={() => void handleDeleteLocalSttModel(pendingDeleteModel)}
                             style={{
                               padding: "10px 14px",
                               borderRadius: 10,
@@ -4377,9 +4098,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
               )}
 
               {localModelKind === "other" && (
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
-                >
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div>
                     <div
                       style={{
@@ -4402,16 +4121,13 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                     </div>
                   </div>
 
-                  <div
-                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                  >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {LOCAL_OTHER_COMPONENTS.map((component) => {
                       const componentStatus = getLocalOtherStatus(component);
                       const isBusy =
                         componentStatus.status === "installing" ||
                         componentStatus.status === "deleting";
-                      const isExpanded =
-                        expandedLocalOtherComponent === component.id || isBusy;
+                      const isExpanded = expandedLocalOtherComponent === component.id || isBusy;
 
                       return (
                         <div
@@ -4491,15 +4207,9 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                               <ModelCardDisclosureButton
                                 expanded={isExpanded}
                                 onToggle={() =>
-                                  setExpandedLocalOtherComponent(
-                                    isExpanded ? null : component.id,
-                                  )
+                                  setExpandedLocalOtherComponent(isExpanded ? null : component.id)
                                 }
-                                label={t(
-                                  isExpanded
-                                    ? "mainTab.collapse"
-                                    : "mainTab.expand",
-                                )}
+                                label={t(isExpanded ? "mainTab.collapse" : "mainTab.expand")}
                               />
                             </div>
                           </div>
@@ -4561,9 +4271,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                     <IconCheck size={15} stroke={2.5} />
                                     {componentStatus.isSelected
                                       ? t("models.localOther.selected")
-                                      : t(
-                                          "models.localOther.installedNotSelected",
-                                        )}
+                                      : t("models.localOther.installedNotSelected")}
                                   </div>
                                 )}
 
@@ -4606,27 +4314,21 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                 )}
 
                                 {!isBusy &&
-                                  (!componentStatus.isInstalled ||
-                                    componentStatus.canDelete) && (
+                                  (!componentStatus.isInstalled || componentStatus.canDelete) && (
                                     <button
                                       type="button"
                                       onClick={() => {
                                         if (componentStatus.isInstalled) {
-                                          void handleDeleteLocalTranslator(
-                                            component,
-                                          );
+                                          void handleDeleteLocalTranslator(component);
                                           return;
                                         }
 
-                                        void handleInstallLocalTranslator(
-                                          component,
-                                        );
+                                        void handleInstallLocalTranslator(component);
                                       }}
                                       style={{
                                         padding: "9px 12px",
                                         borderRadius: 10,
-                                        border:
-                                          "1px solid var(--border-dashed)",
+                                        border: "1px solid var(--border-dashed)",
                                         background: componentStatus.isInstalled
                                           ? "var(--control-muted)"
                                           : "var(--accent)",
@@ -4649,10 +4351,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                         </>
                                       ) : (
                                         <>
-                                          <IconDownload
-                                            size={14}
-                                            stroke={2.2}
-                                          />
+                                          <IconDownload size={14} stroke={2.2} />
                                           {t("models.common.download")}
                                         </>
                                       )}
@@ -4695,9 +4394,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
         <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text-hi)" }}>
           {t("models.textProcessing.title")}
         </div>
-        <div
-          style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}
-        >
+        <div style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}>
           {t("models.textProcessing.desc")}
         </div>
       </div>
@@ -4769,11 +4466,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
       )}
 
       {styleTabView === "prompts" && (
-        <PromptLibrary
-          settings={settings}
-          onReload={syncSettings}
-          update={update}
-        />
+        <PromptLibrary settings={settings} onReload={syncSettings} update={update} />
       )}
 
       {IS_DEV && styleTabView === "style" && (
@@ -4809,9 +4502,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                 {t("models.preview.desc")}
               </div>
             </div>
-            {promptPreview && (
-              <div className="label">v{promptPreview.version}</div>
-            )}
+            {promptPreview && <div className="label">v{promptPreview.version}</div>}
           </summary>
 
           <div style={{ marginTop: 14, display: "grid", gap: 12 }}>

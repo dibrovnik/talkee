@@ -93,7 +93,10 @@ describe("applyTranscriptionToStats", () => {
   it("accumulates voice words/seconds for the speed metric", () => {
     let stats = createEmptyStats();
     stats = applyTranscriptionToStats(stats, input({ id: "a", text: "one two", durationSec: 60 }));
-    stats = applyTranscriptionToStats(stats, input({ id: "b", text: "three four", durationSec: 60 }));
+    stats = applyTranscriptionToStats(
+      stats,
+      input({ id: "b", text: "three four", durationSec: 60 }),
+    );
     expect(stats.voiceWords).toBe(4);
     expect(stats.voiceDurationSec).toBe(120);
   });
@@ -142,7 +145,10 @@ describe("applyTranscriptionToStats", () => {
 describe("statsToView", () => {
   it("computes average WPM from voice totals", () => {
     let stats = createEmptyStats();
-    stats = applyTranscriptionToStats(stats, input({ id: "a", text: "one two three four", durationSec: 60 }));
+    stats = applyTranscriptionToStats(
+      stats,
+      input({ id: "a", text: "one two three four", durationSec: 60 }),
+    );
     const view = statsToView(stats, new Date("2026-06-21T12:00:00.000Z"));
     expect(view.hasSpeed).toBe(true);
     expect(view.averageWpm).toBe(4); // 4 words / 1 minute
@@ -159,9 +165,18 @@ describe("statsToView", () => {
 
   it("shows only today's and the current month's words", () => {
     let stats = createEmptyStats();
-    stats = applyTranscriptionToStats(stats, input({ id: "may", timestamp: "2026-05-10T10:00:00.000Z", text: "a b" }));
-    stats = applyTranscriptionToStats(stats, input({ id: "jun-old", timestamp: "2026-06-10T10:00:00.000Z", text: "c d e" }));
-    stats = applyTranscriptionToStats(stats, input({ id: "jun-today", timestamp: "2026-06-21T10:00:00.000Z", text: "f g h i" }));
+    stats = applyTranscriptionToStats(
+      stats,
+      input({ id: "may", timestamp: "2026-05-10T10:00:00.000Z", text: "a b" }),
+    );
+    stats = applyTranscriptionToStats(
+      stats,
+      input({ id: "jun-old", timestamp: "2026-06-10T10:00:00.000Z", text: "c d e" }),
+    );
+    stats = applyTranscriptionToStats(
+      stats,
+      input({ id: "jun-today", timestamp: "2026-06-21T10:00:00.000Z", text: "f g h i" }),
+    );
     const view = statsToView(stats, new Date("2026-06-21T12:00:00.000Z"));
     expect(view.todayWords).toBe(4);
     expect(view.monthWords).toBe(7);

@@ -17,9 +17,7 @@ export function normalizeWidgetScale(value: unknown): number {
 
 export function scaleWidgetDimension(value: number, scale: number): number {
   const normalizedScale = normalizeWidgetScale(scale);
-  const edgePadding = normalizedScale > DEFAULT_WIDGET_SCALE
-    ? WIDGET_SCALE_EDGE_PADDING
-    : 0;
+  const edgePadding = normalizedScale > DEFAULT_WIDGET_SCALE ? WIDGET_SCALE_EDGE_PADDING : 0;
 
   return Math.max(1, Math.ceil(value * normalizedScale + edgePadding));
 }

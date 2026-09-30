@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  guardTranscriptionResult,
-  isClearlySilentAudio,
-} from "./transcriptionGuard";
+import { guardTranscriptionResult, isClearlySilentAudio } from "./transcriptionGuard";
 
 describe("transcription hallucination guard", () => {
   test("rejects the Russian refusal hallucinated on silence", () => {
@@ -22,18 +19,11 @@ describe("transcription hallucination guard", () => {
   });
 
   test("rejects a short Hangul-only result for Russian recognition", () => {
-    expect(
-      guardTranscriptionResult(
-        { raw: "점심시간", cleaned: "점심시간" },
-        "ru",
-      ),
-    ).toMatchObject({
+    expect(guardTranscriptionResult({ raw: "점심시간", cleaned: "점심시간" }, "ru")).toMatchObject({
       transcription: null,
       rejectionReason: "unexpected-short-script",
     });
-    expect(
-      guardTranscriptionResult({ raw: "", cleaned: "점심시간" }, "ru"),
-    ).toMatchObject({
+    expect(guardTranscriptionResult({ raw: "", cleaned: "점심시간" }, "ru")).toMatchObject({
       transcription: null,
       rejectionReason: "unexpected-short-script",
     });
@@ -53,25 +43,19 @@ describe("transcription hallucination guard", () => {
 
   test("allows the same Korean phrase for Korean and automatic recognition", () => {
     expect(
-      guardTranscriptionResult(
-        { raw: "점심시간", cleaned: "점심시간" },
-        "ko",
-      ).transcription?.cleaned,
+      guardTranscriptionResult({ raw: "점심시간", cleaned: "점심시간" }, "ko").transcription
+        ?.cleaned,
     ).toBe("점심시간");
     expect(
-      guardTranscriptionResult(
-        { raw: "점심시간", cleaned: "점심시간" },
-        "auto",
-      ).transcription?.cleaned,
+      guardTranscriptionResult({ raw: "점심시간", cleaned: "점심시간" }, "auto").transcription
+        ?.cleaned,
     ).toBe("점심시간");
   });
 
   test("keeps ordinary short Russian speech", () => {
     expect(
-      guardTranscriptionResult(
-        { raw: "Добрый день.", cleaned: "Добрый день." },
-        "ru",
-      ).transcription,
+      guardTranscriptionResult({ raw: "Добрый день.", cleaned: "Добрый день." }, "ru")
+        .transcription,
     ).toEqual({ raw: "Добрый день.", cleaned: "Добрый день." });
   });
 

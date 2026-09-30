@@ -16,8 +16,7 @@ export const WIDGET_SHELL_WIDTH = 74;
 export const WIDGET_SHELL_HEIGHT = 22;
 export const IDLE_HOVER_SCALE = 1;
 export const ACTIVE_WIDGET_SHELL_WIDTH = WIDGET_SHELL_WIDTH * IDLE_HOVER_SCALE;
-export const ACTIVE_WIDGET_SHELL_HEIGHT =
-  WIDGET_SHELL_HEIGHT * IDLE_HOVER_SCALE;
+export const ACTIVE_WIDGET_SHELL_HEIGHT = WIDGET_SHELL_HEIGHT * IDLE_HOVER_SCALE;
 export const IDLE_HOVER_WIDGET_WIDTH = ACTIVE_WIDGET_SHELL_WIDTH + 12;
 export const IDLE_HOVER_WIDGET_HEIGHT = ACTIVE_WIDGET_SHELL_HEIGHT + 12;
 export const IDLE_WIDGET_WIDTH = IDLE_HOVER_WIDGET_WIDTH;
@@ -27,13 +26,9 @@ export const RECORDING_WIDGET_HEIGHT = IDLE_HOVER_WIDGET_HEIGHT;
 export const CALL_BUBBLE_SIZE = WIDGET_SHELL_HEIGHT;
 export const WIDGET_CONTROL_GAP = 6;
 /** Transparent hit-area inset around the visible primary status pill. */
-export const WIDGET_PRIMARY_INLINE_INSET =
-  (IDLE_WIDGET_WIDTH - ACTIVE_WIDGET_SHELL_WIDTH) / 2;
+export const WIDGET_PRIMARY_INLINE_INSET = (IDLE_WIDGET_WIDTH - ACTIVE_WIDGET_SHELL_WIDTH) / 2;
 export const CALL_STACK_WIDGET_WIDTH =
-  IDLE_WIDGET_WIDTH -
-  WIDGET_PRIMARY_INLINE_INSET +
-  WIDGET_CONTROL_GAP +
-  CALL_BUBBLE_SIZE;
+  IDLE_WIDGET_WIDTH - WIDGET_PRIMARY_INLINE_INSET + WIDGET_CONTROL_GAP + CALL_BUBBLE_SIZE;
 export const CALL_STACK_WIDGET_HEIGHT = IDLE_WIDGET_HEIGHT;
 export const FILE_DROP_WIDGET_WIDTH = 236;
 export const FILE_DROP_WIDGET_HEIGHT = 82;
@@ -42,13 +37,8 @@ export const FILE_DROP_STACK_WIDGET_WIDTH =
 export const FILE_DROP_STACK_WIDGET_HEIGHT = FILE_DROP_WIDGET_HEIGHT;
 export const WIDGET_STACK_EDGE_PADDING = 10;
 
-export function widgetStackWidth(
-  fileDropActive: boolean,
-  liveTranslationVisible = false,
-): number {
-  const baseWidth = fileDropActive
-    ? FILE_DROP_STACK_WIDGET_WIDTH
-    : CALL_STACK_WIDGET_WIDTH;
+export function widgetStackWidth(fileDropActive: boolean, liveTranslationVisible = false): number {
+  const baseWidth = fileDropActive ? FILE_DROP_STACK_WIDGET_WIDTH : CALL_STACK_WIDGET_WIDTH;
 
   return (
     baseWidth +
@@ -58,9 +48,7 @@ export function widgetStackWidth(
 }
 
 export function widgetStackHeight(fileDropActive: boolean): number {
-  const baseHeight = fileDropActive
-    ? FILE_DROP_STACK_WIDGET_HEIGHT
-    : CALL_STACK_WIDGET_HEIGHT;
+  const baseHeight = fileDropActive ? FILE_DROP_STACK_WIDGET_HEIGHT : CALL_STACK_WIDGET_HEIGHT;
 
   return baseHeight + WIDGET_STACK_EDGE_PADDING * 2;
 }

@@ -37,10 +37,7 @@ function clampPositionToMonitor(
   };
 }
 
-function getDistanceToMonitorWorkArea(
-  point: { x: number; y: number },
-  monitor: Monitor,
-): number {
+function getDistanceToMonitorWorkArea(point: { x: number; y: number }, monitor: Monitor): number {
   const { position, size } = monitor.workArea;
   const maxX = position.x + size.width;
   const maxY = position.y + size.height;
@@ -82,7 +79,8 @@ export async function resolveInitialWidgetPosition(
 ): Promise<WidgetPosition | null> {
   const windowSize = await widgetWindow.outerSize();
   const monitors = await availableMonitors();
-  const fallbackMonitor = (await primaryMonitor()) ?? (await currentMonitor()) ?? monitors[0] ?? null;
+  const fallbackMonitor =
+    (await primaryMonitor()) ?? (await currentMonitor()) ?? monitors[0] ?? null;
 
   if (!fallbackMonitor) {
     return savedPosition;
@@ -92,6 +90,7 @@ export async function resolveInitialWidgetPosition(
     return getDefaultPositionForMonitor(fallbackMonitor, windowSize);
   }
 
-  const targetMonitor = pickMonitorForSavedPosition(monitors, savedPosition, windowSize) ?? fallbackMonitor;
+  const targetMonitor =
+    pickMonitorForSavedPosition(monitors, savedPosition, windowSize) ?? fallbackMonitor;
   return clampPositionToMonitor(savedPosition, targetMonitor, windowSize);
 }

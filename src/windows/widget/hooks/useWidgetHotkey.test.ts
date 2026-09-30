@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  resolveHandyHotkeyIntent,
-  resolveSelectionHotkeyAction,
-} from "./useWidgetHotkey";
+import { resolveHandyHotkeyIntent, resolveSelectionHotkeyAction } from "./useWidgetHotkey";
 
 describe("resolveHandyHotkeyIntent", () => {
   test("voice hotkey wins when selection hotkey accidentally matches it", () => {

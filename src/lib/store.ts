@@ -1,10 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { load } from "@tauri-apps/plugin-store";
 
-import {
-  DEFAULT_LOCAL_STT_ENDPOINT,
-  DEFAULT_LOCAL_STT_MODEL,
-} from "./modelMode";
+import { DEFAULT_LOCAL_STT_ENDPOINT, DEFAULT_LOCAL_STT_MODEL } from "./modelMode";
 import { DEFAULT_WIDGET_SCALE, normalizeWidgetScale } from "./widgetScale";
 import { recordTranscriptionStats } from "./stats";
 import { logInfo } from "./logger";
@@ -341,8 +338,7 @@ export function getDefaultSelectionTranslationHotkey(): string {
   return DEFAULT_MAC_SELECTION_TRANSLATION_HOTKEY;
 }
 
-export const DEFAULT_SELECTION_TRANSLATION_HOTKEY =
-  getDefaultSelectionTranslationHotkey();
+export const DEFAULT_SELECTION_TRANSLATION_HOTKEY = getDefaultSelectionTranslationHotkey();
 
 export function formatHotkeyLabel(hotkey: string): string {
   const parts = hotkey.split("+").map((part) => part.trim());
@@ -402,9 +398,7 @@ function isModifier(part: string): part is (typeof MODIFIER_ORDER)[number] {
 }
 
 function normalizedHotkeyFromParts(parts: string[]): string | null {
-  const modifiers = MODIFIER_ORDER.filter((modifier) =>
-    parts.includes(modifier),
-  );
+  const modifiers = MODIFIER_ORDER.filter((modifier) => parts.includes(modifier));
   const mainKey = parts.find((part) => !isModifier(part));
   return mainKey ? [...modifiers, mainKey].join("+") : null;
 }
@@ -417,9 +411,7 @@ function isCommandShiftLetterHotkey(parts: string[]): boolean {
   const modifiers = parts.filter(isModifier);
   const mainKey = parts.find((part) => !isModifier(part));
   return (
-    modifiers.includes("Command") &&
-    modifiers.includes("Shift") &&
-    isSingleLetterMainKey(mainKey)
+    modifiers.includes("Command") && modifiers.includes("Shift") && isSingleLetterMainKey(mainKey)
   );
 }
 
@@ -447,10 +439,7 @@ export function isUnsafeMacGlobalHotkey(
     .split("+")
     .map((part) => normalizeHotkeyPart(part))
     .filter((part): part is string => part !== null);
-  return (
-    isReservedMacSystemHotkey(hotkey, macPlatform) ||
-    isCommandShiftLetterHotkey(parts)
-  );
+  return isReservedMacSystemHotkey(hotkey, macPlatform) || isCommandShiftLetterHotkey(parts);
 }
 
 export function validateHotkey(hotkey: string): {
@@ -480,8 +469,7 @@ export function validateHotkey(hotkey: string): {
   if (mainKeys.length === 0) {
     return {
       valid: false,
-      error:
-        "Добавьте основную клавишу: букву, цифру, Space, Enter, стрелку или F1–F12",
+      error: "Добавьте основную клавишу: букву, цифру, Space, Enter, стрелку или F1–F12",
     };
   }
 
@@ -500,10 +488,7 @@ export function validateHotkey(hotkey: string): {
   }
 
   const normalizedHotkey = normalizedHotkeyFromParts(normalizedParts);
-  if (
-    normalizedHotkey &&
-    RESERVED_MAC_SYSTEM_HOTKEYS.has(normalizedHotkey)
-  ) {
+  if (normalizedHotkey && RESERVED_MAC_SYSTEM_HOTKEYS.has(normalizedHotkey)) {
     return {
       valid: false,
       error:
@@ -519,10 +504,7 @@ export function validateHotkey(hotkey: string): {
     };
   }
 
-  if (
-    modifiers.includes("Control") &&
-    modifiers.includes("Alt")
-  ) {
+  if (modifiers.includes("Control") && modifiers.includes("Alt")) {
     return {
       valid: false,
       error:
@@ -554,16 +536,13 @@ export function normalizeHotkey(hotkey: string): {
     .split("+")
     .map((part) => normalizeHotkeyPart(part))
     .filter((part): part is string => part !== null);
-  const modifiers = MODIFIER_ORDER.filter((modifier) =>
-    parts.includes(modifier),
-  );
+  const modifiers = MODIFIER_ORDER.filter((modifier) => parts.includes(modifier));
   const mainKey = parts.find((part) => !isModifier(part));
 
   if (!mainKey) {
     return {
       valid: false,
-      error:
-        "Добавьте основную клавишу: букву, цифру, Space, Enter, стрелку или F1–F12",
+      error: "Добавьте основную клавишу: букву, цифру, Space, Enter, стрелку или F1–F12",
     };
   }
 
@@ -638,9 +617,7 @@ export const BUILTIN_PROMPTS: PromptPreset[] = [
   },
 ];
 
-const BUILTIN_PROMPT_ID_SET = new Set(
-  BUILTIN_PROMPTS.map((preset) => preset.id),
-);
+const BUILTIN_PROMPT_ID_SET = new Set(BUILTIN_PROMPTS.map((preset) => preset.id));
 
 export function isLocalSttEndpoint(endpoint?: string): boolean {
   return /127\.0\.0\.1|localhost/i.test(endpoint || "");
@@ -672,18 +649,13 @@ function needsLocalSttSettingsMigration(saved: unknown): boolean {
   }
 
   const raw = saved as Record<string, unknown>;
-  const endpoint =
-    typeof raw.whisperEndpoint === "string" ? raw.whisperEndpoint : "";
+  const endpoint = typeof raw.whisperEndpoint === "string" ? raw.whisperEndpoint : "";
   if (!isLocalSttEndpoint(endpoint)) {
     return false;
   }
 
   const normalizedEndpoint = normalizeLocalSttEndpoint(endpoint);
-  return (
-    raw.provider !== "custom" ||
-    raw.whisperApiKey !== "" ||
-    normalizedEndpoint !== endpoint
-  );
+  return raw.provider !== "custom" || raw.whisperApiKey !== "" || normalizedEndpoint !== endpoint;
 }
 
 /** Legacy cloud mode (`useOwnKey=false` + `deviceToken`) cleanup: drop those
@@ -708,9 +680,7 @@ export function needsHotkeySettingsMigration(
 
   const raw = saved as Record<string, unknown>;
   const currentVoiceHotkey =
-    typeof settings.hotkey === "string"
-      ? normalizeHotkey(settings.hotkey).normalized
-      : undefined;
+    typeof settings.hotkey === "string" ? normalizeHotkey(settings.hotkey).normalized : undefined;
   if (typeof raw.hotkey === "string") {
     const savedVoiceHotkey = normalizeHotkey(raw.hotkey).normalized;
     if (!savedVoiceHotkey || savedVoiceHotkey !== currentVoiceHotkey) {
@@ -742,17 +712,13 @@ export function needsHotkeySettingsMigration(
     return false;
   }
 
-  const savedSelectionHotkey = normalizeHotkey(
-    rawTranslation.selectionHotkey,
-  ).normalized;
+  const savedSelectionHotkey = normalizeHotkey(rawTranslation.selectionHotkey).normalized;
   const currentSelectionHotkey =
     typeof settings.translation?.selectionHotkey === "string"
       ? normalizeHotkey(settings.translation.selectionHotkey).normalized
       : undefined;
 
-  return (
-    !savedSelectionHotkey || savedSelectionHotkey !== currentSelectionHotkey
-  );
+  return !savedSelectionHotkey || savedSelectionHotkey !== currentSelectionHotkey;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -789,8 +755,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     widgetEnabled: false,
     active: false,
     targetLanguage: "en",
-    selectionTargetLanguage:
-      defaultSelectionTranslationTarget(DEFAULT_LANGUAGE),
+    selectionTargetLanguage: defaultSelectionTranslationTarget(DEFAULT_LANGUAGE),
     selectionTargetMigrationVersion: SELECTION_TARGET_MIGRATION_VERSION,
     selectionEnabled: true,
     selectionHotkey: DEFAULT_SELECTION_TRANSLATION_HOTKEY,
@@ -851,8 +816,7 @@ function parsePrompts(value: unknown): PromptPreset[] | undefined {
       kind,
       prompt,
       builtin: false,
-      temperature:
-        typeof raw.temperature === "number" ? raw.temperature : undefined,
+      temperature: typeof raw.temperature === "number" ? raw.temperature : undefined,
       createdAt: typeof raw.createdAt === "string" ? raw.createdAt : undefined,
       updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : undefined,
     });
@@ -898,9 +862,7 @@ function defaultTranslationTarget(sourceLanguage: string | undefined): string {
   return sourceLanguage === "en" ? "ru" : "en";
 }
 
-function defaultSelectionTranslationTarget(
-  sourceLanguage: string | undefined,
-): string {
+function defaultSelectionTranslationTarget(sourceLanguage: string | undefined): string {
   return sourceLanguage && sourceLanguage !== "auto" ? sourceLanguage : "en";
 }
 
@@ -921,8 +883,7 @@ function normalizeTranslationSettings(
 ): TranslationSettings {
   const source = sourceLanguage || DEFAULT_SETTINGS.language;
   const fallbackTarget = defaultTranslationTarget(source);
-  const fallbackSelectionTarget =
-    defaultSelectionTranslationTarget(sourceLanguage);
+  const fallbackSelectionTarget = defaultSelectionTranslationTarget(sourceLanguage);
   const normalizedTarget =
     translation.targetLanguage &&
     translation.targetLanguage !== "auto" &&
@@ -930,8 +891,7 @@ function normalizeTranslationSettings(
       ? translation.targetLanguage
       : fallbackTarget;
   const normalizedSelectionTarget =
-    translation.selectionTargetLanguage &&
-    translation.selectionTargetLanguage !== "auto"
+    translation.selectionTargetLanguage && translation.selectionTargetLanguage !== "auto"
       ? translation.selectionTargetLanguage
       : fallbackSelectionTarget;
   const normalizedSelectionHotkey =
@@ -960,8 +920,7 @@ function normalizeTranslationSettings(
     liveWidgetEnabled: translation.liveWidgetEnabled,
     liveMicrophoneEnabled: translation.liveMicrophoneEnabled,
     liveTargetLanguage:
-      translation.liveTargetLanguage &&
-      translation.liveTargetLanguage !== "auto"
+      translation.liveTargetLanguage && translation.liveTargetLanguage !== "auto"
         ? translation.liveTargetLanguage
         : fallbackTarget,
     liveVoiceEnabled: translation.liveVoiceEnabled,
@@ -973,18 +932,12 @@ function normalizeTranslationSettings(
 }
 
 function nonConflictingSelectionHotkey(voiceHotkey?: string): string {
-  const voice = voiceHotkey
-    ? normalizeHotkey(voiceHotkey).normalized
-    : undefined;
-  const candidates = [
-    DEFAULT_MAC_SELECTION_TRANSLATION_HOTKEY,
-    "Control+Shift+U",
-  ];
+  const voice = voiceHotkey ? normalizeHotkey(voiceHotkey).normalized : undefined;
+  const candidates = [DEFAULT_MAC_SELECTION_TRANSLATION_HOTKEY, "Control+Shift+U"];
   return (
     candidates
       .map((candidate) => normalizeHotkey(candidate).normalized || candidate)
-      .find((candidate) => candidate !== voice) ||
-    DEFAULT_SELECTION_TRANSLATION_HOTKEY
+      .find((candidate) => candidate !== voice) || DEFAULT_SELECTION_TRANSLATION_HOTKEY
   );
 }
 
@@ -1009,12 +962,10 @@ function parseTranslationSettings(
     selectionEnableMigrationVersion < SELECTION_ENABLE_MIGRATION_VERSION &&
     raw.selectionEnabled === false;
   const rawSelectionTargetLanguage =
-    typeof raw.selectionTargetLanguage === "string" &&
-    raw.selectionTargetLanguage.trim()
+    typeof raw.selectionTargetLanguage === "string" && raw.selectionTargetLanguage.trim()
       ? raw.selectionTargetLanguage.trim()
       : defaultSelectionTranslationTarget(sourceLanguage);
-  const fallbackSelectionTarget =
-    defaultSelectionTranslationTarget(sourceLanguage);
+  const fallbackSelectionTarget = defaultSelectionTranslationTarget(sourceLanguage);
   const shouldMigrateSelectionTarget =
     selectionTargetMigrationVersion < SELECTION_TARGET_MIGRATION_VERSION &&
     sourceLanguage &&
@@ -1024,8 +975,7 @@ function parseTranslationSettings(
 
   return normalizeTranslationSettings(
     {
-      widgetEnabled:
-        typeof raw.widgetEnabled === "boolean" ? raw.widgetEnabled : false,
+      widgetEnabled: typeof raw.widgetEnabled === "boolean" ? raw.widgetEnabled : false,
       active: typeof raw.active === "boolean" ? raw.active : false,
       targetLanguage:
         typeof raw.targetLanguage === "string" && raw.targetLanguage.trim()
@@ -1044,10 +994,9 @@ function parseTranslationSettings(
         typeof raw.selectionHotkey === "string" && raw.selectionHotkey.trim()
           ? raw.selectionHotkey.trim()
           : DEFAULT_SELECTION_TRANSLATION_HOTKEY,
-      selectionLocalTranslatorProvider:
-        normalizeSelectionLocalTranslatorProvider(
-          raw.selectionLocalTranslatorProvider,
-        ),
+      selectionLocalTranslatorProvider: normalizeSelectionLocalTranslatorProvider(
+        raw.selectionLocalTranslatorProvider,
+      ),
       selectionEnableMigrationVersion,
       liveWidgetEnabled:
         typeof raw.liveWidgetEnabled === "boolean"
@@ -1058,8 +1007,7 @@ function parseTranslationSettings(
           ? raw.liveMicrophoneEnabled
           : DEFAULT_SETTINGS.translation.liveMicrophoneEnabled,
       liveTargetLanguage:
-        typeof raw.liveTargetLanguage === "string" &&
-        raw.liveTargetLanguage.trim()
+        typeof raw.liveTargetLanguage === "string" && raw.liveTargetLanguage.trim()
           ? raw.liveTargetLanguage.trim()
           : defaultTranslationTarget(sourceLanguage),
       liveVoiceEnabled:
@@ -1071,13 +1019,11 @@ function parseTranslationSettings(
           ? raw.liveVoice.trim()
           : DEFAULT_SETTINGS.translation.liveVoice,
       liveVoiceVolume:
-        typeof raw.liveVoiceVolume === "number" &&
-        Number.isFinite(raw.liveVoiceVolume)
+        typeof raw.liveVoiceVolume === "number" && Number.isFinite(raw.liveVoiceVolume)
           ? raw.liveVoiceVolume
           : DEFAULT_SETTINGS.translation.liveVoiceVolume,
       liveVoiceSpeed:
-        typeof raw.liveVoiceSpeed === "number" &&
-        Number.isFinite(raw.liveVoiceSpeed)
+        typeof raw.liveVoiceSpeed === "number" && Number.isFinite(raw.liveVoiceSpeed)
           ? raw.liveVoiceSpeed
           : DEFAULT_SETTINGS.translation.liveVoiceSpeed,
       liveMuteOriginalEnabled:
@@ -1106,27 +1052,17 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
           acc[key] = {
             apiKey: typeof adapter.apiKey === "string" ? adapter.apiKey : "",
             model: typeof adapter.model === "string" ? adapter.model : "",
-            endpoint:
-              typeof adapter.endpoint === "string"
-                ? adapter.endpoint
-                : undefined,
+            endpoint: typeof adapter.endpoint === "string" ? adapter.endpoint : undefined,
             connectionStatus:
-              adapter.connectionStatus === "saved" ||
-              adapter.connectionStatus === "verified"
+              adapter.connectionStatus === "saved" || adapter.connectionStatus === "verified"
                 ? adapter.connectionStatus
                 : undefined,
             lastConnectedAt:
-              typeof adapter.lastConnectedAt === "string"
-                ? adapter.lastConnectedAt
-                : undefined,
+              typeof adapter.lastConnectedAt === "string" ? adapter.lastConnectedAt : undefined,
             lastTestedApiKey:
-              typeof adapter.lastTestedApiKey === "string"
-                ? adapter.lastTestedApiKey
-                : undefined,
+              typeof adapter.lastTestedApiKey === "string" ? adapter.lastTestedApiKey : undefined,
             lastTestedModel:
-              typeof adapter.lastTestedModel === "string"
-                ? adapter.lastTestedModel
-                : undefined,
+              typeof adapter.lastTestedModel === "string" ? adapter.lastTestedModel : undefined,
             lastTestedEndpoint:
               typeof adapter.lastTestedEndpoint === "string"
                 ? adapter.lastTestedEndpoint
@@ -1146,35 +1082,25 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
       : undefined;
   const rawTranslationAdapters =
     raw.translationAdapters && typeof raw.translationAdapters === "object"
-      ? Object.entries(
-          raw.translationAdapters as Record<string, unknown>,
-        ).reduce<Record<string, ApiAdapterSettings>>((acc, [key, value]) => {
+      ? Object.entries(raw.translationAdapters as Record<string, unknown>).reduce<
+          Record<string, ApiAdapterSettings>
+        >((acc, [key, value]) => {
           if (!value || typeof value !== "object") return acc;
           const adapter = value as Record<string, unknown>;
           acc[key] = {
             apiKey: typeof adapter.apiKey === "string" ? adapter.apiKey : "",
             model: typeof adapter.model === "string" ? adapter.model : "",
-            endpoint:
-              typeof adapter.endpoint === "string"
-                ? adapter.endpoint
-                : undefined,
+            endpoint: typeof adapter.endpoint === "string" ? adapter.endpoint : undefined,
             connectionStatus:
-              adapter.connectionStatus === "saved" ||
-              adapter.connectionStatus === "verified"
+              adapter.connectionStatus === "saved" || adapter.connectionStatus === "verified"
                 ? adapter.connectionStatus
                 : undefined,
             lastConnectedAt:
-              typeof adapter.lastConnectedAt === "string"
-                ? adapter.lastConnectedAt
-                : undefined,
+              typeof adapter.lastConnectedAt === "string" ? adapter.lastConnectedAt : undefined,
             lastTestedApiKey:
-              typeof adapter.lastTestedApiKey === "string"
-                ? adapter.lastTestedApiKey
-                : undefined,
+              typeof adapter.lastTestedApiKey === "string" ? adapter.lastTestedApiKey : undefined,
             lastTestedModel:
-              typeof adapter.lastTestedModel === "string"
-                ? adapter.lastTestedModel
-                : undefined,
+              typeof adapter.lastTestedModel === "string" ? adapter.lastTestedModel : undefined,
             lastTestedEndpoint:
               typeof adapter.lastTestedEndpoint === "string"
                 ? adapter.lastTestedEndpoint
@@ -1209,16 +1135,10 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
               : "not_downloaded";
           acc[key] = {
             status,
-            message:
-              typeof model.message === "string" ? model.message : undefined,
-            downloadedAt:
-              typeof model.downloadedAt === "string"
-                ? model.downloadedAt
-                : undefined,
+            message: typeof model.message === "string" ? model.message : undefined,
+            downloadedAt: typeof model.downloadedAt === "string" ? model.downloadedAt : undefined,
             lastCheckedAt:
-              typeof model.lastCheckedAt === "string"
-                ? model.lastCheckedAt
-                : undefined,
+              typeof model.lastCheckedAt === "string" ? model.lastCheckedAt : undefined,
           };
           return acc;
         }, {})
@@ -1238,18 +1158,14 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
       ? true
       : undefined;
   const normalizedHotkey =
-    typeof raw.hotkey === "string"
-      ? normalizeHotkey(raw.hotkey).normalized
-      : undefined;
+    typeof raw.hotkey === "string" ? normalizeHotkey(raw.hotkey).normalized : undefined;
   const hotkey = normalizedHotkey;
 
   const normalized: Partial<AppSettings> = {
     apiKey: typeof raw.apiKey === "string" ? raw.apiKey : undefined,
     apiAdapters: rawApiAdapters,
     selectedApiAdapter:
-      typeof raw.selectedApiAdapter === "string"
-        ? raw.selectedApiAdapter
-        : undefined,
+      typeof raw.selectedApiAdapter === "string" ? raw.selectedApiAdapter : undefined,
     translationAdapters: rawTranslationAdapters,
     selectedTranslationAdapter:
       typeof raw.selectedTranslationAdapter === "string"
@@ -1259,15 +1175,12 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
     localModelsDir: "",
     transcriptionStorageDir: "",
     saveRecordingAudio:
-      typeof raw.saveRecordingAudio === "boolean"
-        ? raw.saveRecordingAudio
-        : undefined,
+      typeof raw.saveRecordingAudio === "boolean" ? raw.saveRecordingAudio : undefined,
     realtimeTranscriptionEnabled:
       typeof raw.realtimeTranscriptionEnabled === "boolean"
         ? raw.realtimeTranscriptionEnabled
         : legacyStreamingEnabled,
-    whisperApiKey:
-      typeof raw.whisperApiKey === "string" ? raw.whisperApiKey : undefined,
+    whisperApiKey: typeof raw.whisperApiKey === "string" ? raw.whisperApiKey : undefined,
     llmApiKey: typeof raw.llmApiKey === "string" ? raw.llmApiKey : undefined,
     provider: parseProvider(raw.provider),
     whisperModel:
@@ -1278,39 +1191,26 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
           : undefined,
     llmModel: typeof raw.llmModel === "string" ? raw.llmModel : undefined,
     hotkey,
-    widgetScale:
-      raw.widgetScale === undefined
-        ? undefined
-        : normalizeWidgetScale(raw.widgetScale),
+    widgetScale: raw.widgetScale === undefined ? undefined : normalizeWidgetScale(raw.widgetScale),
     theme: parseTheme(raw.theme),
     language: typeof raw.language === "string" ? raw.language : undefined,
-    uiLanguage:
-      raw.uiLanguage === "en" || raw.uiLanguage === "ru"
-        ? raw.uiLanguage
-        : undefined,
-    doubleTapTimeout:
-      typeof raw.doubleTapTimeout === "number"
-        ? raw.doubleTapTimeout
-        : undefined,
+    uiLanguage: raw.uiLanguage === "en" || raw.uiLanguage === "ru" ? raw.uiLanguage : undefined,
+    doubleTapTimeout: typeof raw.doubleTapTimeout === "number" ? raw.doubleTapTimeout : undefined,
     style: parseStyle(raw.style),
     prompts: parsePrompts(raw.prompts),
     selectedCleanupPromptId:
-      typeof raw.selectedCleanupPromptId === "string" &&
-      raw.selectedCleanupPromptId.trim()
+      typeof raw.selectedCleanupPromptId === "string" && raw.selectedCleanupPromptId.trim()
         ? raw.selectedCleanupPromptId.trim()
         : // Migration: fall back to the legacy `style` value, whose ids match
           // the built-in cleanup presets one-to-one.
           parseStyle(raw.style),
     defaultSummaryPromptId:
-      typeof raw.defaultSummaryPromptId === "string" &&
-      raw.defaultSummaryPromptId.trim()
+      typeof raw.defaultSummaryPromptId === "string" && raw.defaultSummaryPromptId.trim()
         ? raw.defaultSummaryPromptId.trim()
         : undefined,
     micId: typeof raw.micId === "string" ? raw.micId : undefined,
-    whisperEndpoint:
-      typeof raw.whisperEndpoint === "string" ? raw.whisperEndpoint : undefined,
-    llmEndpoint:
-      typeof raw.llmEndpoint === "string" ? raw.llmEndpoint : undefined,
+    whisperEndpoint: typeof raw.whisperEndpoint === "string" ? raw.whisperEndpoint : undefined,
+    llmEndpoint: typeof raw.llmEndpoint === "string" ? raw.llmEndpoint : undefined,
     llmLocalModelId:
       typeof raw.llmLocalModelId === "string"
         ? raw.llmLocalModelId
@@ -1318,9 +1218,7 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
           ? parseBundledLocalLlmModelId(raw.llmModel)
           : undefined,
     fileSpeakerDiarization:
-      typeof raw.fileSpeakerDiarization === "boolean"
-        ? raw.fileSpeakerDiarization
-        : undefined,
+      typeof raw.fileSpeakerDiarization === "boolean" ? raw.fileSpeakerDiarization : undefined,
     translation: parseTranslationSettings(
       raw.translation,
       typeof raw.language === "string" ? raw.language : undefined,
@@ -1330,9 +1228,7 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
   const normalizedTranslationHotkey = normalizeHotkey(
     normalized.translation?.selectionHotkey || "",
   ).normalized;
-  const normalizedVoiceHotkey = normalizeHotkey(
-    normalized.hotkey || "",
-  ).normalized;
+  const normalizedVoiceHotkey = normalizeHotkey(normalized.hotkey || "").normalized;
   if (
     normalized.translation &&
     normalizedTranslationHotkey &&
@@ -1346,9 +1242,7 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
   }
 
   if (isLocalSttEndpoint(normalized.whisperEndpoint)) {
-    normalized.whisperEndpoint = normalizeLocalSttEndpoint(
-      normalized.whisperEndpoint,
-    );
+    normalized.whisperEndpoint = normalizeLocalSttEndpoint(normalized.whisperEndpoint);
     normalized.provider = "custom";
     normalized.whisperApiKey = "";
   }
@@ -1363,9 +1257,8 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
     if (hasLocalSttModel) {
       normalized.provider = "custom";
       normalized.whisperApiKey = "";
-      normalized.whisperEndpoint = normalizeLocalSttEndpoint(
-        normalized.whisperEndpoint,
-      ) || DEFAULT_LOCAL_STT_ENDPOINT;
+      normalized.whisperEndpoint =
+        normalizeLocalSttEndpoint(normalized.whisperEndpoint) || DEFAULT_LOCAL_STT_ENDPOINT;
       normalized.whisperModel = normalized.whisperModel || DEFAULT_LOCAL_STT_MODEL;
     } else {
       normalized.whisperEndpoint = "";
@@ -1387,10 +1280,7 @@ async function getStore() {
   return _store;
 }
 
-function readLegacyPath(
-  saved: unknown,
-  key: "localModelsDir" | "transcriptionStorageDir",
-): string {
+function readLegacyPath(saved: unknown, key: "localModelsDir" | "transcriptionStorageDir"): string {
   if (!saved || typeof saved !== "object") {
     return "";
   }
@@ -1409,8 +1299,7 @@ async function migrateAppDataLayoutOnce(saved: unknown): Promise<void> {
     const legacyHistory = (await store.get<HistoryEntry[]>("history")) || [];
     await invoke("migrate_app_data_layout", {
       legacyLocalModelsDir: readLegacyPath(saved, "localModelsDir") || null,
-      legacyTranscriptionStorageDir:
-        readLegacyPath(saved, "transcriptionStorageDir") || null,
+      legacyTranscriptionStorageDir: readLegacyPath(saved, "transcriptionStorageDir") || null,
       legacyHistory,
     });
   })().catch((error) => {
@@ -1420,14 +1309,8 @@ async function migrateAppDataLayoutOnce(saved: unknown): Promise<void> {
   return _appDataLayoutMigration;
 }
 
-function getHistoryEntrySource(
-  entry: HistoryEntry,
-): NonNullable<HistoryEntry["source"]> {
-  if (
-    entry.source === "file" ||
-    entry.source === "call" ||
-    entry.source === "liveTranslation"
-  ) {
+function getHistoryEntrySource(entry: HistoryEntry): NonNullable<HistoryEntry["source"]> {
+  if (entry.source === "file" || entry.source === "call" || entry.source === "liveTranslation") {
     return entry.source;
   }
 
@@ -1438,9 +1321,7 @@ function estimateJsonBytes(value: unknown): number {
   return new TextEncoder().encode(JSON.stringify(value)).length;
 }
 
-function historyEntryText(
-  entry: Pick<HistoryEntry, "cleaned" | "raw">,
-): string {
+function historyEntryText(entry: Pick<HistoryEntry, "cleaned" | "raw">): string {
   const cleaned = entry.cleaned ?? "";
   return cleaned.length > 0 ? cleaned : (entry.raw ?? "");
 }
@@ -1458,23 +1339,17 @@ export function toHistoryListEntry(entry: HistoryEntry): HistoryListEntry {
     processingTime: entry.processingTime,
     fileName: entry.fileName,
     mode: entry.mode,
-    textPreview:
-      text.length > 250 ? `${text.slice(0, 250).trimEnd()}...` : text,
+    textPreview: text.length > 250 ? `${text.slice(0, 250).trimEnd()}...` : text,
     textLength: text.length,
     hasAudio: Boolean(entry.audioPath || entry.audioBase64),
     hasCallTracks: Boolean(entry.callTracks?.length),
     hasFilePath: Boolean(entry.filePath),
     callCapturePhase: entry.callCapturePhase,
-    summaryCount: Math.min(
-      entry.summaries?.length ?? 0,
-      HISTORY_MAX_SUMMARIES_PER_ENTRY,
-    ),
+    summaryCount: Math.min(entry.summaries?.length ?? 0, HISTORY_MAX_SUMMARIES_PER_ENTRY),
   };
 }
 
-export function compactHistoryEntryForStorage(
-  entry: HistoryEntry,
-): HistoryEntry {
+export function compactHistoryEntryForStorage(entry: HistoryEntry): HistoryEntry {
   const summaries = entry.summaries?.slice(0, HISTORY_MAX_SUMMARIES_PER_ENTRY);
   const raw = entry.raw ?? "";
   const cleaned = entry.cleaned ?? "";
@@ -1491,9 +1366,7 @@ export function compactHistoryEntryForStorage(
   return next;
 }
 
-export function normalizeHistoryEntryFromStorage(
-  entry: HistoryEntry,
-): HistoryEntry {
+export function normalizeHistoryEntryFromStorage(entry: HistoryEntry): HistoryEntry {
   if (!entry.raw && entry.cleaned) {
     return { ...entry, raw: entry.cleaned };
   }
@@ -1549,10 +1422,7 @@ function pruneHistory(history: HistoryEntry[]): HistoryEntry[] {
     limitedByType.push(entry);
   }
 
-  while (
-    limitedByType.length > 1 &&
-    estimateJsonBytes(limitedByType) > HISTORY_MAX_TOTAL_BYTES
-  ) {
+  while (limitedByType.length > 1 && estimateJsonBytes(limitedByType) > HISTORY_MAX_TOTAL_BYTES) {
     limitedByType.pop();
   }
 
@@ -1571,8 +1441,7 @@ export function pruneHistoryAudioRetention(history: HistoryEntry[]): {
   const pathsToDelete: string[] = [];
   const updated = history.map((entry) => {
     const hasVoiceAudio =
-      isVoiceHistoryEntry(entry) &&
-      Boolean(entry.audioPath || entry.audioBase64);
+      isVoiceHistoryEntry(entry) && Boolean(entry.audioPath || entry.audioBase64);
     if (!hasVoiceAudio) {
       return entry;
     }
@@ -1601,39 +1470,28 @@ interface GetSettingsOptions {
   reload?: boolean;
 }
 
-export async function getSettings(
-  options: GetSettingsOptions = {},
-): Promise<AppSettings> {
+export async function getSettings(options: GetSettingsOptions = {}): Promise<AppSettings> {
   const store = await getStore();
   if (options.reload) {
     try {
       await store.reload();
     } catch (error) {
-      console.warn(
-        "Failed to reload settings store, using in-memory store",
-        error,
-      );
+      console.warn("Failed to reload settings store, using in-memory store", error);
     }
   }
   const saved = await store.get<unknown>("settings");
   await migrateAppDataLayoutOnce(saved);
   const normalized = normalizeSavedSettings(saved);
   // Remove undefined keys so they don't overwrite defaults
-  const defined = Object.fromEntries(
-    Object.entries(normalized).filter(([, v]) => v !== undefined),
-  );
+  const defined = Object.fromEntries(Object.entries(normalized).filter(([, v]) => v !== undefined));
   const result = { ...DEFAULT_SETTINGS, ...defined } as AppSettings;
   if (isLocalSttEndpoint(result.whisperEndpoint)) {
     result.whisperEndpoint =
-      normalizeLocalSttEndpoint(result.whisperEndpoint) ||
-      result.whisperEndpoint;
+      normalizeLocalSttEndpoint(result.whisperEndpoint) || result.whisperEndpoint;
     result.provider = "custom";
     result.whisperApiKey = "";
   }
-  result.translation = normalizeTranslationSettings(
-    result.translation,
-    result.language,
-  );
+  result.translation = normalizeTranslationSettings(result.translation, result.language);
   if (
     needsCloudModeSettingsMigration(saved) ||
     needsLocalSttSettingsMigration(saved) ||
@@ -1658,10 +1516,7 @@ export type AppSettingsPatch = Omit<Partial<AppSettings>, "translation"> & {
   translation?: Partial<TranslationSettings>;
 };
 
-export function mergeAppSettingsPatch(
-  current: AppSettings,
-  patch: AppSettingsPatch,
-): AppSettings {
+export function mergeAppSettingsPatch(current: AppSettings, patch: AppSettingsPatch): AppSettings {
   return {
     ...current,
     ...patch,
@@ -1703,22 +1558,15 @@ export function saveSettings(settings: AppSettingsPatch): Promise<void> {
 }
 
 export function makePromptId(): string {
-  if (
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-  ) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return `prompt-${crypto.randomUUID()}`;
   }
 
-  return `prompt-${Date.now().toString(36)}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
+  return `prompt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 /** Built-in presets merged with the user's stored presets. */
-export function getAllPrompts(
-  settings: Pick<AppSettings, "prompts">,
-): PromptPreset[] {
+export function getAllPrompts(settings: Pick<AppSettings, "prompts">): PromptPreset[] {
   return [...BUILTIN_PROMPTS, ...settings.prompts];
 }
 
@@ -1759,9 +1607,7 @@ export interface PromptPresetInput {
 }
 
 /** Create or update a user prompt preset. Built-in presets are immutable. */
-export async function upsertPrompt(
-  input: PromptPresetInput,
-): Promise<PromptPreset> {
+export async function upsertPrompt(input: PromptPresetInput): Promise<PromptPreset> {
   const name = input.name.trim();
   const prompt = input.prompt.trim();
 
@@ -1847,9 +1693,7 @@ export async function getHistoryIndex(): Promise<HistoryListEntry[]> {
   return index;
 }
 
-export async function getHistoryEntry(
-  id: string,
-): Promise<HistoryEntry | null> {
+export async function getHistoryEntry(id: string): Promise<HistoryEntry | null> {
   const storageDir = await getHistoryStorageDir();
   const entry = await invoke<HistoryEntry | null>("read_history_entry_file", {
     storageDir,
@@ -1932,9 +1776,7 @@ export async function updateSummaryInEntry(
     updatedEntry = normalizeHistoryEntryFromStorage(
       compactHistoryEntryForStorage({
         ...item,
-        summaries: (item.summaries ?? []).map((s) =>
-          s.id === summaryId ? { ...s, text } : s,
-        ),
+        summaries: (item.summaries ?? []).map((s) => (s.id === summaryId ? { ...s, text } : s)),
       }),
     );
     return updatedEntry;
@@ -2008,9 +1850,7 @@ async function readHistoryFromDefaultStorage(): Promise<HistoryEntry[]> {
   return readHistoryFromStorageDir("");
 }
 
-export async function writeHistoryToDefaultStorage(
-  history: HistoryEntry[],
-): Promise<void> {
+export async function writeHistoryToDefaultStorage(history: HistoryEntry[]): Promise<void> {
   const { history: retained, pathsToDelete } = prepareHistoryForWrite(history);
   await invoke("write_history_file", {
     storageDir: "",
@@ -2019,9 +1859,7 @@ export async function writeHistoryToDefaultStorage(
   await deleteHistoryAudioFiles(pathsToDelete);
 }
 
-async function readHistoryFromStorageDir(
-  storageDir: string,
-): Promise<HistoryEntry[]> {
+async function readHistoryFromStorageDir(storageDir: string): Promise<HistoryEntry[]> {
   const history = await invoke<HistoryEntry[]>("read_history_file", {
     storageDir,
   });
@@ -2101,9 +1939,7 @@ export async function saveHistoryAudio({
   });
 }
 
-export async function readHistoryAudio(
-  path: string,
-): Promise<ReadHistoryAudio> {
+export async function readHistoryAudio(path: string): Promise<ReadHistoryAudio> {
   return invoke<ReadHistoryAudio>("read_history_audio", {
     storageDir: await getHistoryStorageDir(),
     path,
@@ -2117,12 +1953,8 @@ export async function deleteHistoryAudio(path: string): Promise<void> {
   });
 }
 
-async function deleteHistoryAudioFiles(
-  paths: Array<string | undefined>,
-): Promise<void> {
-  const uniquePaths = [
-    ...new Set(paths.filter((path): path is string => Boolean(path))),
-  ];
+async function deleteHistoryAudioFiles(paths: Array<string | undefined>): Promise<void> {
+  const uniquePaths = [...new Set(paths.filter((path): path is string => Boolean(path)))];
 
   await Promise.all(
     uniquePaths.map(async (path) => {
@@ -2142,10 +1974,7 @@ function historyAudioPaths(entry: HistoryEntry): string[] {
     paths.push(entry.audioPath);
   }
 
-  if (
-    (entry.source === "call" || entry.source === "liveTranslation") &&
-    entry.callTracks?.length
-  ) {
+  if ((entry.source === "call" || entry.source === "liveTranslation") && entry.callTracks?.length) {
     for (const track of entry.callTracks) {
       if (track.path) {
         paths.push(track.path);
@@ -2167,8 +1996,7 @@ async function deleteHistoryAudioForEntry(entry?: HistoryEntry): Promise<void> {
 const PERMISSIONS_PASSED_KEY = "permissions_passed";
 const PERMISSIONS_VERSION_KEY = "permissions_version";
 const CURRENT_PERMISSIONS_VERSION = 3;
-const SYSTEM_AUDIO_PERMISSION_VERIFIED_V2_KEY =
-  "system_audio_permission_verified_v2";
+const SYSTEM_AUDIO_PERMISSION_VERIFIED_V2_KEY = "system_audio_permission_verified_v2";
 const WIDGET_POSITION_KEY = "widget_position";
 
 export async function getPermissionsPassed(): Promise<boolean> {
@@ -2181,23 +2009,16 @@ export async function getPermissionsPassed(): Promise<boolean> {
 export async function setPermissionsPassed(value: boolean): Promise<void> {
   const store = await getStore();
   await store.set(PERMISSIONS_PASSED_KEY, value);
-  await store.set(
-    PERMISSIONS_VERSION_KEY,
-    value ? CURRENT_PERMISSIONS_VERSION : 0,
-  );
+  await store.set(PERMISSIONS_VERSION_KEY, value ? CURRENT_PERMISSIONS_VERSION : 0);
   await store.save();
 }
 
 export async function getSystemAudioPermissionVerifiedV2(): Promise<boolean> {
   const store = await getStore();
-  return (
-    (await store.get<boolean>(SYSTEM_AUDIO_PERMISSION_VERIFIED_V2_KEY)) ?? false
-  );
+  return (await store.get<boolean>(SYSTEM_AUDIO_PERMISSION_VERIFIED_V2_KEY)) ?? false;
 }
 
-export async function setSystemAudioPermissionVerifiedV2(
-  value: boolean,
-): Promise<void> {
+export async function setSystemAudioPermissionVerifiedV2(value: boolean): Promise<void> {
   const store = await getStore();
   await store.set(SYSTEM_AUDIO_PERMISSION_VERIFIED_V2_KEY, value);
   await store.save();
@@ -2219,9 +2040,7 @@ export async function getWidgetPosition(): Promise<WidgetPosition | null> {
   return { x: raw.x, y: raw.y };
 }
 
-export async function saveWidgetPosition(
-  position: WidgetPosition,
-): Promise<void> {
+export async function saveWidgetPosition(position: WidgetPosition): Promise<void> {
   const store = await getStore();
   await store.set(WIDGET_POSITION_KEY, position);
   await store.save();

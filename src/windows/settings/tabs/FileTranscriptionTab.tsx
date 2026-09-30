@@ -102,8 +102,7 @@ function getDiarizationWhisperOption(
   const currentModel = (settings.whisperModel || "").trim().toLowerCase();
   const currentOption = DIARIZATION_WHISPER_OPTIONS.find(
     (option) =>
-      option.model.toLowerCase() === currentModel &&
-      isModelDownloaded(settings, option.id),
+      option.model.toLowerCase() === currentModel && isModelDownloaded(settings, option.id),
   );
 
   if (currentOption && STRONG_DIARIZATION_WHISPER_IDS.has(currentOption.id)) {
@@ -112,16 +111,13 @@ function getDiarizationWhisperOption(
 
   const strongestDownloadedOption = DIARIZATION_WHISPER_OPTIONS.find(
     (option) =>
-      STRONG_DIARIZATION_WHISPER_IDS.has(option.id) &&
-      isModelDownloaded(settings, option.id),
+      STRONG_DIARIZATION_WHISPER_IDS.has(option.id) && isModelDownloaded(settings, option.id),
   );
 
   return (
     strongestDownloadedOption ||
     currentOption ||
-    DIARIZATION_WHISPER_OPTIONS.find((option) =>
-      isModelDownloaded(settings, option.id),
-    ) ||
+    DIARIZATION_WHISPER_OPTIONS.find((option) => isModelDownloaded(settings, option.id)) ||
     null
   );
 }
@@ -134,10 +130,8 @@ function statusLabel(
   if (status === "reading") return t("fileTab.status.reading");
   if (status === "converting") return t("fileTab.status.converting");
   if (status === "uploading") return t("fileTab.status.uploading");
-  if (status === "preparing")
-    return progress?.message || t("fileTab.status.preparing");
-  if (status === "diarizing")
-    return progress?.message || t("fileTab.status.diarizing");
+  if (status === "preparing") return progress?.message || t("fileTab.status.preparing");
+  if (status === "diarizing") return progress?.message || t("fileTab.status.diarizing");
   if (status === "transcribing") {
     if (progress && progress.totalChunks > 0) {
       return t("fileTab.status.transcribingChunk", {
@@ -148,8 +142,7 @@ function statusLabel(
 
     return t("fileTab.status.transcribing");
   }
-  if (status === "assembling")
-    return progress?.message || t("fileTab.status.assembling");
+  if (status === "assembling") return progress?.message || t("fileTab.status.assembling");
   if (status === "done") return t("fileTab.status.done");
   if (status === "error") return t("fileTab.status.error");
   return t("fileTab.status.idle");
@@ -272,9 +265,7 @@ function toSpeakerSetupErrorMessage(
     : t("fileTab.setupError.generic");
 }
 
-async function refreshSpeakerInstalledModels(
-  settings: AppSettings,
-): Promise<AppSettings> {
+async function refreshSpeakerInstalledModels(settings: AppSettings): Promise<AppSettings> {
   let result: { success: boolean; models: string[]; message: string };
   try {
     result = await invoke<{
@@ -353,15 +344,10 @@ export function FileTranscriptionTab({
   const nativeDropAtRef = useRef(0);
   const speakerDiarizationToggleRunRef = useRef(0);
   const settingsRef = useRef<AppSettings | null>(null);
-  const processFilePathRef = useRef<(filePath: string) => Promise<void>>(
-    async () => {},
-  );
-  const [selectedFile, setSelectedFile] =
-    useState<SelectedTranscriptionFile | null>(null);
+  const processFilePathRef = useRef<(filePath: string) => Promise<void>>(async () => {});
+  const [selectedFile, setSelectedFile] = useState<SelectedTranscriptionFile | null>(null);
   const [status, setStatus] = useState<ProcessingState>("idle");
-  const [progress, setProgress] = useState<FileTranscriptionProgress | null>(
-    null,
-  );
+  const [progress, setProgress] = useState<FileTranscriptionProgress | null>(null);
   const [resultEntry, setResultEntry] = useState<HistoryEntry | null>(null);
   const [liveCallEntry, setLiveCallEntry] = useState<HistoryEntry | null>(null);
   const [callStopRequested, setCallStopRequested] = useState(false);
@@ -380,11 +366,8 @@ export function FileTranscriptionTab({
   const [speakerSetupInstalling, setSpeakerSetupInstalling] = useState(false);
   const [speakerSetupMessage, setSpeakerSetupMessage] = useState("");
   const [speakerSetupError, setSpeakerSetupError] = useState("");
-  const [pendingSpeakerFilePath, setPendingSpeakerFilePath] = useState<
-    string | null
-  >(null);
-  const [speakerSetupIntent, setSpeakerSetupIntent] =
-    useState<SpeakerSetupIntent | null>(null);
+  const [pendingSpeakerFilePath, setPendingSpeakerFilePath] = useState<string | null>(null);
+  const [speakerSetupIntent, setSpeakerSetupIntent] = useState<SpeakerSetupIntent | null>(null);
   const [speakerSetupForceRepair, setSpeakerSetupForceRepair] = useState(false);
 
   const isProcessing =
@@ -399,13 +382,9 @@ export function FileTranscriptionTab({
 
   const syncSpeakerSetupState = (settings: AppSettings): void => {
     const localWhisperOption = getDiarizationWhisperOption(settings);
-    setDiarizationInstalled(
-      settings.localModels?.[DIARIZATION_MODEL_ID]?.status === "downloaded",
-    );
+    setDiarizationInstalled(settings.localModels?.[DIARIZATION_MODEL_ID]?.status === "downloaded");
     setLocalWhisperDownloaded(localWhisperOption !== null);
-    setLocalWhisperLabel(
-      localWhisperOption?.label || RECOMMENDED_LOCAL_WHISPER_LABEL,
-    );
+    setLocalWhisperLabel(localWhisperOption?.label || RECOMMENDED_LOCAL_WHISPER_LABEL);
   };
 
   useEffect(() => {
@@ -437,10 +416,7 @@ export function FileTranscriptionTab({
             return;
           }
 
-          if (
-            syncedSettings.fileSpeakerDiarization &&
-            !isSpeakerSetupReady(syncedSettings)
-          ) {
+          if (syncedSettings.fileSpeakerDiarization && !isSpeakerSetupReady(syncedSettings)) {
             setSpeakerDiarization(false);
             void saveSettings({ fileSpeakerDiarization: false });
             return;
@@ -508,10 +484,7 @@ export function FileTranscriptionTab({
     }
   };
 
-  const showHistoryEntryResult = (
-    entry: HistoryEntry,
-    scrollToResult = false,
-  ): void => {
+  const showHistoryEntryResult = (entry: HistoryEntry, scrollToResult = false): void => {
     setSelectedFile({
       name: entry.fileName || t("fileTab.source.file"),
       size: entry.fileSize ?? null,
@@ -544,36 +517,31 @@ export function FileTranscriptionTab({
           .find(
             (entry) =>
               entry.source === "call" &&
-              (entry.status === "recording" ||
-                entry.callCapturePhase === "finalizing"),
+              (entry.status === "recording" || entry.callCapturePhase === "finalizing"),
           );
         setLiveCallEntry(activeCall || null);
       })
       .catch(() => {});
 
-    const unlistenPromise = listen<HistoryEntry>(
-      HISTORY_UPDATED_EVENT,
-      ({ payload }) => {
-        if (payload.source === "call") {
-          const isActive =
-            payload.status === "recording" ||
-            payload.callCapturePhase === "finalizing";
-          setLiveCallEntry((current) =>
-            isActive ? payload : current?.id === payload.id ? null : current,
-          );
-        }
+    const unlistenPromise = listen<HistoryEntry>(HISTORY_UPDATED_EVENT, ({ payload }) => {
+      if (payload.source === "call") {
+        const isActive =
+          payload.status === "recording" || payload.callCapturePhase === "finalizing";
+        setLiveCallEntry((current) =>
+          isActive ? payload : current?.id === payload.id ? null : current,
+        );
+      }
 
-        if (
-          isProcessingRef.current ||
-          (payload.source !== "file" && payload.source !== "call") ||
-          payload.status !== "completed"
-        ) {
-          return;
-        }
+      if (
+        isProcessingRef.current ||
+        (payload.source !== "file" && payload.source !== "call") ||
+        payload.status !== "completed"
+      ) {
+        return;
+      }
 
-        showHistoryEntryResult(payload);
-      },
-    );
+      showHistoryEntryResult(payload);
+    });
 
     return () => {
       mounted = false;
@@ -679,9 +647,7 @@ export function FileTranscriptionTab({
     setStatus("idle");
 
     try {
-      const settings = await refreshSpeakerInstalledModels(
-        await getSettings({ reload: true }),
-      );
+      const settings = await refreshSpeakerInstalledModels(await getSettings({ reload: true }));
       settingsRef.current = settings;
       syncSpeakerSetupState(settings);
 
@@ -939,9 +905,7 @@ export function FileTranscriptionTab({
       settingsRef.current = finalSettings;
       syncSpeakerSetupState(finalSettings);
       setSpeakerSetupMessage(
-        speakerSetupIntent === "toggle"
-          ? t("fileTab.setup.done")
-          : t("fileTab.setup.doneContinue"),
+        speakerSetupIntent === "toggle" ? t("fileTab.setup.done") : t("fileTab.setup.doneContinue"),
       );
       setSpeakerSetupError("");
       setError("");
@@ -963,27 +927,20 @@ export function FileTranscriptionTab({
       }
       setSpeakerSetupIntent(null);
     } catch (caughtError) {
-      setSpeakerSetupError(
-        toSpeakerSetupErrorMessage(caughtError, t, settingsRef.current),
-      );
+      setSpeakerSetupError(toSpeakerSetupErrorMessage(caughtError, t, settingsRef.current));
     } finally {
       setSpeakerSetupInstalling(false);
     }
   };
 
-  const renameSpeaker = async (
-    speakerId: string,
-    label: string,
-  ): Promise<void> => {
+  const renameSpeaker = async (speakerId: string, label: string): Promise<void> => {
     if (!resultEntry?.segments || !resultEntry.speakers) return;
 
     const nextSpeakers = resultEntry.speakers.map((speaker) =>
       speaker.id === speakerId ? { ...speaker, label } : speaker,
     );
     const nextSegments = resultEntry.segments.map((segment) =>
-      segment.speakerId === speakerId
-        ? { ...segment, speakerLabel: label }
-        : segment,
+      segment.speakerId === speakerId ? { ...segment, speakerLabel: label } : segment,
     );
     const nextText = formatSpeakerTranscript(nextSegments);
     const nextEntry: HistoryEntry = {
@@ -1003,8 +960,7 @@ export function FileTranscriptionTab({
   const toggleSpeakerDiarization = (): void => {
     const runId = speakerDiarizationToggleRunRef.current + 1;
     speakerDiarizationToggleRunRef.current = runId;
-    const isCurrentToggleRun = (): boolean =>
-      speakerDiarizationToggleRunRef.current === runId;
+    const isCurrentToggleRun = (): boolean => speakerDiarizationToggleRunRef.current === runId;
 
     if (speakerDiarization) {
       setSpeakerDiarization(false);
@@ -1033,9 +989,7 @@ export function FileTranscriptionTab({
 
     void (async () => {
       try {
-        const settings = await refreshSpeakerInstalledModels(
-          await getSettings({ reload: true }),
-        );
+        const settings = await refreshSpeakerInstalledModels(await getSettings({ reload: true }));
         if (!isCurrentToggleRun()) {
           return;
         }
@@ -1074,10 +1028,8 @@ export function FileTranscriptionTab({
   };
 
   const displayedResultEntry = liveCallEntry || resultEntry;
-  const resultText =
-    displayedResultEntry?.cleaned || displayedResultEntry?.raw || "";
-  const shouldCollapseResult =
-    !liveCallEntry && resultText.length > RESULT_PREVIEW_LIMIT;
+  const resultText = displayedResultEntry?.cleaned || displayedResultEntry?.raw || "";
+  const shouldCollapseResult = !liveCallEntry && resultText.length > RESULT_PREVIEW_LIMIT;
   const visibleResult =
     shouldCollapseResult && !resultExpanded
       ? `${resultText.slice(0, RESULT_PREVIEW_LIMIT).trimEnd()}...`
@@ -1113,9 +1065,7 @@ export function FileTranscriptionTab({
           >
             {t("fileTab.heading")}
           </h2>
-          <div
-            style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}
-          >
+          <div style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}>
             {t("fileTab.subheading")}
           </div>
         </div>
@@ -1140,10 +1090,7 @@ export function FileTranscriptionTab({
               }
             }}
             onKeyDown={(event) => {
-              if (
-                isProcessing ||
-                (event.key !== "Enter" && event.key !== " ")
-              ) {
+              if (isProcessing || (event.key !== "Enter" && event.key !== " ")) {
                 return;
               }
 
@@ -1164,9 +1111,7 @@ export function FileTranscriptionTab({
               padding: 24,
               borderWidth: 2,
               borderStyle: "dashed",
-              borderColor: isDragOver
-                ? "var(--border-strong)"
-                : "var(--border-dashed)",
+              borderColor: isDragOver ? "var(--border-strong)" : "var(--border-dashed)",
               background: isDragOver ? "var(--surface-hi)" : "var(--surface)",
               cursor: isProcessing ? "default" : "pointer",
               transition: "background 0.18s ease, border-color 0.18s ease",
@@ -1194,11 +1139,7 @@ export function FileTranscriptionTab({
                 }}
               >
                 {isProcessing ? (
-                  <IconLoader2
-                    className="loading-soft-icon"
-                    size={24}
-                    stroke={1.8}
-                  />
+                  <IconLoader2 className="loading-soft-icon" size={24} stroke={1.8} />
                 ) : (
                   <IconFileMusic size={25} stroke={1.8} />
                 )}
@@ -1212,9 +1153,7 @@ export function FileTranscriptionTab({
                     color: "var(--text-hi)",
                   }}
                 >
-                  {selectedFile
-                    ? selectedFile.name
-                    : t("fileTab.dropzone.title")}
+                  {selectedFile ? selectedFile.name : t("fileTab.dropzone.title")}
                 </div>
                 <div
                   style={{
@@ -1274,11 +1213,7 @@ export function FileTranscriptionTab({
                     textAlign: "left",
                   }}
                 >
-                  <IconAlertCircle
-                    size={16}
-                    stroke={2}
-                    style={{ flexShrink: 0, marginTop: 2 }}
-                  />
+                  <IconAlertCircle size={16} stroke={2} style={{ flexShrink: 0, marginTop: 2 }} />
                   <span>{error}</span>
                 </div>
               )}
@@ -1329,9 +1264,7 @@ export function FileTranscriptionTab({
                 height: 26,
                 borderRadius: 999,
                 border: "none",
-                background: speakerDiarization
-                  ? "var(--accent)"
-                  : "var(--switch-track)",
+                background: speakerDiarization ? "var(--accent)" : "var(--switch-track)",
                 padding: 3,
                 cursor: isProcessing ? "not-allowed" : "pointer",
                 flexShrink: 0,
@@ -1348,9 +1281,7 @@ export function FileTranscriptionTab({
                   height: 20,
                   borderRadius: "50%",
                   background: "var(--accent-contrast)",
-                  transform: speakerDiarization
-                    ? "translateX(18px)"
-                    : "translateX(0)",
+                  transform: speakerDiarization ? "translateX(18px)" : "translateX(0)",
                   transition: "transform 0.16s ease",
                 }}
               />
@@ -1368,9 +1299,7 @@ export function FileTranscriptionTab({
             gap: 12,
           }}
         >
-          <div
-            style={{ fontSize: 14, fontWeight: 700, color: "var(--text-hi)" }}
-          >
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-hi)" }}>
             {t("fileTab.result.title")}
           </div>
 
@@ -1382,24 +1311,15 @@ export function FileTranscriptionTab({
                 onClick={() => {
                   void requestStopLiveCall();
                 }}
-                disabled={
-                  callStopRequested ||
-                  liveCallEntry.callCapturePhase === "finalizing"
-                }
+                disabled={callStopRequested || liveCallEntry.callCapturePhase === "finalizing"}
                 style={{ minHeight: 32, padding: "0 12px" }}
               >
-                {callStopRequested ||
-                liveCallEntry.callCapturePhase === "finalizing" ? (
-                  <IconLoader2
-                    className="loading-soft-icon"
-                    size={13}
-                    stroke={2}
-                  />
+                {callStopRequested || liveCallEntry.callCapturePhase === "finalizing" ? (
+                  <IconLoader2 className="loading-soft-icon" size={13} stroke={2} />
                 ) : (
                   <IconSquare size={11} stroke={2} fill="currentColor" />
                 )}
-                {callStopRequested ||
-                liveCallEntry.callCapturePhase === "finalizing"
+                {callStopRequested || liveCallEntry.callCapturePhase === "finalizing"
                   ? t("fileTab.live.stopping")
                   : t("fileTab.live.stop")}
               </button>
@@ -1429,11 +1349,7 @@ export function FileTranscriptionTab({
                 className="btn"
                 onClick={() => setSummaryOpen(true)}
                 disabled={!summaryAvailable}
-                title={
-                  summaryAvailable
-                    ? undefined
-                    : t("summary.unavailable.tooltip")
-                }
+                title={summaryAvailable ? undefined : t("summary.unavailable.tooltip")}
                 style={{
                   minHeight: 32,
                   padding: "0 12px",
@@ -1447,23 +1363,21 @@ export function FileTranscriptionTab({
               </button>
             )}
 
-            {!liveCallEntry &&
-              (resultEntry || error || selectedFile) &&
-              !isProcessing && (
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => {
-                    setSelectedFile(null);
-                    setStatus("idle");
-                    resetResult();
-                  }}
-                  style={{ width: 32, minWidth: 32, minHeight: 32, padding: 0 }}
-                  title={t("fileTab.result.clear")}
-                >
-                  <IconX size={14} stroke={2} />
-                </button>
-              )}
+            {!liveCallEntry && (resultEntry || error || selectedFile) && !isProcessing && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setSelectedFile(null);
+                  setStatus("idle");
+                  resetResult();
+                }}
+                style={{ width: 32, minWidth: 32, minHeight: 32, padding: 0 }}
+                title={t("fileTab.result.clear")}
+              >
+                <IconX size={14} stroke={2} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -1595,9 +1509,7 @@ export function FileTranscriptionTab({
                       }}
                     >
                       <span>
-                        {new Date(
-                          displayedResultEntry.timestamp,
-                        ).toLocaleTimeString("ru-RU", {
+                        {new Date(displayedResultEntry.timestamp).toLocaleTimeString("ru-RU", {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
@@ -1632,9 +1544,7 @@ export function FileTranscriptionTab({
                       {shouldCollapseResult && (
                         <button
                           type="button"
-                          onClick={() =>
-                            setResultExpanded((current) => !current)
-                          }
+                          onClick={() => setResultExpanded((current) => !current)}
                           style={{
                             marginLeft: 0,
                             padding: 0,
@@ -1783,12 +1693,8 @@ export function FileTranscriptionTab({
                   lineHeight: 1.6,
                   padding: "8px 10px",
                   borderRadius: 8,
-                  background: speakerSetupError
-                    ? "var(--danger-soft)"
-                    : "var(--control-muted)",
-                  color: speakerSetupError
-                    ? "var(--error-bright)"
-                    : "var(--text-mid)",
+                  background: speakerSetupError ? "var(--danger-soft)" : "var(--control-muted)",
+                  color: speakerSetupError ? "var(--error-bright)" : "var(--text-mid)",
                   border: `1px solid ${speakerSetupError ? "var(--danger-border)" : "var(--border-subtle)"}`,
                   marginBottom: 16,
                 }}
@@ -1845,11 +1751,7 @@ export function FileTranscriptionTab({
                 }}
               >
                 {speakerSetupInstalling ? (
-                  <IconLoader2
-                    className="loading-soft-icon"
-                    size={15}
-                    stroke={2}
-                  />
+                  <IconLoader2 className="loading-soft-icon" size={15} stroke={2} />
                 ) : null}
                 {speakerSetupActionLabel}
               </button>

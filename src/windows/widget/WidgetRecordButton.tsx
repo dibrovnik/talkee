@@ -39,9 +39,7 @@ export function WidgetRecordButton({
         alignItems: "center",
         justifyContent: "center",
         opacity: visible ? 1 : 0,
-        transform: visible
-          ? "translateY(-50%) scale(1)"
-          : "translateY(-50%) scale(0.84)",
+        transform: visible ? "translateY(-50%) scale(1)" : "translateY(-50%) scale(0.84)",
         transition: "opacity 0.14s ease, transform 0.14s ease",
         pointerEvents: visible ? "auto" : "none",
         cursor: "pointer",

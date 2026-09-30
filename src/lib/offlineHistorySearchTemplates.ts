@@ -43,7 +43,8 @@ const OFFLINE_HISTORY_CONCEPTS: OfflineHistoryConcept[] = [
       /^(?:баг|баги|багов|ошибка|ошибки|ошибок|проблема|проблемы|проблем|дефект|дефекты|жалоб[а-яё]*|жалов[а-яё]*)$/i,
       /^(?:bug|bugs|error|errors|issue|issues|problem|problems)$/i,
     ],
-    embeddingHint: "Описание багов, ошибок, неисправностей и некорректного поведения: не работает, зависает, пропадает, сломано или мешает пользоваться.",
+    embeddingHint:
+      "Описание багов, ошибок, неисправностей и некорректного поведения: не работает, зависает, пропадает, сломано или мешает пользоваться.",
   },
   {
     id: "task",
@@ -63,7 +64,8 @@ const OFFLINE_HISTORY_CONCEPTS: OfflineHistoryConcept[] = [
       /^(?:задач[а-яё]*|поруч[а-яё]*)$/i,
       /^(?:task|tasks|todo|action|items)$/i,
     ],
-    embeddingHint: "Задачи, поручения и следующие действия: что нужно сделать, проверить, исправить, подготовить или реализовать.",
+    embeddingHint:
+      "Задачи, поручения и следующие действия: что нужно сделать, проверить, исправить, подготовить или реализовать.",
   },
   {
     id: "decision",
@@ -81,7 +83,8 @@ const OFFLINE_HISTORY_CONCEPTS: OfflineHistoryConcept[] = [
       /^(?:решен[а-яё]*|решили|договоренност[а-яё]*|договорились|утвердили|согласовали)$/i,
       /^(?:decision|decisions|decided|agreed|agreement|agreements|approved)$/i,
     ],
-    embeddingHint: "Принятые решения и договорённости: что решили, согласовали, утвердили или зафиксировали.",
+    embeddingHint:
+      "Принятые решения и договорённости: что решили, согласовали, утвердили или зафиксировали.",
   },
   {
     id: "idea",
@@ -101,7 +104,8 @@ const OFFLINE_HISTORY_CONCEPTS: OfflineHistoryConcept[] = [
       /^(?:иде[а-яё]*|предложен[а-яё]*|предлагал[а-яё]*|вариант[а-яё]*)$/i,
       /^(?:idea|ideas|suggestion|suggestions|proposal|proposals|proposed)$/i,
     ],
-    embeddingHint: "Идеи, предложения и варианты реализации: что предлагали попробовать, изменить или добавить.",
+    embeddingHint:
+      "Идеи, предложения и варианты реализации: что предлагали попробовать, изменить или добавить.",
   },
   {
     id: "commitment",
@@ -119,7 +123,8 @@ const OFFLINE_HISTORY_CONCEPTS: OfflineHistoryConcept[] = [
       /^(?:обещ[а-яё]*|обязательств[а-яё]*|обязал[а-яё]*)$/i,
       /^(?:promise|promises|promised|commitment|commitments|committed)$/i,
     ],
-    embeddingHint: "Обещания и обязательства участников: кто взял ответственность и что пообещал сделать.",
+    embeddingHint:
+      "Обещания и обязательства участников: кто взял ответственность и что пообещал сделать.",
   },
   {
     id: "risk",
@@ -137,7 +142,8 @@ const OFFLINE_HISTORY_CONCEPTS: OfflineHistoryConcept[] = [
       /^(?:риск[а-яё]*|блокер[а-яё]*|опас[а-яё]*|угроз[а-яё]*|препятств[а-яё]*)$/i,
       /^(?:risk|risks|blocker|blockers|threat|threats|concern|concerns)$/i,
     ],
-    embeddingHint: "Риски, блокеры и препятствия: что может помешать, задержать или привести к сбою.",
+    embeddingHint:
+      "Риски, блокеры и препятствия: что может помешать, задержать или привести к сбою.",
   },
 ];
 
@@ -151,15 +157,15 @@ function matchesAny(text: string, patterns: RegExp[]): boolean {
 }
 
 export function matchOfflineHistoryConcepts(question: string): OfflineHistoryConcept[] {
-  return OFFLINE_HISTORY_CONCEPTS.filter((concept) =>
-    matchesAny(question, concept.queryPatterns),
-  );
+  return OFFLINE_HISTORY_CONCEPTS.filter((concept) => matchesAny(question, concept.queryPatterns));
 }
 
 export function isOfflineConceptHistoryQuestion(question: string): boolean {
   if (matchOfflineHistoryConcepts(question).length === 0) return false;
 
-  return /(?:найди|найти|покажи|отыщи|перечисли|где|в\s+каких\s+запис|из\s+истории|раньше|ранее|что\s+(?:я|мы|он|она|они)\s+(?:решил|решали|обещал|предлагал|обсуждал)|какие\s+.+\s+(?:я|мы|он|она|они)\s+(?:принимал|ставил|фиксировал|обсуждал)|find|show|list|where|what\s+(?:did|were|was))/i.test(question);
+  return /(?:найди|найти|покажи|отыщи|перечисли|где|в\s+каких\s+запис|из\s+истории|раньше|ранее|что\s+(?:я|мы|он|она|они)\s+(?:решил|решали|обещал|предлагал|обсуждал)|какие\s+.+\s+(?:я|мы|он|она|они)\s+(?:принимал|ставил|фиксировал|обсуждал)|find|show|list|where|what\s+(?:did|were|was))/i.test(
+    question,
+  );
 }
 
 export function filterOfflineHistoryQueryTokens(
@@ -168,14 +174,12 @@ export function filterOfflineHistoryQueryTokens(
 ): string[] {
   if (concepts.length === 0) return tokens;
 
-  return tokens.filter((token) =>
-    !matchesAny(
-      token,
-      [
+  return tokens.filter(
+    (token) =>
+      !matchesAny(token, [
         ...COMMON_CONTROL_TOKEN_PATTERNS,
         ...concepts.flatMap((concept) => concept.controlTokenPatterns),
-      ],
-    ),
+      ]),
   );
 }
 
@@ -185,10 +189,8 @@ export function scoreOfflineHistoryConcepts(
 ): number {
   return concepts.reduce(
     (total, concept) =>
-      total + concept.recordPatterns.reduce(
-        (score, pattern) => score + (pattern.test(text) ? 8 : 0),
-        0,
-      ),
+      total +
+      concept.recordPatterns.reduce((score, pattern) => score + (pattern.test(text) ? 8 : 0), 0),
     0,
   );
 }

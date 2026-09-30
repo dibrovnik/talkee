@@ -4,7 +4,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { IconAlertCircle, IconInfoCircle } from "../../lib/icons";
 
-import { NOTICE_AREA_HEIGHT, NOTICE_WIDGET_WIDTH, WIDGET_NOTICE_EVENT, type WidgetNoticeState } from "./widgetConstants";
+import {
+  NOTICE_AREA_HEIGHT,
+  NOTICE_WIDGET_WIDTH,
+  WIDGET_NOTICE_EVENT,
+  type WidgetNoticeState,
+} from "./widgetConstants";
 
 export function WidgetNoticeOverlay(): ReactElement | null {
   const [notice, setNotice] = useState<WidgetNoticeState | null>(null);
@@ -37,9 +42,8 @@ export function WidgetNoticeOverlay(): ReactElement | null {
     if (!notice) {
       return;
     }
-    const height = expanded && bubbleRef.current
-      ? bubbleRef.current.scrollHeight
-      : NOTICE_AREA_HEIGHT;
+    const height =
+      expanded && bubbleRef.current ? bubbleRef.current.scrollHeight : NOTICE_AREA_HEIGHT;
     void invoke("expand_widget_notice", { height });
   }, [expanded, notice]);
 
@@ -91,7 +95,8 @@ export function WidgetNoticeOverlay(): ReactElement | null {
           lineHeight: 1.4,
           letterSpacing: "0.01em",
           color: "rgba(0,0,0,0.82)",
-          background: "linear-gradient(180deg, rgba(252,251,248,0.98) 0%, rgba(244,239,231,0.96) 100%)",
+          background:
+            "linear-gradient(180deg, rgba(252,251,248,0.98) 0%, rgba(244,239,231,0.96) 100%)",
           border: "1px solid rgba(0,0,0,0.08)",
           backdropFilter: "blur(18px)",
           WebkitBackdropFilter: "blur(18px)",

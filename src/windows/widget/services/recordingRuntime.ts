@@ -1,10 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import { logError, logInfo } from "../../../lib/logger";
-import type {
-  LiveTranscriptionResult,
-  NativeLiveDictationOptions,
-} from "./dictationStreamOverlay";
+import type { LiveTranscriptionResult, NativeLiveDictationOptions } from "./dictationStreamOverlay";
 import type { AudioSignalStats } from "./transcriptionGuard";
 
 type RecorderCodec = "native-wav" | "webm" | "default" | "wav";
@@ -209,9 +206,10 @@ function getPcmStats(chunks: Float32Array[], sampleRate: number): PcmAudioStats 
     }
   }
 
-  const gain = peak > PCM_MIN_SIGNAL_PEAK && peak < PCM_NORMALIZE_BELOW_PEAK
-    ? Math.min(PCM_MAX_GAIN, PCM_TARGET_PEAK / peak)
-    : 1;
+  const gain =
+    peak > PCM_MIN_SIGNAL_PEAK && peak < PCM_NORMALIZE_BELOW_PEAK
+      ? Math.min(PCM_MAX_GAIN, PCM_TARGET_PEAK / peak)
+      : 1;
 
   return {
     sampleCount,
@@ -465,7 +463,10 @@ export function createRecordingRuntimeController(): RecordingRuntimeController {
     pause() {
       if (state.nativeActive && state.active) {
         void invoke("pause_native_voice_recording").catch((error) => {
-          logError("RECORDING", `Native recorder pause failed: ${error instanceof Error ? error.message : String(error)}`);
+          logError(
+            "RECORDING",
+            `Native recorder pause failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
         });
         return true;
       }
@@ -491,7 +492,10 @@ export function createRecordingRuntimeController(): RecordingRuntimeController {
     resume() {
       if (state.nativeActive && state.active) {
         void invoke("resume_native_voice_recording").catch((error) => {
-          logError("RECORDING", `Native recorder resume failed: ${error instanceof Error ? error.message : String(error)}`);
+          logError(
+            "RECORDING",
+            `Native recorder resume failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
         });
         return true;
       }
@@ -519,7 +523,9 @@ export function createRecordingRuntimeController(): RecordingRuntimeController {
       }
 
       if (state.nativeActive) {
-        state.nativeResult = await invoke<NativeVoiceRecordingResult>("stop_native_voice_recording");
+        state.nativeResult = await invoke<NativeVoiceRecordingResult>(
+          "stop_native_voice_recording",
+        );
         state.audioStats = {
           peak: state.nativeResult.peak,
           rms: state.nativeResult.rms,

@@ -1,11 +1,6 @@
 import type { ReactElement } from "react";
 
-import {
-  IconAlertCircle,
-  IconCheck,
-  IconChevronDown,
-  IconCopy,
-} from "../../lib/icons";
+import { IconAlertCircle, IconCheck, IconChevronDown, IconCopy } from "../../lib/icons";
 
 interface WidgetErrorStatusBarProps {
   message: string;
@@ -106,11 +101,7 @@ export function WidgetErrorStatusBar({
           onPointerDown={(event) => event.stopPropagation()}
           style={ACTION_BUTTON_STYLE}
         >
-          {copied ? (
-            <IconCheck size={12} stroke={2.4} />
-          ) : (
-            <IconCopy size={12} stroke={2} />
-          )}
+          {copied ? <IconCheck size={12} stroke={2.4} /> : <IconCopy size={12} stroke={2} />}
         </button>
         <button
           type="button"

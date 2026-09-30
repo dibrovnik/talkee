@@ -44,10 +44,7 @@ describe("live translation overlay renderer", () => {
       ...createLiveTranslationOverlayState("session"),
       error: "partial",
     });
-    renderer.schedule(
-      { ...createLiveTranslationOverlayState("session"), error: "final" },
-      true,
-    );
+    renderer.schedule({ ...createLiveTranslationOverlayState("session"), error: "final" }, true);
     await wait(30);
 
     expect(rendered).toEqual(["final"]);

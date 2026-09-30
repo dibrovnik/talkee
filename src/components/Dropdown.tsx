@@ -62,7 +62,11 @@ export function Dropdown({
         <IconChevronDown
           size={14}
           stroke={2}
-          style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}
+          style={{
+            flexShrink: 0,
+            transform: open ? "rotate(180deg)" : "none",
+            transition: "transform 0.15s",
+          }}
         />
       </button>
 
@@ -109,11 +113,29 @@ export function Dropdown({
                   fontSize: 13,
                   fontFamily: "var(--font-main)",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = active ? "var(--dropdown-active)" : "var(--dropdown-hover)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = active ? "var(--dropdown-active)" : "transparent")}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = active
+                    ? "var(--dropdown-active)"
+                    : "var(--dropdown-hover)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = active
+                    ? "var(--dropdown-active)"
+                    : "transparent")
+                }
               >
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{option.label}</span>
-                {active && <IconCheck size={14} stroke={2.5} style={{ flexShrink: 0, color: "var(--text-hi)" }} />}
+                <span
+                  style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                >
+                  {option.label}
+                </span>
+                {active && (
+                  <IconCheck
+                    size={14}
+                    stroke={2.5}
+                    style={{ flexShrink: 0, color: "var(--text-hi)" }}
+                  />
+                )}
               </button>
             );
           })}

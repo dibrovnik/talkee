@@ -71,9 +71,7 @@ export function LocalLlmModels({
 }) {
   const { t } = useI18n();
   const [models, setModels] = useState<LocalLlmModel[]>([]);
-  const [progress, setProgress] = useState<Record<string, DownloadProgress>>(
-    {},
-  );
+  const [progress, setProgress] = useState<Record<string, DownloadProgress>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,28 +102,25 @@ export function LocalLlmModels({
       })
       .catch(() => {});
 
-    const unlisten = listen<DownloadProgress>(
-      "local-llm-model-download-progress",
-      (event) => {
-        const payload = event.payload;
-        setProgress((prev) => {
-          const next = { ...prev };
-          if (
-            payload.status === "downloaded" ||
-            payload.status === "cancelled" ||
-            payload.status === "error"
-          ) {
-            delete next[payload.model_id];
-          } else {
-            next[payload.model_id] = payload;
-          }
-          return next;
-        });
-        if (payload.status === "downloaded" || payload.status === "cancelled") {
-          void refresh();
+    const unlisten = listen<DownloadProgress>("local-llm-model-download-progress", (event) => {
+      const payload = event.payload;
+      setProgress((prev) => {
+        const next = { ...prev };
+        if (
+          payload.status === "downloaded" ||
+          payload.status === "cancelled" ||
+          payload.status === "error"
+        ) {
+          delete next[payload.model_id];
+        } else {
+          next[payload.model_id] = payload;
         }
-      },
-    );
+        return next;
+      });
+      if (payload.status === "downloaded" || payload.status === "cancelled") {
+        void refresh();
+      }
+    });
     return () => {
       void unlisten.then((dispose) => dispose());
     };
@@ -257,8 +252,7 @@ export function LocalLlmModels({
 
   const translateLanguageValue = (value: string): string => {
     if (value === "English") return t("models.languageValue.english");
-    if (/^\d+\+?$/.test(value))
-      return t("models.languageValue.count", { value });
+    if (/^\d+\+?$/.test(value)) return t("models.languageValue.count", { value });
     return value;
   };
 
@@ -390,9 +384,7 @@ export function LocalLlmModels({
         >
           {t("localLlm.title")}
         </div>
-        <div
-          style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}
-        >
+        <div style={{ fontSize: 13, color: "var(--text-mid)", lineHeight: 1.6 }}>
           {t("localLlm.desc")}
         </div>
       </div>
@@ -440,8 +432,7 @@ export function LocalLlmModels({
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {models.map((model) => {
           const prog = progress[model.id];
-          const isDownloading =
-            prog?.status === "downloading" || prog?.status === "starting";
+          const isDownloading = prog?.status === "downloading" || prog?.status === "starting";
           const isBusy = busy === model.id;
           const isDeleting = deleting === model.id;
           const isSelected = selectedModelId === model.id && usingLocalEndpoint;
@@ -562,9 +553,7 @@ export function LocalLlmModels({
                   </div>
                   <ModelCardDisclosureButton
                     expanded={open}
-                    onToggle={() =>
-                      setExpandedId(expandedId === model.id ? null : model.id)
-                    }
+                    onToggle={() => setExpandedId(expandedId === model.id ? null : model.id)}
                     label={t(open ? "mainTab.collapse" : "mainTab.expand")}
                   />
                 </div>
@@ -601,9 +590,7 @@ export function LocalLlmModels({
                       >
                         <span>{t("localLlm.downloadingModel")}</span>
                         <span style={{ color: "var(--text-hi)" }}>
-                          {prog?.percent != null
-                            ? `${prog.percent}%`
-                            : t("localLlm.preparing")}
+                          {prog?.percent != null ? `${prog.percent}%` : t("localLlm.preparing")}
                         </span>
                       </div>
                       <div

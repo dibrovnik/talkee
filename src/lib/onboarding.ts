@@ -18,14 +18,10 @@ export function normalizeOnboardingTestPhrase(value: string): string {
     .trim();
 }
 
-export function matchesOnboardingTestPhrase(
-  recognized: string,
-  expected: string,
-): boolean {
+export function matchesOnboardingTestPhrase(recognized: string, expected: string): boolean {
   return (
     Boolean(recognized.trim()) &&
-    normalizeOnboardingTestPhrase(recognized) ===
-      normalizeOnboardingTestPhrase(expected)
+    normalizeOnboardingTestPhrase(recognized) === normalizeOnboardingTestPhrase(expected)
   );
 }
 
@@ -33,19 +29,13 @@ export function resolveOnboardingModelId(
   installedModels: string[],
   settings: Pick<AppSettings, "whisperEndpoint" | "whisperModel">,
 ): string {
-  const localEndpoint = /127\.0\.0\.1|localhost/i.test(
-    settings.whisperEndpoint || "",
-  );
-  const activeModel = ONBOARDING_STT_MODELS.find(
-    (model) => model.model === settings.whisperModel,
-  );
+  const localEndpoint = /127\.0\.0\.1|localhost/i.test(settings.whisperEndpoint || "");
+  const activeModel = ONBOARDING_STT_MODELS.find((model) => model.model === settings.whisperModel);
   if (localEndpoint && activeModel) {
     return activeModel.id;
   }
 
-  const installed = ONBOARDING_STT_MODELS.find((model) =>
-    installedModels.includes(model.model),
-  );
+  const installed = ONBOARDING_STT_MODELS.find((model) => installedModels.includes(model.model));
   return installed?.id || DEFAULT_ONBOARDING_STT_MODEL_ID;
 }
 

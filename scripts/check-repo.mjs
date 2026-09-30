@@ -35,11 +35,7 @@ export function findForbiddenPaths(files) {
   return files.filter(isForbiddenPath);
 }
 
-export function findLargeFiles(
-  rootDir,
-  files,
-  { maxBytes = MAX_BYTES, stat = statSync } = {},
-) {
+export function findLargeFiles(rootDir, files, { maxBytes = MAX_BYTES, stat = statSync } = {}) {
   const large = [];
   for (const relPath of files) {
     let size;
@@ -81,8 +77,7 @@ export function run({
 }
 
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : "";
-const isDirectRun =
-  import.meta.main === true || invokedPath === fileURLToPath(import.meta.url);
+const isDirectRun = import.meta.main === true || invokedPath === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
   process.exit(run({ rootDir: process.cwd() }));

@@ -35,9 +35,7 @@ function readTargetTriple() {
       encoding: "utf8",
       env: toolchainEnv,
     });
-    const hostLine = versionOutput
-      .split("\n")
-      .find((line) => line.startsWith("host:"));
+    const hostLine = versionOutput.split("\n").find((line) => line.startsWith("host:"));
 
     if (!hostLine) {
       throw new Error("Failed to determine Rust target triple");
@@ -60,10 +58,7 @@ function copyFileIfChanged(source, destination) {
     const sourceStat = statSync(source);
     const destinationStat = statSync(destination);
 
-    if (
-      sourceStat.size === destinationStat.size &&
-      fileHash(source) === fileHash(destination)
-    ) {
+    if (sourceStat.size === destinationStat.size && fileHash(source) === fileHash(destination)) {
       return false;
     }
   }
@@ -89,25 +84,9 @@ const targetTriple = readTargetTriple();
 
 const profile = process.env.TALKEE_STT_RELEASE === "1" ? "release" : "debug";
 const sidecars = ["talkee-stt", "talkee-diarize", "talkee-llm"];
-const baseCargoArgs = [
-  "build",
-  "--manifest-path",
-  join(tauriDir, "Cargo.toml"),
-];
-const sttCargoArgs = [
-  ...baseCargoArgs,
-  "--bin",
-  "talkee-stt",
-  "--bin",
-  "talkee-diarize",
-];
-const llmCargoArgs = [
-  "build",
-  "--manifest-path",
-  llmManifest,
-  "--bin",
-  "talkee-llm",
-];
+const baseCargoArgs = ["build", "--manifest-path", join(tauriDir, "Cargo.toml")];
+const sttCargoArgs = [...baseCargoArgs, "--bin", "talkee-stt", "--bin", "talkee-diarize"];
+const llmCargoArgs = ["build", "--manifest-path", llmManifest, "--bin", "talkee-llm"];
 
 if (profile === "release") {
   sttCargoArgs.push("--release");
@@ -117,10 +96,7 @@ if (profile === "release") {
 mkdirSync(binariesDir, { recursive: true });
 
 for (const sidecar of sidecars) {
-  const destinationBinary = join(
-    binariesDir,
-    `${sidecar}-${targetTriple}`,
-  );
+  const destinationBinary = join(binariesDir, `${sidecar}-${targetTriple}`);
   if (!existsSync(destinationBinary)) {
     writeFileSync(destinationBinary, placeholderContents);
     markExecutable(destinationBinary);
@@ -145,10 +121,7 @@ try {
 
 for (const sidecar of sidecars) {
   const sourceBinary = join(tauriDir, "target", profile, sidecar);
-  const destinationBinary = join(
-    binariesDir,
-    `${sidecar}-${targetTriple}`,
-  );
+  const destinationBinary = join(binariesDir, `${sidecar}-${targetTriple}`);
 
   if (!existsSync(sourceBinary)) {
     throw new Error(`${sidecar} binary was not built: ${sourceBinary}`);

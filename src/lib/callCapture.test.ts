@@ -1,16 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  buildCallLiveSpeakerTranscript,
-  formatCallLiveTranscript,
-} from "./callCapture";
+import { buildCallLiveSpeakerTranscript, formatCallLiveTranscript } from "./callCapture";
 
 describe("call live transcript", () => {
   test("keeps microphone and system speech in separate readable blocks", () => {
-    const transcript = formatCallLiveTranscript(
-      "Проверяю микрофон",
-      "Вас хорошо слышно",
-    );
+    const transcript = formatCallLiveTranscript("Проверяю микрофон", "Вас хорошо слышно");
 
     expect(transcript).toContain("Проверяю микрофон");
     expect(transcript).toContain("Вас хорошо слышно");
@@ -36,10 +30,7 @@ describe("call live transcript", () => {
     });
 
     expect(result.mode).toBe("speakers");
-    expect(result.speakers?.map((speaker) => speaker.label)).toEqual([
-      "Вы",
-      "Гость 1",
-    ]);
+    expect(result.speakers?.map((speaker) => speaker.label)).toEqual(["Вы", "Гость 1"]);
     expect(result.segments).toEqual([
       {
         start: 2,

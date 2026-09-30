@@ -1,9 +1,8 @@
 name: CI
 
-# Compile-check the full codebase — including the per-OS `#[cfg(target_os = ...)]`
-# branches in call_capture.rs / realtime_interpreter.rs that `cargo check` on a single
-# host can never reach. Runs on every push and PR so platform-gated Rust is validated
-# without waiting for a `v*` release tag.
+# Compile-check the macOS-only codebase. Runs on every push and PR so the
+# Rust workspace and frontend are validated without waiting for a `v*`
+# release tag.
 
 on:
   push:
@@ -18,18 +17,8 @@ concurrency:
 
 jobs:
   rust-check:
-    name: cargo check (${{ matrix.platform }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos
-            runner: macos-latest
-          - platform: windows
-            runner: windows-latest
-          - platform: linux
-            runner: ubuntu-24.04
+    name: cargo check (macos)
+    runs-on: macos-latest
 
     steps:
       - name: Checkout repository
@@ -38,35 +27,18 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Linux Tauri dependencies
-        if: matrix.platform == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libayatana-appindicator3-dev \
-            libxdo-dev \
-            libasound2-dev \
-            libpipewire-0.3-dev \
-            librsvg2-dev \
-            patchelf \
-            clang \
-            libclang-dev \
-            cmake
-
       - name: Create sidecar placeholders
-        # tauri-build resolves the externalBin entries from tauri.conf.json and on
-        # Windows hard-errors if a `binaries/<name>-<target-triple>(.exe)` file is
-        # missing. `cargo check` does not bundle, so empty placeholders are enough to
-        # satisfy the existence check without downloading the real ffmpeg/STT sidecars.
+        # tauri-build resolves the externalBin entries from tauri.conf.json and
+        # hard-errors if a `binaries/<name>-<target-triple>` file is missing.
+        # `cargo check` does not bundle, so empty placeholders are enough to
+        # satisfy the existence check without downloading the real ffmpeg/STT
+        # sidecars.
         shell: bash
         run: |
           TRIPLE=$(rustc -vV | sed -n 's/^host: //p')
-          EXT=""
-          if [ "$RUNNER_OS" = "Windows" ]; then EXT=".exe"; fi
           mkdir -p src-tauri/binaries
-          for name in talkee-ffmpeg talkee-stt talkee-stt-nvidia talkee-stt-qwen talkee-diarize talkee-llm; do
-            : > "src-tauri/binaries/${name}-${TRIPLE}${EXT}"
+          for name in talkee-ffmpeg talkee-stt talkee-diarize talkee-llm; do
+            : > "src-tauri/binaries/${name}-${TRIPLE}"
           done
           ls -la src-tauri/binaries
 
@@ -87,7 +59,7 @@ jobs:
 
   frontend-check:
     name: tsc + hotkey smoke
-    runs-on: ubuntu-22.04
+    runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

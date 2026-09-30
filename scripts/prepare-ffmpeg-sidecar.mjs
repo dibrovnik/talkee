@@ -5,12 +5,10 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { withWindowsToolchainPaths } from "./windows-toolchain-env.mjs";
-
 const require = createRequire(import.meta.url);
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const binariesDir = join(rootDir, "src-tauri", "binaries");
-const toolchainEnv = withWindowsToolchainPaths(process.env);
+const toolchainEnv = process.env;
 
 function readTargetTriple() {
   if (toolchainEnv.TAURI_FFMPEG_TARGET_TRIPLE) {
@@ -65,8 +63,7 @@ function copyFileIfChanged(source, destination) {
 
 const targetTriple = readTargetTriple();
 const sourceBinary = resolveSourceBinary();
-const extension = targetTriple.includes("windows") ? ".exe" : "";
-const destinationBinary = join(binariesDir, `talkee-ffmpeg-${targetTriple}${extension}`);
+const destinationBinary = join(binariesDir, `talkee-ffmpeg-${targetTriple}`);
 
 if (!sourceBinary || !existsSync(sourceBinary)) {
   throw new Error(`ffmpeg binary was not found: ${sourceBinary || "(empty)"}`);
@@ -78,9 +75,6 @@ if (!statSync(sourceBinary).isFile()) {
 
 mkdirSync(binariesDir, { recursive: true });
 copyFileIfChanged(sourceBinary, destinationBinary);
-
-if (!targetTriple.includes("windows")) {
-  chmodSync(destinationBinary, 0o755);
-}
+chmodSync(destinationBinary, 0o755);
 
 console.log(`Prepared ffmpeg sidecar: ${destinationBinary}`);

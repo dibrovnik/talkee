@@ -37,11 +37,11 @@
 
 ## 5. Скрипты и CI
 
-- [ ] 5.1 Удалить `scripts/verify-windows-release.mjs`, `scripts/windows-toolchain-env.mjs`, `scripts/windows-toolchain-env.test.mjs`
-- [ ] 5.2 `scripts/build-release.mjs`, `scripts/prepare-ffmpeg-sidecar.mjs`, `scripts/prepare-stt-sidecar.mjs`, `scripts/run-tauri.mjs`: удалить Windows/Linux ветки (MSVC CRT, Linux lib dirs, `ensureLinuxBuildDependencies`, `.exe`)
-- [ ] 5.3 `package.json`: удалить `build:release:windows`, `build:release:linux`, `verify:windows-release`; `build:release` = macOS
-- [ ] 5.4 `.github/workflows/*`: design.md, решение 7
-- [ ] 5.5 Проверка: `bun run check:release` проходит локально
+- [x] 5.1 Удалить `scripts/verify-windows-release.mjs`, `scripts/windows-toolchain-env.mjs`, `scripts/windows-toolchain-env.test.mjs`
+- [x] 5.2 `scripts/build-release.mjs`, `scripts/prepare-ffmpeg-sidecar.mjs`, `scripts/prepare-stt-sidecar.mjs`, `scripts/run-tauri.mjs`: удалить Windows/Linux ветки (MSVC CRT, Linux lib dirs, `ensureLinuxBuildDependencies`, `.exe`)
+- [x] 5.3 `package.json`: удалить `build:release:windows`, `build:release:linux`, `verify:windows-release`; `build:release` = macOS
+- [x] 5.4 `.github/workflows/*`: design.md, решение 7
+- [x] 5.5 Проверка: `bun run check:release` проходит локально
 
 ## 6. Документация
 

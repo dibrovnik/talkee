@@ -17,9 +17,9 @@
 
 ## 3. Проверка bump на практике (в отдельной ветке)
 
-- [ ] 3.1 `git switch -c test/pvs-bump`; `bun run version:patch`; убедиться, что изменились все цели, создан коммит и тег `v0.4.9`; `cargo metadata --locked --manifest-path src-tauri/Cargo.toml >/dev/null` проходит; `bun run tauri build` → в `Talkee.app/Contents/Info.plist` версия `0.4.9`
-- [ ] 3.2 Откатить эксперимент: `git switch main && git branch -D test/pvs-bump && git tag -d v0.4.9`
-- [ ] 3.3 Проверка грязного дерева: изменить любой файл, `bun run version:patch` → ошибка, файлы не изменены
+- [x] 3.1 `git switch -c test/pvs-bump`; `bun run version:patch`; убедиться, что изменились все цели, создан коммит и тег `v0.4.9`; `cargo metadata --locked --manifest-path src-tauri/Cargo.toml >/dev/null` проходит; `bun run tauri build` → в `Talkee.app/Contents/Info.plist` версия `0.4.9`
+- [x] 3.2 Откатить эксперимент: `git switch main && git branch -D test/pvs-bump && git tag -d v0.4.9`
+- [x] 3.3 Проверка грязного дерева: изменить любой файл, `bun run version:patch` → ошибка, файлы не изменены
 
 ## 4. Документация
 

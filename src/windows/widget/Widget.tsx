@@ -70,6 +70,7 @@ import {
   type TranslationSettings,
   updateHistoryEntry,
 } from "../../lib/store";
+import { setTrayRecording } from "../../lib/tray";
 import { scaleWidgetDimension } from "../../lib/widgetScale";
 import { useWidgetController } from "./hooks/useWidgetController";
 import { requestCallMicrophoneStream, resolveCallMicrophoneLabel } from "./services/callMicrophone";
@@ -996,6 +997,7 @@ export function Widget() {
             : null,
       });
       startedSession = session;
+      setTrayRecording(true);
 
       if (session.nativeMicActive) {
         logInfo(
@@ -1056,6 +1058,7 @@ export function Widget() {
       setCallState("recording");
     } catch (error) {
       stopMediaStream(micStream);
+      setTrayRecording(false);
       if (startedSession) {
         await stopCallCapture(startedSession.id).catch((stopError) => {
           logError(
@@ -1161,6 +1164,7 @@ export function Widget() {
       }
       stoppedSession = await stopCallCapture(callSession.id);
       callSessionRef.current = null;
+      setTrayRecording(false);
       if (runtime) {
         runtime.micRequestId = null;
         runtime.systemRequestId = null;
@@ -1250,6 +1254,7 @@ export function Widget() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logError("CALL_CAPTURE", `Call capture stop/process failed: ${message}`);
+      setTrayRecording(false);
       const userFacingMessage = t("widget.call.processFailed");
 
       const failedRuntime = callTranscriptRuntimeRef.current;

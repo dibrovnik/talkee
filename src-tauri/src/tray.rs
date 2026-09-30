@@ -4,12 +4,18 @@ use crate::{
 };
 use std::future::Future;
 use tauri::{
+    image::Image,
     menu::{AboutMetadataBuilder, Menu, MenuItem, PredefinedMenuItem},
     tray::{TrayIcon, TrayIconBuilder},
     App, AppHandle, Manager,
 };
 
 const TRAY_ID: &str = "talkee-main-tray";
+
+// Template images: macOS keeps only the alpha channel, so a single black glyph
+// works on both light and dark menu bars. The @2x bitmap keeps the glyph crisp.
+const TRAY_ICON_PNG: &[u8] = include_bytes!("../icons/tray/tray@2x.png");
+const TRAY_ICON_RECORDING_PNG: &[u8] = include_bytes!("../icons/tray/tray-recording@2x.png");
 const TRAY_OPEN_ID: &str = "talkee-tray-open";
 const TRAY_HISTORY_ID: &str = "talkee-tray-history";
 const TRAY_FILE_ID: &str = "talkee-tray-file";
@@ -149,7 +155,7 @@ pub fn setup(app: &App) -> tauri::Result<()> {
         ],
     )?;
 
-    let mut builder = TrayIconBuilder::with_id(TRAY_ID)
+    let builder = TrayIconBuilder::with_id(TRAY_ID)
         .tooltip("Talkee")
         .menu(&menu)
         .show_menu_on_left_click(true)
@@ -171,14 +177,31 @@ pub fn setup(app: &App) -> tauri::Result<()> {
             None => {}
         });
 
-    if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(icon.clone());
-    }
-
-    let tray = builder.build(app)?;
+    let icon = Image::from_bytes(TRAY_ICON_PNG)?;
+    let tray = builder.icon(icon).icon_as_template(true).build(app)?;
     app.manage(TrayState { _tray: tray });
     logger::log_info("TRAY", "System tray initialized");
     Ok(())
+}
+
+/// Switches the menu-bar icon between the idle and recording variants.
+///
+/// Called from the frontend while dictation or call capture is running. The
+/// icon is re-applied with `set_icon_with_as_template` so the template flag is
+/// preserved without a second render pass (avoids a visible flicker).
+#[tauri::command]
+pub fn set_tray_recording(app: AppHandle, recording: bool) -> Result<(), String> {
+    let tray = app
+        .tray_by_id(TRAY_ID)
+        .ok_or_else(|| "tray icon is not initialized".to_string())?;
+    let bytes = if recording {
+        TRAY_ICON_RECORDING_PNG
+    } else {
+        TRAY_ICON_PNG
+    };
+    let icon = Image::from_bytes(bytes).map_err(|error| error.to_string())?;
+    tray.set_icon_with_as_template(Some(icon), true)
+        .map_err(|error| error.to_string())
 }
 
 #[cfg(test)]

@@ -9,13 +9,13 @@
 
 ## 2. Rust: удаление платформенных веток (по одному файлу, `cargo check` после каждого)
 
-- [ ] 2.1 Удалить `src-tauri/src/windows_titlebar.rs` и `mod windows_titlebar` в `lib.rs`; в `lib.rs` удалить single-instance plugin, `focus_existing_instance`, прочие cfg (правила — design.md, решение 1)
-- [ ] 2.2 `call_capture.rs`: удалить Linux PipeWire и Windows backend'ы, per-OS state, упростить `platform_targets`/`start_platform_capture`/`stop_platform_capture` до macOS-реализации
-- [ ] 2.3 `paste.rs`: удалить Linux/X11 и generic-ветки; подписи шорткатов только macOS
-- [ ] 2.4 `commands/widget.rs`, `commands/accessibility.rs`, `commands/settings_window.rs`, `commands/runtime_info.rs`
-- [ ] 2.5 `local_stt.rs`, `shutdown.rs`, `hotkey_capture.rs`, `native_voice_recorder.rs`, `live_translation.rs`, `bin/talkee-diarize.rs`
-- [ ] 2.6 Удалить `media_permissions.rs`, если после удаления Linux-кода он пуст (и его `mod`/регистрацию команд)
-- [ ] 2.7 Проверка: `grep -rn "cfg(windows)\|target_os = \"linux\"\|target_os = \"windows\"\|not(target_os = \"macos\")\|cfg!(windows)" src-tauri/src src-tauri/sidecars` пуст; `cargo check --workspace` и `cargo test --workspace` (manifest `src-tauri/Cargo.toml`) зелёные
+- [x] 2.1 Удалить `src-tauri/src/windows_titlebar.rs` и `mod windows_titlebar` в `lib.rs`; в `lib.rs` удалить single-instance plugin, `focus_existing_instance`, прочие cfg (правила — design.md, решение 1)
+- [x] 2.2 `call_capture.rs`: удалить Linux PipeWire и Windows backend'ы, per-OS state, упростить `platform_targets`/`start_platform_capture`/`stop_platform_capture` до macOS-реализации
+- [x] 2.3 `paste.rs`: удалить Linux/X11 и generic-ветки; подписи шорткатов только macOS
+- [x] 2.4 `commands/widget.rs`, `commands/accessibility.rs`, `commands/settings_window.rs`, `commands/runtime_info.rs`
+- [x] 2.5 `local_stt.rs`, `shutdown.rs`, `hotkey_capture.rs`, `native_voice_recorder.rs`, `live_translation.rs`, `bin/talkee-diarize.rs`
+- [x] 2.6 Удалить `media_permissions.rs`, если после удаления Linux-кода он пуст (и его `mod`/регистрацию команд)
+- [x] 2.7 Проверка: `grep -rn "cfg(windows)\|target_os = \"linux\"\|target_os = \"windows\"\|not(target_os = \"macos\")\|cfg!(windows)" src-tauri/src src-tauri/sidecars` пуст; `cargo check --workspace` и `cargo test --workspace` (manifest `src-tauri/Cargo.toml`) зелёные
 
 ## 3. Конфиг и ассеты
 

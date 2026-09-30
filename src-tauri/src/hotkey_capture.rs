@@ -1,4 +1,3 @@
-#[cfg(target_os = "macos")]
 mod macos {
     use std::cell::RefCell;
     use std::ptr;
@@ -608,23 +607,4 @@ mod macos {
     }
 }
 
-#[cfg(target_os = "macos")]
 pub use macos::{start_capture, stop_capture};
-
-#[cfg(not(target_os = "macos"))]
-pub fn start_capture(
-    _window: &tauri::WebviewWindow,
-    _request_id: String,
-    _target: String,
-) -> Result<(), String> {
-    Err("Native hotkey capture is only available on macOS".to_string())
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn stop_capture(
-    _window: &tauri::WebviewWindow,
-    _request_id: String,
-    _target: String,
-) -> Result<(), String> {
-    Ok(())
-}

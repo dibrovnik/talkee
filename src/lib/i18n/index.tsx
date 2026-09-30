@@ -14,7 +14,7 @@ import { MESSAGES, type MsgKey } from "./messages";
 export type UiLanguage = "ru" | "en";
 export type { MsgKey };
 
-const LS_KEY = "talkis.uiLanguage";
+const LS_KEY = "talkee.uiLanguage";
 
 /** Best-effort OS language guess from the webview locale (RU is the fallback). */
 export function detectOsLanguage(): UiLanguage {

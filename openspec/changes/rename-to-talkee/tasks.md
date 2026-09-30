@@ -2,11 +2,11 @@
 
 ## 1. Миграция данных (сначала, пока старые пути ещё известны коду)
 
-- [ ] 1.1 Создать `src-tauri/src/legacy_migration.rs` по design.md, решение 2 (функция `migrate_from_talkis(old_dir: &Path, new_dir: &Path) -> Result<MigrationReport, String>` без зависимости от `AppHandle`, чтобы её можно было тестировать)
-- [ ] 1.2 Unit-тесты в том же модуле на `tempdir`: пустой старый каталог; полный старый; новый уже содержит `talkee.json` (не перезаписывается); повторный запуск с маркером; переписывание путей в настройках
-- [ ] 1.3 Вызвать миграцию в `src-tauri/src/lib.rs` в `setup` до инициализации store, истории и окон; при ошибке — лог и событие для показа сообщения в виджете
-- [ ] 1.4 Источник истины языка интерфейса — настройки (design.md, решение 3); обновить `src/i18n/index.tsx`
-- [ ] 1.5 Проверка: `cargo test --manifest-path src-tauri/Cargo.toml legacy_migration`
+- [x] 1.1 Создать `src-tauri/src/legacy_migration.rs` по design.md, решение 2 (функция `migrate_from_talkis(old_dir: &Path, new_dir: &Path) -> Result<MigrationReport, String>` без зависимости от `AppHandle`, чтобы её можно было тестировать)
+- [x] 1.2 Unit-тесты в том же модуле на `tempdir`: пустой старый каталог; полный старый; новый уже содержит `talkee.json` (не перезаписывается); повторный запуск с маркером; переписывание путей в настройках
+- [x] 1.3 Вызвать миграцию в `src-tauri/src/lib.rs` в `setup` до инициализации store, истории и окон; при ошибке — лог и событие для показа сообщения в виджете
+- [x] 1.4 Источник истины языка интерфейса — настройки (design.md, решение 3); обновить `src/i18n/index.tsx`
+- [x] 1.5 Проверка: `cargo test --manifest-path src-tauri/Cargo.toml legacy_migration`
 
 ## 2. Идентичность приложения (конфиг)
 

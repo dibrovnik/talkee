@@ -471,9 +471,9 @@ fn merge_history(target: &mut Vec<Value>, source: Vec<Value>) {
     }
 }
 
-fn copy_file_if_missing(source: &Path, target: &Path) -> Result<(), String> {
+pub(crate) fn copy_file_if_missing(source: &Path, target: &Path) -> Result<bool, String> {
     if !source.is_file() || target.exists() {
-        return Ok(());
+        return Ok(false);
     }
 
     if let Some(parent) = target.parent() {
@@ -490,17 +490,18 @@ fn copy_file_if_missing(source: &Path, target: &Path) -> Result<(), String> {
         )
     })?;
 
-    Ok(())
+    Ok(true)
 }
 
-fn copy_dir_contents_if_missing(source: &Path, target: &Path) -> Result<(), String> {
+pub(crate) fn copy_dir_contents_if_missing(source: &Path, target: &Path) -> Result<u64, String> {
     if !source.is_dir() {
-        return Ok(());
+        return Ok(0);
     }
 
     fs::create_dir_all(target)
         .map_err(|err| format!("Не удалось подготовить папку {}: {}", target.display(), err))?;
 
+    let mut copied = 0;
     for entry in fs::read_dir(source)
         .map_err(|err| format!("Не удалось прочитать папку {}: {}", source.display(), err))?
     {
@@ -516,13 +517,13 @@ fn copy_dir_contents_if_missing(source: &Path, target: &Path) -> Result<(), Stri
         })?;
 
         if file_type.is_dir() {
-            copy_dir_contents_if_missing(&source_path, &target_path)?;
-        } else if file_type.is_file() {
-            copy_file_if_missing(&source_path, &target_path)?;
+            copied += copy_dir_contents_if_missing(&source_path, &target_path)?;
+        } else if file_type.is_file() && copy_file_if_missing(&source_path, &target_path)? {
+            copied += 1;
         }
     }
 
-    Ok(())
+    Ok(copied)
 }
 
 fn migrate_path_value(

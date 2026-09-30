@@ -20,6 +20,7 @@ import {
   HISTORY_DELETED_EVENT,
   HISTORY_UPDATED_EVENT,
   DICTATION_STREAM_UPDATE_EVENT,
+  APP_DATA_MIGRATION_ERROR_EVENT,
   PROCESSING_CANCEL_REQUEST_EVENT,
   SETTINGS_UPDATED_EVENT,
   WIDGET_RETRY_PROCESSING_EVENT,
@@ -747,6 +748,24 @@ export function Widget() {
         }
 
         setRetryProcessingSource(payload.active ? payload.source : null);
+      },
+    );
+
+    return () => {
+      mounted = false;
+      void unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const unlistenPromise = listen<string>(
+      APP_DATA_MIGRATION_ERROR_EVENT,
+      ({ payload }) => {
+        if (!mounted) {
+          return;
+        }
+        showWidgetErrorOverlay(payload);
       },
     );
 

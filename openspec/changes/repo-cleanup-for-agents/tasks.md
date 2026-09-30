@@ -2,9 +2,9 @@
 
 ## 1. Git (выполнить ДО первого изменения `remove-telemetry`; если репозиторий уже создан — только проверить пункты)
 
-- [ ] 1.1 Обновить `.gitignore`: `src-tauri/binaries/*` + `!src-tauri/binaries/.gitkeep`, `src-tauri/target/`, `docs/demo/`, удалить Beads/Dolt-правила (`.dolt/`, `*.db`, `.beads-credential-key`), добавить `.nanocoder/`
-- [ ] 1.2 `git init -b main`; `git add -A`; убедиться через `git status`, что бинарники и GIF не добавлены; первый коммит `chore: initial import of talkee`
-- [ ] 1.3 Проверка: `git ls-files | xargs -I{} du -k {} | sort -n | tail -5` — нет файлов > 5 МБ
+- [x] 1.1 Обновить `.gitignore`: `src-tauri/binaries/*` + `!src-tauri/binaries/.gitkeep`, `src-tauri/target/`, `docs/demo/`, удалить Beads/Dolt-правила (`.dolt/`, `*.db`, `.beads-credential-key`), добавить `.nanocoder/`
+- [x] 1.2 `git init -b main`; `git add -A`; убедиться через `git status`, что бинарники и GIF не добавлены; первый коммит `chore: initial import of talkee` (репозиторий уже существует на `main`; `git init`/initial import не выполнялись — состояние проверено)
+- [x] 1.3 Проверка: `git ls-files | xargs -I{} du -k {} | sort -n | tail -5` — нет файлов > 5 МБ
 
 ## 2. Удаление мусора
 

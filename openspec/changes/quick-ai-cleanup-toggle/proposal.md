@@ -15,7 +15,7 @@
 
 **Настройки**
 - `cleanupEnabled` — по умолчанию выключено.
-- `cleanupToggleHotkey` — по умолчанию `Control+Option+C`, можно очистить.
+- `cleanupToggleHotkey` — по умолчанию `Control+Shift+C`, можно очистить.
 - Существующий `selectedCleanupPromptId` определяет стиль.
 
 **Быстрые переключатели**

@@ -1,8 +1,8 @@
 # Tasks
 
-## 0. Предварительные настройки (исходная задача 3.1)
+## 3. Предварительные настройки (выполнить перед ядром)
 
-- [ ] 3.1 `src/lib/store.ts`: `cleanupEnabled`, `cleanupToggleHotkey`, нормализация, валидация конфликтов (design.md, решение 6) + тесты
+- [x] 3.1 `src/lib/store.ts`: `cleanupEnabled`, `cleanupToggleHotkey`, нормализация, валидация конфликтов (design.md, решение 6) + тесты
 
 ## 1. Ядро очистки
 
@@ -18,7 +18,7 @@
 - [ ] 2.3 `sidecars/talkee-llm`: `enable_thinking=false` для шаблонов с поддержкой (design.md, решение 5)
 - [ ] 2.4 Проверка: `cargo test --workspace`; вручную — локальная LLM, очистка включена → вставлен очищенный текст; отключить LLM runtime → вставлен исходный текст + уведомление
 
-## 3. Настройки и переключение
+## 3. Переключение (после пайплайна)
 
 - [ ] 3.2 Создать `src/lib/cleanupToggle.ts`: `toggleCleanup`, `selectCleanupPreset`, `buildCleanupMenuModel` (design.md, решения 7-9) + тесты
 - [ ] 3.3 `src/windows/widget/hooks/useWidgetHotkey.ts`: регистрация третьей горячей клавиши и перерегистрация при изменении

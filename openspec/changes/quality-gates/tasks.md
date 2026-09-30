@@ -27,10 +27,10 @@
 
 ## 4. Хуки и CI
 
-- [ ] 4.1 Создать `lefthook.yml` (design.md, решение 5); `package.json`: `"prepare": "lefthook install"`; `bun install`
-- [ ] 4.2 Проверка хука: закоммитить неотформатированный `.rs` → коммит отклонён; откатить
-- [ ] 4.3 Переписать `.github/workflows/check.yml` (design.md, решение 6); удалить из `release-preflight.yml` дублирующие проверки, заменив на `bun run gate`
-- [ ] 4.4 Проверка: `act` недоступен → проверить YAML `bunx yaml-lint`/визуально; после первого push убедиться, что job зелёный
+- [x] 4.1 Создать `lefthook.yml` (design.md, решение 5); `package.json`: `"prepare": "lefthook install"`; `bun install`
+- [x] 4.2 Проверка хука: закоммитить неотформатированный `.rs` → коммит отклонён; откатить
+- [x] 4.3 Переписать `.github/workflows/check.yml` (design.md, решение 6); удалить из `release-preflight.yml` дублирующие проверки, заменив на `bun run gate`
+- [x] 4.4 Проверка: `act` недоступен → проверить YAML `bunx yaml-lint`/визуально; после первого push убедиться, что job зелёный
 
 ## 5. Документация
 

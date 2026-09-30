@@ -1,0 +1,20 @@
+# Git hooks. Installed by `lefthook install`, which runs from the
+# `prepare` script on `bun install`.
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      glob: "*.{ts,tsx,js,mjs,json,jsonc}"
+      run: bunx biome check --no-errors-on-unmatched {staged_files}
+    rustfmt:
+      glob: "*.rs"
+      run: cargo fmt --manifest-path src-tauri/Cargo.toml --all --check
+    versions:
+      run: bun run version:check
+    naming:
+      run: bun run check:naming
+
+pre-push:
+  commands:
+    gate:
+      run: bun run gate

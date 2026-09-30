@@ -62,8 +62,8 @@ jobs:
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
 
-      - name: Run release checks
-        run: bun run check:release
+      - name: Run quality gate
+        run: bun run gate
 
       - name: Build bundles
         run: bun run tauri build --bundles app

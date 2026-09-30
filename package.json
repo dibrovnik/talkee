@@ -6,6 +6,7 @@
   "type": "module",
   "packageManager": "bun@1.2.13",
   "scripts": {
+    "prepare": "lefthook install",
     "prepare:ffmpeg-sidecar": "bun scripts/prepare-ffmpeg-sidecar.mjs",
     "prepare:stt-sidecar": "bun scripts/prepare-stt-sidecar.mjs",
     "prepare:sidecars": "bun run prepare:ffmpeg-sidecar && bun run prepare:stt-sidecar",

@@ -1738,6 +1738,8 @@ struct ModelListItem {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ProcessTextRequest {
+    #[serde(default)]
+    pub deadline_ms: Option<u64>,
     pub text: String,
     pub prompt: String,
     #[serde(default)]
@@ -1847,15 +1849,32 @@ pub async fn process_text(req: ProcessTextRequest) -> Result<ProcessTextResponse
         request = request.bearer_auth(key);
     }
 
-    let response = request
-        .send()
+    let operation = async {
+        let response = request
+            .send()
+            .await
+            .map_err(|err| format!("Запрос к текстовой модели не удался: {}", err))?;
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .map_err(|err| format!("Не удалось прочитать ответ модели: {}", err))?;
+        Ok::<_, String>((status, body))
+    };
+    let (status, body) = if let Some(deadline) = req.deadline_ms {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|err| err.to_string())?
+            .as_millis() as u64;
+        tokio::time::timeout(
+            Duration::from_millis(deadline.saturating_sub(now)),
+            operation,
+        )
         .await
-        .map_err(|err| format!("Запрос к текстовой модели не удался: {}", err))?;
-    let status = response.status();
-    let body = response
-        .text()
-        .await
-        .map_err(|err| format!("Не удалось прочитать ответ модели: {}", err))?;
+        .map_err(|_| "Таймаут очистки текста".to_string())??
+    } else {
+        operation.await?
+    };
 
     if !status.is_success() {
         let snippet: String = body.chars().take(500).collect();
@@ -3026,4 +3045,47 @@ pub async fn test_api_connection(
         message: format!("{} ({}ms)", messages.join(" "), latency_ms),
         latency_ms,
     })
+}
+
+#[cfg(test)]
+mod cleanup_deadline_tests {
+    use super::*;
+    use tokio::io::AsyncReadExt;
+
+    #[tokio::test]
+    async fn cleanup_deadline_closes_stalled_http_connection() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/v1", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut buffer = [0u8; 4096];
+            assert!(socket.read(&mut buffer).await.unwrap() > 0);
+            // The client must close its connection when its deadline expires.
+            assert_eq!(
+                tokio::time::timeout(Duration::from_secs(2), socket.read(&mut buffer))
+                    .await
+                    .unwrap()
+                    .unwrap(),
+                0
+            );
+        });
+        let deadline = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+            + 200;
+        let result = process_text(ProcessTextRequest {
+            text: "Hello".into(),
+            prompt: "Clean".into(),
+            deadline_ms: Some(deadline),
+            temperature: None,
+            max_tokens: None,
+            endpoint: Some(endpoint),
+            model: Some("test".into()),
+            api_key: None,
+        })
+        .await;
+        assert!(matches!(result, Err(message) if message.contains("Таймаут")));
+        server.await.unwrap();
+    }
 }

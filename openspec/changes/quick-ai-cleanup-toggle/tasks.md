@@ -7,9 +7,9 @@
 ## 1. Ядро очистки
 
 - [x] 1.1 `src-tauri/src/prompt_config.rs` / `lib.rs`: команда `get_cleanup_prompt(language, style)` доступна в release (design.md, решение 2)
-- [ ] 1.2 Создать `src/lib/textCleanup.ts` (design.md, решение 3) и `src/lib/textCleanup.test.ts` со всеми сценариями из решения 3; runner `resolveSummaryBackend(...).run(...)` вместо генератора промптов. В `summarize.ts` передать `signal`/`deadlineMs`, прекратить повторные попытки после отмены; в `ai.rs` добавить необязательный `deadline_ms` и timeout отправки/чтения HTTP, сохранив поведение запросов без дедлайна; тесты отмены транспорта и позднего результата
-- [ ] 1.3 `src/windows/widget/services/transcriptionGuard.ts`: правило длины ответа (+ тест)
-- [ ] 1.4 Проверка: `bun test src/lib/textCleanup.test.ts src/windows/widget/services/transcriptionGuard.test.ts`
+- [x] 1.2 Создать `src/lib/textCleanup.ts` (design.md, решение 3) и `src/lib/textCleanup.test.ts` со всеми сценариями из решения 3; runner `resolveSummaryBackend(...).run(...)` вместо генератора промптов. В `summarize.ts` передать `signal`/`deadlineMs`, прекратить повторные попытки после отмены; в `ai.rs` добавить необязательный `deadline_ms` и timeout отправки/чтения HTTP, сохранив поведение запросов без дедлайна; тесты отмены транспорта и позднего результата
+- [x] 1.3 `src/windows/widget/services/transcriptionGuard.ts`: правило длины ответа (+ тест)
+- [x] 1.4 Проверка: `bun test src/lib/textCleanup.test.ts src/windows/widget/services/transcriptionGuard.test.ts`
 
 ## 2. Пайплайн
 

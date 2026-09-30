@@ -11,7 +11,8 @@ export interface AudioSignalStats {
 export type TranscriptionRejectionReason =
   | "empty"
   | "known-silence-hallucination"
-  | "unexpected-short-script";
+  | "unexpected-short-script"
+  | "excessive-cleanup-length";
 
 export interface GuardedTranscription<T extends TranscriptionText> {
   transcription: T | null;
@@ -94,7 +95,10 @@ export function guardTranscriptionResult<T extends TranscriptionText>(
   const raw = transcription.raw.trim();
   const cleaned = transcription.cleaned.trim();
   const rawReason = rejectionReasonForText(raw, language);
-  const cleanedReason = rejectionReasonForText(cleaned, language);
+  const cleanedReason =
+    raw && cleaned.length > raw.length * 2 + 40
+      ? "excessive-cleanup-length"
+      : rejectionReasonForText(cleaned, language);
 
   if (raw && rawReason) {
     return {

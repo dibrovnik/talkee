@@ -18,8 +18,8 @@
 
 ## 3. Удаление Beads
 
-- [ ] 3.1 Удалить `.agents/skills/beads/`, `.codex/hooks.json`, `.codex/config.toml` (и `.codex/`, если опустел)
-- [ ] 3.2 Проверка: `grep -rni "beads\|\bbd \|dolt" --exclude-dir=node_modules --exclude-dir=openspec --exclude-dir=.git .` — совпадений нет, кроме, возможно, CHANGELOG
+- [x] 3.1 Удалить `.agents/skills/beads/`, `.codex/hooks.json`, `.codex/config.toml` (и `.codex/`, если опустел)
+- [x] 3.2 Проверка: `grep -rni "beads\|\bbd \|dolt" --exclude-dir=node_modules --exclude-dir=openspec --exclude-dir=.git .` — совпадений нет, кроме, возможно, CHANGELOG (совпадений нет; также удалены Beads-секции из `AGENTS.md` и `.beads` из `scripts/check-naming.mjs`, чтобы проверка прошла)
 
 ## 4. Документация для агентов
 

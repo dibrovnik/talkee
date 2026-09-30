@@ -350,14 +350,14 @@ export function PermissionScreen({
     setRestartError(null);
     void logInfo(
       "PERMISSIONS",
-      "Restarting Talkis to refresh Accessibility permission",
+      "Restarting Talkee to refresh Accessibility permission",
     );
 
     try {
       await relaunch();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      void logError("PERMISSIONS", `Failed to restart Talkis: ${message}`);
+      void logError("PERMISSIONS", `Failed to restart Talkee: ${message}`);
       setRestartError(t("permission.hint.restartFailed"));
       setRestarting(false);
     }

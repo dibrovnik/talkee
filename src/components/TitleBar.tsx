@@ -64,7 +64,7 @@ export function TitleBar() {
         </div>
 
         <div style={{ fontSize: 12, fontWeight: 600, color: "var(--titlebar-text)", letterSpacing: "-0.02em" }}>
-          Talkis
+          Talkee
         </div>
 
         <div style={{ width: 56 }} />

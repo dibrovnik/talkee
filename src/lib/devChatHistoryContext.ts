@@ -70,7 +70,7 @@ const MAX_ALL_TOTAL_CONTEXT_CHARS = 32_000;
 const SEARCH_CHUNK_MAX_CHARS = 1400;
 const SEARCH_CHUNK_OVERLAP_CHARS = 180;
 const MIN_VECTOR_SIMILARITY = 0.72;
-const SEARCH_INDEX_DB_NAME = "talkis-dev-chat-history-index";
+const SEARCH_INDEX_DB_NAME = "talkee-dev-chat-history-index";
 const SEARCH_INDEX_DB_VERSION = 1;
 const SEARCH_INDEX_STORE_NAME = "chunks";
 const SEARCH_INDEX_KEY = "current";
@@ -952,8 +952,8 @@ function buildContextText(
 
   const intro =
     lang === "en"
-      ? "Context from Talkis transcription history. Use only these records when answering questions about transcription history. If the answer is not present here, say that the matching record was not found."
-      : "Контекст из истории транскрибаций Talkis. Используй только эти записи для ответов об истории транскрибаций. Если ответа нет в этих записях, скажи, что подходящая запись не найдена.";
+      ? "Context from Talkee transcription history. Use only these records when answering questions about transcription history. If the answer is not present here, say that the matching record was not found."
+      : "Контекст из истории транскрибаций Talkee. Используй только эти записи для ответов об истории транскрибаций. Если ответа нет в этих записях, скажи, что подходящая запись не найдена.";
 
   let total = intro.length;
   const maxTotalChars = allowAllMatches

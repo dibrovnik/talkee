@@ -19,7 +19,7 @@ export const STATS_UPDATED_EVENT = "stats-updated";
 
 // Stored under its own key in the shared store, separate from `settings` and
 // `history`, so it survives history pruning and "clear history".
-const STATS_STORE_FILE = "talkis.json";
+const STATS_STORE_FILE = "talkee.json";
 const STATS_KEY = "stats";
 
 let _store: Awaited<ReturnType<typeof load>> | null = null;

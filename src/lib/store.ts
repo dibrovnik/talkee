@@ -1396,7 +1396,7 @@ const settingsSaveQueue = createSerialTaskQueue();
 
 async function getStore() {
   if (!_store) {
-    _store = await load("talkis.json");
+    _store = await load("talkee.json");
   }
   return _store;
 }

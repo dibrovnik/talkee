@@ -30,11 +30,11 @@
 
 ## 4. Frontend
 
-- [ ] 4.1 `src/lib/store.ts:1374`, `src/lib/stats.ts:22`: `talkee.json`
-- [ ] 4.2 `src/lib/logger.ts:34`: путь лога
-- [ ] 4.3 i18n-словари: «Talkis» → «Talkee» (~73 вхождения), проверить склонения в русских строках («в Talkee», «Talkee не может…»)
-- [ ] 4.4 Остальные вхождения `grep -rni talkis src`
-- [ ] 4.5 Проверка: `bunx tsc --noEmit && bun test`
+- [x] 4.1 `src/lib/store.ts:1374`, `src/lib/stats.ts:22`: `talkee.json`
+- [x] 4.2 `src/lib/logger.ts:34`: путь лога
+- [x] 4.3 i18n-словари: «Talkis» → «Talkee» (~73 вхождения), проверить склонения в русских строках («в Talkee», «Talkee не может…»)
+- [x] 4.4 Остальные вхождения `grep -rni talkis src`
+- [x] 4.5 Проверка: `bunx tsc --noEmit && bun test`
 
 ## 5. Скрипты, CI, документация
 

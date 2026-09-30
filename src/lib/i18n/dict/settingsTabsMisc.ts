@@ -82,8 +82,8 @@ export const settingsTabsMisc = {
 
   // processFile / convertedInfo
   "fileTab.error.speakerNeedsDialog": {
-    ru: "Разделение по говорящим доступно для файлов, выбранных через системный диалог или перетаскиванием в окно Talkis.",
-    en: "Speaker separation is available for files chosen via the system dialog or dropped onto the Talkis window.",
+    ru: "Разделение по говорящим доступно для файлов, выбранных через системный диалог или перетаскиванием в окно Talkee.",
+    en: "Speaker separation is available for files chosen via the system dialog or dropped onto the Talkee window.",
   },
   "fileTab.convertedInfo": {
     ru: "Отправлено как {name}, {size}",
@@ -169,12 +169,12 @@ export const settingsTabsMisc = {
     en: "Local setup required",
   },
   "fileTab.modal.descDownloaded": {
-    ru: "Для разделения по говорящим Talkis использует {name} для распознавания с таймкодами и подготовит локальные компоненты для разметки говорящих.",
-    en: "For speaker separation Talkis uses {name} for timestamped recognition and will prepare local components for speaker diarization.",
+    ru: "Для разделения по говорящим Talkee использует {name} для распознавания с таймкодами и подготовит локальные компоненты для разметки говорящих.",
+    en: "For speaker separation Talkee uses {name} for timestamped recognition and will prepare local components for speaker diarization.",
   },
   "fileTab.modal.descNeedDownload": {
-    ru: "Для разделения по говорящим Talkis подготовит {name} для распознавания с таймкодами и локальные компоненты для разметки говорящих.",
-    en: "For speaker separation Talkis will prepare {name} for timestamped recognition and local components for speaker diarization.",
+    ru: "Для разделения по говорящим Talkee подготовит {name} для распознавания с таймкодами и локальные компоненты для разметки говорящих.",
+    en: "For speaker separation Talkee will prepare {name} for timestamped recognition and local components for speaker diarization.",
   },
   "fileTab.modal.whisperReady": {
     ru: "{name} готова для разметки",
@@ -256,24 +256,24 @@ export const settingsTabsMisc = {
     en: "Duck original audio",
   },
   "translation.live.muteOriginalDesc": {
-    ru: "Оригинальный звук остаётся слышен тихо, а Talkis получает его на полной громкости для распознавания.",
-    en: "The original audio remains quietly audible while Talkis captures it at full level for recognition.",
+    ru: "Оригинальный звук остаётся слышен тихо, а Talkee получает его на полной громкости для распознавания.",
+    en: "The original audio remains quietly audible while Talkee captures it at full level for recognition.",
   },
   "translation.live.voice.marin": { ru: "Marin", en: "Marin" },
   "translation.live.voice.cedar": { ru: "Cedar", en: "Cedar" },
   "translation.live.voice.coral": { ru: "Coral", en: "Coral" },
   "translation.live.voice.verse": { ru: "Verse", en: "Verse" },
   "translation.live.voiceDesc": {
-    ru: "Перевод воспроизводится сразу короткими фрагментами. Talkis исключает собственный звук из захвата, чтобы не возникал повторный перевод.",
-    en: "Translation is played immediately in short chunks. Talkis excludes its own audio from capture to prevent a translation feedback loop.",
+    ru: "Перевод воспроизводится сразу короткими фрагментами. Talkee исключает собственный звук из захвата, чтобы не возникал повторный перевод.",
+    en: "Translation is played immediately in short chunks. Talkee excludes its own audio from capture to prevent a translation feedback loop.",
   },
   "translation.live.voiceOpenAiOnly": {
     ru: "Озвучка доступна через проверенное подключение к Realtime API.",
     en: "Voice playback is available through a verified Realtime API connection.",
   },
   "translation.live.voiceMacOnly": {
-    ru: "Озвучка сейчас доступна на macOS. Для Windows и Linux нужна безопасная защита от повторного захвата звука Talkis.",
-    en: "Voice playback is currently available on macOS. Windows and Linux still need safe Talkis self-audio exclusion.",
+    ru: "Озвучка сейчас доступна на macOS. Для Windows и Linux нужна безопасная защита от повторного захвата звука Talkee.",
+    en: "Voice playback is currently available on macOS. Windows and Linux still need safe Talkee self-audio exclusion.",
   },
   "translation.live.desc": {
     ru: "Системный звук переводится через подключённый API. Локальные модели остаются доступны для обычной диктовки и перевода выделенного текста.",
@@ -284,8 +284,8 @@ export const settingsTabsMisc = {
     en: "Selected text translation",
   },
   "translation.selection.desc": {
-    ru: "Выделите текст в любом приложении и нажмите горячую клавишу. Talkis покажет перевод в отдельном окне над виджетом.",
-    en: "Select text in any app and press the hotkey. Talkis shows the translation in a separate window above the widget.",
+    ru: "Выделите текст в любом приложении и нажмите горячую клавишу. Talkee покажет перевод в отдельном окне над виджетом.",
+    en: "Select text in any app and press the hotkey. Talkee shows the translation in a separate window above the widget.",
   },
   "translation.selection.on": { ru: "Включено", en: "On" },
   "translation.selection.off": { ru: "Выключено", en: "Off" },

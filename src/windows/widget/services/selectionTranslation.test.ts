@@ -38,11 +38,11 @@ describe("selected text translation prompt", () => {
     );
 
     expect(payload).toContain("ТЕКСТ ДЛЯ ПЕРЕВОДА");
-    expect(payload).toContain("<<<TALKIS_TRANSLATION_SOURCE>>>");
+    expect(payload).toContain("<<<TALKEE_TRANSLATION_SOURCE>>>");
     expect(payload).toContain(
       "Последние записи доступны для копирования и удаления.",
     );
-    expect(payload).toContain("<<<END_TALKIS_TRANSLATION_SOURCE>>>");
+    expect(payload).toContain("<<<END_TALKEE_TRANSLATION_SOURCE>>>");
   });
 
   it("removes a leading Qwen reasoning block from model output", () => {
@@ -333,7 +333,7 @@ describe("selected text translation backend selection", () => {
 
     expect(result).toBe("Hello from LLM");
     expect(llmCalls).toHaveLength(1);
-    expect(llmCalls[0]).toContain("<<<TALKIS_TRANSLATION_SOURCE>>>");
+    expect(llmCalls[0]).toContain("<<<TALKEE_TRANSLATION_SOURCE>>>");
     expect(llmCalls[0]).toContain("Привет");
   });
 
@@ -419,7 +419,7 @@ describe("selected text translation backend selection", () => {
 
     expect(result).toBe("Hello from LLM");
     expect(llmCalls).toHaveLength(1);
-    expect(llmCalls[0]).toContain("<<<TALKIS_TRANSLATION_SOURCE>>>");
+    expect(llmCalls[0]).toContain("<<<TALKEE_TRANSLATION_SOURCE>>>");
     expect(llmCalls[0]).toContain("Привет");
   });
 

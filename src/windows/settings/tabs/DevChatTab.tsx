@@ -56,7 +56,7 @@ interface ChatTranslationRequest {
   targetLanguage?: string;
 }
 
-const DEV_CHAT_DB_NAME = "talkis-dev-chat";
+const DEV_CHAT_DB_NAME = "talkee-dev-chat";
 const DEV_CHAT_DB_VERSION = 1;
 const DEV_CHAT_STORE_NAME = "state";
 const DEV_CHAT_MESSAGES_KEY = "messages";

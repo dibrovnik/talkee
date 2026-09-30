@@ -1878,7 +1878,7 @@ export function Widget() {
             if (level.framesAboveNoiseFloor > 0) return;
 
             const message =
-              "Системный звук не поступает. Проверьте воспроизведение видео и разрешение Talkis на запись системного звука.";
+              "Системный звук не поступает. Проверьте воспроизведение видео и разрешение Talkee на запись системного звука.";
             logError("LIVE_TRANSLATION", message);
             liveOverlayRef.current = null;
             pendingLiveEventsRef.current = [];

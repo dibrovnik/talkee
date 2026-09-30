@@ -73,8 +73,8 @@ export const libMessages = {
     en: "To separate speakers, download the local components in the file transcription section.",
   },
   "fileTranscription.errRuntimeIncomplete": {
-    ru: "Runtime для разметки установился не полностью. Нажмите «Скачать» в подготовке разметки, чтобы Talkis восстановил его.",
-    en: "The labeling runtime did not install completely. Click “Download” in the labeling setup so Talkis can restore it.",
+    ru: "Runtime для разметки установился не полностью. Нажмите «Скачать» в подготовке разметки, чтобы Talkee восстановил его.",
+    en: "The labeling runtime did not install completely. Click “Download” in the labeling setup so Talkee can restore it.",
   },
   "fileTranscription.errNoSpeakerSegments": {
     ru: "Не удалось найти отдельные реплики говорящих в этом файле.",
@@ -111,8 +111,8 @@ export const libMessages = {
     en: "Processing stopped. You can run it again.",
   },
   "callCapture.recovered": {
-    ru: "Talkis восстановил незавершённый разговор. Аудио и сохранённый черновик доступны, обработку можно повторить.",
-    en: "Talkis recovered an unfinished call. Its audio and saved draft are available, and processing can be retried.",
+    ru: "Talkee восстановил незавершённый разговор. Аудио и сохранённый черновик доступны, обработку можно повторить.",
+    en: "Talkee recovered an unfinished call. Its audio and saved draft are available, and processing can be retried.",
   },
   "callCapture.liveUnavailable": {
     ru: "Онлайн-транскрибация недоступна, но аудио продолжает сохраняться.",

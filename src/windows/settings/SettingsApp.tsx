@@ -160,7 +160,7 @@ function SidebarLogo() {
             color: "var(--text-hi)",
           }}
         >
-          Talkis
+          Talkee
         </div>
       </div>
     </div>

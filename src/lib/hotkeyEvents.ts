@@ -19,7 +19,7 @@ export const DICTATION_STREAM_UPDATE_EVENT = "dictation-stream:update";
 export const APP_DATA_MIGRATION_ERROR_EVENT = "app-data-migration-error";
 export const NATIVE_VOICE_LEVEL_EVENT = "native-voice-level";
 
-export type HotkeyTarget = "dictation" | "selection";
+export type HotkeyTarget = "dictation" | "selection" | "cleanup";
 
 export interface HotkeyChangeRequestPayload {
   requestId: string;

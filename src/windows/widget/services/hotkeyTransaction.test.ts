@@ -11,6 +11,7 @@ import {
 function settings(): AppSettings {
   return {
     hotkey: "Alt+Space",
+    cleanupToggleHotkey: "Control+Shift+C",
     translation: {
       selectionEnabled: true,
       selectionHotkey: "Control+Shift+Y",
@@ -38,6 +39,7 @@ function setup(
   const active: Record<HotkeyTarget, string | null> = {
     dictation: stored.hotkey,
     selection: stored.translation.selectionHotkey,
+    cleanup: stored.cleanupToggleHotkey || null,
   };
   const registered: string[] = [];
   const unregistered: string[] = [];
@@ -224,4 +226,25 @@ describe("applyHotkeyTransaction", () => {
     expect((await fixture.dependencies.loadSettings()).hotkey).toBe("Alt+Enter");
     expect(fixture.active.dictation).toBe("Alt+Enter");
   });
+});
+
+test("cleanup transaction can change and clear without disturbing voice or selection", async () => {
+  const env = setup();
+  const changed = await applyHotkeyTransaction(
+    request("cleanup", "Control+Shift+D"),
+    env.dependencies,
+  );
+  expect(changed.success).toBe(true);
+  const cleared = await applyHotkeyTransaction(request("cleanup", ""), env.dependencies);
+  expect(cleared.success).toBe(true);
+  expect(env.dependencies.getActiveHotkey("cleanup")).toBeNull();
+  expect(env.dependencies.getActiveHotkey("dictation")).toBe("Alt+Space");
+  expect(env.dependencies.getActiveHotkey("selection")).toBe("Control+Shift+Y");
+});
+test("dictation cannot steal the cleanup hotkey", async () => {
+  const env = setup();
+  expect(
+    (await applyHotkeyTransaction(request("dictation", "Control+Shift+C"), env.dependencies))
+      .success,
+  ).toBe(false);
 });

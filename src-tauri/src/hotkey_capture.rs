@@ -456,7 +456,7 @@ mod macos {
         if request_id.trim().is_empty() {
             return Err("Hotkey capture requestId is required".to_string());
         }
-        if target != "dictation" && target != "selection" {
+        if target != "dictation" && target != "selection" && target != "cleanup" {
             return Err(format!("Unsupported hotkey target: {}", target));
         }
         let app = window.app_handle().clone();

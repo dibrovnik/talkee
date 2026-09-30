@@ -180,6 +180,7 @@ function localLlmRunner(
         if (attempt > 0) {
           await invoke<void>("stop_local_llm").catch(() => {});
         }
+        signal?.throwIfAborted();
         baseUrl = await invoke<string>("start_local_llm", { modelId });
       }
 

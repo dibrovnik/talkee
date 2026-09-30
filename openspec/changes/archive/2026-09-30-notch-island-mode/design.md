@@ -82,7 +82,7 @@
 3. **Окно в режиме острова** (`set_widget_presentation("island")`):
    - **Кадр окна** фиксированный: ширина `max(notch_width + 2*140, 440)`, высота `notch_height + 120` (запас под раскрытое уведомление), по центру `center_x`, верх = верх экрана. Размер кадра меняется только при смене экрана или режима, не при смене состояния: анимация идёт в CSS внутри фиксированного прозрачного окна, native resize на каждом кадре не нужен.
    - **Уровень окна** — `NSWindow.setLevel(NSMainMenuWindowLevel + 1)` (над строкой меню). `collectionBehavior` = `CanJoinAllSpaces | Stationary | FullScreenAuxiliary | IgnoresCycle`. `hasShadow = false`.
-   - **Фокус.** Окно не должно становиться key. Если WKWebView всё же забирает фокус, переопределять `canBecomeKeyWindow` нельзя без подкласса. Проверить на практике; при проблеме заменить класс окна на неактивирующую панель (`NSWindowStyleMaskNonactivatingPanel` через `object_setClass` на `NSPanel`) — это задача 3.5.
+   - **Фокус.** Окно не должно становиться key. Если WKWebView всё же забирает фокус, переопределять `canBecomeKeyWindow` нельзя без подкласса. Проверить на практике; при проблеме заменить класс окна на неактивирующую панель (`NSWindowStyleMaskNonactivatingPanel` через `object_setClass` на `NSPanel`) — это задача 7.3.
    - **Click-through** — `window.set_ignore_cursor_events(true)` во всех состояниях, кроме `notice-expanded` с кнопкой: там `false`, после сворачивания снова `true`. Переключает frontend через `set_island_interactive(bool)`.
    - **Отключается:** `keep_widget_on_available_monitor`, сохранение позиции (`onMoved` в `useWidgetController`), drag, `widget_resize` (no-op с логом), `widgetScale`. Watchdog в режиме острова вместо восстановления позиции пилюли вызывает повторное позиционирование острова.
    - **Возврат** `set_widget_presentation("pill")` восстанавливает прежние параметры: размер из `widgetStackWidth/Height`, сохранённую позицию, обычный уровень, `ignore_cursor_events(false)`.
@@ -117,7 +117,7 @@
    - `notice` — текст (13 px, белый, до 2 строк) и `Button` (примитив из `src/ui`, вариант на тёмном фоне) под зоной выреза.
    - Состояние берётся из существующего `widgetMachine`/overlay-состояний; маппинг «состояние виджета → состояние острова» — чистая функция в `islandState.ts` с тестами.
 6. **Оверлеи.**
-   - `position_widget_notice_window` и `position_widget_text_window` получают ветку для острова: `x = center_x - w/2`, `y = top_y + notch_height + 8` (вниз).
+   - `position_widget_notice_window` и `position_widget_text_window` получают ветку для острова. Кадр в координатах AppKit (начало снизу слева): `x = center_x - w/2`, нижний край окна на `gap` pt ниже выреза, то есть `y = top_y - notch_height - gap - height`, `gap = 8`. `top_y` — это верх экрана (`frame.maxY`), поэтому прибавлять высоту к нему нельзя: оверлей ушёл бы за верхний край.
    - В режиме острова короткие уведомления (включение очистки и т. п.) показываются в самом острове (`notice`), отдельное окно `widget-notice` не нужно. Длинный текст остаётся в `widget-text`.
 7. **Настройки** (`store.ts`):
    - `widgetPresentation: "pill" | "island"` (по умолчанию `"pill"`);
@@ -132,7 +132,7 @@
 
 ## Risks / Trade-offs
 
-- **Фокус WKWebView.** Прозрачное always-on-top окно может забирать key-статус. Задача 3.5 — ручная проверка и fallback на NSPanel через `object_setClass`. Этот приём известен, но хрупок: оформить отдельной функцией с подробным комментарием.
+- **Фокус WKWebView.** Прозрачное always-on-top окно может забирать key-статус. Задача 7.3 — ручная проверка и fallback на NSPanel через `object_setClass`. Этот приём известен, но хрупок: оформить отдельной функцией с подробным комментарием.
 - **CSS-анимация внутри фиксированного окна.** Прозрачная часть окна (≈ 440×150 pt) всегда над строкой меню, но при `ignore_cursor_events(true)` она не мешает кликам. Во время раскрытого уведомления с кнопкой клики в прозрачной части окна перехватываются — это небольшая зона, и уведомление живёт 4 с. Приемлемо.
 - **Разные модели MacBook** — геометрия берётся из системы, констант выреза нет.
 - **Уровень `NSMainMenuWindowLevel + 1`** может перекрывать системные меню строки меню, если они раскрыты под островом. В покое остров совпадает с вырезом, где пунктов меню не бывает.

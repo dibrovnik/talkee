@@ -47,17 +47,12 @@ include_dir = "0.7"
 url = "2.5.8"
 tauri-plugin-process = "2.3.1"
 tauri-plugin-shell = "2.3.2"
-transcribe-cpp = { version = "0.1.1", default-features = false }
+transcribe-cpp = { version = "0.1.1", default-features = false, features = ["metal"] }
 hound = "3.5.1"
 tauri-plugin-dialog = "2"
 handy-keys = "0.2.4"
 ct2rs = { version = "0.9.19", default-features = false, features = ["all-tokenizers", "ruy"] }
-
-[dev-dependencies]
-tempfile = "3"
-
-[target.'cfg(target_os = "macos")'.dependencies]
-transcribe-cpp = { version = "0.1.1", default-features = false, features = ["metal"] }
+tauri-plugin-autostart = "2.5.1"
 block2 = "0.6"
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", features = ["NSView", "NSWindow", "NSEvent", "block2"] }
@@ -66,22 +61,5 @@ objc2-core-audio-types = "0.3"
 objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFArray", "CFDictionary", "CFNumber", "CFString"] }
 objc2-foundation = "0.3"
 
-[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
-tauri-plugin-autostart = "2.5.1"
-
-# macOS enforces a single app instance natively; Windows/Linux need this plugin
-# so a second launch focuses the running app instead of spawning another widget.
-[target.'cfg(any(windows, target_os = "linux"))'.dependencies]
-tauri-plugin-single-instance = "2"
-
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61.2", features = [
-  "Win32_Foundation",
-  "Win32_Graphics_Dwm",
-  "Win32_Storage_FileSystem",
-] }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-pipewire = "0.10.0"
-webkit2gtk = { version = "2.0.2", features = ["v2_8"] }
-x11rb = { version = "0.13.2", features = ["xtest"] }
+[dev-dependencies]
+tempfile = "3"

@@ -33,13 +33,11 @@ import {
   setPermissionsPassed,
   getHistoryIndex,
   getSettings,
-  isMacPlatform,
   type ThemePreference,
 } from "../../lib/store";
 import { checkAllPermissions } from "../../lib/permissions";
 import { logError } from "../../lib/logger";
 import { watchThemePreference } from "../../lib/theme";
-import { syncWindowsTitlebarTheme } from "../../lib/windowsTitlebar";
 import {
   isSettingsTab,
   resolveInitialSettingsTab,
@@ -235,16 +233,7 @@ export function SettingsApp() {
   }, []);
 
   useEffect(() => {
-    return watchThemePreference(themePreference, (theme) => {
-      void syncWindowsTitlebarTheme(theme).catch((error) => {
-        void logError(
-          "WINDOW_TITLEBAR",
-          `Failed to sync Windows title bar theme: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-      });
-    });
+    return watchThemePreference(themePreference);
   }, [themePreference]);
 
   useEffect(() => {
@@ -252,7 +241,7 @@ export function SettingsApp() {
       .then(async ([passed, permissions]) => {
         const hasRequiredStartupPermissions =
           permissions.microphone !== "denied" &&
-          (!isMacPlatform() || permissions.accessibility === "granted");
+          permissions.accessibility === "granted";
         const shouldRecoverExistingInstall =
           !passed &&
           hasRequiredStartupPermissions &&
@@ -370,11 +359,11 @@ export function SettingsApp() {
   const isChatActive = activeTab === "chat";
 
   return (
-    <div className={isMacPlatform() ? "app-root" : "app-root native-frame"}>
+    <div className="app-root">
       <div
         style={
           {
-            "--summary-modal-top-offset": isMacPlatform() ? "48px" : "0px",
+            "--summary-modal-top-offset": "48px",
             display: "flex",
             flexDirection: "column",
             height: "100vh",
@@ -383,8 +372,7 @@ export function SettingsApp() {
           } as CSSProperties
         }
       >
-        {/* Windows/Linux use the native title bar + system window controls. */}
-        {isMacPlatform() && <TitleBar />}
+        <TitleBar />
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           <aside

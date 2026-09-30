@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
-#[cfg(any(unix, windows))]
 use std::process::Command as StdCommand;
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
@@ -80,7 +79,7 @@ fn local_runtime_http_client() -> &'static reqwest::Client {
     LOCAL_RUNTIME_HTTP_CLIENT.get_or_init(|| {
         reqwest::Client::builder()
             // The managed runtime is always loopback-only. It must never inherit
-            // a Windows/VPN system proxy, even when localhost is not in its bypass list.
+            // a system or VPN proxy, even when localhost is not in its bypass list.
             .no_proxy()
             .pool_max_idle_per_host(0)
             .connect_timeout(Duration::from_secs(3))
@@ -963,7 +962,6 @@ async fn runtime_models_match_disk(
     }
 }
 
-#[cfg(unix)]
 fn command_has_port_argument(command: &str, port: u16) -> bool {
     let port = port.to_string();
     let mut parts = command.split_whitespace();
@@ -975,7 +973,6 @@ fn command_has_port_argument(command: &str, port: u16) -> bool {
     false
 }
 
-#[cfg(unix)]
 fn stop_stale_managed_runtime(kind: LocalRuntimeKind, port: u16) -> Result<(), String> {
     let output = StdCommand::new("ps")
         .args(["-ax", "-o", "pid=,command="])
@@ -1016,41 +1013,6 @@ fn stop_stale_managed_runtime(kind: LocalRuntimeKind, port: u16) -> Result<(), S
     } else {
         Err("Не найден процесс старого локального runtime для остановки.".to_string())
     }
-}
-
-#[cfg(windows)]
-fn stop_stale_managed_runtime(kind: LocalRuntimeKind, _port: u16) -> Result<(), String> {
-    use std::os::windows::process::CommandExt;
-
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    let image_name = format!("{}.exe", kind.runtime_name());
-    let output = StdCommand::new("taskkill")
-        .args(["/F", "/T", "/IM", &image_name])
-        .creation_flags(CREATE_NO_WINDOW)
-        .output()
-        .map_err(|err| {
-            format!("Не удалось проверить старый локальный runtime {image_name}: {err}")
-        })?;
-
-    if output.status.success() {
-        logger::log_info(
-            "LOCAL_STT",
-            &format!("Stopped stale Windows managed runtime: {image_name}"),
-        );
-        Ok(())
-    } else {
-        Err(format!(
-            "Не найден процесс старого локального runtime {image_name} для остановки."
-        ))
-    }
-}
-
-#[cfg(not(any(unix, windows)))]
-fn stop_stale_managed_runtime(_kind: LocalRuntimeKind, _port: u16) -> Result<(), String> {
-    Err(
-        "Автоматическая остановка старого локального runtime недоступна на этой платформе."
-            .to_string(),
-    )
 }
 
 pub fn stop_managed_runtime(kind: LocalRuntimeKind, port: u16) -> Result<(), String> {
@@ -1376,7 +1338,6 @@ mod tests {
         ));
     }
 
-    #[cfg(unix)]
     #[test]
     fn stale_runtime_match_requires_the_exact_port_argument() {
         let command = "/Applications/Talkee Dev.app/talkee-stt --host 127.0.0.1 --port 18000";

@@ -1,3 +1,6 @@
+#[cfg(not(target_os = "macos"))]
+compile_error!("talkee supports macOS only");
+
 mod ai;
 mod call_capture;
 mod commands;
@@ -13,54 +16,19 @@ mod local_stt;
 mod local_translator;
 mod logger;
 mod media;
-mod media_permissions;
 mod native_voice_recorder;
 mod paste;
 mod prompt_config;
 pub mod realtime;
 mod shutdown;
 mod tray;
-#[cfg(windows)]
-mod windows_titlebar;
 
 use commands::{accessibility, runtime_info, settings_window, widget};
 use tauri::Manager;
 
-/// Bring the already-running instance to front when a second launch is blocked
-/// by the single-instance plugin (Windows/Linux only).
-#[cfg(any(windows, target_os = "linux"))]
-fn focus_existing_instance(app: &tauri::AppHandle) {
-    use tauri::Manager;
-
-    if let Err(err) = widget::restore_widget_window(app, "second-launch", false) {
-        logger::log_error(
-            "WIDGET",
-            &format!("Failed to restore widget after a second launch: {err}"),
-        );
-    }
-
-    if let Some(win) = app.get_webview_window("settings") {
-        let _ = win.unminimize();
-        let _ = win.show();
-        let _ = win.set_focus();
-    }
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    #[allow(unused_mut)]
-    let mut builder = tauri::Builder::default();
-
-    // The single-instance plugin must be registered first. macOS enforces one
-    // app instance natively (so the duplicate-widget bug never happens there);
-    // on Windows/Linux a second launch — autostart or re-open — would otherwise
-    // start another process with its own floating widget.
-    #[cfg(any(windows, target_os = "linux"))]
-    {
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            focus_existing_instance(app)
-        }));
-    }
+    let builder = tauri::Builder::default();
 
     builder
         .on_window_event(|window, event| {
@@ -94,8 +62,6 @@ pub fn run() {
             // so the new app-data directory already contains the migrated data.
             let _ = legacy_migration::run_startup_migration(app.handle());
 
-            #[cfg(windows)]
-            shutdown::cleanup_orphaned_sidecars();
             if let Err(err) = native_voice_recorder::init() {
                 logger::log_error(
                     "NATIVE_RECORDER",
@@ -108,7 +74,6 @@ pub fn run() {
             hotkey_manager::init(app);
             tray::setup(app)?;
 
-            #[cfg(desktop)]
             app.handle().plugin(tauri_plugin_autostart::init(
                 tauri_plugin_autostart::MacosLauncher::LaunchAgent,
                 None,
@@ -118,7 +83,6 @@ pub fn run() {
             let _ = widget::ensure_widget_text_window(app.handle());
 
             if let Some(win) = app.get_webview_window("widget") {
-                media_permissions::allow_microphone_requests(&win);
                 if let Err(err) = widget::configure_main_widget_window(&win) {
                     logger::log_error(
                         "WINDOW",

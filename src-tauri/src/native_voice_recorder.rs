@@ -629,28 +629,6 @@ fn drop_native_input_stream(stream: cpal::Stream) -> Result<(), String> {
         .map_err(|_| "Нативный аудиодрайвер аварийно завершил остановку записи.".to_string())
 }
 
-#[cfg(windows)]
-fn warm_up_windows_wasapi_owner() {
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        let host = cpal::default_host();
-        host.default_input_device().is_some()
-    }));
-
-    match result {
-        Ok(has_default_input) => logger::log_info(
-            "NATIVE_RECORDER",
-            &format!(
-                "Persistent WASAPI owner initialized: default_input_present={}",
-                has_default_input
-            ),
-        ),
-        Err(_) => logger::log_error(
-            "NATIVE_RECORDER",
-            "WASAPI owner warm-up panicked; keeping the owner thread alive for safe fallback",
-        ),
-    }
-}
-
 fn run_native_recorder_owner(
     command_rx: mpsc::Receiver<NativeRecorderCommand>,
     ready_tx: mpsc::Sender<()>,
@@ -660,11 +638,6 @@ fn run_native_recorder_owner(
         "NATIVE_RECORDER",
         "Persistent native recorder owner started",
     );
-    #[cfg(windows)]
-    if warm_up_audio_owner {
-        warm_up_windows_wasapi_owner();
-    }
-    #[cfg(not(windows))]
     let _ = warm_up_audio_owner;
     let _ = ready_tx.send(());
 

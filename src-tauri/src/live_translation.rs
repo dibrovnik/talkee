@@ -774,14 +774,7 @@ pub async fn start_live_translation(
         return Err("Синхронный перевод уже запущен.".to_string());
     }
     if req.voice_enabled && req.provider != "openai" {
-        return Err("Озвучка сейчас поддерживается только через OpenAI Realtime API.".to_string());
-    }
-    #[cfg(not(target_os = "macos"))]
-    if req.voice_enabled {
-        return Err(
-            "Озвучка синхронного перевода пока доступна только на macOS: на этой платформе Talkee ещё не умеет исключать собственный звук из системного захвата."
-                .to_string(),
-        );
+        return Err("Озвучка сейчас поддерживается только через [OI] Realtime API.".to_string());
     }
 
     let connection = resolve_translation_connection(&req).await?;

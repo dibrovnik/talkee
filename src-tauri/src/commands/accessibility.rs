@@ -1,7 +1,5 @@
-#[cfg(target_os = "macos")]
 const APP_BUNDLE_ID: &str = "com.talkee.app";
 
-#[cfg(target_os = "macos")]
 #[link(name = "AVFoundation", kind = "framework")]
 unsafe extern "C" {
     static AVMediaTypeAudio: *const objc2::runtime::AnyObject;
@@ -15,7 +13,6 @@ fn microphone_permission_status(status: isize) -> &'static str {
     }
 }
 
-#[cfg(target_os = "macos")]
 #[link(name = "ApplicationServices", kind = "framework")]
 unsafe extern "C" {
     fn AXIsProcessTrusted() -> u8;
@@ -23,7 +20,6 @@ unsafe extern "C" {
     static kAXTrustedCheckOptionPrompt: *const std::ffi::c_void;
 }
 
-#[cfg(target_os = "macos")]
 #[link(name = "CoreFoundation", kind = "framework")]
 unsafe extern "C" {
     static kCFBooleanTrue: *const std::ffi::c_void;
@@ -46,9 +42,7 @@ unsafe extern "C" {
 /// that aren't .app bundles.
 #[tauri::command]
 pub async fn open_accessibility_settings() -> Result<(), String> {
-    #[cfg(target_os = "macos")]
-    {
-        unsafe {
+    unsafe {
             let keys = [kAXTrustedCheckOptionPrompt];
             let values = [kCFBooleanTrue];
             let options = CFDictionaryCreate(
@@ -59,42 +53,34 @@ pub async fn open_accessibility_settings() -> Result<(), String> {
                 &kCFTypeDictionaryKeyCallBacks as *const _,
                 &kCFTypeDictionaryValueCallBacks as *const _,
             );
-            AXIsProcessTrustedWithOptions(options);
-            CFRelease(options);
-        }
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        // On Windows/Linux, accessibility is usually not required for global shortcuts
+        AXIsProcessTrustedWithOptions(options);
+        CFRelease(options);
     }
     Ok(())
 }
 
 #[tauri::command]
 pub async fn reset_accessibility_permission() -> Result<(), String> {
-    #[cfg(target_os = "macos")]
-    {
-        // In dev mode, there is no .app bundle so tccutil cannot find
+    // In dev mode, there is no .app bundle so tccutil cannot find
         // the bundle identifier. Just skip the reset — it is only
-        // useful for production builds where the user re-requests
-        // permission after denial.
-        if cfg!(dev) {
-            return Ok(());
-        }
+    // useful for production builds where the user re-requests
+    // permission after denial.
+    if cfg!(dev) {
+        return Ok(());
+    }
 
-        let status = std::process::Command::new("tccutil")
-            .arg("reset")
-            .arg("Accessibility")
-            .arg(APP_BUNDLE_ID)
-            .status()
-            .map_err(|e| format!("Failed to reset accessibility permission: {}", e))?;
+    let status = std::process::Command::new("tccutil")
+        .arg("reset")
+        .arg("Accessibility")
+        .arg(APP_BUNDLE_ID)
+        .status()
+        .map_err(|e| format!("Failed to reset accessibility permission: {}", e))?;
 
-        if !status.success() {
-            return Err(format!(
-                "tccutil reset Accessibility {} failed with status {}",
-                APP_BUNDLE_ID, status
-            ));
-        }
+    if !status.success() {
+        return Err(format!(
+            "tccutil reset Accessibility {} failed with status {}",
+            APP_BUNDLE_ID, status
+        ));
     }
 
     Ok(())
@@ -102,43 +88,27 @@ pub async fn reset_accessibility_permission() -> Result<(), String> {
 
 #[tauri::command]
 pub async fn check_accessibility_permission() -> Result<bool, String> {
-    #[cfg(target_os = "macos")]
-    {
-        let trusted = unsafe { AXIsProcessTrustedWithOptions(std::ptr::null()) != 0 };
-        if trusted {
-            return Ok(true);
-        }
-
-        Ok(unsafe { AXIsProcessTrusted() != 0 })
+    let trusted = unsafe { AXIsProcessTrustedWithOptions(std::ptr::null()) != 0 };
+    if trusted {
+        return Ok(true);
     }
 
-    #[cfg(not(target_os = "macos"))]
-    {
-        Ok(true)
-    }
+    Ok(unsafe { AXIsProcessTrusted() != 0 })
 }
 
 #[tauri::command]
 pub async fn check_microphone_permission() -> Result<String, String> {
-    #[cfg(target_os = "macos")]
-    {
-        // AVAuthorizationStatus: notDetermined=0, restricted=1, denied=2,
-        // authorized=3. This is a read-only TCC check and does not start an
-        // audio session or trigger the native permission prompt.
-        let status: isize = unsafe {
-            objc2::msg_send![
-                objc2::class!(AVCaptureDevice),
-                authorizationStatusForMediaType: AVMediaTypeAudio
-            ]
-        };
+    // AVAuthorizationStatus: notDetermined=0, restricted=1, denied=2,
+    // authorized=3. This is a read-only TCC check and does not start an
+    // audio session or trigger the native permission prompt.
+    let status: isize = unsafe {
+        objc2::msg_send![
+            objc2::class!(AVCaptureDevice),
+            authorizationStatusForMediaType: AVMediaTypeAudio
+        ]
+    };
 
-        return Ok(microphone_permission_status(status).to_string());
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    {
-        Ok("unknown".to_string())
-    }
+    Ok(microphone_permission_status(status).to_string())
 }
 
 #[cfg(test)]

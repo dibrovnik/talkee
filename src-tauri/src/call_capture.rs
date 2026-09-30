@@ -7,27 +7,18 @@ use crate::logger;
 use crate::realtime::RealtimeAudioCommand;
 use base64::Engine;
 use chrono::{DateTime, Utc};
-#[cfg(target_os = "windows")]
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
 use std::io::BufWriter;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
-#[cfg(target_os = "macos")]
 use std::ptr::NonNull;
-#[cfg(target_os = "macos")]
 use std::sync::atomic::{AtomicBool, Ordering};
-#[cfg(any(target_os = "windows", target_os = "linux"))]
-use std::sync::Arc;
 use std::sync::{mpsc, Mutex, OnceLock};
 use tauri::{AppHandle, Manager};
 
-#[cfg(target_os = "macos")]
 use objc2::AnyThread;
-#[cfg(target_os = "macos")]
 use objc2_core_audio::{
     kAudioAggregateDeviceIsPrivateKey, kAudioAggregateDeviceIsStackedKey,
     kAudioAggregateDeviceNameKey, kAudioAggregateDeviceTapAutoStartKey,
@@ -41,19 +32,12 @@ use objc2_core_audio::{
     AudioObjectGetPropertyData, AudioObjectID, AudioObjectPropertyAddress,
     AudioObjectPropertySelector, CATapDescription, CATapMuteBehavior,
 };
-#[cfg(target_os = "macos")]
 use objc2_core_audio_types::{
     kAudioFormatFlagIsFloat, kAudioFormatFlagIsNonInterleaved, kAudioFormatFlagIsSignedInteger,
     kAudioFormatLinearPCM, AudioBufferList, AudioStreamBasicDescription, AudioTimeStamp,
 };
-#[cfg(target_os = "macos")]
-use objc2_core_foundation::{CFArray, CFBoolean, CFDictionary, CFRetained, CFString, CFType, Type};
-#[cfg(target_os = "macos")]
+use objc2_core_foundation::{CFArray, CFBoolean, CFDictionary, CFRetained, CFString, CFType};
 use objc2_foundation::{NSArray, NSNumber, NSString, NSUUID};
-#[cfg(target_os = "linux")]
-use pipewire as pw;
-#[cfg(target_os = "linux")]
-use pw::{properties::properties, spa};
 
 static SESSIONS: OnceLock<Mutex<HashMap<String, StoredCallCaptureSession>>> = OnceLock::new();
 static SESSION_DIRECTORIES: OnceLock<Mutex<HashMap<String, PathBuf>>> = OnceLock::new();
@@ -61,9 +45,7 @@ static SYSTEM_AUDIO_SINK: OnceLock<Mutex<Option<tokio::sync::mpsc::Sender<Realti
     OnceLock::new();
 static SYSTEM_AUDIO_MONITOR_SINK: OnceLock<Mutex<Option<mpsc::SyncSender<Vec<u8>>>>> =
     OnceLock::new();
-#[cfg(target_os = "macos")]
 static REQUIRE_SELF_AUDIO_EXCLUSION: AtomicBool = AtomicBool::new(false);
-#[cfg(target_os = "macos")]
 static MUTE_CAPTURED_SYSTEM_AUDIO: AtomicBool = AtomicBool::new(false);
 const CALL_SYSTEM_CAPTURE_SAMPLE_RATE: u32 = 16_000;
 const CALL_SYSTEM_CAPTURE_CHANNELS: u16 = 1;
@@ -93,19 +75,11 @@ pub fn set_system_audio_monitor_sink(sender: Option<mpsc::SyncSender<Vec<u8>>>) 
 }
 
 pub fn set_require_self_audio_exclusion(required: bool) {
-    #[cfg(target_os = "macos")]
     REQUIRE_SELF_AUDIO_EXCLUSION.store(required, Ordering::SeqCst);
-
-    #[cfg(not(target_os = "macos"))]
-    let _ = required;
 }
 
 pub fn set_mute_captured_system_audio(muted: bool) {
-    #[cfg(target_os = "macos")]
     MUTE_CAPTURED_SYSTEM_AUDIO.store(muted, Ordering::SeqCst);
-
-    #[cfg(not(target_os = "macos"))]
-    let _ = muted;
 }
 
 fn sessions() -> &'static Mutex<HashMap<String, StoredCallCaptureSession>> {
@@ -231,15 +205,9 @@ struct StoredCallCaptureSession {
     session: CallCaptureSession,
     mic: Option<microphone::CallMicrophoneCapture>,
     system_live_session: Option<LiveDictationSession>,
-    #[cfg(target_os = "macos")]
     macos: Option<MacosCallCaptureState>,
-    #[cfg(target_os = "windows")]
-    windows: Option<WindowsCallCaptureState>,
-    #[cfg(target_os = "linux")]
-    linux: Option<LinuxCallCaptureState>,
 }
 
-#[cfg(target_os = "macos")]
 #[derive(Clone, Debug)]
 struct MacosCallCaptureState {
     tap_id: AudioObjectID,
@@ -248,44 +216,11 @@ struct MacosCallCaptureState {
     callback_state_ptr: usize,
 }
 
-#[cfg(target_os = "macos")]
 struct MacosAudioWriterState {
     writer: Mutex<SystemAudioWriter<BufWriter<File>>>,
     stream_description: AudioStreamBasicDescription,
 }
 
-#[cfg(target_os = "windows")]
-/// Wraps a cpal `Stream`, which cpal marks `!Send` for cross-platform uniformity.
-/// The WASAPI backend runs its audio work on a dedicated thread; the `Stream` itself
-/// is a control handle that is sound to move and drop across threads. Access is
-/// additionally serialized through the global `SESSIONS` mutex.
-struct SendStream(cpal::Stream);
-#[cfg(target_os = "windows")]
-// SAFETY: see the SendStream doc comment above.
-unsafe impl Send for SendStream {}
-
-#[cfg(target_os = "windows")]
-struct WindowsCallCaptureState {
-    stream: Option<SendStream>,
-    writer: Arc<Mutex<Option<SystemAudioWriter<BufWriter<File>>>>>,
-    device_name: String,
-    source_sample_rate: u32,
-    source_channels: u16,
-    sample_format: cpal::SampleFormat,
-}
-
-#[cfg(target_os = "linux")]
-struct LinuxCallCaptureState {
-    stop_tx: Option<std::sync::mpsc::Sender<()>>,
-    thread: Option<std::thread::JoinHandle<()>>,
-    writer: Arc<Mutex<Option<SystemAudioWriter<BufWriter<File>>>>>,
-    source_sample_rate: u32,
-    source_channels: u16,
-    source_format: String,
-    target: String,
-}
-
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux", test))]
 struct SystemAudioResampler {
     source_sample_rate: f64,
     source_frames_seen: u64,
@@ -296,7 +231,6 @@ struct SystemAudioResampler {
     output_frames_written: u64,
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux", test))]
 impl SystemAudioResampler {
     fn new(source_sample_rate: u32) -> Self {
         Self {
@@ -345,7 +279,7 @@ impl SystemAudioResampler {
         self.source_frames_seen = self.source_frames_seen.saturating_add(1);
     }
 
-    #[cfg(any(target_os = "windows", target_os = "linux", test))]
+    #[cfg(test)]
     fn push_interleaved_f32<F>(&mut self, samples: &[f32], channels: usize, mut write_sample: F)
     where
         F: FnMut(i16),
@@ -375,19 +309,11 @@ impl SystemAudioResampler {
         self.frames_above_noise_floor
     }
 
-    #[cfg(target_os = "linux")]
-    fn reset_source_sample_rate(&mut self, source_sample_rate: u32) {
-        if self.source_frames_seen == 0 {
-            *self = Self::new(source_sample_rate);
-        }
-    }
-
     fn output_frames_written(&self) -> u64 {
         self.output_frames_written
     }
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux", test))]
 fn float_to_pcm_i16(sample: f32) -> i16 {
     let normalized = sample.clamp(-1.0, 1.0);
     let value = if normalized < 0.0 {
@@ -398,7 +324,6 @@ fn float_to_pcm_i16(sample: f32) -> i16 {
     value.round() as i16
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux", test))]
 struct SystemAudioWriter<W>
 where
     W: Write + Seek,
@@ -409,7 +334,6 @@ where
     samples_since_checkpoint: u64,
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux", test))]
 impl<W> SystemAudioWriter<W>
 where
     W: Write + Seek,
@@ -467,21 +391,6 @@ where
         }
     }
 
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
-    fn write_interleaved_f32(&mut self, samples: &[f32], channels: usize) {
-        let mut output = Vec::new();
-        self.resampler
-            .push_interleaved_f32(samples, channels, |sample| output.push(sample));
-        for sample in output {
-            self.write_output_sample(sample);
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    fn reset_source_sample_rate(&mut self, source_sample_rate: u32) {
-        self.resampler.reset_source_sample_rate(source_sample_rate);
-    }
-
     fn finalize(mut self) -> Result<(), hound::Error> {
         if !self.live_pcm.is_empty() {
             if let Ok(sink) = system_audio_monitor_sink().lock() {
@@ -518,22 +427,7 @@ fn default_true() -> bool {
 }
 
 fn platform_name() -> &'static str {
-    #[cfg(target_os = "macos")]
-    {
-        "macos"
-    }
-    #[cfg(target_os = "windows")]
-    {
-        "windows"
-    }
-    #[cfg(target_os = "linux")]
-    {
-        "linux"
-    }
-    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-    {
-        "unsupported"
-    }
+    "macos"
 }
 
 fn call_capture_root(app: &AppHandle, _storage_dir: Option<&str>) -> Result<PathBuf, String> {
@@ -570,7 +464,6 @@ fn write_manifest(session: &CallCaptureSession) -> Result<(), String> {
         let _ = fs::remove_file(&temp_path);
         format!("Не удалось заменить manifest созвона: {}", err)
     })?;
-    #[cfg(unix)]
     File::open(
         path.parent()
             .ok_or_else(|| "Не удалось найти папку manifest созвона.".to_string())?,
@@ -585,40 +478,8 @@ fn write_manifest(session: &CallCaptureSession) -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(not(windows))]
 fn replace_file(source: &Path, destination: &Path) -> std::io::Result<()> {
     fs::rename(source, destination)
-}
-
-#[cfg(windows)]
-fn replace_file(source: &Path, destination: &Path) -> std::io::Result<()> {
-    use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Storage::FileSystem::{
-        MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
-    };
-
-    let source = source
-        .as_os_str()
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect::<Vec<_>>();
-    let destination = destination
-        .as_os_str()
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect::<Vec<_>>();
-    let result = unsafe {
-        MoveFileExW(
-            source.as_ptr(),
-            destination.as_ptr(),
-            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
-        )
-    };
-    if result == 0 {
-        Err(std::io::Error::last_os_error())
-    } else {
-        Ok(())
-    }
 }
 
 fn build_session(
@@ -934,12 +795,7 @@ pub async fn start_call_capture(
         session: session.clone(),
         mic,
         system_live_session,
-        #[cfg(target_os = "macos")]
         macos: platform_state,
-        #[cfg(target_os = "windows")]
-        windows: platform_state,
-        #[cfg(target_os = "linux")]
-        linux: platform_state,
     });
     match sessions().lock() {
         Ok(mut guard) => {
@@ -1401,75 +1257,27 @@ pub fn get_system_audio_level(session_id: &str) -> Result<SystemAudioLevel, Stri
         .get(session_id)
         .ok_or_else(|| "Активная запись созвона не найдена.".to_string())?;
 
-    #[cfg(target_os = "macos")]
-    {
-        let state = stored
-            .macos
-            .as_ref()
-            .ok_or_else(|| "Системная аудиодорожка macOS не запущена.".to_string())?;
-        if state.callback_state_ptr == 0 {
-            return Err("Системная аудиодорожка macOS недоступна.".to_string());
-        }
-        // SAFETY: the callback state is owned by the stored session and is freed
-        // only by stop_platform_capture while the sessions mutex is held.
-        let callback_state =
-            unsafe { &*(state.callback_state_ptr as *const MacosAudioWriterState) };
-        let writer = callback_state
-            .writer
-            .lock()
-            .map_err(|_| "Не удалось прочитать уровень системного звука macOS.".to_string())?;
-        return Ok(SystemAudioLevel {
-            max_dbfs: writer.max_dbfs(),
-            frames_above_noise_floor: writer.frames_above_noise_floor(),
-            output_frames_written: writer.output_frames_written(),
-        });
+    let state = stored
+        .macos
+        .as_ref()
+        .ok_or_else(|| "Системная аудиодорожка macOS не запущена.".to_string())?;
+    if state.callback_state_ptr == 0 {
+        return Err("Системная аудиодорожка macOS недоступна.".to_string());
     }
-
-    #[cfg(target_os = "windows")]
-    {
-        let state = stored
-            .windows
-            .as_ref()
-            .ok_or_else(|| "Системная аудиодорожка Windows не запущена.".to_string())?;
-        let guard = state
-            .writer
-            .lock()
-            .map_err(|_| "Не удалось прочитать уровень системного звука Windows.".to_string())?;
-        let writer = guard
-            .as_ref()
-            .ok_or_else(|| "Системная аудиодорожка Windows недоступна.".to_string())?;
-        return Ok(SystemAudioLevel {
-            max_dbfs: writer.max_dbfs(),
-            frames_above_noise_floor: writer.frames_above_noise_floor(),
-            output_frames_written: writer.output_frames_written(),
-        });
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        let state = stored
-            .linux
-            .as_ref()
-            .ok_or_else(|| "Системная аудиодорожка Linux не запущена.".to_string())?;
-        let guard = state
-            .writer
-            .lock()
-            .map_err(|_| "Не удалось прочитать уровень системного звука Linux.".to_string())?;
-        let writer = guard
-            .as_ref()
-            .ok_or_else(|| "Системная аудиодорожка Linux недоступна.".to_string())?;
-        return Ok(SystemAudioLevel {
-            max_dbfs: writer.max_dbfs(),
-            frames_above_noise_floor: writer.frames_above_noise_floor(),
-            output_frames_written: writer.output_frames_written(),
-        });
-    }
-
-    #[allow(unreachable_code)]
-    Err("Захват системного звука не поддерживается на этой платформе.".to_string())
+    // SAFETY: the callback state is owned by the stored session and is freed
+    // only by stop_platform_capture while the sessions mutex is held.
+    let callback_state = unsafe { &*(state.callback_state_ptr as *const MacosAudioWriterState) };
+    let writer = callback_state
+        .writer
+        .lock()
+        .map_err(|_| "Не удалось прочитать уровень системного звука macOS.".to_string())?;
+    Ok(SystemAudioLevel {
+        max_dbfs: writer.max_dbfs(),
+        frames_above_noise_floor: writer.frames_above_noise_floor(),
+        output_frames_written: writer.output_frames_written(),
+    })
 }
 
-#[cfg(target_os = "macos")]
 fn platform_targets() -> Vec<CaptureTarget> {
     vec![CaptureTarget {
         id: "system-output".to_string(),
@@ -1479,32 +1287,6 @@ fn platform_targets() -> Vec<CaptureTarget> {
     }]
 }
 
-#[cfg(target_os = "windows")]
-fn platform_targets() -> Vec<CaptureTarget> {
-    vec![CaptureTarget {
-        id: "default-loopback".to_string(),
-        label: "Системный звук Windows".to_string(),
-        kind: CaptureTargetKind::SystemOutput,
-        platform: "windows".to_string(),
-    }]
-}
-
-#[cfg(target_os = "linux")]
-fn platform_targets() -> Vec<CaptureTarget> {
-    vec![CaptureTarget {
-        id: "default-pipewire-monitor".to_string(),
-        label: "Системный звук PipeWire".to_string(),
-        kind: CaptureTargetKind::SystemOutput,
-        platform: "linux".to_string(),
-    }]
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-fn platform_targets() -> Vec<CaptureTarget> {
-    Vec::new()
-}
-
-#[cfg(target_os = "macos")]
 fn start_platform_capture(
     session: &CallCaptureSession,
     req: &StartCallCaptureRequest,
@@ -1523,53 +1305,6 @@ fn start_platform_capture(
     start_macos_system_audio_capture(session, req.save_audio)
 }
 
-#[cfg(target_os = "windows")]
-fn start_platform_capture(
-    session: &CallCaptureSession,
-    req: &StartCallCaptureRequest,
-) -> Result<Option<WindowsCallCaptureState>, String> {
-    if req.include_mic {
-        logger::log_info(
-            "CALL_CAPTURE",
-            "Mic track is reserved in the manifest; native mic capture will be attached after the Windows loopback path.",
-        );
-    }
-
-    if !req.include_system {
-        return Ok(None);
-    }
-
-    start_windows_system_audio_capture(session, req.save_audio)
-}
-
-#[cfg(target_os = "linux")]
-fn start_platform_capture(
-    session: &CallCaptureSession,
-    req: &StartCallCaptureRequest,
-) -> Result<Option<LinuxCallCaptureState>, String> {
-    if req.include_mic {
-        logger::log_info(
-            "CALL_CAPTURE",
-            "Mic track is reserved in the manifest; native mic capture will be attached after the PipeWire monitor path.",
-        );
-    }
-
-    if !req.include_system {
-        return Ok(None);
-    }
-
-    start_linux_system_audio_capture(session, req.save_audio)
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-fn start_platform_capture(
-    _session: &CallCaptureSession,
-    _req: &StartCallCaptureRequest,
-) -> Result<(), String> {
-    Err("Захват созвона не поддерживается на этой платформе.".to_string())
-}
-
-#[cfg(target_os = "macos")]
 fn stop_platform_capture(stored: &mut StoredCallCaptureSession) -> Result<(), String> {
     let Some(state) = stored.macos.take() else {
         return Ok(());
@@ -1648,108 +1383,6 @@ fn stop_platform_capture(stored: &mut StoredCallCaptureSession) -> Result<(), St
     Ok(())
 }
 
-#[cfg(target_os = "windows")]
-fn stop_platform_capture(stored: &mut StoredCallCaptureSession) -> Result<(), String> {
-    let Some(mut state) = stored.windows.take() else {
-        return Ok(());
-    };
-
-    state.stream.take();
-    let mut guard = state
-        .writer
-        .lock()
-        .map_err(|_| "Не удалось заблокировать writer системной дорожки Windows.".to_string())?;
-
-    if let Some(writer) = guard.take() {
-        logger::log_info(
-            "CALL_CAPTURE",
-            &format!(
-                "System audio capture level: max={:.1} dBFS, frames_above_noise_floor={}",
-                writer.max_dbfs(),
-                writer.frames_above_noise_floor()
-            ),
-        );
-        writer.finalize().map_err(|err| {
-            logger::log_error(
-                "CALL_CAPTURE",
-                &format!("Failed to finalize Windows system WAV: {}", err),
-            );
-            format!("Не удалось завершить system.wav Windows: {}", err)
-        })?;
-    }
-
-    logger::log_info(
-        "CALL_CAPTURE",
-        &format!(
-            "Stopped Windows system audio capture: device={}, source={}Hz/{}ch/{:?}",
-            state.device_name, state.source_sample_rate, state.source_channels, state.sample_format
-        ),
-    );
-
-    Ok(())
-}
-
-#[cfg(target_os = "linux")]
-fn stop_platform_capture(stored: &mut StoredCallCaptureSession) -> Result<(), String> {
-    let Some(mut state) = stored.linux.take() else {
-        return Ok(());
-    };
-
-    if let Some(stop_tx) = state.stop_tx.take() {
-        if stop_tx.send(()).is_err() {
-            logger::log_error(
-                "CALL_CAPTURE",
-                "Linux PipeWire capture thread already stopped",
-            );
-        }
-    }
-
-    if let Some(thread) = state.thread.take() {
-        if thread.join().is_err() {
-            logger::log_error("CALL_CAPTURE", "Linux PipeWire capture thread panicked");
-        }
-    }
-
-    let mut guard = state
-        .writer
-        .lock()
-        .map_err(|_| "Не удалось заблокировать writer системной дорожки Linux.".to_string())?;
-
-    if let Some(writer) = guard.take() {
-        logger::log_info(
-            "CALL_CAPTURE",
-            &format!(
-                "System audio capture level: max={:.1} dBFS, frames_above_noise_floor={}",
-                writer.max_dbfs(),
-                writer.frames_above_noise_floor()
-            ),
-        );
-        writer.finalize().map_err(|err| {
-            logger::log_error(
-                "CALL_CAPTURE",
-                &format!("Failed to finalize Linux system WAV: {}", err),
-            );
-            format!("Не удалось завершить system.wav Linux: {}", err)
-        })?;
-    }
-
-    logger::log_info(
-        "CALL_CAPTURE",
-        &format!(
-            "Stopped Linux PipeWire system audio capture: target={}, source={}Hz/{}ch/{}",
-            state.target, state.source_sample_rate, state.source_channels, state.source_format
-        ),
-    );
-
-    Ok(())
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-fn stop_platform_capture(_stored: &mut StoredCallCaptureSession) -> Result<(), String> {
-    Ok(())
-}
-
-#[cfg(target_os = "macos")]
 fn status_result(status: i32, operation: &str) -> Result<(), String> {
     if status == 0 {
         Ok(())
@@ -1758,7 +1391,6 @@ fn status_result(status: i32, operation: &str) -> Result<(), String> {
     }
 }
 
-#[cfg(target_os = "macos")]
 fn cf_key(value: &'static std::ffi::CStr) -> Result<CFRetained<CFString>, String> {
     let key = value
         .to_str()
@@ -1766,7 +1398,6 @@ fn cf_key(value: &'static std::ffi::CStr) -> Result<CFRetained<CFString>, String
     Ok(CFString::from_str(key))
 }
 
-#[cfg(target_os = "macos")]
 fn audio_property_address(selector: AudioObjectPropertySelector) -> AudioObjectPropertyAddress {
     AudioObjectPropertyAddress {
         mSelector: selector,
@@ -1775,7 +1406,6 @@ fn audio_property_address(selector: AudioObjectPropertySelector) -> AudioObjectP
     }
 }
 
-#[cfg(target_os = "macos")]
 fn read_audio_property<T: Copy>(
     object_id: AudioObjectID,
     selector: AudioObjectPropertySelector,
@@ -1799,7 +1429,6 @@ fn read_audio_property<T: Copy>(
     Ok(value)
 }
 
-#[cfg(target_os = "macos")]
 fn current_audio_process_object() -> Result<AudioObjectID, String> {
     let mut address = audio_property_address(kAudioHardwarePropertyTranslatePIDToProcessObject);
     let pid = std::process::id() as i32;
@@ -1823,7 +1452,6 @@ fn current_audio_process_object() -> Result<AudioObjectID, String> {
     Ok(process_object)
 }
 
-#[cfg(target_os = "macos")]
 fn current_audio_process_object_for_tap() -> Result<AudioObjectID, String> {
     let required = REQUIRE_SELF_AUDIO_EXCLUSION.load(Ordering::SeqCst);
     let attempts = if required { 20 } else { 1 };
@@ -1841,7 +1469,6 @@ fn current_audio_process_object_for_tap() -> Result<AudioObjectID, String> {
         .unwrap_or_else(|| "CoreAudio did not return an audio process for Talkee.".to_string()))
 }
 
-#[cfg(target_os = "macos")]
 fn read_tap_stream_description(
     tap_id: AudioObjectID,
 ) -> Result<AudioStreamBasicDescription, String> {
@@ -1862,7 +1489,6 @@ fn read_tap_stream_description(
     )
 }
 
-#[cfg(target_os = "macos")]
 fn cf_type<T>(value: &T) -> &CFType
 where
     T: objc2_core_foundation::Type + AsRef<CFType>,
@@ -1870,7 +1496,6 @@ where
     <T as AsRef<CFType>>::as_ref(value)
 }
 
-#[cfg(target_os = "macos")]
 fn build_macos_aggregate_description(
     session_id: &str,
     tap_uuid: &str,
@@ -1919,7 +1544,6 @@ fn build_macos_aggregate_description(
     ))
 }
 
-#[cfg(target_os = "macos")]
 unsafe extern "C-unwind" fn macos_system_audio_io_proc(
     _device: AudioObjectID,
     _now: NonNull<AudioTimeStamp>,
@@ -2064,7 +1688,6 @@ unsafe extern "C-unwind" fn macos_system_audio_io_proc(
     0
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
 fn system_wav_spec() -> hound::WavSpec {
     hound::WavSpec {
         channels: CALL_SYSTEM_CAPTURE_CHANNELS,
@@ -2074,12 +1697,8 @@ fn system_wav_spec() -> hound::WavSpec {
     }
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
 fn system_track_path(session: &CallCaptureSession, save_audio: bool) -> Result<PathBuf, String> {
     if !save_audio {
-        #[cfg(windows)]
-        return Ok(PathBuf::from("NUL"));
-        #[cfg(not(windows))]
         return Ok(PathBuf::from("/dev/null"));
     }
     session
@@ -2090,572 +1709,6 @@ fn system_track_path(session: &CallCaptureSession, save_audio: bool) -> Result<P
         .ok_or_else(|| "В сессии созвона нет системной дорожки.".to_string())
 }
 
-#[cfg(target_os = "linux")]
-#[derive(Clone, Debug)]
-struct LinuxPipeWireCaptureInfo {
-    source_sample_rate: u32,
-    source_channels: u16,
-    source_format: String,
-    target: String,
-}
-
-#[cfg(target_os = "linux")]
-struct LinuxPipeWireUserData {
-    format: spa::param::audio::AudioInfoRaw,
-    writer: Arc<Mutex<Option<SystemAudioWriter<BufWriter<File>>>>>,
-    ready_tx: Arc<Mutex<Option<std::sync::mpsc::Sender<Result<LinuxPipeWireCaptureInfo, String>>>>>,
-}
-
-#[cfg(target_os = "linux")]
-fn linux_pipewire_error(operation: &str, err: impl std::fmt::Display) -> String {
-    format!(
-        "{}: {}. Убедитесь, что PipeWire запущен и в системе есть устройство вывода.",
-        operation, err
-    )
-}
-
-#[cfg(target_os = "linux")]
-fn send_linux_pipewire_ready_once(
-    user_data: &LinuxPipeWireUserData,
-    result: Result<LinuxPipeWireCaptureInfo, String>,
-) {
-    let Ok(mut guard) = user_data.ready_tx.lock() else {
-        return;
-    };
-    let Some(tx) = guard.take() else {
-        return;
-    };
-    let _ = tx.send(result);
-}
-
-#[cfg(target_os = "linux")]
-fn linux_pipewire_capture_info(user_data: &LinuxPipeWireUserData) -> LinuxPipeWireCaptureInfo {
-    LinuxPipeWireCaptureInfo {
-        source_sample_rate: user_data.format.rate().max(CALL_SYSTEM_CAPTURE_SAMPLE_RATE),
-        source_channels: user_data
-            .format
-            .channels()
-            .max(CALL_SYSTEM_CAPTURE_CHANNELS as u32)
-            .min(u16::MAX as u32) as u16,
-        source_format: format!("{:?}", user_data.format.format()),
-        target: "default PipeWire output monitor".to_string(),
-    }
-}
-
-#[cfg(target_os = "linux")]
-fn parse_pipewire_f32_samples(payload: &[u8]) -> Vec<f32> {
-    payload
-        .chunks_exact(std::mem::size_of::<f32>())
-        .map(|sample| f32::from_le_bytes(sample.try_into().unwrap_or([0; 4])))
-        .collect()
-}
-
-#[cfg(target_os = "linux")]
-fn write_linux_pipewire_buffer(user_data: &LinuxPipeWireUserData, payload: &[u8], channels: usize) {
-    if payload.is_empty() || channels == 0 {
-        return;
-    }
-
-    let samples = parse_pipewire_f32_samples(payload);
-    if samples.is_empty() {
-        return;
-    }
-
-    let Ok(mut guard) = user_data.writer.lock() else {
-        return;
-    };
-    let Some(writer) = guard.as_mut() else {
-        return;
-    };
-
-    writer.write_interleaved_f32(&samples, channels);
-}
-
-#[cfg(target_os = "linux")]
-fn run_linux_pipewire_capture(
-    session_id: String,
-    writer: Arc<Mutex<Option<SystemAudioWriter<BufWriter<File>>>>>,
-    ready_tx: std::sync::mpsc::Sender<Result<LinuxPipeWireCaptureInfo, String>>,
-    stop_rx: std::sync::mpsc::Receiver<()>,
-) {
-    let ready_for_setup = ready_tx.clone();
-    let setup_result = (|| -> Result<(), String> {
-        let thread_loop =
-            unsafe { pw::thread_loop::ThreadLoopRc::new(Some("talkee-call-capture"), None) }
-                .map_err(|err| {
-                    linux_pipewire_error(
-                        "Не удалось создать PipeWire loop для записи системного звука Linux",
-                        err,
-                    )
-                })?;
-        let context = pw::context::ContextRc::new(&thread_loop, None).map_err(|err| {
-            linux_pipewire_error(
-                "Не удалось создать PipeWire context для записи системного звука Linux",
-                err,
-            )
-        })?;
-        let core = context.connect_rc(None).map_err(|err| {
-            linux_pipewire_error(
-                "Не удалось подключиться к PipeWire для записи системного звука Linux",
-                err,
-            )
-        })?;
-        let ready_tx = Arc::new(Mutex::new(Some(ready_tx)));
-        let data = LinuxPipeWireUserData {
-            format: Default::default(),
-            writer: Arc::clone(&writer),
-            ready_tx,
-        };
-
-        let props = properties! {
-            *pw::keys::MEDIA_TYPE => "Audio",
-            *pw::keys::MEDIA_CATEGORY => "Capture",
-            *pw::keys::MEDIA_ROLE => "Communication",
-            *pw::keys::MEDIA_NAME => "Talkee Call Capture",
-            *pw::keys::APP_NAME => "Talkee",
-            *pw::keys::APP_ID => "talkee.call-capture",
-            *pw::keys::STREAM_CAPTURE_SINK => "true",
-            *pw::keys::STREAM_MONITOR => "true",
-        };
-        let stream = pw::stream::StreamBox::new(&core, "talkee-call-capture-system", props)
-            .map_err(|err| {
-                linux_pipewire_error(
-                    "Не удалось создать PipeWire stream для записи системного звука Linux",
-                    err,
-                )
-            })?;
-
-        let _listener = stream
-            .add_local_listener_with_user_data(data)
-            .state_changed(|_, user_data, _old, new| match new {
-                pw::stream::StreamState::Error(err) => {
-                    send_linux_pipewire_ready_once(
-                        user_data,
-                        Err(format!(
-                            "Не удалось найти PipeWire monitor системного звука Linux: {}. Убедитесь, что PipeWire запущен и есть активное устройство вывода.",
-                            err
-                        )),
-                    );
-                }
-                pw::stream::StreamState::Paused | pw::stream::StreamState::Streaming => {
-                    send_linux_pipewire_ready_once(
-                        user_data,
-                        Ok(linux_pipewire_capture_info(user_data)),
-                    );
-                }
-                _ => {}
-            })
-            .param_changed(|_, user_data, id, param| {
-                let Some(param) = param else {
-                    return;
-                };
-                if id != pw::spa::param::ParamType::Format.as_raw() {
-                    return;
-                }
-
-                let Ok((media_type, media_subtype)) = pw::spa::param::format_utils::parse_format(param) else {
-                    return;
-                };
-                if media_type != pw::spa::param::format::MediaType::Audio
-                    || media_subtype != pw::spa::param::format::MediaSubtype::Raw
-                {
-                    return;
-                }
-
-                if user_data.format.parse(param).is_err() {
-                    return;
-                }
-
-                let source_sample_rate = user_data
-                    .format
-                    .rate()
-                    .max(CALL_SYSTEM_CAPTURE_SAMPLE_RATE);
-                if let Ok(mut guard) = user_data.writer.lock() {
-                    if let Some(writer) = guard.as_mut() {
-                        writer.reset_source_sample_rate(source_sample_rate);
-                    }
-                }
-            })
-            .process(|stream, user_data| {
-                let Some(mut buffer) = stream.dequeue_buffer() else {
-                    return;
-                };
-                let datas = buffer.datas_mut();
-                if datas.is_empty() {
-                    return;
-                }
-
-                let data = &mut datas[0];
-                let offset = data.chunk().offset() as usize;
-                let size = data.chunk().size() as usize;
-                if size == 0 {
-                    return;
-                }
-
-                let channels = user_data
-                    .format
-                    .channels()
-                    .max(CALL_SYSTEM_CAPTURE_CHANNELS as u32) as usize;
-                let Some(bytes) = data.data() else {
-                    return;
-                };
-                let end = offset.saturating_add(size).min(bytes.len());
-                if offset >= end {
-                    return;
-                }
-
-                write_linux_pipewire_buffer(user_data, &bytes[offset..end], channels);
-            })
-            .register()
-            .map_err(|err| linux_pipewire_error("Не удалось подписаться на PipeWire stream events", err))?;
-
-        let mut audio_info = spa::param::audio::AudioInfoRaw::new();
-        audio_info.set_format(spa::param::audio::AudioFormat::F32LE);
-        audio_info.set_rate(CALL_SYSTEM_CAPTURE_SAMPLE_RATE);
-        audio_info.set_channels(CALL_SYSTEM_CAPTURE_CHANNELS as u32);
-        let obj = pw::spa::pod::Object {
-            type_: pw::spa::utils::SpaTypes::ObjectParamFormat.as_raw(),
-            id: pw::spa::param::ParamType::EnumFormat.as_raw(),
-            properties: audio_info.into(),
-        };
-        let values: Vec<u8> = pw::spa::pod::serialize::PodSerializer::serialize(
-            std::io::Cursor::new(Vec::new()),
-            &pw::spa::pod::Value::Object(obj),
-        )
-        .map_err(|err| linux_pipewire_error("Не удалось подготовить PipeWire audio format", err))?
-        .0
-        .into_inner();
-        let mut params = [spa::pod::Pod::from_bytes(&values)
-            .ok_or_else(|| "Не удалось прочитать PipeWire audio format".to_string())?];
-
-        stream
-            .connect(
-                spa::utils::Direction::Input,
-                None,
-                pw::stream::StreamFlags::AUTOCONNECT
-                    | pw::stream::StreamFlags::MAP_BUFFERS
-                    | pw::stream::StreamFlags::RT_PROCESS,
-                &mut params,
-            )
-            .map_err(|err| {
-                linux_pipewire_error(
-                    "Не удалось начать PipeWire stream записи системного звука Linux",
-                    err,
-                )
-            })?;
-
-        thread_loop.start();
-        logger::log_info(
-            "CALL_CAPTURE",
-            &format!(
-                "Linux PipeWire capture thread is running for session={}",
-                session_id
-            ),
-        );
-
-        let _ = stop_rx.recv();
-        thread_loop.stop();
-        drop(_listener);
-        drop(stream);
-        drop(core);
-        drop(context);
-        drop(thread_loop);
-        Ok(())
-    })();
-
-    if let Err(err) = setup_result {
-        let _ = ready_for_setup.send(Err(err));
-    }
-}
-
-#[cfg(target_os = "linux")]
-fn start_linux_system_audio_capture(
-    session: &CallCaptureSession,
-    save_audio: bool,
-) -> Result<Option<LinuxCallCaptureState>, String> {
-    let path = system_track_path(session, save_audio)?;
-    let wav_writer = hound::WavWriter::create(&path, system_wav_spec())
-        .map_err(|err| format!("Не удалось открыть system.wav для записи: {}", err))?;
-    let writer = Arc::new(Mutex::new(Some(SystemAudioWriter::new(
-        wav_writer,
-        CALL_SYSTEM_CAPTURE_SAMPLE_RATE,
-    ))));
-    let (ready_tx, ready_rx) = std::sync::mpsc::channel();
-    let (stop_tx, stop_rx) = std::sync::mpsc::channel();
-    let session_id = session.id.clone();
-    let thread_writer = Arc::clone(&writer);
-    let thread = std::thread::Builder::new()
-        .name("talkee-pipewire-call-capture".to_string())
-        .spawn(move || run_linux_pipewire_capture(session_id, thread_writer, ready_tx, stop_rx))
-        .map_err(|err| {
-            format!(
-                "Не удалось запустить PipeWire thread записи системного звука Linux: {}",
-                err
-            )
-        })?;
-
-    let info = match ready_rx.recv_timeout(std::time::Duration::from_secs(5)) {
-        Ok(Ok(info)) => info,
-        Ok(Err(err)) => {
-            let _ = stop_tx.send(());
-            let _ = thread.join();
-            return Err(err);
-        }
-        Err(err) => {
-            let _ = stop_tx.send(());
-            let _ = thread.join();
-            return Err(format!(
-                "Не удалось найти PipeWire monitor системного звука Linux: {}. Убедитесь, что PipeWire запущен и есть активное устройство вывода.",
-                err
-            ));
-        }
-    };
-
-    logger::log_info(
-        "CALL_CAPTURE",
-        &format!(
-            "Started Linux PipeWire system audio capture session={}, target={}, source={}Hz/{}ch/{}, stored={}Hz/{}ch/{}bit",
-            session.id,
-            info.target,
-            info.source_sample_rate,
-            info.source_channels,
-            info.source_format,
-            CALL_SYSTEM_CAPTURE_SAMPLE_RATE,
-            CALL_SYSTEM_CAPTURE_CHANNELS,
-            CALL_SYSTEM_CAPTURE_BITS_PER_SAMPLE
-        ),
-    );
-
-    Ok(Some(LinuxCallCaptureState {
-        stop_tx: Some(stop_tx),
-        thread: Some(thread),
-        writer,
-        source_sample_rate: info.source_sample_rate,
-        source_channels: info.source_channels,
-        source_format: info.source_format,
-        target: info.target,
-    }))
-}
-
-#[cfg(target_os = "windows")]
-fn write_windows_loopback_samples<T, F>(
-    writer: &Arc<Mutex<Option<SystemAudioWriter<BufWriter<File>>>>>,
-    channels: usize,
-    samples: &[T],
-    mut to_f32: F,
-) where
-    T: Copy,
-    F: FnMut(T) -> f32,
-{
-    if channels == 0 {
-        return;
-    }
-
-    let Ok(mut guard) = writer.lock() else {
-        return;
-    };
-    let Some(writer) = guard.as_mut() else {
-        return;
-    };
-
-    let mut mono_frames = Vec::with_capacity(samples.len() / channels);
-    for frame in samples.chunks(channels) {
-        if frame.is_empty() {
-            continue;
-        }
-        let mono = frame.iter().copied().map(&mut to_f32).sum::<f32>() / frame.len() as f32;
-        mono_frames.push(mono);
-    }
-
-    writer.write_interleaved_f32(&mono_frames, 1);
-}
-
-#[cfg(target_os = "windows")]
-fn windows_stream_error(err: cpal::StreamError) {
-    logger::log_error(
-        "CALL_CAPTURE",
-        &format!("Windows loopback stream error: {}", err),
-    );
-}
-
-#[cfg(target_os = "windows")]
-fn build_windows_loopback_stream(
-    device: &cpal::Device,
-    config: &cpal::StreamConfig,
-    sample_format: cpal::SampleFormat,
-    writer: Arc<Mutex<Option<SystemAudioWriter<BufWriter<File>>>>>,
-) -> Result<cpal::Stream, String> {
-    let channels = config.channels as usize;
-    if channels == 0 {
-        return Err("Устройство вывода Windows вернуло аудиоформат без каналов.".to_string());
-    }
-
-    match sample_format {
-        cpal::SampleFormat::F32 => device.build_input_stream(
-            config,
-            move |data: &[f32], _| {
-                write_windows_loopback_samples(&writer, channels, data, |sample| sample)
-            },
-            windows_stream_error,
-            None,
-        ),
-        cpal::SampleFormat::F64 => device.build_input_stream(
-            config,
-            move |data: &[f64], _| {
-                write_windows_loopback_samples(&writer, channels, data, |sample| sample as f32)
-            },
-            windows_stream_error,
-            None,
-        ),
-        cpal::SampleFormat::I8 => device.build_input_stream(
-            config,
-            move |data: &[i8], _| {
-                write_windows_loopback_samples(&writer, channels, data, |sample| {
-                    sample as f32 / i8::MAX as f32
-                })
-            },
-            windows_stream_error,
-            None,
-        ),
-        cpal::SampleFormat::I16 => device.build_input_stream(
-            config,
-            move |data: &[i16], _| {
-                write_windows_loopback_samples(&writer, channels, data, |sample| {
-                    sample as f32 / i16::MAX as f32
-                })
-            },
-            windows_stream_error,
-            None,
-        ),
-        cpal::SampleFormat::I32 => device.build_input_stream(
-            config,
-            move |data: &[i32], _| {
-                write_windows_loopback_samples(&writer, channels, data, |sample| {
-                    sample as f32 / i32::MAX as f32
-                })
-            },
-            windows_stream_error,
-            None,
-        ),
-        cpal::SampleFormat::I64 => device.build_input_stream(
-            config,
-            move |data: &[i64], _| {
-                write_windows_loopback_samples(&writer, channels, data, |sample| {
-                    (sample as f64 / i64::MAX as f64) as f32
-                })
-            },
-            windows_stream_error,
-            None,
-        ),
-        cpal::SampleFormat::U8 => device.build_input_stream(
-            config,
-            move |data: &[u8], _| {
-                write_windows_loopback_samples(&writer, channels, data, |sample| {
-                    (sample as f32 - 128.0) / 128.0
-                })
-            },
-            windows_stream_error,
-            None,
-        ),
-        cpal::SampleFormat::U16 => device.build_input_stream(
-            config,
-            move |data: &[u16], _| {
-                write_windows_loopback_samples(&writer, channels, data, |sample| {
-                    (sample as f32 - 32_768.0) / 32_768.0
-                })
-            },
-            windows_stream_error,
-            None,
-        ),
-        cpal::SampleFormat::U32 => device.build_input_stream(
-            config,
-            move |data: &[u32], _| {
-                write_windows_loopback_samples(&writer, channels, data, |sample| {
-                    ((sample as f64 - 2_147_483_648.0) / 2_147_483_648.0) as f32
-                })
-            },
-            windows_stream_error,
-            None,
-        ),
-        cpal::SampleFormat::U64 => device.build_input_stream(
-            config,
-            move |data: &[u64], _| {
-                write_windows_loopback_samples(&writer, channels, data, |sample| {
-                    ((sample as f64 - 9_223_372_036_854_775_808.0) / 9_223_372_036_854_775_808.0)
-                        as f32
-                })
-            },
-            windows_stream_error,
-            None,
-        ),
-        other => {
-            return Err(format!(
-                "Неподдерживаемый формат системного звука Windows: {:?}.",
-                other
-            ))
-        }
-    }
-    .map_err(|err| format!("Не удалось начать запись системного звука Windows: {}", err))
-}
-
-#[cfg(target_os = "windows")]
-fn start_windows_system_audio_capture(
-    session: &CallCaptureSession,
-    save_audio: bool,
-) -> Result<Option<WindowsCallCaptureState>, String> {
-    let host = cpal::default_host();
-    let device = host.default_output_device().ok_or_else(|| {
-        "Не найдено устройство вывода Windows для записи системного звука.".to_string()
-    })?;
-    let device_name = device
-        .name()
-        .unwrap_or_else(|_| "default Windows output".to_string());
-    let supported_config = device
-        .default_output_config()
-        .map_err(|err| format!("Не удалось начать запись системного звука Windows: {}", err))?;
-    let sample_format = supported_config.sample_format();
-    let config: cpal::StreamConfig = supported_config.into();
-    let source_sample_rate = config.sample_rate.0;
-    let source_channels = config.channels;
-    let path = system_track_path(session, save_audio)?;
-    let wav_writer = hound::WavWriter::create(&path, system_wav_spec())
-        .map_err(|err| format!("Не удалось открыть system.wav для записи: {}", err))?;
-    let writer = Arc::new(Mutex::new(Some(SystemAudioWriter::new(
-        wav_writer,
-        source_sample_rate,
-    ))));
-    let stream =
-        build_windows_loopback_stream(&device, &config, sample_format, Arc::clone(&writer))?;
-    stream
-        .play()
-        .map_err(|err| format!("Не удалось начать запись системного звука Windows: {}", err))?;
-
-    logger::log_info(
-        "CALL_CAPTURE",
-        &format!(
-            "Started Windows system audio capture session={}, device={}, source={}Hz/{}ch/{:?}, stored={}Hz/{}ch/{}bit",
-            session.id,
-            device_name,
-            source_sample_rate,
-            source_channels,
-            sample_format,
-            CALL_SYSTEM_CAPTURE_SAMPLE_RATE,
-            CALL_SYSTEM_CAPTURE_CHANNELS,
-            CALL_SYSTEM_CAPTURE_BITS_PER_SAMPLE
-        ),
-    );
-
-    Ok(Some(WindowsCallCaptureState {
-        stream: Some(SendStream(stream)),
-        writer,
-        device_name,
-        source_sample_rate,
-        source_channels,
-        sample_format,
-    }))
-}
-
-#[cfg(target_os = "macos")]
 fn start_macos_system_audio_capture(
     session: &CallCaptureSession,
     save_audio: bool,

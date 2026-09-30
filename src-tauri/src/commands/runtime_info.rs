@@ -12,15 +12,7 @@ pub struct AppRuntimeInfo {
 }
 
 fn platform_name() -> &'static str {
-    if cfg!(target_os = "macos") {
-        "macos"
-    } else if cfg!(target_os = "windows") {
-        "windows"
-    } else if cfg!(target_os = "linux") {
-        "linux"
-    } else {
-        "unknown"
-    }
+    "macos"
 }
 
 fn build_runtime_info() -> Result<AppRuntimeInfo, String> {
@@ -37,7 +29,7 @@ fn build_runtime_info() -> Result<AppRuntimeInfo, String> {
 
     // In dev builds, never warn about Applications — the binary is
     // expected to live wherever target-dir points.
-    let should_move = if cfg!(dev) || !cfg!(target_os = "macos") {
+    let should_move = if cfg!(dev) {
         false
     } else {
         launched_via_translocation || launched_from_mounted_volume

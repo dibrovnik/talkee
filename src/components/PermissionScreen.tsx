@@ -178,7 +178,7 @@ interface PermissionScreenProps {
 }
 
 interface AppRuntimeInfo {
-  platform: "macos" | "windows" | "linux" | "unknown";
+  platform: "macos";
   executablePath: string;
   bundlePath: string;
   launchedViaTranslocation: boolean;
@@ -186,38 +186,10 @@ interface AppRuntimeInfo {
   shouldMoveToApplications: boolean;
 }
 
-type DesktopPlatform = AppRuntimeInfo["platform"];
-
-function detectDesktopPlatform(): DesktopPlatform {
-  if (typeof navigator === "undefined") {
-    return "unknown";
-  }
-
-  const value = `${navigator.platform} ${navigator.userAgent}`.toLowerCase();
-
-  if (value.includes("mac")) return "macos";
-  if (value.includes("win")) return "windows";
-  if (value.includes("linux") || value.includes("x11")) return "linux";
-
-  return "unknown";
-}
-
 type TranslateFn = ReturnType<typeof useI18n>["t"];
 
-function microphoneHelpText(platform: DesktopPlatform, t: TranslateFn): string {
-  if (platform === "macos") {
-    return t("permission.micHelp.macos");
-  }
-
-  if (platform === "windows") {
-    return t("permission.micHelp.windows");
-  }
-
-  if (platform === "linux") {
-    return t("permission.micHelp.linux");
-  }
-
-  return t("permission.micHelp.default");
+function microphoneHelpText(t: TranslateFn): string {
+  return t("permission.micHelp.macos");
 }
 
 export function PermissionScreen({
@@ -417,29 +389,20 @@ export function PermissionScreen({
     onComplete();
   };
 
-  const platform = runtimeInfo?.platform ?? detectDesktopPlatform();
-  const requiresAccessibility = platform === "macos";
-  const requiresSystemAudio = platform === "macos";
+  const requiresAccessibility = true;
+  const requiresSystemAudio = true;
   // In dev mode the binary lives in the build target dir (e.g. /Volumes/...),
   // which is not /Applications - but that's expected, so skip the warning.
   const shouldShowInstallWarning = import.meta.env.DEV
     ? false
     : Boolean(runtimeInfo?.shouldMoveToApplications);
-  const pastePermissionTitle = requiresAccessibility
-    ? t("permission.paste.titleAccessibility")
-    : t("permission.paste.titlePaste");
-  const pastePermissionDescription = requiresAccessibility
-    ? t("permission.paste.descAccessibility")
-    : platform === "linux"
-      ? t("permission.paste.descLinux")
-      : t("permission.paste.descDefault");
+  const pastePermissionTitle = t("permission.paste.titleAccessibility");
+  const pastePermissionDescription = t("permission.paste.descAccessibility");
   const pastePermissionHelpText = shouldShowInstallWarning
     ? t("permission.paste.helpNotInApplications", {
         path: runtimeInfo?.bundlePath ?? "-",
       })
-    : platform === "linux"
-      ? t("permission.paste.helpLinux")
-      : undefined;
+    : undefined;
   const canContinue =
     micStatus === "granted" &&
     (!requiresAccessibility || accStatus === "granted") &&
@@ -450,7 +413,7 @@ export function PermissionScreen({
     <div
       style={{
         position: "fixed",
-        top: platform === "macos" ? 48 : 0,
+        top: 48,
         right: 0,
         bottom: 0,
         left: 0,
@@ -651,7 +614,7 @@ export function PermissionScreen({
               >
                 {restartError ??
                   (micStatus === "denied"
-                    ? microphoneHelpText(platform, t)
+                    ? microphoneHelpText(t)
                     : systemAudioStatus === "denied"
                       ? t("permission.hint.systemAudioDenied")
                       : accessibilityRestartSuggested

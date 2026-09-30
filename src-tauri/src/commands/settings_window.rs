@@ -1,6 +1,6 @@
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
-use crate::{logger, media_permissions};
+use crate::logger;
 
 const SETTINGS_NAVIGATE_EVENT: &str = "settings-navigate";
 #[cfg(debug_assertions)]
@@ -34,34 +34,11 @@ fn create_settings_window(app: &AppHandle, url: &str) -> Result<tauri::WebviewWi
         .min_inner_size(820.0, 560.0)
         .center();
 
-    // macOS keeps the custom decoration-less, transparent, rounded shell with the
+    // Keep the custom decoration-less, transparent, rounded shell with the
     // in-app traffic-light title bar.
-    #[cfg(target_os = "macos")]
-    {
-        builder = builder.decorations(false).transparent(true);
-    }
-
-    // Windows & Linux use a standard rectangular window with the native title bar
-    // and system minimize / maximize / close controls (the custom rounded shell
-    // showed lit square corners on those platforms).
-    #[cfg(not(target_os = "macos"))]
-    {
-        builder = builder.decorations(true).transparent(false);
-    }
+    builder = builder.decorations(false).transparent(true);
 
     let win = builder.build().map_err(|e| e.to_string())?;
-    media_permissions::allow_microphone_requests(&win);
-
-    #[cfg(windows)]
-    {
-        let initial_theme = match win.theme() {
-            Ok(tauri::Theme::Dark) => crate::windows_titlebar::TitlebarTheme::Dark,
-            _ => crate::windows_titlebar::TitlebarTheme::Light,
-        };
-        if let Err(error) = crate::windows_titlebar::apply(&win, initial_theme) {
-            logger::log_error("WINDOW_TITLEBAR", &error);
-        }
-    }
 
     show_and_focus_window(&win);
     Ok(win)
@@ -69,16 +46,6 @@ fn create_settings_window(app: &AppHandle, url: &str) -> Result<tauri::WebviewWi
 
 #[tauri::command]
 pub async fn set_settings_titlebar_theme(app: AppHandle, theme: String) -> Result<(), String> {
-    #[cfg(windows)]
-    {
-        let window = app
-            .get_webview_window("settings")
-            .ok_or_else(|| "Settings window is not available".to_string())?;
-        let theme = crate::windows_titlebar::TitlebarTheme::parse(&theme)?;
-        crate::windows_titlebar::apply(&window, theme)?;
-    }
-
-    #[cfg(not(windows))]
     let _ = (app, theme);
 
     Ok(())

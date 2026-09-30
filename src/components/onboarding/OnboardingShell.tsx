@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
 import { useI18n } from "../../lib/i18n";
-import { isMacPlatform } from "../../lib/store";
 
 const ONBOARDING_STEP_COUNT = 3;
 
@@ -63,7 +62,7 @@ export function OnboardingShell({
     <div
       style={{
         position: "fixed",
-        top: isMacPlatform() ? 48 : 0,
+        top: 48,
         right: 0,
         bottom: 0,
         left: 0,

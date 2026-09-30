@@ -5,7 +5,7 @@ use tauri::{
     WebviewWindowBuilder,
 };
 
-use crate::{logger, media_permissions};
+use crate::logger;
 
 #[path = "widget_visibility.rs"]
 mod widget_visibility;
@@ -47,8 +47,7 @@ pub fn configure_main_widget_window(win: &WebviewWindow) -> Result<(), String> {
     }))
     .map_err(|e| e.to_string())?;
 
-    #[cfg(target_os = "macos")]
-    {
+        {
         let main_thread_window = win.clone();
         win.run_on_main_thread(move || unsafe {
             match main_thread_window.ns_window() {
@@ -85,7 +84,6 @@ fn get_or_create_main_widget_window(app: &AppHandle) -> Result<(WebviewWindow, b
         .map_err(|e| e.to_string())?
         .build()
         .map_err(|e| e.to_string())?;
-    media_permissions::allow_microphone_requests(&win);
     configure_main_widget_window(&win)?;
 
     Ok((win, true))
@@ -148,8 +146,7 @@ pub fn restore_widget_window(
         win.set_always_on_top(true).map_err(|e| e.to_string())?;
     }
 
-    #[cfg(target_os = "macos")]
-    if bring_to_front {
+        if bring_to_front {
         order_widget_window_front(app)?;
     }
 
@@ -295,18 +292,9 @@ pub fn ensure_widget_notice_window(app: &AppHandle) -> Result<tauri::WebviewWind
     .visible(false)
     .shadow(false);
 
-    #[cfg(target_os = "linux")]
-    {
-        builder = builder.transparent(true).skip_taskbar(true);
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    {
-        builder = builder.transparent(true).skip_taskbar(true);
-    }
+    builder = builder.transparent(true).skip_taskbar(true);
 
     let win = builder.build().map_err(|e| e.to_string())?;
-    media_permissions::allow_microphone_requests(&win);
 
     Ok(win)
 }
@@ -331,18 +319,9 @@ pub fn ensure_widget_text_window(app: &AppHandle) -> Result<tauri::WebviewWindow
     .visible(false)
     .shadow(false);
 
-    #[cfg(target_os = "linux")]
-    {
-        builder = builder.transparent(true).skip_taskbar(true);
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    {
-        builder = builder.transparent(true).skip_taskbar(true);
-    }
+    builder = builder.transparent(true).skip_taskbar(true);
 
     let win = builder.build().map_err(|e| e.to_string())?;
-    media_permissions::allow_microphone_requests(&win);
 
     Ok(win)
 }
@@ -438,7 +417,6 @@ fn text_overlay_width(payload: &WidgetTextOverlayPayload) -> f64 {
     }
 }
 
-#[cfg(target_os = "macos")]
 fn order_widget_window_front(app: &AppHandle) -> Result<(), String> {
     use objc2_app_kit::NSWindowCollectionBehavior;
     use std::sync::mpsc;
@@ -475,7 +453,6 @@ fn order_widget_window_front(app: &AppHandle) -> Result<(), String> {
         .map_err(|e| format!("Failed to receive widget activation result: {}", e))?
 }
 
-#[cfg(target_os = "macos")]
 fn resize_widget_window(
     app: &AppHandle,
     width: f64,
@@ -527,78 +504,6 @@ fn resize_widget_window(
 
     rx.recv()
         .map_err(|e| format!("Failed to receive resize result: {}", e))?
-}
-
-#[cfg(not(target_os = "macos"))]
-fn calculate_default_widget_position(
-    monitor: &tauri::Monitor,
-    width: f64,
-    height: f64,
-) -> tauri::PhysicalPosition<i32> {
-    let scale_factor = monitor.scale_factor();
-    let monitor_position = monitor.position();
-    let monitor_size = monitor.size();
-    let target_width = width * scale_factor;
-    let target_height = height * scale_factor;
-    let x = monitor_position.x as f64 + (monitor_size.width as f64 - target_width) / 2.0;
-    let y = monitor_position.y as f64 + monitor_size.height as f64 - target_height;
-
-    tauri::PhysicalPosition {
-        x: x.round() as i32,
-        y: y.round() as i32,
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-fn resize_widget_window(
-    app: &AppHandle,
-    width: f64,
-    height: f64,
-    expanded_offset_ratio: f64,
-) -> Result<(), String> {
-    use crate::logger;
-
-    if let Some(win) = app.get_webview_window("widget") {
-        let current_position = win.outer_position().ok();
-        let current_size = win.outer_size().ok();
-        let scale_factor = win.scale_factor().unwrap_or(1.0);
-
-        if let Err(err) = win.set_size(tauri::Size::Logical(tauri::LogicalSize { width, height })) {
-            logger::log_error(
-                "WINDOW",
-                &format!("Failed to resize widget window: {}", err),
-            );
-        }
-
-        if let (Some(position), Some(size)) = (current_position, current_size) {
-            let target_width = width * scale_factor;
-            let target_height = height * scale_factor;
-            let x = position.x as f64
-                + centered_resize_offset(size.width as f64, target_width, expanded_offset_ratio);
-            let y = position.y as f64
-                + centered_resize_offset(size.height as f64, target_height, expanded_offset_ratio);
-
-            if let Err(err) = win.set_position(tauri::Position::Physical(tauri::PhysicalPosition {
-                x: x.round() as i32,
-                y: y.round() as i32,
-            })) {
-                logger::log_error(
-                    "WINDOW",
-                    &format!("Failed to preserve widget position on resize: {}", err),
-                );
-            }
-        } else if let Ok(Some(monitor)) = win.primary_monitor() {
-            let position = calculate_default_widget_position(&monitor, width, height);
-            if let Err(err) = win.set_position(tauri::Position::Physical(position)) {
-                logger::log_error(
-                    "WINDOW",
-                    &format!("Failed to reposition widget window: {}", err),
-                );
-            }
-        }
-    }
-
-    Ok(())
 }
 
 #[tauri::command]
@@ -776,9 +681,6 @@ pub async fn widget_resize(
 
 #[tauri::command]
 pub async fn activate_widget_for_hotkey(app: AppHandle) -> Result<(), String> {
-    #[cfg(target_os = "linux")]
-    crate::paste::remember_linux_paste_target_window();
-
     restore_widget_window(&app, "hotkey", true)?;
     Ok(())
 }

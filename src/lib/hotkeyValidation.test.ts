@@ -164,7 +164,7 @@ describe("normalizeHotkey", () => {
 describe("formatHotkeyLabel", () => {
   test("formats for display", () => {
     const label = formatHotkeyLabel("Command+Shift+Space");
-    // On non-mac (test env), Command stays as Cmd
+    // macOS notation: Command is rendered as "Command"
     expect(label).toContain("Space");
     expect(label).toContain(" + ");
   });

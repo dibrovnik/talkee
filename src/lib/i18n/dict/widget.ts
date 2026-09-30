@@ -22,22 +22,6 @@ export const widget = {
   },
 
   // ── Widget.tsx: call capture start errors ───────────────────────────────
-  "widget.call.pipewireFailed": {
-    ru: "Не удалось начать запись системного звука Linux. Убедитесь, что PipeWire запущен и есть активное устройство вывода.",
-    en: "Couldn't start Linux system audio capture. Make sure PipeWire is running and an output device is active.",
-  },
-  "widget.call.systemAudioUnsupported": {
-    ru: "Запись системного звука не поддерживается на этой платформе.",
-    en: "System audio capture isn't supported on this platform.",
-  },
-  "widget.call.windowsOutputMissing": {
-    ru: "Не найдено устройство вывода Windows для записи системного звука.",
-    en: "No Windows output device found for system audio capture.",
-  },
-  "widget.call.windowsCaptureFailed": {
-    ru: "Не удалось начать запись системного звука Windows.",
-    en: "Couldn't start Windows system audio capture.",
-  },
   "widget.call.systemAudioPermission": {
     ru: "Разрешите запись звука системы для созвона.",
     en: "Allow system audio capture for the call.",

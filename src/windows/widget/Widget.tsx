@@ -33,7 +33,6 @@ import {
   DEFAULT_SELECTION_TRANSLATION_HOTKEY,
   getHistory,
   getSettings,
-  isMacPlatform,
   addHistoryEntry,
   reconcileInterruptedProcessing,
   type HistoryEntry,
@@ -285,26 +284,6 @@ function callCaptureStartErrorMessage(error: unknown): string {
 
   const rawMessage = error instanceof Error ? error.message : String(error);
   const normalized = rawMessage.toLowerCase();
-
-  if (normalized.includes("pipewire")) {
-    return tn("widget.call.pipewireFailed");
-  }
-
-  if (normalized.includes("не поддерживается")) {
-    return tn("widget.call.systemAudioUnsupported");
-  }
-
-  if (normalized.includes("устройство вывода windows")) {
-    return tn("widget.call.windowsOutputMissing");
-  }
-
-  if (
-    normalized.includes("wasapi") ||
-    normalized.includes("windows loopback") ||
-    normalized.includes("запись системного звука windows")
-  ) {
-    return tn("widget.call.windowsCaptureFailed");
-  }
 
   if (
     normalized.includes("audiohardwarecreateprocesstap") ||
@@ -1833,14 +1812,12 @@ export function Widget() {
             endpoint: connection.endpoint,
             targetLanguage: settings.translation.liveTargetLanguage,
             voiceEnabled:
-              isMacPlatform() &&
               settings.translation.liveVoiceEnabled &&
               connection.supportsVoice,
             voice: settings.translation.liveVoice,
             voiceVolume: settings.translation.liveVoiceVolume,
             voiceSpeed: settings.translation.liveVoiceSpeed,
             muteOriginal:
-              isMacPlatform() &&
               settings.translation.liveVoiceEnabled &&
               settings.translation.liveMuteOriginalEnabled,
             includeMicrophone: settings.translation.liveMicrophoneEnabled,

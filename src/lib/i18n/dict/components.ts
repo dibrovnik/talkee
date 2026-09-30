@@ -14,22 +14,10 @@ export const components = {
   "permission.action.retry": { ru: "Повторить", en: "Retry" },
   "permission.action.allow": { ru: "Разрешить", en: "Allow" },
 
-  // Microphone help text per platform
+  // Microphone help text
   "permission.micHelp.macos": {
     ru: "Если микрофон был отклонен, откройте Системные настройки -> Конфиденциальность -> Микрофон и включите Talkee.",
     en: "If the microphone was denied, open System Settings -> Privacy -> Microphone and enable Talkee.",
-  },
-  "permission.micHelp.windows": {
-    ru: "Если микрофон был отклонен, откройте Параметры -> Конфиденциальность и безопасность -> Микрофон и разрешите доступ для Talkee.",
-    en: "If the microphone was denied, open Settings -> Privacy & security -> Microphone and allow access for Talkee.",
-  },
-  "permission.micHelp.linux": {
-    ru: "Если микрофон недоступен, проверьте системные настройки звука и разрешения браузерного WebView для записи.",
-    en: "If the microphone is unavailable, check your system sound settings and the WebView recording permissions.",
-  },
-  "permission.micHelp.default": {
-    ru: "Если микрофон был отклонен, откройте системные настройки приватности и разрешите доступ для Talkee.",
-    en: "If the microphone was denied, open your system privacy settings and allow access for Talkee.",
   },
 
   // Paste / accessibility permission row
@@ -37,26 +25,13 @@ export const components = {
     ru: "Универсальный доступ",
     en: "Accessibility",
   },
-  "permission.paste.titlePaste": { ru: "Вставка текста", en: "Text insertion" },
   "permission.paste.descAccessibility": {
     ru: "Нужен для глобальной горячей клавиши и вставки текста.",
     en: "Required for the global hotkey and text insertion.",
   },
-  "permission.paste.descLinux": {
-    ru: "Talkee использует буфер обмена и Ctrl+V. В некоторых Wayland/X11 окружениях автоматическая вставка может быть ограничена.",
-    en: "Talkee uses the clipboard and Ctrl+V. In some Wayland/X11 environments automatic insertion may be limited.",
-  },
-  "permission.paste.descDefault": {
-    ru: "Talkee использует буфер обмена и Ctrl+V. Отдельное системное разрешение обычно не требуется.",
-    en: "Talkee uses the clipboard and Ctrl+V. A separate system permission is usually not required.",
-  },
   "permission.paste.helpNotInApplications": {
     ru: "Приложение запущено не из Applications: {path}",
     en: "The app is not running from Applications: {path}",
-  },
-  "permission.paste.helpLinux": {
-    ru: "Если вставка не сработает, скопированный текст останется в буфере обмена и его можно вставить вручную.",
-    en: "If insertion fails, the copied text stays on the clipboard and you can paste it manually.",
   },
 
   // Header

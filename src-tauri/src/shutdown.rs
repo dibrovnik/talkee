@@ -24,43 +24,6 @@ pub fn quit(app: &AppHandle) {
     app.exit(0);
 }
 
-#[cfg(windows)]
-pub fn cleanup_orphaned_sidecars() {
-    logger::log_info(
-        "SHUTDOWN",
-        "Cleaning up orphaned Windows sidecars from a previous app session",
-    );
-    terminate_sidecar_processes();
-}
-
-#[cfg(windows)]
-fn terminate_sidecar_processes() {
-    use std::os::windows::process::CommandExt;
-    use std::process::Command;
-
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-
-    for process_name in managed_sidecar_process_names() {
-        let image_name = format!("{process_name}.exe");
-        match Command::new("taskkill")
-            .args(["/F", "/T", "/IM", &image_name])
-            .creation_flags(CREATE_NO_WINDOW)
-            .output()
-        {
-            Ok(output) if output.status.success() => logger::log_info(
-                "SHUTDOWN",
-                &format!("Stopped Windows sidecar process tree: {image_name}"),
-            ),
-            Ok(_) => {}
-            Err(err) => logger::log_error(
-                "SHUTDOWN",
-                &format!("Failed to stop Windows sidecar {image_name}: {err}"),
-            ),
-        }
-    }
-}
-
-#[cfg(unix)]
 fn terminate_sidecar_processes() {
     use std::process::Command;
 
@@ -108,9 +71,6 @@ fn terminate_sidecar_processes() {
         }
     }
 }
-
-#[cfg(not(any(unix, windows)))]
-fn terminate_sidecar_processes() {}
 
 #[cfg(test)]
 mod tests {

@@ -14,10 +14,6 @@
   <a href="https://github.com/SerTimBerrners-Lee/talkee/releases/latest">Latest release</a>
 </p>
 
-<p align="center">
-  <img src="docs/demo/demo-1.gif" alt="Talkee dictating a development request into a code editor" width="860">
-</p>
-
 ## What Is Talkee?
 
 Talkee is a desktop voice-to-text app built with Tauri, React, TypeScript, and Rust. It stays as a small floating widget, records while you hold a hotkey, transcribes your speech, optionally cleans the text with an LLM, and pastes the final result into the app you were using.
@@ -39,173 +35,9 @@ It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, 
 - Run managed local STT through one native `transcribe.cpp` runtime for Whisper, GigaAM, Qwen ASR, NVIDIA Parakeet, plus local text summaries through a managed GGUF LLM runtime.
 - Build a native macOS (Apple Silicon) bundle.
 
-## Latest Changes
+## Changelog
 
-### v0.4.8
-
-- Windows upgrades now stop Talkee and every bundled local-model process before replacing files, preventing `Error opening file for writing ... talkee-stt.exe` and partially installed application/runtime combinations.
-- Talkee cleans up orphaned Windows sidecars on startup and terminates incompatible or timed-out managed STT runtimes, preventing stale processes from accumulating across ports and blocking future updates.
-- Local transcription now always sends the active local model to the managed runtime, even when a previously selected API adapter still stores a remote model such as `gpt-4o-transcribe`; the backend also falls back to an actually installed local model for migrated settings.
-- Voice capture no longer waits up to 15 seconds for a cold local streaming runtime: after a short warm-up budget it starts recording immediately and keeps the normal post-stop transcription fallback available.
-- The Windows release verifier now requires the NSIS install/uninstall cleanup hook and every bundled process name, so this upgrade protection is checked in release builds.
-
-### v0.4.7
-
-- Local STT setup on Windows now starts the model download before launching the runtime, reads installed models directly from disk, warms the runtime in the background, bypasses system proxies for loopback requests, and records sidecar output for diagnostics.
-- Windows development commands now discover Rust and the Visual Studio C++ toolchain automatically and keep the application and local-model sidecars on the same static runtime, avoiding missing `rustc` and linker failures during `bun run tauri dev`.
-- Clicking the floating widget on Windows opens Talkee, recognition/translation mode changes persist correctly, and the Settings window uses a native Windows caption with Talkee styling and reliable system buttons.
-- Widget errors now appear in one expandable status bar below the controls, with copy and expand actions; Windows clipboard shortcuts use physical keys so automatic paste also works with non-Latin keyboard layouts.
-- The floating widget is now persistent: Talkee prevents accidental closure and automatically restores a hidden, minimized, destroyed, or off-screen widget without stealing focus from the active application.
-- macOS call recording no longer adds the output device to the capture aggregate or opens a competing WebView microphone when native capture is available, preventing call volume and microphone routing changes.
-- Fixed the Windows onboarding offset that exposed content from the main screen above the setup flow, and clarified model activation progress after a download finishes.
-
-### v0.4.6
-
-- Fixed a Windows crash that could close Talkee without an error on the first dictation after a long idle period or system sleep.
-- Native microphone capture now keeps one process-long `cpal`/WASAPI owner thread across recording sessions, preventing reuse of a COM audio-device enumerator after its owning thread has ended.
-- Native recorder lifecycle failures are logged and returned to the existing WebView microphone fallback instead of leaving the dictation flow without a recoverable error path.
-
-### v0.4.5
-
-- Cloud dictation now waits for the accurate full-audio batch transcript instead of showing a lower-quality realtime text overlay that could differ from the pasted result.
-- Short, silent, or noisy recordings are rejected before paste when the cloud model returns stock refusal text, unrelated foreign-language fragments, or other low-confidence hallucinations.
-- Talkee Cloud remains selected after sign-in and when revisiting Models: stale local STT endpoints and keys are cleared instead of silently switching the app back to another mode.
-- Cloud balances, usage, and reservations are displayed as whole tokens throughout the desktop app.
-- Cloud file transcription with speaker separation now supports long meetings through the upgraded server route, while the desktop distinguishes real timeouts from other diarization failures and records the raw diagnostic error.
-
-### v0.4.4
-
-- Promoted the existing model chat from development mode to the product navigation on macOS, Windows, and Linux.
-- Added direct Chat access from the desktop tray and production-safe `?tab=chat` navigation.
-- The chat can search local Talkee records with cited sources, summarize recent calls and transcripts, extract tasks, translate text, and use the configured Cloud, API, or local text model.
-- Chat messages remain stored locally, and existing development chat history is preserved during the product upgrade.
-
-### v0.4.3
-
-- Restored the standard compact hotkey field in Settings, matching the selected-text translator control, while keeping the large live keycap visualization exclusive to onboarding.
-
-### v0.4.2
-
-- Added a guided first-run flow that grants permissions, downloads and activates a local STT model, and verifies dictation with the configured global hotkey before setup completes.
-- Unified dictation hotkey capture logic across onboarding and Settings, while keeping live key previews in onboarding, apply-without-restart behavior, and conflict handling.
-- Reused one local-model card pattern across onboarding and Settings, and added a way to deselect the active local text model without deleting its downloaded file.
-- Added managed OPUS-MT English-to-Russian translation, reverse-pair fallback selection, and removal of model reasoning blocks from selected-text translation results.
-- Hardened microphone routing for voice and call capture, prevented batch-only local STT models from inheriting API streaming capability, and fixed onboarding when an empty recording produces no transcript.
-
-### v0.4.1
-
-- Added GigaAM v3 E2E RNNT as a managed local Russian speech-recognition model, with short file-transcription chunks matched to the model's 25-second window.
-- Fixed local selected-text translation dropping everything after the first sentence by translating multi-sentence input as a checked CTranslate2 batch.
-- Improved local model installation with automatic retries for transient Hugging Face transport failures and stable installed-state UI while the local runtime refreshes.
-- Added live call transcription directly in the Transcription result view while separate microphone and system-audio tracks continue to be saved for recovery and final refinement.
-- Added a persistent desktop system tray with explicit Open Talkee and Quit actions; Quit also terminates managed local sidecar processes.
-- Added a native Windows release gate that verifies the main application and every bundled sidecar as x86-64 PE executables, plus a published SHA-256 checksum for the stable Windows installer.
-
-### v0.4.0
-
-- Added synchronous system-audio translation through Talkee Cloud or verified OpenAI/Gemini Realtime API adapters; local models remain available for the rest of the app, while live translation requires Cloud or API.
-- Added optional translated voice playback on macOS, with Talkee audio excluded from capture and the original source ducked to prevent feedback loops.
-- Added realtime streaming dictation for supported local and API STT models, including live partial text and a batch fallback for the final result.
-- Reworked dictation and selected-text hotkey capture into one release-on-complete transaction with conflict checks, rollback, stale-request protection, and runtime registration without restart.
-- Improved the floating text overlay: wider streaming layout, compact speaker turns, dark-theme support, drag-to-move, immediate replacement by a new request, and automatic dismissal ten seconds after terminal results.
-- Fixed selected-text translation, permission recovery after relaunch, widget edge clipping, history action menus near the viewport edge, live-translation audio playback, and persisted widget/streaming settings.
-- File transcripts now present the first detected speaker as `You` and the others as `Guest N`; stable inline renaming updates every segment without moving the caret.
-- Call history now keeps and synchronously plays separate microphone and system-audio tracks so both sides of a conversation remain audible.
-- The experimental development chat now searches local history with general lexical and offline-semantic ranking, while a compatible embedding backend can optionally improve recall.
-- Added a stable signed macOS development app runner so TCC permissions survive local rebuilds when an Apple Development identity is available.
-
-### v0.3.12
-
-- Fixed the Windows frontend release build by invoking Vite through its package JavaScript entrypoint instead of the platform-specific `.cmd` shim.
-- Fixed Windows release bundle linking by using the static MSVC CRT expected by the bundled C++ translation runtime.
-- This release candidate must pass Release Preflight on macOS, Windows, and Linux before a tag is created.
-
-### v0.3.11
-
-- Fixed the Windows release workflow by reusing sidecars prepared during release checks instead of running the sidecar preparation step twice.
-- Made sidecar preparation idempotent by skipping copies when the source and destination binaries are already identical.
-
-### v0.3.10
-
-- Hardened the Windows Vite wrapper path normalization used by release builds.
-- Split the GitHub Actions release bundle phase into explicit sidecar, frontend, and native bundle steps so Windows packaging failures are visible without raw log access.
-
-### v0.3.9
-
-- Fixed Windows release builds by resolving the Vite wrapper root path with `fileURLToPath`, avoiding malformed `/D:/...` paths on GitHub Actions Windows runners.
-- Re-publishing the v0.3.8 app changes with the Windows bundle fix so macOS, Windows, and Linux artifacts can be produced by the release workflow.
-
-### v0.3.8
-
-- Added live local dictation for streaming STT models: the text overlay opens when recording starts, shows partial results while speaking, and still pastes only after stop.
-- Improved the text overlay lifecycle so live dictation, translation, and paste errors do not overwrite each other; first-show startup races are handled through an explicit ready handshake.
-- Added local selected-text translation with managed local translator options and selection hotkey settings.
-- Improved local file transcription for WebM/video inputs and local streaming models by routing files through native preparation and streaming-compatible chunks.
-- Reduced voice-history memory pressure by storing completed recording audio through the history audio store instead of keeping large base64 payloads in live history entries.
-- Refreshed settings/model UI for local STT, local LLM, local translation, and development chat workflows.
-
-### v0.3.7
-
-- Migrated managed local file transcription to a unified native `transcribe.cpp` runtime for Whisper, Qwen ASR, and NVIDIA Parakeet.
-- Removed the old Qwen/Parakeet MLX/Python sidecars from the desktop bundle and release build.
-- Fixed local STT settings migration so old Qwen/Parakeet endpoints move to `http://127.0.0.1:8000` and do not require an API key.
-- Fixed selecting a local transcription model so it no longer clears the selected text model used for summarization.
-
-### v0.3.6
-
-- Fixed permissions onboarding recovery for existing installs so updates do not reopen the full permissions screen when required macOS access is already granted.
-- Switched the app icon set from Lucide to Phosphor through a local icon facade for softer, more consistent product UI icons.
-- Added a macOS Vite/esbuild runner workaround for development and release builds from external drives.
-- Kept local STT failures separate from API-key authentication errors when a local model is selected.
-
-### v0.3.5
-
-- Fixed local STT mode so managed localhost runtimes are called without a stale API bearer token and no longer show an API-key error for local runtime failures.
-- Improved widget notice layout so the status icon stays visually centered next to long messages.
-- Prevented call-capture startup errors from resetting the completed permissions onboarding state after restart.
-
-### v0.3.4
-
-- Fixed repeated permission prompts after restarting macOS: startup checks no longer trigger a microphone request, and Accessibility is not reset before re-requesting access.
-- Updated the transcription statistics card to show words today, words this month, and words per minute instead of the less useful all-time words metric.
-
-## Demo
-
-The repository includes the same GIF demos used on the Talkee website.
-
-| Demo | What it shows |
-| --- | --- |
-| [Dictating code](docs/demo/demo-1.gif) | A short development request inserted into an editor |
-| [Dictating an email](docs/demo/demo-2.gif) | Business-style speech-to-email flow |
-| [Dictating a note](docs/demo/demo-3.gif) | Everyday notes and task capture |
-| [Recording a call](docs/demo/demo-4.gif) | Separate call-recording flow from the widget |
-| [Transcribing a file](docs/demo/demo-5.gif) | Audio/video file transcription |
-| [Choosing models](docs/demo/demo-6.gif) | Local models and own API configuration |
-
-<details>
-<summary>Show more demos inline</summary>
-
-### Email Dictation
-
-<img src="docs/demo/demo-2.gif" alt="Talkee dictating an email" width="860">
-
-### Notes
-
-<img src="docs/demo/demo-3.gif" alt="Talkee dictating a note" width="860">
-
-### Call Recording
-
-<img src="docs/demo/demo-4.gif" alt="Talkee recording a call transcript" width="860">
-
-### File Transcription
-
-<img src="docs/demo/demo-5.gif" alt="Talkee transcribing an audio or video file" width="860">
-
-### Local Models And API Keys
-
-<img src="docs/demo/demo-6.gif" alt="Talkee choosing a local model or own API key" width="860">
-
-</details>
+See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
 ## How It Works
 
@@ -389,7 +221,7 @@ src/windows/settings/ Settings window and tabs
 src/lib/              Store, auth, permissions, logging, shared clients
 src-tauri/src/        Rust backend, Tauri commands, audio, paste, STT
 src-tauri/icons/      App icons
-docs/                 Architecture, business requirements, release docs, audio rules, demo media
+docs/                 Architecture, business requirements, release docs, audio rules
 scripts/              Release and sidecar preparation scripts
 ```
 

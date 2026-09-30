@@ -14,7 +14,6 @@ const IGNORED_SEGMENTS = new Set([
   "target",
   "dist",
   "dist-ssr",
-  ".beads",
 ]);
 
 // Paths that are excluded outright: sidecar build artifacts, the regenerated

@@ -13,8 +13,9 @@ content blindly.
 
 ## Required Reference
 
-Before changing UI, read `references/talkee-product-ui.md`. It contains the portable tokens,
-component rules, layout patterns, motion guidance, and anti-patterns that define the style.
+Before changing UI, read `references/talkee-product-ui.md`. It contains the portable component
+rules, layout patterns, motion guidance, and anti-patterns that define the style. Token and
+color values are not duplicated there — they live in `rules/style.rule.md`.
 
 ## Workflow
 
@@ -30,11 +31,9 @@ component rules, layout patterns, motion guidance, and anti-patterns that define
 
 ## Talkee Repo Usage
 
-In `talkee-pc`, treat `rules/style.rule.md` and `src/index.css` as the product style source of
-truth. For React UI, prefer existing CSS variables and local inline-style conventions.
-
-In `talkee-web`, reuse `src/app/globals.css` classes such as `btn-black`, `btn-outline`,
-`sticky-nav`, dashboard classes, and type utilities before creating variants.
+In this repository, treat `rules/style.rule.md` as the product style source of truth and
+`src/index.css` as its implementation. For React UI, prefer existing CSS variables and local
+inline-style conventions.
 
 Keep `rules/style.rule.md`, this skill, and any installed copy in sync when changing the style
 language.

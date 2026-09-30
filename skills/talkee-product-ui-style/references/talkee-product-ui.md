@@ -12,41 +12,19 @@ for other products that should feel inspired by Talkee without copying brand con
 
 ## Typography
 
-- Body/UI: `Inter`, then `system-ui, sans-serif`.
-- Brand and headings: `Manrope` 700-800 when available, otherwise a bold neutral sans.
-- Wordmark: uppercase, heavy weight, controlled tight tracking, usually around `-0.06em`.
-- Product headings: compact line-height, bold sans, around `-0.04em` tracking in desktop UI.
-- Web surfaces may keep `letter-spacing: 0` when already established by local CSS.
+Font families and tracking values are defined in `rules/style.rule.md`; use them from there
+rather than copying numbers. In short: a neutral UI sans for product text, a bold neutral sans
+for brand and headings.
+
+- Wordmark: uppercase, heavy weight, controlled tight tracking.
+- Product headings: compact line-height, bold sans.
 - Avoid serif display faces, script faces, and decorative headline styles as the identity base.
 
 ## Core Tokens
 
-Use local token names when they exist.
-
-```css
---bg: #faf9f6;
---bg-soft: #f4f1eb;
---surface: rgba(255, 255, 255, 0.72);
---surface-hi: rgba(255, 255, 255, 0.88);
---surface-solid: #f8f5ef;
---surface-strong: #f1ede6;
---text-hi: #000000;
---text-mid: #39342d;
---text-low: #5d564d;
---text-faint: #847d73;
---accent: #000000;
---accent-contrast: #ffffff;
---border: rgba(0, 0, 0, 0.09);
---border-subtle: rgba(0, 0, 0, 0.06);
---border-strong: rgba(0, 0, 0, 0.16);
---radius-sm: 8px;
---radius-md: 12px;
---radius-lg: 16px;
---radius-pill: 999px;
-```
-
-For web landing/dashboard surfaces, `--text-mid: #666666` and `--text-low: #999999` are acceptable
-when they match the existing web CSS.
+Token and color values are defined once in `rules/style.rule.md` (source of truth; the
+desktop app also exposes them as CSS variables in `src/index.css`). Do not duplicate them
+here — read that rule and map its values to the target project's local variable names.
 
 ## Components
 

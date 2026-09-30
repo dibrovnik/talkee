@@ -27,7 +27,7 @@
 - `bun run tauri build` - passed
 - Additional manual checks:
   - verified the release branch is based on current `main`
-  - verified the final DMG path exists at `/tmp/talkis-target/release/bundle/dmg/Talkis_0.1.2_aarch64.dmg`
+  - verified the final DMG path exists at `/tmp/talkee-target/release/bundle/dmg/Talkee_0.1.2_aarch64.dmg`
 
 ## Manual review
 

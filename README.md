@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="src-tauri/icons/128x128.png" width="96" height="96" alt="Talkis app icon">
+  <img src="src-tauri/icons/128x128.png" width="96" height="96" alt="Talkee app icon">
 </p>
 
-<h1 align="center">Talkis</h1>
+<h1 align="center">Talkee</h1>
 
 <p align="center">
   Open desktop voice input for people who write in real apps all day.
@@ -11,16 +11,16 @@
 <p align="center">
   <a href="README.ru.md">Read in Russian</a>
   ·
-  <a href="https://github.com/SerTimBerrners-Lee/talkis/releases/latest">Latest release</a>
+  <a href="https://github.com/SerTimBerrners-Lee/talkee/releases/latest">Latest release</a>
 </p>
 
 <p align="center">
-  <img src="docs/demo/demo-1.gif" alt="Talkis dictating a development request into a code editor" width="860">
+  <img src="docs/demo/demo-1.gif" alt="Talkee dictating a development request into a code editor" width="860">
 </p>
 
-## What Is Talkis?
+## What Is Talkee?
 
-Talkis is a desktop voice-to-text app built with Tauri, React, TypeScript, and Rust. It stays as a small floating widget, records while you hold a hotkey, transcribes your speech, optionally cleans the text with an LLM, and pastes the final result into the app you were using.
+Talkee is a desktop voice-to-text app built with Tauri, React, TypeScript, and Rust. It stays as a small floating widget, records while you hold a hotkey, transcribes your speech, optionally cleans the text with an LLM, and pastes the final result into the app you were using.
 
 It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, files, and meeting transcripts.
 
@@ -35,7 +35,7 @@ It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, 
 - Transcribe audio and video files from the Files tab or by dropping files onto the widget.
 - Record calls with separate microphone and system-audio tracks on macOS, Windows, and Linux.
 - Keep local history for voice recordings, file transcriptions, calls, and live translations.
-- Chat with the configured text model to search and analyze Talkis records, summarize calls, find tasks, and translate text.
+- Chat with the configured text model to search and analyze Talkee records, summarize calls, find tasks, and translate text.
 - Run managed local STT through one native `transcribe.cpp` runtime for Whisper, GigaAM, Qwen ASR, NVIDIA Parakeet, plus local text summaries through a managed GGUF LLM runtime.
 - Build native bundles for macOS, Windows, and Linux.
 
@@ -43,8 +43,8 @@ It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, 
 
 ### v0.4.8
 
-- Windows upgrades now stop Talkis and every bundled local-model process before replacing files, preventing `Error opening file for writing ... talkis-stt.exe` and partially installed application/runtime combinations.
-- Talkis cleans up orphaned Windows sidecars on startup and terminates incompatible or timed-out managed STT runtimes, preventing stale processes from accumulating across ports and blocking future updates.
+- Windows upgrades now stop Talkee and every bundled local-model process before replacing files, preventing `Error opening file for writing ... talkee-stt.exe` and partially installed application/runtime combinations.
+- Talkee cleans up orphaned Windows sidecars on startup and terminates incompatible or timed-out managed STT runtimes, preventing stale processes from accumulating across ports and blocking future updates.
 - Local transcription now always sends the active local model to the managed runtime, even when a previously selected API adapter still stores a remote model such as `gpt-4o-transcribe`; the backend also falls back to an actually installed local model for migrated settings.
 - Voice capture no longer waits up to 15 seconds for a cold local streaming runtime: after a short warm-up budget it starts recording immediately and keeps the normal post-stop transcription fallback available.
 - The Windows release verifier now requires the NSIS install/uninstall cleanup hook and every bundled process name, so this upgrade protection is checked in release builds.
@@ -53,15 +53,15 @@ It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, 
 
 - Local STT setup on Windows now starts the model download before launching the runtime, reads installed models directly from disk, warms the runtime in the background, bypasses system proxies for loopback requests, and records sidecar output for diagnostics.
 - Windows development commands now discover Rust and the Visual Studio C++ toolchain automatically and keep the application and local-model sidecars on the same static runtime, avoiding missing `rustc` and linker failures during `bun run tauri dev`.
-- Clicking the floating widget on Windows opens Talkis, recognition/translation mode changes persist correctly, and the Settings window uses a native Windows caption with Talkis styling and reliable system buttons.
+- Clicking the floating widget on Windows opens Talkee, recognition/translation mode changes persist correctly, and the Settings window uses a native Windows caption with Talkee styling and reliable system buttons.
 - Widget errors now appear in one expandable status bar below the controls, with copy and expand actions; Windows clipboard shortcuts use physical keys so automatic paste also works with non-Latin keyboard layouts.
-- The floating widget is now persistent: Talkis prevents accidental closure and automatically restores a hidden, minimized, destroyed, or off-screen widget without stealing focus from the active application.
+- The floating widget is now persistent: Talkee prevents accidental closure and automatically restores a hidden, minimized, destroyed, or off-screen widget without stealing focus from the active application.
 - macOS call recording no longer adds the output device to the capture aggregate or opens a competing WebView microphone when native capture is available, preventing call volume and microphone routing changes.
 - Fixed the Windows onboarding offset that exposed content from the main screen above the setup flow, and clarified model activation progress after a download finishes.
 
 ### v0.4.6
 
-- Fixed a Windows crash that could close Talkis without an error on the first dictation after a long idle period or system sleep.
+- Fixed a Windows crash that could close Talkee without an error on the first dictation after a long idle period or system sleep.
 - Native microphone capture now keeps one process-long `cpal`/WASAPI owner thread across recording sessions, preventing reuse of a COM audio-device enumerator after its owning thread has ended.
 - Native recorder lifecycle failures are logged and returned to the existing WebView microphone fallback instead of leaving the dictation flow without a recoverable error path.
 
@@ -69,7 +69,7 @@ It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, 
 
 - Cloud dictation now waits for the accurate full-audio batch transcript instead of showing a lower-quality realtime text overlay that could differ from the pasted result.
 - Short, silent, or noisy recordings are rejected before paste when the cloud model returns stock refusal text, unrelated foreign-language fragments, or other low-confidence hallucinations.
-- Talkis Cloud remains selected after sign-in and when revisiting Models: stale local STT endpoints and keys are cleared instead of silently switching the app back to another mode.
+- Talkee Cloud remains selected after sign-in and when revisiting Models: stale local STT endpoints and keys are cleared instead of silently switching the app back to another mode.
 - Cloud balances, usage, and reservations are displayed as whole tokens throughout the desktop app.
 - Cloud file transcription with speaker separation now supports long meetings through the upgraded server route, while the desktop distinguishes real timeouts from other diarization failures and records the raw diagnostic error.
 
@@ -77,7 +77,7 @@ It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, 
 
 - Promoted the existing model chat from development mode to the product navigation on macOS, Windows, and Linux.
 - Added direct Chat access from the desktop tray and production-safe `?tab=chat` navigation.
-- The chat can search local Talkis records with cited sources, summarize recent calls and transcripts, extract tasks, translate text, and use the configured Cloud, API, or local text model.
+- The chat can search local Talkee records with cited sources, summarize recent calls and transcripts, extract tasks, translate text, and use the configured Cloud, API, or local text model.
 - Chat messages remain stored locally, and existing development chat history is preserved during the product upgrade.
 
 ### v0.4.3
@@ -98,13 +98,13 @@ It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, 
 - Fixed local selected-text translation dropping everything after the first sentence by translating multi-sentence input as a checked CTranslate2 batch.
 - Improved local model installation with automatic retries for transient Hugging Face transport failures and stable installed-state UI while the local runtime refreshes.
 - Added live call transcription directly in the Transcription result view while separate microphone and system-audio tracks continue to be saved for recovery and final refinement.
-- Added a persistent desktop system tray with explicit Open Talkis and Quit actions; Quit also terminates managed local sidecar processes.
+- Added a persistent desktop system tray with explicit Open Talkee and Quit actions; Quit also terminates managed local sidecar processes.
 - Added a native Windows release gate that verifies the main application and every bundled sidecar as x86-64 PE executables, plus a published SHA-256 checksum for the stable Windows installer.
 
 ### v0.4.0
 
-- Added synchronous system-audio translation through Talkis Cloud or verified OpenAI/Gemini Realtime API adapters; local models remain available for the rest of the app, while live translation requires Cloud or API.
-- Added optional translated voice playback on macOS, with Talkis audio excluded from capture and the original source ducked to prevent feedback loops.
+- Added synchronous system-audio translation through Talkee Cloud or verified OpenAI/Gemini Realtime API adapters; local models remain available for the rest of the app, while live translation requires Cloud or API.
+- Added optional translated voice playback on macOS, with Talkee audio excluded from capture and the original source ducked to prevent feedback loops.
 - Added realtime streaming dictation for supported local and API STT models, including live partial text and a batch fallback for the final result.
 - Reworked dictation and selected-text hotkey capture into one release-on-complete transaction with conflict checks, rollback, stale-request protection, and runtime registration without restart.
 - Improved the floating text overlay: wider streaming layout, compact speaker turns, dark-theme support, drag-to-move, immediate replacement by a new request, and automatic dismissal ten seconds after terminal results.
@@ -171,7 +171,7 @@ It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, 
 
 ## Demo
 
-The repository includes the same GIF demos used on the Talkis website.
+The repository includes the same GIF demos used on the Talkee website.
 
 | Demo | What it shows |
 | --- | --- |
@@ -187,23 +187,23 @@ The repository includes the same GIF demos used on the Talkis website.
 
 ### Email Dictation
 
-<img src="docs/demo/demo-2.gif" alt="Talkis dictating an email" width="860">
+<img src="docs/demo/demo-2.gif" alt="Talkee dictating an email" width="860">
 
 ### Notes
 
-<img src="docs/demo/demo-3.gif" alt="Talkis dictating a note" width="860">
+<img src="docs/demo/demo-3.gif" alt="Talkee dictating a note" width="860">
 
 ### Call Recording
 
-<img src="docs/demo/demo-4.gif" alt="Talkis recording a call transcript" width="860">
+<img src="docs/demo/demo-4.gif" alt="Talkee recording a call transcript" width="860">
 
 ### File Transcription
 
-<img src="docs/demo/demo-5.gif" alt="Talkis transcribing an audio or video file" width="860">
+<img src="docs/demo/demo-5.gif" alt="Talkee transcribing an audio or video file" width="860">
 
 ### Local Models And API Keys
 
-<img src="docs/demo/demo-6.gif" alt="Talkis choosing a local model or own API key" width="860">
+<img src="docs/demo/demo-6.gif" alt="Talkee choosing a local model or own API key" width="860">
 
 </details>
 
@@ -213,7 +213,7 @@ The repository includes the same GIF demos used on the Talkis website.
 2. Hold `Shift + Command + Space` on macOS.
 3. Speak naturally.
 4. Release the hotkey.
-5. Talkis transcribes, cleans, and pastes the text.
+5. Talkee transcribes, cleans, and pastes the text.
 
 The hotkey, microphone, language, model source, cleanup style, and app appearance are configurable in Settings.
 
@@ -244,38 +244,38 @@ Supported STT model names include:
 
 ### Local Models
 
-Install and run Talkis-managed local models from Settings. Local mode can keep both transcription and transcript summaries on your machine: STT models handle audio, and a separate local text LLM handles summary and prompt-based processing.
+Install and run Talkee-managed local models from Settings. Local mode can keep both transcription and transcript summaries on your machine: STT models handle audio, and a separate local text LLM handles summary and prompt-based processing.
 
 Managed local runtimes:
 
 - Whisper, GigaAM GGUF, NVIDIA Parakeet GGUF, and Qwen ASR GGUF through the unified `transcribe.cpp` runtime, default endpoint `http://127.0.0.1:8000`
-- Text LLM summaries through the bundled OpenAI-compatible `talkis-llm` runtime backed by GGUF models such as Qwen2.5 Instruct
+- Text LLM summaries through the bundled OpenAI-compatible `talkee-llm` runtime backed by GGUF models such as Qwen2.5 Instruct
 - Speaker diarization, default endpoint `http://127.0.0.1:8003`
 
-If a default port is busy, Talkis starts the managed runtime on a fallback port and saves the actual endpoint in settings.
+If a default port is busy, Talkee starts the managed runtime on a fallback port and saves the actual endpoint in settings.
 
 ## Installation
 
 Download the latest build from GitHub Releases:
 
-- [macOS DMG](https://github.com/SerTimBerrners-Lee/talkis/releases/latest/download/Talkis-macos.dmg)
-- [Windows x64 installer](https://github.com/SerTimBerrners-Lee/talkis/releases/latest/download/Talkis-windows-x64-setup.exe)
-- [Linux x64 AppImage](https://github.com/SerTimBerrners-Lee/talkis/releases/latest/download/Talkis-linux-x64.AppImage)
+- [macOS DMG](https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/Talkee-macos.dmg)
+- [Windows x64 installer](https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/Talkee-windows-x64-setup.exe)
+- [Linux x64 AppImage](https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/Talkee-linux-x64.AppImage)
 
 ### If your OS blocks the first launch
 
-Talkis is currently distributed **without paid code signing**, so Gatekeeper (macOS) and SmartScreen (Windows) show an "unverified app" warning. This is **not malware**: the source is open (AGPL-3.0) and the builds are produced by the public GitHub Actions workflow in this repo. How to open it:
+Talkee is currently distributed **without paid code signing**, so Gatekeeper (macOS) and SmartScreen (Windows) show an "unverified app" warning. This is **not malware**: the source is open (AGPL-3.0) and the builds are produced by the public GitHub Actions workflow in this repo. How to open it:
 
-**macOS** — "Apple could not verify Talkis is free of malware":
+**macOS** — "Apple could not verify Talkee is free of malware":
 
 1. In the dialog click **Done** (not "Move to Trash").
-2. Open **System Settings → Privacy & Security**, scroll down to *"Talkis was blocked…"* and click **Open Anyway**.
+2. Open **System Settings → Privacy & Security**, scroll down to *"Talkee was blocked…"* and click **Open Anyway**.
 3. Confirm with your password or Touch ID and click **Open** again.
 
 Or, in one command in Terminal (after moving it to Applications):
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/Talkis.app
+xattr -dr com.apple.quarantine /Applications/Talkee.app
 ```
 
 **Windows** — the blue *"Windows protected your PC"* dialog:
@@ -283,21 +283,35 @@ xattr -dr com.apple.quarantine /Applications/Talkis.app
 1. Click **More info**.
 2. Click **Run anyway**.
 
-On first launch, grant the permissions Talkis needs:
+On first launch, grant the permissions Talkee needs:
 
 - Microphone access for recording.
 - Accessibility permission on macOS for automatic paste.
 - Screen and System Audio Recording permission on macOS for call recording.
 
-After permissions are granted, Talkis stores the completed onboarding state and
+After permissions are granted, Talkee stores the completed onboarding state and
 does not reopen native permission prompts on every launch. If an OS permission is
-reset or denied later, Talkis asks again only when that access is needed.
+reset or denied later, Talkee asks again only when that access is needed.
+
+## Migrating from Talkis
+
+Talkee was previously released under the name **Talkis**. On first launch Talkee automatically migrates your data from the old app-data directory, so settings, history, audio, and downloaded models are preserved.
+
+- **Migrated automatically:** settings (`talkis.json` → `talkee.json`), transcription history and audio, downloaded local models, and the saved path settings. The migration runs once and never overwrites files already present in the new directory.
+- **Grant permissions again:** the bundle identifier changed to `com.talkee.app`, so macOS treats Talkee as a new app. Grant Microphone, Accessibility, and Screen & System Audio Recording again on first launch.
+- **Old directory:** `~/Library/Application Support/com.trixter.talkis/`. Talkee copies the data but leaves this directory in place. After you verify that everything works, you can delete it manually to reclaim the space used by models:
+
+  ```bash
+  rm -rf ~/Library/Application\ Support/com.trixter.talkis
+  ```
+
+  Old logs live in `~/.talkis/` and can be removed the same way.
 
 ## File Transcription
 
 The Files tab supports audio and video transcription up to 8 GB. Files are processed through a native path-based pipeline, so large files do not need to be loaded into WebView memory.
 
-Talkis uses the bundled ffmpeg sidecar for video, unsupported audio formats, chunking, and diarization preparation. Ready `16 kHz` mono PCM WAV files can skip conversion for local STT.
+Talkee uses the bundled ffmpeg sidecar for video, unsupported audio formats, chunking, and diarization preparation. Ready `16 kHz` mono PCM WAV files can skip conversion for local STT.
 
 Speaker diarization is available through local Whisper plus the local diarization runtime.
 
@@ -312,10 +326,10 @@ System-audio capture is implemented with Core Audio on macOS, WASAPI loopback on
 Windows, and PipeWire monitor streams on Linux. Linux requires a running PipeWire
 daemon with an active output device.
 
-The call appears in history as soon as recording starts. Talkis checkpoints
+The call appears in history as soon as recording starts. Talkee checkpoints
 both audio tracks and the transcript draft while the call is active. Streaming
 STT models show live text in the Transcription tab, then the saved tracks refine
-the result after stop. After an unexpected shutdown, Talkis restores available
+the result after stop. After an unexpected shutdown, Talkee restores available
 audio and the latest durable draft on the next launch. GigaAM and other
 batch-only models transcribe the call after recording stops.
 
@@ -331,20 +345,20 @@ The live text overlay keeps consecutive chunks from the same source together and
 - In local mode, transcription stays on your machine.
 - API keys are stored locally in app settings.
 - Voice history and file transcription history are stored locally.
-- Talkis does not keep audio on its own servers beyond the API call.
+- Talkee does not keep audio on its own servers beyond the API call.
 
 ## Troubleshooting
 
-- Nothing is pasted: check macOS System Settings -> Privacy & Security -> Accessibility and make sure Talkis is enabled.
+- Nothing is pasted: check macOS System Settings -> Privacy & Security -> Accessibility and make sure Talkee is enabled.
 - Transcription contains unexpected foreign characters: choose a fixed recognition language such as `ru` or `en` instead of auto.
 - Local STT returns model errors: open `Модели` -> `Локально`, make sure the model is installed and selected, then reinstall it if the runtime reports missing files.
 - Call recording cannot start: grant Microphone and the OS system-audio permission, then start the call recording again. On Linux, also make sure PipeWire is running and an output device is active.
-- Need deeper diagnostics: open `~/.talkis/talkis.log` or run `bun run logs` during development.
+- Need deeper diagnostics: open `~/.talkee/talkee.log` or run `bun run logs` during development.
 
 ## Product And Architecture Documentation
 
 - [API/Local mode architecture](docs/architecture/processing-modes.md) — technical routing for dictation, files, calls, translation, LLM processing, and history.
-- [Talkis business requirements](docs/business-requirements.md) — user capabilities, expected behavior, limitations, and acceptance criteria.
+- [Talkee business requirements](docs/business-requirements.md) — user capabilities, expected behavior, limitations, and acceptance criteria.
 - [Audio pipeline principles](docs/audio-pipeline-principles.md) — mandatory engineering rules for recording, STT, files, and call capture.
 - [Local STT runtime](docs/local-stt-runtime.md) — managed local recognition architecture and contract.
 
@@ -422,6 +436,6 @@ Project conventions:
 
 ## License
 
-Talkis is licensed under the [GNU Affero General Public License v3.0 or later](LICENSE) (`AGPL-3.0-or-later`).
+Talkee is licensed under the [GNU Affero General Public License v3.0 or later](LICENSE) (`AGPL-3.0-or-later`).
 
 This license keeps the desktop app open-source and also requires source availability for modified versions that are offered to users over a network.

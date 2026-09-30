@@ -1,0 +1,4 @@
+interface:
+  display_name: "Talkee Product UI Style"
+  short_description: "Apply Talkee-inspired product UI"
+  default_prompt: "Use $talkee-product-ui-style to apply the Talkee product UI language to this interface."

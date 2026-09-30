@@ -11,12 +11,12 @@
 ## Scope
 
 - Key changes included in this release:
-  - Added file speaker diarization flow with local Whisper timestamp transcription and bundled `talkis-diarize` runtime.
+  - Added file speaker diarization flow with local Whisper timestamp transcription and bundled `talkee-diarize` runtime.
   - Added background-safe diarized file transcription so global API/local/cloud model settings are not overwritten by speaker splitting.
   - Reworked model selection UX so API, local, and cloud sections can be viewed without changing the active recognition mode; the active mode changes only after `Выбрать`.
   - Added optional API adapter host field with reset-to-default behavior.
   - Improved cloud mode selection state so cloud cannot appear selected without active PRO.
-  - Renamed bundled ffmpeg sidecar to `talkis-ffmpeg` to avoid Linux package conflicts with system `/usr/bin/ffmpeg`.
+  - Renamed bundled ffmpeg sidecar to `talkee-ffmpeg` to avoid Linux package conflicts with system `/usr/bin/ffmpeg`.
   - Updated widget and settings UI details for current model/account selection states.
 - User-facing changes:
   - `Файлы` can split transcripts by speakers after the required local components are prepared.
@@ -25,22 +25,22 @@
   - Cloud selection button appears only when PRO is active.
   - Linux `.deb` installs should no longer collide with the distro `ffmpeg` package binary path.
 - Risky areas:
-  - Diarized file transcription depends on local Whisper timestamps and the `talkis-diarize` sidecar being included for each release platform.
+  - Diarized file transcription depends on local Whisper timestamps and the `talkee-diarize` sidecar being included for each release platform.
   - API adapter selection now persists a selected adapter id and snapshots API settings when switching away.
   - Linux/Windows sidecar packaging needs GitHub Actions validation because this local review ran on macOS.
 
 ## Checks run
 
 - `bun run check:release`: passed
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkis-updater.key bun run build:release:macos`: app bundle, DMG, and updater archive were created; updater signing then failed because the local private key password is not configured in this shell (`failed to decode secret key: incorrect updater private key password: Device not configured (os error 6)`).
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkee-updater.key bun run build:release:macos`: app bundle, DMG, and updater archive were created; updater signing then failed because the local private key password is not configured in this shell (`failed to decode secret key: incorrect updater private key password: Device not configured (os error 6)`).
 - Native/GitHub Windows build: not run locally; expected to run in GitHub Actions on tag.
 - Native/GitHub Linux build: not run locally; expected to run in GitHub Actions on tag.
 - Additional manual checks:
   - `bash scripts/check-version-sync.sh`: passed for `0.1.19`.
   - `git diff --check`: passed.
   - Confirmed local macOS artifacts exist:
-    - `src-tauri/target/release/bundle/macos/Talkis.app.tar.gz`
-    - `src-tauri/target/release/bundle/dmg/Talkis_0.1.19_aarch64.dmg`
+    - `src-tauri/target/release/bundle/macos/Talkee.app.tar.gz`
+    - `src-tauri/target/release/bundle/dmg/Talkee_0.1.19_aarch64.dmg`
 
 ## Manual review
 

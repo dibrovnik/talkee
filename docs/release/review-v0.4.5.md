@@ -11,9 +11,9 @@
 ## Scope
 
 - Key changes included in this release:
-  - Makes Talkis Cloud dictation batch-only so the widget and pasted result use the same accurate full-audio transcription.
+  - Makes Talkee Cloud dictation batch-only so the widget and pasted result use the same accurate full-audio transcription.
   - Rejects clearly silent recordings before Cloud STT and filters known refusal, caption, and unexpected short-script hallucinations before history or paste.
-  - Keeps Talkis Cloud selected after sign-in and when returning to Models by clearing stale local STT endpoint/key state.
+  - Keeps Talkee Cloud selected after sign-in and when returning to Models by clearing stale local STT endpoint/key state.
   - Rounds Cloud balance, usage, and reservations to whole tokens and keeps progress below 100% while the balance is incomplete.
   - Distinguishes real Cloud diarization timeouts from other speaker-separation and gateway failures, with raw diagnostic logging.
   - Documents the upgraded Cloud speaker-separation route for long recordings and the Cloud batch-only behavior.
@@ -26,7 +26,7 @@
 - Risky areas:
   - Routing between Cloud batch dictation and existing own-key/local streaming paths.
   - Silence thresholds and transcript rejection heuristics for short utterances.
-  - Settings normalization when switching from a stale local STT configuration to Talkis Cloud.
+  - Settings normalization when switching from a stale local STT configuration to Talkee Cloud.
   - Cloud wallet progress when reservations are present.
 
 ## Checks run
@@ -34,16 +34,16 @@
 - `bun test`: passed, `253/253` tests across 33 files.
 - `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`: passed.
 - `CARGO_INCREMENTAL=0 bun run check:release`: passed, including synchronized version `0.4.5`, TypeScript/Rust checks, sidecar preparation, hotkey smoke `6/6`, and production frontend build.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkis-updater.key CARGO_INCREMENTAL=0 bun run build:release:macos`: compiled the optimized application and all release sidecars and produced `Talkis.app` plus the updater archive; final updater signing could not decrypt the local password-protected key because its password is unavailable in this shell.
-- Built `Talkis.app` version: verified as `0.4.5` from `CFBundleShortVersionString`.
-- `codesign --force --deep --sign - --identifier com.trixter.talkis` followed by `codesign --verify --deep --strict`: passed for the locally built application and all four sidecars.
-- GitHub Release Preflight for reviewed commit `6c3f658`: passed in [run 30983902551](https://github.com/SerTimBerrners-Lee/talkis/actions/runs/30983902551).
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkee-updater.key CARGO_INCREMENTAL=0 bun run build:release:macos`: compiled the optimized application and all release sidecars and produced `Talkee.app` plus the updater archive; final updater signing could not decrypt the local password-protected key because its password is unavailable in this shell.
+- Built `Talkee.app` version: verified as `0.4.5` from `CFBundleShortVersionString`.
+- `codesign --force --deep --sign - --identifier com.trixter.talkee` followed by `codesign --verify --deep --strict`: passed for the locally built application and all four sidecars.
+- GitHub Release Preflight for reviewed commit `6c3f658`: passed in [run 30983902551](https://github.com/SerTimBerrners-Lee/talkee/actions/runs/30983902551).
 - Native/GitHub macOS build: passed in `21m32s`; signed bundle post-processing and artifact upload completed.
 - Native/GitHub Windows x64 build: passed in `35m44s`; bundle build, x64 architecture verification, and artifact upload completed.
 - Native/GitHub Linux build: passed in `20m17s`; bundle build and artifact upload completed.
 - Additional manual checks:
   - Full diff from `v0.4.4` reviewed file by file; no unintended binary or generated-file changes are included.
-  - Version sync passed for `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, and the Talkis workspace entries in `Cargo.lock`.
+  - Version sync passed for `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, and the Talkee workspace entries in `Cargo.lock`.
   - Cloud diarization server path was deployed before the desktop release; an authenticated smoke request completed with HTTP 200.
   - The checked local private key's public key does not match the updater public key embedded in `tauri.conf.json`; release/preflight CI must therefore remain the authoritative signing check using repository secrets.
 
@@ -60,11 +60,11 @@
 - Blockers:
   - None identified.
 - Non-blocking issues:
-  - The local Talkis updater key cannot be used for the final signature without its password and does not match the public updater key currently embedded in the app. The exact-commit macOS preflight will verify the configured repository signing secrets instead.
+  - The local Talkee updater key cannot be used for the final signature without its password and does not match the public updater key currently embedded in the app. The exact-commit macOS preflight will verify the configured repository signing secrets instead.
   - Vite reports the existing mixed static/dynamic `SummaryModal` import and a main chunk above 500 kB; the production build still passes.
 - Follow-ups after release:
-  - Rotate the Cloud transcription provider credential tracked in `talkis-pc-z5b` without exposing its replacement in chat or logs.
-  - Restore a secure local copy of the active Talkis updater signing key/password if local updater-signature verification is required in future releases.
+  - Rotate the Cloud transcription provider credential tracked in `talkee-pc-z5b` without exposing its replacement in chat or logs.
+  - Restore a secure local copy of the active Talkee updater signing key/password if local updater-signature verification is required in future releases.
 
 ## Decision
 

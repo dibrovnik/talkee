@@ -29,7 +29,7 @@
 ## Checks run
 
 - `bun run check:release`: passed
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkis-updater.key bun run build:release:macos`: failed at updater signing because the local private key is password-protected and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not available in this shell. Frontend build, Rust release build, app bundle, and updater archive were created before signing failed.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkee-updater.key bun run build:release:macos`: failed at updater signing because the local private key is password-protected and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not available in this shell. Frontend build, Rust release build, app bundle, and updater archive were created before signing failed.
 - Additional manual checks:
   - Release diff reviewed for settings model/API adapter UI, adapter persistence, README, and version metadata.
   - `git diff --check`: passed.

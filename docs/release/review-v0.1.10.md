@@ -18,10 +18,10 @@
 - **Language param for Speaches** (`ai.rs`): `language=ru` is now correctly included in the multipart form for local endpoints — prevents hallucinations in foreign scripts
 - **Business style filler removal** (`ru.business.json`): explicit rule + examples to strip `ну вот`, `слушай`, `ну ладно`, `как бы`, `это самое`, `типа` in business mode; semantic words (`также`, `тоже`) explicitly preserved
 - **Local model instructions** (`SettingsTabs.tsx`): verbose inline Docker instructions replaced with a collapsible `<details>` element — shows only a header by default, expands to full steps on click
-- **GitHub link fix** (`SettingsTabs.tsx`): corrected wrong placeholder GitHub URL to `github.com/SerTimBerrners-Lee/talkis`
+- **GitHub link fix** (`SettingsTabs.tsx`): corrected wrong placeholder GitHub URL to `github.com/SerTimBerrners-Lee/talkee`
 - **CSS for collapsible** (`index.css`): `details[open] summary svg` rotates chevron on expand; marker hidden
 
-### talkis-proxy
+### talkee-proxy
 
 - **Language constraint** (`transcribe.go`): `language` param now forwarded to OpenAI STT API — constrains model output to selected language, eliminates foreign-script hallucinations on short/noisy audio
 - **Subscription middleware** (`subscription.go`): updated

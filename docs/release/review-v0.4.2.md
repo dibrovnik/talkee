@@ -18,7 +18,7 @@
   - Separates ordinary dictation microphone fallback from call-capture routing so a missing explicitly selected call microphone cannot silently duplicate system audio.
   - Prevents batch-only local STT models from inheriting a verified API adapter's streaming capability.
   - Fixes onboarding completion when an empty recording removes its placeholder history entry, and evaluates the raw STT result before cleaned or translated text.
-  - Rebuilds the bundled macOS `talkis-llm` sidecar for the 0.4.2 workspace version.
+  - Rebuilds the bundled macOS `talkee-llm` sidecar for the 0.4.2 workspace version.
 - User-facing changes:
   - New users can complete local setup without navigating through the full Settings window.
   - The onboarding test shows the configured hotkey, tracks the active recording, and reports no-speech results instead of remaining in a processing state.
@@ -40,15 +40,15 @@
 - `bunx tsc --noEmit`: passed.
 - Focused frontend tests for onboarding, hotkey preview, local LLM selection, microphone routing, streaming eligibility, and selected-text translation: passed, `49/49`.
 - `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`: passed.
-- Focused Rust local-translator tests: passed, `5/5`; one installed-model integration test is ignored unless `TALKIS_NLLB_TEST_MODEL` is provided.
+- Focused Rust local-translator tests: passed, `5/5`; one installed-model integration test is ignored unless `TALKEE_NLLB_TEST_MODEL` is provided.
 - `cargo test --manifest-path src-tauri/Cargo.toml --lib`: passed, `108/108`; the same installed-model NLLB test is ignored by default.
 - `bun run check:release`: passed.
   - Version synchronization, sidecar preparation, TypeScript, `cargo check`, six hotkey smoke tests, and the Vite production build passed.
-  - Vite repeated the existing mixed `SummaryModal.tsx` import and 893.69 kB main-chunk warnings tracked in `talkis-pc-884`.
+  - Vite repeated the existing mixed `SummaryModal.tsx` import and 893.69 kB main-chunk warnings tracked in `talkee-pc-884`.
 - Full `bun test` auto-discovery: unavailable in this removable-volume workspace because Bun exits before test execution with `ProcessFdQuotaExceeded`; the changed surfaces pass through the explicit 49-test invocation and the mandatory release smoke suite passes `6/6`.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkis-updater.key TAURI_SIGNING_PRIVATE_KEY_PASSWORD='' bun run build:release:macos`: passed outside the filesystem sandbox.
-  - Built release sidecars, frontend, Rust binary, `Talkis.app`, signed updater `.app.tar.gz`, `.sig`, and `Talkis_0.4.2_aarch64.dmg`.
-  - Strict recursive `codesign` verification passed with `Identifier=com.trixter.talkis`.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkee-updater.key TAURI_SIGNING_PRIVATE_KEY_PASSWORD='' bun run build:release:macos`: passed outside the filesystem sandbox.
+  - Built release sidecars, frontend, Rust binary, `Talkee.app`, signed updater `.app.tar.gz`, `.sig`, and `Talkee_0.4.2_aarch64.dmg`.
+  - Strict recursive `codesign` verification passed with `Identifier=com.trixter.talkee`.
   - `hdiutil verify` reports the final DMG checksum as valid.
   - SHA-256: DMG `f355b730161c5f7d36752f673d39e0d5c0964d1466ab57a00eadb86cc5d1cf07`; updater archive `b3cca3a7f42e571fba37b2eb234a988714b87391154447132cc37215d6c15bbf`; signature file `6d95237eba6599922ae09b1de1191bb222d529d24ac19b843a850afd07068808`.
 - GitHub Release Preflight run `29859133520` on commit `dd0e252`: passed for `Preflight macos`, `Preflight windows`, and `Preflight linux`.
@@ -56,7 +56,7 @@
 - Native/GitHub Windows build: passed in Release Preflight run `29859133520`, including the x86-64 PE architecture gate for the app and bundled sidecars.
 - Native/GitHub Linux build: passed in Release Preflight run `29859133520` on Ubuntu 24.04 with PipeWire development dependencies installed.
 - Additional manual checks:
-  - Reviewed the complete `v0.4.1..release/v0.4.2` diff and the onboarding terminal-event fix recorded as `talkis-pc-d62`.
+  - Reviewed the complete `v0.4.1..release/v0.4.2` diff and the onboarding terminal-event fix recorded as `talkee-pc-d62`.
   - No OS-level microphone, permission-dialog, or global-hotkey session was run during this release pass; automated state, routing, and hotkey checks are green.
 
 ## Manual review
@@ -72,11 +72,11 @@
 - Blockers:
   - Do not merge or tag until the review-result-only commit receives green `Preflight macos`, `Preflight windows`, and `Preflight linux` checks.
 - Non-blocking issues:
-  - `talkis-pc-884`: Vite reports a mixed static/dynamic `SummaryModal.tsx` import and an 893.69 kB main JavaScript chunk.
+  - `talkee-pc-884`: Vite reports a mixed static/dynamic `SummaryModal.tsx` import and an 893.69 kB main JavaScript chunk.
   - Bun 1.2.13 full-suite auto-discovery intermittently exhausts file descriptors on this removable-volume workspace; explicit focused invocations and the release smoke suite pass.
   - The first sandboxed macOS postprocess attempt could not access `hdiutil`; the same full signed release command passed outside the sandbox.
 - Follow-ups after release:
-  - Resolve `talkis-pc-884` without coupling bundle optimization to this functional release.
+  - Resolve `talkee-pc-884` without coupling bundle optimization to this functional release.
 
 ## Decision
 

@@ -18,7 +18,7 @@
   - Add daily word buckets alongside existing monthly and all-time counters.
   - Refresh README release notes for v0.3.4.
 - User-facing changes:
-  - Talkis should not ask for already granted permissions again after a computer restart.
+  - Talkee should not ask for already granted permissions again after a computer restart.
   - The main statistics card now shows words today, words this month, and words per minute.
 - Risky areas:
   - macOS onboarding permission state after app/computer restart.
@@ -29,7 +29,7 @@
 - `bun test src/lib/statsCore.test.ts`: passed during implementation.
 - `bunx tsc --noEmit`: passed during implementation.
 - `bun run check:release`: passed.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=$HOME/.tauri/talkis-updater.key bun run build:release:macos`: app, DMG, and updater archive were built outside the sandbox; local updater signing then failed because the password-protected updater key needs `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=$HOME/.tauri/talkee-updater.key bun run build:release:macos`: app, DMG, and updater archive were built outside the sandbox; local updater signing then failed because the password-protected updater key needs `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 - Native/GitHub Windows build: pending GitHub Actions after tag publish.
 - Native/GitHub Linux build: pending GitHub Actions after tag publish.
 - Additional manual checks:

@@ -38,11 +38,11 @@
 
 ## 5. Скрипты, CI, документация
 
-- [ ] 5.1 `scripts/*`: имена, env, `--talkee-check-dev-port`, identifier в `postprocess-macos-release.sh` и `run-macos-dev-app.sh`, `APP_NAME=Talkee`
-- [ ] 5.2 `.github/workflows/*`: имена релизов, артефактов, env
-- [ ] 5.3 `AGENTS.md`, `README.md`, `README.ru.md`, `docs/**`, `rules/**`: замена имени; переименовать `skills/talkis-product-ui-style` → `skills/talkee-product-ui-style` и `references/talkis-product-ui.md` → `talkee-product-ui.md`, обновить ссылки в `AGENTS.md`
-- [ ] 5.4 README: раздел «Переход с Talkis» — что переносится автоматически, что нужно заново выдать разрешения, где лежит старый каталог и как удалить его вручную
-- [ ] 5.5 Проверка: `bun run check:versions` (или `pvs check`, если уже настроен)
+- [x] 5.1 `scripts/*`: имена, env, `--talkee-check-dev-port`, identifier в `postprocess-macos-release.sh` и `run-macos-dev-app.sh`, `APP_NAME=Talkee`
+- [x] 5.2 `.github/workflows/*`: имена релизов, артефактов, env
+- [x] 5.3 `AGENTS.md`, `README.md`, `README.ru.md`, `docs/**`, `rules/**`: замена имени; переименовать `skills/talkis-product-ui-style` → `skills/talkee-product-ui-style` и `references/talkis-product-ui.md` → `talkee-product-ui.md`, обновить ссылки в `AGENTS.md`
+- [x] 5.4 README: раздел «Переход с Talkis» — что переносится автоматически, что нужно заново выдать разрешения, где лежит старый каталог и как удалить его вручную
+- [x] 5.5 Проверка: `bun run check:versions` (или `pvs check`, если уже настроен)
 
 ## 6. Защита от регрессии
 

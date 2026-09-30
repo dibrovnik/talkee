@@ -1,8 +1,8 @@
-# Talkis Product UI Style Rule
+# Talkee Product UI Style Rule
 
-Use this rule when creating or editing Talkis product UI: the desktop app, settings windows,
+Use this rule when creating or editing Talkee product UI: the desktop app, settings windows,
 dashboard screens, auth pages, product landing sections, and reusable UI patterns inspired by
-Talkis. The goal is one visual language across `talkis-pc` and `talkis-web`, not a one-off
+Talkee. The goal is one visual language across `talkee-pc` and `talkee-web`, not a one-off
 landing-page prompt.
 
 ## Design Direction
@@ -99,7 +99,7 @@ Desktop app:
 
 Web landing:
 
-- First viewport should immediately signal Talkis and the product.
+- First viewport should immediately signal Talkee and the product.
 - Use strong product screenshots, real UI, voice/widget visuals, or product-specific motion.
 - Keep hero text direct. Supporting copy carries the value proposition.
 - Avoid generic SaaS gradient heroes and stock-like decoration.
@@ -119,9 +119,9 @@ Dashboard:
 ## Implementation Rules
 
 - Prefer existing local tokens and classes before adding new styling primitives.
-- In `talkis-pc`, use inline styles with CSS variables for React components unless the file already
+- In `talkee-pc`, use inline styles with CSS variables for React components unless the file already
   uses shared CSS classes.
-- In `talkis-web`, reuse `globals.css` utility classes such as `btn-black`, `btn-outline`,
+- In `talkee-web`, reuse `globals.css` utility classes such as `btn-black`, `btn-outline`,
   `sticky-nav`, dashboard classes, and type classes before adding custom variants.
 - Keep UI text Russian in product surfaces unless a specific screen is intentionally English.
 - Test responsive text fit. Buttons, nav links, tables, and cards must not overflow their containers.

@@ -32,13 +32,13 @@
 - `git diff --check`: passed.
 - `bun run check:release`: passed.
 - `cargo check --manifest-path src-tauri/Cargo.toml`: passed without warnings after cleanup.
-- `cargo test --manifest-path src-tauri/Cargo.toml --bin talkis-stt`: passed, 4 tests.
+- `cargo test --manifest-path src-tauri/Cargo.toml --bin talkee-stt`: passed, 4 tests.
 - `bun test src/lib/summarize.test.ts src/lib/fileTranscription.test.ts`: passed, 13 tests.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkis-updater.key bun run build:release:macos`: built release sidecars, frontend, `Talkis.app`, and `Talkis.app.tar.gz`; failed only at updater signature step because the local encrypted key password was not available in this shell.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkee-updater.key bun run build:release:macos`: built release sidecars, frontend, `Talkee.app`, and `Talkee.app.tar.gz`; failed only at updater signature step because the local encrypted key password was not available in this shell.
 - Native/GitHub Windows build: delegated to GitHub Actions release workflow.
 - Native/GitHub Linux build: delegated to GitHub Actions release workflow.
 - Additional manual checks:
-  - Temporary `talkis-stt` runtime smoke test on port `18081`: `/health`, `/v1/models`, and silent local transcription passed.
+  - Temporary `talkee-stt` runtime smoke test on port `18081`: `/health`, `/v1/models`, and silent local transcription passed.
   - User manually tested the faster local transcription path before release request.
 
 ## Manual review
@@ -46,7 +46,7 @@
 - Hotkey flow: smoke tests passed for start, stop, lock, suppressed release, and reset states.
 - Onboarding permissions: previous permission-onboarding changes are included; no new permission prompt changes in this release slice.
 - Widget position and notice behavior: no release-blocking changes found in this review slice.
-- Transcription quality and short-utterance handling: `talkis-stt` low-signal guard test passed; local runtime smoke test returned empty text for silence.
+- Transcription quality and short-utterance handling: `talkee-stt` low-signal guard test passed; local runtime smoke test returned empty text for silence.
 - README refreshed: yes, README and README.ru now document unified `transcribe.cpp` local STT runtime and v0.3.7 changes.
 
 ## Findings

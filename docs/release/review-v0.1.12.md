@@ -31,8 +31,8 @@
 ## Checks run
 
 - `bun run check:release`: passed
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkis-updater.key bun run build:release:macos`: failed at updater signing because the local private key is password-protected and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not available in this shell.
-- `TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/talkis-updater.key)" bun run build:release:macos`: failed at updater signing for the same missing password.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkee-updater.key bun run build:release:macos`: failed at updater signing because the local private key is password-protected and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not available in this shell.
+- `TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/talkee-updater.key)" bun run build:release:macos`: failed at updater signing for the same missing password.
 - Additional manual checks:
   - Release diff reviewed for widget, file transcription, updater, and history behavior.
   - GitHub release workflow history checked: previous `v0.1.11` Release workflow completed successfully.

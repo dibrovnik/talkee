@@ -26,7 +26,7 @@
 ## Checks run
 
 - `bun run check:release`: passed
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkis-updater.key bun run build:release:macos`: app bundle, DMG, and updater archive were created; local updater signing then failed because the local private key is password-protected and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not available in this shell.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkee-updater.key bun run build:release:macos`: app bundle, DMG, and updater archive were created; local updater signing then failed because the local private key is password-protected and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not available in this shell.
 - Native/GitHub Windows build: pending GitHub Actions for `v0.1.17`
 - Native/GitHub Linux build: pending GitHub Actions for `v0.1.17`
 - Additional manual checks:

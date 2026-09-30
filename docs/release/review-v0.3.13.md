@@ -11,12 +11,12 @@
 ## Scope
 
 - Key changes included in this release:
-  - Adds live system-audio translation through Talkis Cloud or verified OpenAI/Gemini Realtime API adapters, with optional translated voice playback on macOS.
+  - Adds live system-audio translation through Talkee Cloud or verified OpenAI/Gemini Realtime API adapters, with optional translated voice playback on macOS.
   - Adds realtime dictation for supported local and API STT models with live partial text and a final batch fallback.
   - Reworks dictation and selected-text hotkeys into one transactional capture and runtime registration path with conflict checks, rollback, and stale-request protection.
   - Adds macOS, Windows, and Linux system-audio capture for call transcription and stores live-translation sessions and audio tracks in local history.
   - Improves the floating widget, text overlay, permission recovery, history action menus, settings persistence, and macOS development app runner.
-  - Adds the authenticated Talkis Cloud Realtime client-secret endpoint in `talkis-proxy` v0.1.9 without exposing the provider API key to the desktop app.
+  - Adds the authenticated Talkee Cloud Realtime client-secret endpoint in `talkee-proxy` v0.1.9 without exposing the provider API key to the desktop app.
 - User-facing changes:
   - Live translation starts from the widget and displays compact translated speaker turns while audio is still playing.
   - Selected text can be translated with a separate configurable global shortcut.
@@ -39,9 +39,9 @@
 - `bun run check:release`: passed.
   - Version sync passed for `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json` at 0.3.13.
   - Sidecar preparation, `bunx tsc --noEmit`, `cargo check`, hotkey smoke tests, and Vite production build passed.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkis-updater.key bun run build:release:macos`: passed.
-  - Built release sidecars, frontend, Rust binary, `Talkis.app`, updater `.app.tar.gz`, updater `.sig`, and `Talkis_0.3.13_aarch64.dmg`.
-- Talkis Cloud proxy: `go test ./...` passed; endpoint commit `1f366a7` and deploy hardening through `db49bc2` were pushed to `main` and published as `v0.1.9`.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkee-updater.key bun run build:release:macos`: passed.
+  - Built release sidecars, frontend, Rust binary, `Talkee.app`, updater `.app.tar.gz`, updater `.sig`, and `Talkee_0.3.13_aarch64.dmg`.
+- Talkee Cloud proxy: `go test ./...` passed; endpoint commit `1f366a7` and deploy hardening through `db49bc2` were pushed to `main` and published as `v0.1.9`.
   - Deploy run `29451482082` passed SSH setup, exact-directory Docker build, container restart, active Nginx config update, and internal/public route probes.
   - Public verification passed: `/health` returns `200`, while unauthenticated `POST /api/realtime/client-secret` returns the expected `401` instead of exposing a credential.
 - GitHub Release Preflight: pending for `Preflight macos`, `Preflight windows`, and `Preflight linux` on the final release commit.

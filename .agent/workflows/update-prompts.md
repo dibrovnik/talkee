@@ -10,7 +10,7 @@ Prompts are stored in **two locations** and must be kept in sync:
    - Used when the user provides their own API key
    - Loaded by Rust backend (`prompt_config.rs`)
 
-2. **Server (Go proxy):** `talkis-proxy/internal/prompt/prompts/`
+2. **Server (Go proxy):** `talkee-proxy/internal/prompt/prompts/`
    - Used for subscription users (proxied through the Go service)
    - Embedded into the Go binary via `embed.FS`
 
@@ -20,11 +20,11 @@ Prompts are stored in **two locations** and must be kept in sync:
 2. **Copy all changed files** to the proxy:
    ```bash
    cp -r /Volumes/KINGSTON/project/talkflow/Talk-Flow/src/config/transcription-prompts/* \
-         /Volumes/KINGSTON/project/talkflow/talkis-proxy/internal/prompt/prompts/
+         /Volumes/KINGSTON/project/talkflow/talkee-proxy/internal/prompt/prompts/
    ```
 3. **Verify the Go build** still compiles:
    ```bash
-   cd /Volumes/KINGSTON/project/talkflow/talkis-proxy && go build ./...
+   cd /Volumes/KINGSTON/project/talkflow/talkee-proxy && go build ./...
    ```
 4. **Commit in both repositories**
 

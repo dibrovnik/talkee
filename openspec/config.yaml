@@ -5,7 +5,7 @@ context: |
   All artifacts must be written in ru.
   Keep OpenSpec structural headings and SHALL/MUST keywords in English.
 
-  Project: talkee (formerly "Talkis") — macOS-only voice-to-text app.
+  Project: talkee (formerly "Talkee") — macOS-only voice-to-text app.
   Stack: Tauri v2 (Rust, src-tauri/) + React 19 / TypeScript (src/), bun as package manager.
   Target hardware: Apple Silicon (primary dev machine: MacBook with Apple M5), macOS only.
   Processing modes after cleanup: "API" (user keys/endpoints) and "Локально" (managed localhost sidecars).
@@ -23,7 +23,7 @@ context: |
 
   Change execution order (dependencies between changes in openspec/changes/):
     1. remove-telemetry
-    2. remove-talkis-cloud
+    2. remove-talkee-cloud
     3. rename-to-talkee
     4. drop-windows-linux-support
     5. repo-cleanup-for-agents

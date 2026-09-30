@@ -11,14 +11,14 @@
 ## Scope
 
 - Key changes included in this release:
-  - Cloud file speaker diarization now routes through `proxy.talkis.ru/api/transcribe-diarized`.
-  - Desktop checks Talkis Cloud profile state and proxy capabilities before enabling cloud speaker diarization.
+  - Cloud file speaker diarization now routes through `proxy.talkee.ru/api/transcribe-diarized`.
+  - Desktop checks Talkee Cloud profile state and proxy capabilities before enabling cloud speaker diarization.
   - Cloud mode no longer silently falls back to local diarization when cloud diarization is unavailable.
   - File audio for cloud diarization is prepared as compressed mono MP3 before upload.
 - User-facing changes:
-  - In Cloud mode, `Разделить по говорящим` uses Talkis Cloud / AssemblyAI instead of local Whisper.
-  - If Cloud speaker diarization is unavailable, Talkis shows an error instead of starting a slow local job.
-  - Processing status names Talkis Cloud while the cloud diarization job is running.
+  - In Cloud mode, `Разделить по говорящим` uses Talkee Cloud / AssemblyAI instead of local Whisper.
+  - If Cloud speaker diarization is unavailable, Talkee shows an error instead of starting a slow local job.
+  - Processing status names Talkee Cloud while the cloud diarization job is running.
 - Risky areas:
   - Cloud diarization depends on active PRO status and proxy `/api/capabilities`.
   - Large-file preparation still depends on the bundled ffmpeg sidecar.
@@ -26,11 +26,11 @@
 ## Checks run
 
 - `bun run check:release` — passed.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkis-updater.key bun run build:release:macos` — built app, DMG, and updater archive, then failed at updater signature because the local key password is not configured.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkee-updater.key bun run build:release:macos` — built app, DMG, and updater archive, then failed at updater signature because the local key password is not configured.
 - Native/GitHub Windows build: pending GitHub Actions for `v0.1.20`.
 - Native/GitHub Linux build: pending GitHub Actions for `v0.1.20`.
 - Additional manual checks:
-  - `curl https://proxy.talkis.ru/api/capabilities` returns `speakerDiarization: true`.
+  - `curl https://proxy.talkee.ru/api/capabilities` returns `speakerDiarization: true`.
   - `bunx tsc --noEmit` passed.
   - `cargo check --manifest-path src-tauri/Cargo.toml` passed.
 

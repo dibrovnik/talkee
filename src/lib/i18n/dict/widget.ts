@@ -231,6 +231,7 @@ export const widget = {
     ru: "Не удалось зарегистрировать горячую клавишу.",
     en: "Couldn't register the hotkey.",
   },
+  "widget.island.call": { ru: "Созвон", en: "Call" },
   "widget.hotkey.conflict": {
     ru: "Это сочетание уже используется другой функцией Talkee.",
     en: "This shortcut is already used by another Talkee feature.",

@@ -35,6 +35,7 @@ import { SegmentedControl } from "../../../ui/SegmentedControl";
 import { Slider } from "../../../ui/Slider";
 import { TextField } from "../../../ui/TextField";
 import { Toggle } from "../../../ui/Toggle";
+import { RecordingIndicatorSection } from "./RecordingIndicatorSection";
 
 const SUPPORT_EMAIL = "david.perov60@gmail.com";
 
@@ -673,9 +674,29 @@ export function SettingsTab() {
         />
       </FormSection>
 
+      <RecordingIndicatorSection
+        presentation={settings.widgetPresentation}
+        fallback={settings.islandFallback}
+        textDisplay={settings.textDisplay}
+        onPresentationChange={(widgetPresentation) => {
+          void update({ widgetPresentation });
+        }}
+        onFallbackChange={(islandFallback) => {
+          void update({ islandFallback });
+        }}
+        onTextDisplayChange={(textDisplay) => {
+          void update({ textDisplay });
+        }}
+      />
+
       <FormSection title={t("settings.widgetSize.title")}>
         <FormRow
           label={t("settings.widgetSize.title")}
+          description={
+            settings.widgetPresentation === "island"
+              ? t("settings.widgetSize.islandDisabled")
+              : undefined
+          }
           control={
             <div
               style={{
@@ -691,6 +712,7 @@ export function SettingsTab() {
                 max={WIDGET_SCALE_MAX}
                 step={WIDGET_SCALE_STEP}
                 value={widgetScale}
+                disabled={settings.widgetPresentation === "island"}
                 onChange={(value) => {
                   void update({ widgetScale: normalizeWidgetScale(value) });
                 }}

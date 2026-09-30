@@ -236,6 +236,12 @@ export interface AppSettings {
   cleanupToggleHotkey: string;
   /** Floating widget visual scale. 1 = 100%. */
   widgetScale: number;
+  /** Floating pill or notch island. */
+  widgetPresentation: "pill" | "island";
+  /** What to show when the active screen has no notch. */
+  islandFallback: "island" | "pill";
+  /** Recognized text in its own window, or as a one-line ticker on the indicator. */
+  textDisplay: "window" | "ticker";
   theme: ThemePreference;
   /** Transcription/recognition language (not the UI language). */
   language: string;
@@ -745,6 +751,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   cleanupEnabled: false,
   cleanupToggleHotkey: "Control+Shift+C",
   widgetScale: DEFAULT_WIDGET_SCALE,
+  widgetPresentation: "pill",
+  islandFallback: "island",
+  textDisplay: "window",
   theme: "system",
   language: DEFAULT_LANGUAGE,
   doubleTapTimeout: 400,
@@ -777,6 +786,18 @@ const DEFAULT_SETTINGS: AppSettings = {
     liveMuteOriginalEnabled: true,
   },
 };
+
+function parseWidgetPresentation(value: unknown): AppSettings["widgetPresentation"] | undefined {
+  return value === "pill" || value === "island" ? value : undefined;
+}
+
+function parseIslandFallback(value: unknown): AppSettings["islandFallback"] | undefined {
+  return value === "pill" || value === "island" ? value : undefined;
+}
+
+function parseTextDisplay(value: unknown): AppSettings["textDisplay"] | undefined {
+  return value === "window" || value === "ticker" ? value : undefined;
+}
 
 function parseStyle(value: unknown): AppSettings["style"] | undefined {
   if (value === "classic" || value === "business" || value === "tech") {
@@ -1208,6 +1229,9 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
               : "Control+Shift+C",
           ).normalized ?? ""),
     widgetScale: raw.widgetScale === undefined ? undefined : normalizeWidgetScale(raw.widgetScale),
+    widgetPresentation: parseWidgetPresentation(raw.widgetPresentation) ?? "pill",
+    islandFallback: parseIslandFallback(raw.islandFallback) ?? "island",
+    textDisplay: parseTextDisplay(raw.textDisplay) ?? "window",
     theme: parseTheme(raw.theme),
     language: typeof raw.language === "string" ? raw.language : undefined,
     uiLanguage: raw.uiLanguage === "en" || raw.uiLanguage === "ru" ? raw.uiLanguage : undefined,
@@ -1586,6 +1610,10 @@ export function saveSettings(settings: AppSettingsPatch): Promise<void> {
     if (settings.widgetScale !== undefined) {
       nextSettings.widgetScale = normalizeWidgetScale(settings.widgetScale);
     }
+    nextSettings.widgetPresentation =
+      parseWidgetPresentation(nextSettings.widgetPresentation) ?? "pill";
+    nextSettings.islandFallback = parseIslandFallback(nextSettings.islandFallback) ?? "island";
+    nextSettings.textDisplay = parseTextDisplay(nextSettings.textDisplay) ?? "window";
 
     nextSettings.translation = normalizeTranslationSettings(
       nextSettings.translation,

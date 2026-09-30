@@ -28,6 +28,7 @@ import {
   normalizeWidgetScale,
   scaleWidgetDimension,
 } from "../../../lib/widgetScale";
+import { applyStoredWidgetPresentation, isIslandPresentationActive } from "../island/islandSession";
 import {
   type SelectionTranslationProgress,
   selectionTranslationLanguageLabel,
@@ -207,7 +208,7 @@ export function useWidgetController({
 
     widgetWindow
       .onMoved(({ payload }) => {
-        if (!positionReadyRef.current) return;
+        if (!positionReadyRef.current || isIslandPresentationActive()) return;
         clearMoveSaveTimer();
         moveSaveTimerRef.current = setTimeout(() => {
           moveSaveTimerRef.current = null;
@@ -243,6 +244,11 @@ export function useWidgetController({
 
     const restoreWidgetPosition = async () => {
       try {
+        const applied = await applyStoredWidgetPresentation();
+        if (cancelled || applied.mode === "island") {
+          positionReadyRef.current = true;
+          return;
+        }
         const savedPosition = await getWidgetPosition();
         const targetPosition = await resolveInitialWidgetPosition(widgetWindow, savedPosition);
         if (!targetPosition || cancelled) return;
@@ -273,6 +279,9 @@ export function useWidgetController({
   const resizeWidget = useCallback(
     async (width: number, height: number, options: ResizeWidgetOptions = {}) => {
       try {
+        if (isIslandPresentationActive()) {
+          return;
+        }
         const scale = normalizeWidgetScale(widgetScaleRef.current);
         const scaledWidth = scaleWidgetDimension(width, scale);
         const scaledHeight = scaleWidgetDimension(height, scale);

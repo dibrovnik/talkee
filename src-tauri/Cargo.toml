@@ -63,11 +63,11 @@ ct2rs = { version = "0.9.19", default-features = false, features = ["all-tokeniz
 tauri-plugin-autostart = "2.5.1"
 block2 = "0.6"
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", features = ["NSView", "NSWindow", "NSEvent", "block2"] }
+objc2-app-kit = { version = "0.3", features = ["NSView", "NSWindow", "NSEvent", "NSScreen", "NSGraphics", "NSApplication", "block2"] }
 objc2-core-audio = "0.3"
 objc2-core-audio-types = "0.3"
 objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFArray", "CFDictionary", "CFNumber", "CFString"] }
-objc2-foundation = { version = "0.3", features = ["NSProcessInfo", "NSString"] }
+objc2-foundation = { version = "0.3", features = ["NSProcessInfo", "NSString", "NSNotification", "NSOperation", "block2"] }
 
 [dev-dependencies]
 tempfile = "3"

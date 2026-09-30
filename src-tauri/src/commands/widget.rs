@@ -9,6 +9,8 @@ use tauri::{
 
 use crate::logger;
 
+#[path = "widget_island.rs"]
+mod widget_island;
 #[path = "widget_visibility.rs"]
 mod widget_visibility;
 use widget_visibility::{recover_offscreen_position, PhysicalRect};
@@ -132,6 +134,16 @@ pub fn restore_widget_window(
     reason: &str,
     bring_to_front: bool,
 ) -> Result<bool, String> {
+    if widget_island::is_island_mode() {
+        let moved = widget_island::reposition_if_island(app)?;
+        if moved {
+            logger::log_info(
+                "WIDGET",
+                &format!("Widget island repositioned instead of restoring pill position: reason={reason}, bring_to_front={bring_to_front}"),
+            );
+        }
+        return Ok(moved);
+    }
     let (win, recreated) = get_or_create_main_widget_window(app)?;
     let was_minimized = win.is_minimized().map_err(|e| e.to_string())?;
     let was_visible = win.is_visible().map_err(|e| e.to_string())?;
@@ -163,6 +175,10 @@ pub fn restore_widget_window(
     }
 
     Ok(restored)
+}
+
+pub fn start_island_screen_observer(app: &AppHandle) {
+    widget_island::start_screen_observer(app);
 }
 
 pub fn start_widget_watchdog(app: &AppHandle) {
@@ -223,6 +239,18 @@ fn text_overlay_payload_store() -> &'static Mutex<Option<WidgetTextOverlayPayloa
 fn text_overlay_open_request_store() -> &'static Mutex<Option<String>> {
     static STORE: OnceLock<Mutex<Option<String>>> = OnceLock::new();
     STORE.get_or_init(|| Mutex::new(None))
+}
+
+fn text_display_flag() -> &'static Mutex<bool> {
+    static FLAG: OnceLock<Mutex<bool>> = OnceLock::new();
+    FLAG.get_or_init(|| Mutex::new(false))
+}
+
+fn text_display_is_ticker() -> bool {
+    text_display_flag()
+        .lock()
+        .map(|flag| *flag)
+        .unwrap_or(false)
 }
 
 fn is_new_text_overlay_request(current: Option<&str>, next: Option<&str>) -> bool {
@@ -358,6 +386,15 @@ fn position_widget_notice_window(
     notice_window: &tauri::WebviewWindow,
     height: f64,
 ) -> Result<(), String> {
+    if widget_island::try_position_below_island(
+        widget_window.app_handle(),
+        notice_window,
+        NOTICE_WIDTH,
+        height,
+        8.0,
+    )? {
+        return Ok(());
+    }
     let widget_position = widget_window.outer_position().map_err(|e| e.to_string())?;
     let widget_size = widget_window.outer_size().map_err(|e| e.to_string())?;
     let scale_factor = widget_window.scale_factor().map_err(|e| e.to_string())?;
@@ -391,6 +428,15 @@ fn position_widget_text_window(
     width: f64,
     height: f64,
 ) -> Result<(), String> {
+    if widget_island::try_position_below_island(
+        widget_window.app_handle(),
+        text_window,
+        width,
+        height,
+        TEXT_OVERLAY_GAP,
+    )? {
+        return Ok(());
+    }
     let widget_position = widget_window.outer_position().map_err(|e| e.to_string())?;
     let widget_size = widget_window.outer_size().map_err(|e| e.to_string())?;
     let scale_factor = widget_window.scale_factor().map_err(|e| e.to_string())?;
@@ -538,6 +584,20 @@ pub async fn show_widget_notice(
     action_label: Option<String>,
     action_tab: Option<String>,
 ) -> Result<(), String> {
+    if widget_island::is_island_mode() {
+        app.emit_to(
+            "widget",
+            "island-notice",
+            WidgetNoticePayload {
+                message,
+                tone,
+                action_label,
+                action_tab,
+            },
+        )
+        .map_err(|e| e.to_string())?;
+        return Ok(());
+    }
     let widget_window = app
         .get_webview_window("widget")
         .ok_or_else(|| "Widget window not found".to_string())?;
@@ -565,6 +625,11 @@ pub async fn show_widget_notice(
 
 #[tauri::command]
 pub async fn hide_widget_notice(app: AppHandle) -> Result<(), String> {
+    let _ = app.emit_to(
+        "widget",
+        "island-notice",
+        Option::<WidgetNoticePayload>::None,
+    );
     if let Some(win) = app.get_webview_window(NOTICE_WINDOW_LABEL) {
         win.hide().map_err(|e| e.to_string())?;
     }
@@ -598,6 +663,20 @@ pub async fn show_widget_text_overlay(
             .map_err(|e| format!("Text overlay request lock failed: {e}"))?;
         is_new_text_overlay_request(opened_request.as_deref(), request_id.as_deref())
     };
+
+    if text_display_is_ticker() {
+        if let Some(win) = app.get_webview_window(TEXT_WINDOW_LABEL) {
+            let _ = win.hide();
+        }
+        app.emit_to("widget", TEXT_EVENT, payload)
+            .map_err(|e| e.to_string())?;
+        if opens_new_request {
+            *text_overlay_open_request_store()
+                .lock()
+                .map_err(|e| format!("Text overlay request lock failed: {e}"))? = request_id;
+        }
+        return Ok(());
+    }
 
     let widget_window = app
         .get_webview_window("widget")
@@ -670,6 +749,11 @@ fn hide_widget_text_overlay_inner(
     *cached = None;
     *opened_request = None;
 
+    let _ = app.emit_to(
+        "widget",
+        TEXT_EVENT,
+        Option::<WidgetTextOverlayPayload>::None,
+    );
     if let Some(win) = app.get_webview_window(TEXT_WINDOW_LABEL) {
         let _ = app.emit_to(
             TEXT_WINDOW_LABEL,
@@ -679,6 +763,68 @@ fn hide_widget_text_overlay_inner(
         win.hide().map_err(|e| e.to_string())?;
     }
 
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_text_display(app: AppHandle, mode: String) -> Result<(), String> {
+    let ticker = match mode.as_str() {
+        "window" => false,
+        "ticker" => true,
+        _ => return Err(format!("Unknown text display: {mode}")),
+    };
+    *text_display_flag()
+        .lock()
+        .map_err(|err| format!("Text display lock failed: {err}"))? = ticker;
+
+    if ticker {
+        if let Some(win) = app.get_webview_window(TEXT_WINDOW_LABEL) {
+            let _ = win.hide();
+        }
+        match cached_text_overlay_payload()? {
+            Some(payload) => {
+                app.emit_to("widget", TEXT_EVENT, payload)
+                    .map_err(|e| e.to_string())?;
+            }
+            None => {
+                let _ = app.emit_to(
+                    "widget",
+                    TEXT_EVENT,
+                    Option::<WidgetTextOverlayPayload>::None,
+                );
+            }
+        }
+        return Ok(());
+    }
+
+    let _ = app.emit_to(
+        "widget",
+        TEXT_EVENT,
+        Option::<WidgetTextOverlayPayload>::None,
+    );
+    if let Some(payload) = cached_text_overlay_payload()? {
+        present_text_window(&app, &payload)?;
+    }
+    Ok(())
+}
+
+fn present_text_window(app: &AppHandle, payload: &WidgetTextOverlayPayload) -> Result<(), String> {
+    let widget_window = app
+        .get_webview_window("widget")
+        .ok_or_else(|| "Widget window not found".to_string())?;
+    let text_window = ensure_widget_text_window(app)?;
+    position_widget_text_window(
+        &widget_window,
+        &text_window,
+        text_overlay_width(payload),
+        text_overlay_height(payload),
+    )?;
+    let _ = text_window.set_ignore_cursor_events(false);
+    app.emit_to(TEXT_WINDOW_LABEL, TEXT_EVENT, payload.clone())
+        .map_err(|e| e.to_string())?;
+    if !text_window.is_visible().unwrap_or(false) {
+        text_window.show().map_err(|e| e.to_string())?;
+    }
     Ok(())
 }
 
@@ -703,10 +849,28 @@ pub async fn widget_resize(
     height: f64,
     growth_offset_ratio: Option<f64>,
 ) -> Result<(), String> {
+    if widget_island::is_island_mode() {
+        logger::log_info("WIDGET", "widget_resize ignored in island mode");
+        return Ok(());
+    }
     let expanded_offset_ratio = growth_offset_ratio
         .unwrap_or(WIDGET_EXPANDED_OFFSET_RATIO)
         .clamp(0.0, 1.0);
     resize_widget_window(&app, width, height, expanded_offset_ratio)
+}
+
+#[tauri::command]
+pub async fn set_widget_presentation(
+    app: AppHandle,
+    mode: String,
+    fallback: Option<crate::notch::IslandFallback>,
+) -> Result<widget_island::WidgetPresentationApplied, String> {
+    widget_island::apply_presentation(&app, &mode, fallback)
+}
+
+#[tauri::command]
+pub async fn set_island_interactive(app: AppHandle, interactive: bool) -> Result<(), String> {
+    widget_island::set_interactive(&app, interactive)
 }
 
 #[tauri::command]

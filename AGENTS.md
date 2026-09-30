@@ -138,7 +138,7 @@ regenerate them instead.
 2. **Hotkeys:** format `Modifier+Key` (e.g. `Ctrl+Alt+Space`); always validate with
    `validateHotkey()`.
 3. **Settings:** load once at startup via `getSettings()`, save immediately on change.
-4. **Widget size:** the compact widget matches `src/windows/widget/widgetConstants.ts`.
+4. **Widget:** the compact pill matches `src/windows/widget/widgetConstants.ts`. The same `widget` window can instead present a notch island (`widgetPresentation`: `pill` or `island`). Island geometry comes from AppKit in `src-tauri/src/notch.rs`; drag, saved position, and pill scale stay off in island mode.
 5. **Logs:** `~/.talkee/talkee.log`.
 6. **Package manager:** `bun` everywhere (not npm/yarn).
 7. **Dev-only features:** gate behind `import.meta.env.DEV`.

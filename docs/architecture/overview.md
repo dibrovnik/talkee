@@ -90,7 +90,7 @@ Talkee — macOS-приложение (Apple Silicon): Rust-бэкенд Tauri v
 
 | Каталог | Ответственность |
 | --- | --- |
-| `widget/` | UI плавающего виджета: `Widget.tsx`, хуки `useWidgetController`, `useWidgetHotkey`, `useWidgetRecording`, `useWidgetNotice`, сервисы `recordingRuntime`, `transcriptionPipeline`, `hotkeyFsm`/`hotkeyTransaction`, `liveTranslation`, `callMicrophone`, `selectionTranslation`, `widgetConstants`. |
+| `widget/` | UI индикатора записи. Два представления одного окна `widget`: плавающая пилюля (`pill/`) и остров у выреза (`island/`). Режим `widgetPresentation` и запасной вариант без выреза `islandFallback` живут в настройках. Хуки `useWidgetController`, `useWidgetHotkey`, `useWidgetRecording`, `useWidgetNotice`, сервисы `recordingRuntime`, `transcriptionPipeline`, `hotkeyFsm`/`hotkeyTransaction`, `liveTranslation`, `callMicrophone`, `selectionTranslation`, `widgetConstants`. |
 | `settings/` | Окно настроек: `SettingsApp.tsx`, навигация, захват горячих клавиш и вкладки `tabs/` (Main, FileTranscription, Translation, RealtimeTranslationModels, DevChat). |
 
 ### `src/components`

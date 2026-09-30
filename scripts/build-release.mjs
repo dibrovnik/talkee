@@ -32,4 +32,6 @@ if (process.env.TALKEE_POSTPROCESS_MACOS_RELEASE !== "0") {
   run("bun", ["run", "postprocess:macos-release"]);
 }
 
+run("bun", ["scripts/report-bundle-size.mjs"]);
+
 console.log("Built macOS release bundles: app, dmg");

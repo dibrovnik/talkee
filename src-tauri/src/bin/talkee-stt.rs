@@ -1062,7 +1062,7 @@ fn transcribe(request: &HttpRequest, config: &RuntimeConfig) -> Result<String, (
             ));
         }
 
-        let Some(stream_extension) = stream_extension_for_model(&loaded_model) else {
+        let Some(stream_extension) = stream_extension_for_model(loaded_model) else {
             return Err((
                 400,
                 format!(
@@ -1178,7 +1178,7 @@ fn transcribe_streaming(
         ));
     }
 
-    let Some(stream_extension) = stream_extension_for_model(&loaded_model) else {
+    let Some(stream_extension) = stream_extension_for_model(loaded_model) else {
         return Err((
             400,
             format!(
@@ -1275,7 +1275,7 @@ fn transcribe_live(
     );
     options.language = normalize_streaming_language(model, options.language.as_deref());
 
-    let Some(stream_extension) = stream_extension_for_model(&loaded_model) else {
+    let Some(stream_extension) = stream_extension_for_model(loaded_model) else {
         return Err((
             400,
             format!(

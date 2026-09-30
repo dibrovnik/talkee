@@ -59,6 +59,6 @@
 
 ## 7. Итоговые замеры
 
-- [ ] 7.1 `scripts/report-bundle-size.mjs` + вызов в `build:release:macos` (бюджеты из спеки)
-- [ ] 7.2 Заполнить таблицу «после» в `docs/performance.md`
-- [ ] 7.3 Проверка: бюджеты из спеки выполнены; `bun run gate`; `openspec validate optimize-apple-silicon --strict`
+- [x] 7.1 `scripts/report-bundle-size.mjs` + вызов в `build:release:macos` (бюджеты из спеки)
+- [x] 7.2 Заполнить таблицу «после» в `docs/performance.md`
+- [x] 7.3 Проверка: бюджеты из спеки выполнены; `bun run gate`; `openspec validate optimize-apple-silicon --strict`

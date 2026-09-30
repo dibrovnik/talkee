@@ -12,6 +12,7 @@ function settings(): AppSettings {
   return {
     hotkey: "Alt+Space",
     cleanupToggleHotkey: "Control+Shift+C",
+    cleanupRecordingHotkey: "Alt+Command+Space",
     translation: {
       selectionEnabled: true,
       selectionHotkey: "Control+Shift+Y",
@@ -40,6 +41,7 @@ function setup(
     dictation: stored.hotkey,
     selection: stored.translation.selectionHotkey,
     cleanup: stored.cleanupToggleHotkey || null,
+    dictationCleanup: stored.cleanupRecordingHotkey || null,
   };
   const registered: string[] = [];
   const unregistered: string[] = [];

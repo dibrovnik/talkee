@@ -250,6 +250,12 @@ pub async fn copy_selected_text(app: tauri::AppHandle) -> Result<String, String>
         .map_err(|e| format!("Failed receiving selected text copy result: {}", e))?
 }
 
+/// After Cmd+V the dictated text stays on the clipboard instead of restoring
+/// whatever was there before the paste.
+pub(crate) fn clipboard_text_after_paste<'a>(pasted: &'a str, _previous: Option<&str>) -> &'a str {
+    pasted
+}
+
 /// Paste text by writing to clipboard and simulating Cmd+V
 #[tauri::command]
 pub async fn paste_text(app: tauri::AppHandle, text: String) -> Result<(), String> {
@@ -276,7 +282,7 @@ pub async fn paste_text(app: tauri::AppHandle, text: String) -> Result<(), Strin
             );
             handle
                 .clipboard()
-                .write_text(text)
+                .write_text(text.clone())
                 .map_err(|e| format!("Clipboard write failed: {}", e))?;
 
             std::thread::sleep(Duration::from_millis(100));
@@ -286,22 +292,12 @@ pub async fn paste_text(app: tauri::AppHandle, text: String) -> Result<(), Strin
 
             std::thread::sleep(Duration::from_millis(500));
 
-            if let Some(previous_text) = previous_clipboard_text {
-                logger::log_info("PASTE", "Restoring previous clipboard text after paste");
-                handle
-                    .clipboard()
-                    .write_text(previous_text)
-                    .map_err(|e| format!("Clipboard restore failed: {}", e))?;
-            } else {
-                logger::log_info(
-                    "PASTE",
-                    "Previous clipboard text unavailable, clearing clipboard",
-                );
-                handle
-                    .clipboard()
-                    .clear()
-                    .map_err(|e| format!("Clipboard clear failed: {}", e))?;
-            }
+            let kept = clipboard_text_after_paste(&text, previous_clipboard_text.as_deref());
+            logger::log_info("PASTE", "Leaving dictated text on the clipboard");
+            handle
+                .clipboard()
+                .write_text(kept)
+                .map_err(|e| format!("Clipboard write failed: {}", e))?;
 
             Ok(())
         })();
@@ -328,7 +324,19 @@ pub async fn paste_text(app: tauri::AppHandle, text: String) -> Result<(), Strin
 mod tests {
     use std::time::Duration;
 
-    use super::{selected_text_from_clipboard, wait_for_selected_text_from_clipboard};
+    use super::{
+        clipboard_text_after_paste, selected_text_from_clipboard,
+        wait_for_selected_text_from_clipboard,
+    };
+
+    #[test]
+    fn dictated_text_stays_on_the_clipboard() {
+        assert_eq!(
+            clipboard_text_after_paste("привет", Some("старое")),
+            "привет"
+        );
+        assert_eq!(clipboard_text_after_paste("привет", None), "привет");
+    }
 
     #[test]
     fn sentinel_means_no_selected_text() {

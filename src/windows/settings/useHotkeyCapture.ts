@@ -136,7 +136,8 @@ export function useHotkeyCapture({
       const requestId = captureRequestIdRef.current ?? createRequestId(target);
       await stop();
 
-      if (candidate === null || (!candidate && target !== "cleanup")) {
+      const allowsEmpty = target === "cleanup" || target === "dictationCleanup";
+      if (candidate === null || (!candidate && !allowsEmpty)) {
         setDraft(null);
         setTone("error");
         setFeedback(messagesRef.current.recognizeFailed);
@@ -144,9 +145,7 @@ export function useHotkeyCapture({
       }
 
       const normalized =
-        target === "cleanup" && !candidate
-          ? { valid: true, normalized: "" }
-          : normalizeHotkey(candidate);
+        allowsEmpty && !candidate ? { valid: true, normalized: "" } : normalizeHotkey(candidate);
       if (!normalized.valid || normalized.normalized === undefined) {
         setDraft(candidate);
         setTone("error");

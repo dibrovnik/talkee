@@ -13,6 +13,7 @@ import { DOCK_VISIBILITY_CHANGED_EVENT, SETTINGS_UPDATED_EVENT } from "../../../
 import { useI18n } from "../../../lib/i18n";
 import { IconCheck, IconChevronDown, IconMail, IconSearch } from "../../../lib/icons";
 import { logError, logInfo } from "../../../lib/logger";
+import { checkMicrophonePermission } from "../../../lib/permissions";
 import {
   type AppSettings,
   type AppSettingsPatch,
@@ -151,29 +152,18 @@ export function SettingsTab() {
           return;
         }
 
-        let devices = await navigator.mediaDevices.enumerateDevices();
-        let mics = devices.filter((d) => d.kind === "audioinput");
-        let needsPermission = false;
-
-        if (mics.length === 0 || mics.some((m) => !m.label || m.label === "")) {
-          if (navigator.mediaDevices.getUserMedia) {
-            try {
-              const stream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
-              });
-              await new Promise((r) => setTimeout(r, 50));
-              devices = await navigator.mediaDevices.enumerateDevices();
-              mics = devices.filter((d) => d.kind === "audioinput");
-              stream.getTracks().forEach((t) => {
-                t.stop();
-              });
-            } catch (permitErr) {
-              void logInfo(
-                "SETTINGS",
-                `Microphone permission denied or no mic available: ${permitErr instanceof Error ? permitErr.message : String(permitErr)}`,
-              );
-              needsPermission = true;
-            }
+        // Never open a capture stream just to label devices. On macOS that
+        // starts an audio session and ducks other apps — a call in Telemost
+        // gets about twice as quiet for as long as Talkee is running.
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const mics = devices.filter((d) => d.kind === "audioinput" && d.deviceId);
+        if (mics.length === 0) {
+          const permission = await checkMicrophonePermission();
+          if (permission !== "granted") {
+            setMicrophones([]);
+            setMicStatus("permission-needed");
+            setMicMessage(t("settingsGeneralExtra.mic.permissionNeeded"));
+            return;
           }
         }
 
@@ -198,12 +188,6 @@ export function SettingsTab() {
         }
 
         if (uniqueMics.length === 0) {
-          if (needsPermission) {
-            setMicStatus("permission-needed");
-            setMicMessage(t("settingsGeneralExtra.mic.permissionNeeded"));
-            return;
-          }
-
           setMicStatus("empty");
           setMicMessage(t("settingsGeneralExtra.mic.noneFound"));
           return;
@@ -661,7 +645,8 @@ export function SettingsTab() {
 
       <FormSection title={t("settings.hotkey.title")}>
         <FormRow
-          label={t("settings.hotkey.title")}
+          label={t("settings.hotkey.plain")}
+          description={t("settings.hotkey.plainDesc")}
           control={
             <DictationHotkeyControl
               settings={settings}
@@ -669,6 +654,37 @@ export function SettingsTab() {
                 settingsRef.current = latestSettings;
                 setSettings(latestSettings);
               }}
+            />
+          }
+        />
+        <FormRow
+          label={t("settings.hotkey.cleanup")}
+          description={t("settings.hotkey.cleanupDesc")}
+          control={
+            <DictationHotkeyControl
+              target="dictationCleanup"
+              settings={settings}
+              onSettingsChange={(latestSettings) => {
+                settingsRef.current = latestSettings;
+                setSettings(latestSettings);
+              }}
+            />
+          }
+        />
+        <FormRow
+          label={t("settings.hotkey.mode")}
+          description={t("settings.hotkey.modeDesc")}
+          control={
+            <SegmentedControl
+              ariaLabel={t("settings.hotkey.mode")}
+              value={settings.recordingHotkeyMode}
+              onChange={(recordingHotkeyMode) => {
+                void update({ recordingHotkeyMode });
+              }}
+              options={[
+                { value: "hold", label: t("settings.hotkey.modeHold") },
+                { value: "toggle", label: t("settings.hotkey.modeToggle") },
+              ]}
             />
           }
         />

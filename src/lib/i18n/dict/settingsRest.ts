@@ -34,8 +34,8 @@ export const settingsRest = {
   },
   "mainTab.howItWorks": { ru: "Как это работает", en: "How it works" },
   "mainTab.howToStartHint": {
-    ru: "Удерживайте горячую клавишу, говорите и отпустите ее, когда закончите. После обработки текст вставится автоматически.",
-    en: "Hold the hotkey, speak and release it when you're done. After processing the text is pasted automatically.",
+    ru: "Начните запись горячей клавишей. После обработки текст вставится в активное приложение и останется в буфере обмена.",
+    en: "Start a recording with the hotkey. After processing, the text is pasted into the active app and stays on the clipboard.",
   },
   "mainTab.hero.supportTitle": {
     ru: "Нашли ошибку или есть вопрос?",
@@ -49,8 +49,8 @@ export const settingsRest = {
     en: "Recent recordings can be copied and deleted.",
   },
   "mainTab.historyDescEmpty": {
-    ru: "Записей пока нет. Удерживайте {hotkey} для записи.",
-    en: "No recordings yet. Hold {hotkey} to record.",
+    ru: "Записей пока нет. Начните запись сочетанием {hotkey}.",
+    en: "No recordings yet. Start a recording with {hotkey}.",
   },
   "mainTab.clearAllConfirmTitle": {
     ru: "Нажмите еще раз, чтобы очистить всю историю",

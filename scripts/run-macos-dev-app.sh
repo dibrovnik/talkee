@@ -70,20 +70,15 @@ RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 APP_EXECUTABLE="${MACOS_DIR}/Talkee"
 INFO_PLIST="${CONTENTS_DIR}/Info.plist"
 APP_VERSION="$(/usr/bin/plutil -extract version raw -o - "${PROJECT_ROOT}/package.json")"
-SIGNING_IDENTITY="${TALKEE_DEV_SIGNING_IDENTITY:-}"
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/macos-signing-identity.sh"
+SIGNING_IDENTITY="$(talkee_signing_identity)"
 
-if [[ -z "${SIGNING_IDENTITY}" ]]; then
-  SIGNING_IDENTITY="$(
-    /usr/bin/security find-identity -v -p codesigning 2>/dev/null | \
-      /usr/bin/awk '/"Apple Development:/{print $2; exit}'
-  )"
-fi
-
-if [[ -z "${SIGNING_IDENTITY}" ]]; then
-  SIGNING_IDENTITY="-"
-  print -u2 "Talkee dev: no Apple Development signing identity found; macOS permissions may reset after each rebuild"
+if [[ "${SIGNING_IDENTITY}" == "-" ]]; then
+  print -u2 "Talkee dev: no stable signing identity; macOS permissions may reset after each rebuild"
 else
   print "Talkee dev: using stable signing identity ${SIGNING_IDENTITY}"
+  print "Talkee dev: if macOS asks to allow the Talkee Development key, choose Always Allow"
 fi
 
 mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
@@ -141,14 +136,21 @@ set_plist_bool "CSResourcesFileMapped" "true"
 set_plist_bool "LSRequiresCarbon" "true"
 set_plist_bool "NSHighResolutionCapable" "true"
 
-codesign \
-  --force \
-  --deep \
-  --timestamp=none \
-  --sign "${SIGNING_IDENTITY}" \
-  --identifier "com.talkee.app.dev" \
-  --entitlements "${PROJECT_ROOT}/src-tauri/entitlements.plist" \
-  "${APP_DIR}" >/dev/null
+sign_dev_app() {
+  codesign \
+    --force \
+    --deep \
+    --timestamp=none \
+    --sign "${1}" \
+    --identifier "com.talkee.app.dev" \
+    --entitlements "${PROJECT_ROOT}/src-tauri/entitlements.plist" \
+    "${APP_DIR}" >/dev/null
+}
+
+if ! sign_dev_app "${SIGNING_IDENTITY}"; then
+  print -u2 "Talkee dev: stable signing failed, falling back to an ad-hoc signature"
+  sign_dev_app "-"
+fi
 
 print "Talkee dev: prepared signed app bundle ${APP_DIR}"
 

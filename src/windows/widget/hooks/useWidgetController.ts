@@ -8,6 +8,7 @@ import {
   selectCleanupPreset,
   toggleCleanup,
 } from "../../../lib/cleanupToggle";
+import { setPendingDictationCleanup } from "../../../lib/dictationCleanup";
 import {
   SELECTION_TEXT_REQUEST_EVENT,
   SELECTION_TEXT_RESPONSE_EVENT,
@@ -133,6 +134,7 @@ export function useWidgetController({
   const executeEffect = useCallback((effect: WidgetEffect) => {
     switch (effect.type) {
       case "start_recording":
+        setPendingDictationCleanup(effect.cleanup);
         void startRecordingRef.current();
         break;
       case "stop_and_process":

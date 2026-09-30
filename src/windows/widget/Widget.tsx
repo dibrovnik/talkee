@@ -73,7 +73,12 @@ import {
   isIslandPresentationActive,
   setIslandPresentationActive,
 } from "./island/islandSession";
-import { type IslandNotice, islandNoticeIsInteractive, mapIslandState } from "./island/islandState";
+import {
+  ISLAND_COPY_VISIBLE_MS,
+  type IslandNotice,
+  islandNoticeIsInteractive,
+  mapIslandState,
+} from "./island/islandState";
 import {
   PillPresentation,
   type WidgetCallState,
@@ -1764,9 +1769,11 @@ export function Widget(): ReactNode {
       return;
     }
     void invoke("set_island_interactive", {
-      interactive: islandNoticeIsInteractive(islandNotice),
+      interactive:
+        islandNoticeIsInteractive(islandNotice) ||
+        (islandVisual === "done" && Boolean(latestCopyText?.trim())),
     });
-  }, [appliedMode, islandNotice]);
+  }, [appliedMode, islandNotice, islandVisual, latestCopyText]);
 
   useEffect(() => {
     if (displayWidgetState === "processing") {
@@ -1779,7 +1786,7 @@ export function Widget(): ReactNode {
     }
     wasIslandProcessingRef.current = false;
     setIslandDone(true);
-    const timer = window.setTimeout(() => setIslandDone(false), 800);
+    const timer = window.setTimeout(() => setIslandDone(false), ISLAND_COPY_VISIBLE_MS);
     return () => window.clearTimeout(timer);
   }, [displayWidgetState]);
 
@@ -2033,6 +2040,7 @@ export function Widget(): ReactNode {
         elapsedMs={islandElapsedMs}
         tickerText={activeTickerLine}
         tickerLive={activeTickerLive}
+        copyText={latestCopyText}
       />
     );
   }

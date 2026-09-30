@@ -10,6 +10,7 @@
  * the next state (Elm-style).
  */
 
+import type { RecordingHotkeyMode } from "../../../lib/store";
 import { setTrayRecording } from "../../../lib/tray";
 import type { WidgetState } from "../widgetConstants";
 
@@ -48,7 +49,7 @@ export const initialWidgetMachineState: WidgetMachineState = {
 // ── Effects ─────────────────────────────────────────────────────────────────
 
 export type WidgetEffect =
-  | { type: "start_recording" }
+  | { type: "start_recording"; cleanup: boolean | null }
   | { type: "stop_and_process" }
   | { type: "schedule_release_stop_timer" }
   | { type: "clear_release_stop_timer" }
@@ -61,7 +62,7 @@ export type WidgetEffect =
 
 export type WidgetAction =
   // Hotkey events
-  | { type: "HOTKEY_PRESSED" }
+  | { type: "HOTKEY_PRESSED"; mode: RecordingHotkeyMode; cleanup: boolean }
   | { type: "HOTKEY_RELEASED" }
   // Recording lifecycle
   | { type: "RECORDING_STARTED"; timestamp: number }
@@ -100,7 +101,7 @@ export function widgetReducer(state: WidgetMachineState, action: WidgetAction): 
 function reduce(state: WidgetMachineState, action: WidgetAction): ReducerResult {
   switch (action.type) {
     case "HOTKEY_PRESSED":
-      return handleHotkeyPressed(state);
+      return handleHotkeyPressed(state, action.mode, action.cleanup);
     case "HOTKEY_RELEASED":
       return handleHotkeyReleased(state);
     case "RECORDING_STARTED":
@@ -128,7 +129,11 @@ function reduce(state: WidgetMachineState, action: WidgetAction): ReducerResult 
 
 // ── Transition handlers ─────────────────────────────────────────────────────
 
-function handleHotkeyPressed(state: WidgetMachineState): ReducerResult {
+function handleHotkeyPressed(
+  state: WidgetMachineState,
+  mode: RecordingHotkeyMode,
+  cleanup: boolean,
+): ReducerResult {
   // Locked recording + already recording → stop
   if (state.lockedRecording && state.widgetState === "recording") {
     return result(
@@ -141,8 +146,8 @@ function handleHotkeyPressed(state: WidgetMachineState): ReducerResult {
     );
   }
 
-  // Recording + release timer active → user double-tapped → lock mode
-  if (state.widgetState === "recording" && state.releaseStopTimerActive) {
+  // Hold mode: a second press during the release grace window locks the recording.
+  if (mode === "hold" && state.widgetState === "recording" && state.releaseStopTimerActive) {
     return result(
       {
         ...state,
@@ -160,7 +165,25 @@ function handleHotkeyPressed(state: WidgetMachineState): ReducerResult {
     return result(state, []);
   }
 
-  // Fresh press from idle → start recording
+  if (mode === "toggle") {
+    return result(
+      {
+        ...state,
+        widgetState: "recording",
+        hotkeyHeld: true,
+        lockedRecording: true,
+        recordingActive: false,
+        pendingStopAfterStart: false,
+        releaseStopTimerActive: false,
+      },
+      [
+        { type: "set_locked_recording_ui", value: true },
+        { type: "start_recording", cleanup },
+      ],
+    );
+  }
+
+  // Hold: record while the shortcut is down.
   return result(
     {
       ...state,
@@ -170,7 +193,7 @@ function handleHotkeyPressed(state: WidgetMachineState): ReducerResult {
       recordingActive: false,
       pendingStopAfterStart: false,
     },
-    [{ type: "start_recording" }],
+    [{ type: "start_recording", cleanup }],
   );
 }
 
@@ -279,7 +302,10 @@ function handleManualRecordingStart(state: WidgetMachineState): ReducerResult {
       releaseStopTimerActive: false,
       suppressNextRelease: false,
     },
-    [{ type: "set_locked_recording_ui", value: true }, { type: "start_recording" }],
+    [
+      { type: "set_locked_recording_ui", value: true },
+      { type: "start_recording", cleanup: null },
+    ],
   );
 }
 

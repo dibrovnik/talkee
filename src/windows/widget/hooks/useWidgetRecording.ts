@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { useCallback, useEffect, useRef } from "react";
+import {
+  applyDictationCleanupChoice,
+  takePendingDictationCleanup,
+} from "../../../lib/dictationCleanup";
 import { useI18n } from "../../../lib/i18n";
 import { logError, logInfo } from "../../../lib/logger";
 import { type AppSettings, getSettings } from "../../../lib/store";
@@ -239,6 +243,7 @@ export function useWidgetRecording({
 
   // ── Start recording ─────────────────────────────────────────────────────
   const startRecording = useCallback(async () => {
+    const forceCleanup = takePendingDictationCleanup();
     const startRequestedAt = Date.now();
     logInfo("RECORDING", "startRecording called");
     hideNotice();
@@ -294,7 +299,7 @@ export function useWidgetRecording({
       machineRef.current = { ...machineRef.current, widgetState: "recording" };
       void resizeForSettings(activeSettings);
 
-      recordingSettingsRef.current = activeSettings;
+      recordingSettingsRef.current = applyDictationCleanupChoice(activeSettings, forceCleanup);
       await clearTextOverlayPromise;
 
       const liveStreamingEnabled = isSttStreamingEnabled(activeSettings);

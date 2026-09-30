@@ -404,7 +404,10 @@ fn restore_pill_on_main(win: &WebviewWindow) -> Result<(), String> {
             true,
         );
         ns_win.setLevel(snapshot.level);
-        ns_win.setCollectionBehavior(NSWindowCollectionBehavior(snapshot.behavior));
+        ns_win.setCollectionBehavior(
+            NSWindowCollectionBehavior(snapshot.behavior)
+                | NSWindowCollectionBehavior::IgnoresCycle,
+        );
         ns_win.setHasShadow(snapshot.has_shadow);
     }
     let _ = win.set_always_on_top(true);

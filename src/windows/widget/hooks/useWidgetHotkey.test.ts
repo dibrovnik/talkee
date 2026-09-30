@@ -14,6 +14,18 @@ describe("resolveHandyHotkeyIntent", () => {
     ).toBe("voice");
   });
 
+  test("the cleanup recording hotkey is a separate voice take", () => {
+    expect(
+      resolveHandyHotkeyIntent({
+        eventHotkey: "Alt+Command+Space",
+        voiceHotkey: "Shift+Command+Space",
+        selectionHotkey: "Control+Shift+Y",
+        selectionEnabled: true,
+        cleanupRecordingHotkey: "Alt+Command+Space",
+      }),
+    ).toBe("voice-cleanup");
+  });
+
   test("disabled selection hotkey falls back to voice", () => {
     expect(
       resolveHandyHotkeyIntent({

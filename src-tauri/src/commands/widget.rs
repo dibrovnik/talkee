@@ -59,6 +59,9 @@ pub fn configure_main_widget_window(win: &WebviewWindow) -> Result<(), String> {
                 Ok(pointer) => {
                     let ns_win: &objc2_app_kit::NSWindow = &*pointer.cast();
                     ns_win.setAcceptsMouseMovedEvents(true);
+                    let behavior = ns_win.collectionBehavior()
+                        | objc2_app_kit::NSWindowCollectionBehavior::IgnoresCycle;
+                    ns_win.setCollectionBehavior(behavior);
                 }
                 Err(err) => logger::log_error(
                     "WINDOW",
@@ -319,6 +322,7 @@ fn overlay_effects() -> WindowEffectsConfig {
 
 pub fn ensure_widget_notice_window(app: &AppHandle) -> Result<tauri::WebviewWindow, String> {
     if let Some(win) = app.get_webview_window(NOTICE_WINDOW_LABEL) {
+        exclude_from_window_cycle(&win);
         return Ok(win);
     }
 
@@ -343,12 +347,14 @@ pub fn ensure_widget_notice_window(app: &AppHandle) -> Result<tauri::WebviewWind
         .skip_taskbar(true);
 
     let win = builder.build().map_err(|e| e.to_string())?;
+    exclude_from_window_cycle(&win);
 
     Ok(win)
 }
 
 pub fn ensure_widget_text_window(app: &AppHandle) -> Result<tauri::WebviewWindow, String> {
     if let Some(win) = app.get_webview_window(TEXT_WINDOW_LABEL) {
+        exclude_from_window_cycle(&win);
         return Ok(win);
     }
 
@@ -373,8 +379,26 @@ pub fn ensure_widget_text_window(app: &AppHandle) -> Result<tauri::WebviewWindow
         .skip_taskbar(true);
 
     let win = builder.build().map_err(|e| e.to_string())?;
+    exclude_from_window_cycle(&win);
 
     Ok(win)
+}
+
+fn exclude_from_window_cycle(win: &WebviewWindow) {
+    let window = win.clone();
+    if let Err(err) = win.run_on_main_thread(move || unsafe {
+        if let Ok(pointer) = window.ns_window() {
+            let ns_win: &objc2_app_kit::NSWindow = &*pointer.cast();
+            let behavior = ns_win.collectionBehavior()
+                | objc2_app_kit::NSWindowCollectionBehavior::IgnoresCycle;
+            ns_win.setCollectionBehavior(behavior);
+        }
+    }) {
+        logger::log_error(
+            "WINDOW",
+            &format!("Failed to hide overlay from the window switcher: {err}"),
+        );
+    }
 }
 
 /// Maximum expanded height for the notice bubble (logical px) — keeps a very long

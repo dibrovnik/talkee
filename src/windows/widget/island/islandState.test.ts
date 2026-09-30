@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { islandNoticeIsInteractive, mapIslandState } from "./islandState";
+import {
+  ISLAND_COPY_VISIBLE_MS,
+  islandNoticeIsInteractive,
+  islandShowsCopyButton,
+  mapIslandState,
+} from "./islandState";
 
 const base = {
   widgetState: "idle" as const,
@@ -21,6 +26,13 @@ test("island state prefers a notice, then dictation, then a call", () => {
       notice: { message: "Сеть", tone: "error", actionLabel: "Открыть" },
     }),
   ).toBe("notice");
+});
+
+test("the copy button stays for three seconds after processing", () => {
+  expect(ISLAND_COPY_VISIBLE_MS).toBe(3000);
+  expect(islandShowsCopyButton("done", "Привет")).toBe(true);
+  expect(islandShowsCopyButton("done", "  ")).toBe(false);
+  expect(islandShowsCopyButton("idle", "Привет")).toBe(false);
 });
 
 test("only a notice with an action accepts clicks", () => {

@@ -234,6 +234,10 @@ export interface AppSettings {
   hotkey: string;
   cleanupEnabled: boolean;
   cleanupToggleHotkey: string;
+  /** Records and always runs AI cleanup. Empty disables the shortcut. */
+  cleanupRecordingHotkey: string;
+  /** Hold to talk, or press once to start and again to stop. */
+  recordingHotkeyMode: RecordingHotkeyMode;
   /** Floating widget visual scale. 1 = 100%. */
   widgetScale: number;
   /** Floating pill or notch island. */
@@ -311,6 +315,14 @@ const MAIN_KEY_ALIASES: Record<string, string> = {
 };
 const FUNCTION_KEY_PATTERN = /^F(?:[1-9]|1[0-2])$/;
 const DEFAULT_MAC_HOTKEY = "Command+Shift+Space";
+const DEFAULT_CLEANUP_RECORDING_HOTKEY = "Alt+Command+Space";
+
+export type RecordingHotkeyMode = "hold" | "toggle";
+
+export function parseRecordingHotkeyMode(value: unknown): RecordingHotkeyMode {
+  return value === "toggle" ? "toggle" : "hold";
+}
+
 const DEFAULT_LANGUAGE = "ru";
 const LEGACY_SELECTION_TRANSLATION_HOTKEYS = [
   "Command+Alt+Y",
@@ -750,6 +762,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   hotkey: DEFAULT_HOTKEY,
   cleanupEnabled: false,
   cleanupToggleHotkey: "Control+Shift+C",
+  cleanupRecordingHotkey: DEFAULT_CLEANUP_RECORDING_HOTKEY,
+  recordingHotkeyMode: "hold",
   widgetScale: DEFAULT_WIDGET_SCALE,
   widgetPresentation: "pill",
   islandFallback: "island",
@@ -1228,6 +1242,15 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
               ? raw.cleanupToggleHotkey
               : "Control+Shift+C",
           ).normalized ?? ""),
+    cleanupRecordingHotkey:
+      raw.cleanupRecordingHotkey === ""
+        ? ""
+        : (normalizeHotkey(
+            typeof raw.cleanupRecordingHotkey === "string"
+              ? raw.cleanupRecordingHotkey
+              : DEFAULT_CLEANUP_RECORDING_HOTKEY,
+          ).normalized ?? ""),
+    recordingHotkeyMode: parseRecordingHotkeyMode(raw.recordingHotkeyMode),
     widgetScale: raw.widgetScale === undefined ? undefined : normalizeWidgetScale(raw.widgetScale),
     widgetPresentation: parseWidgetPresentation(raw.widgetPresentation) ?? "pill",
     islandFallback: parseIslandFallback(raw.islandFallback) ?? "island",
@@ -1288,6 +1311,17 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
     )
   ) {
     normalized.cleanupToggleHotkey = "";
+  }
+
+  if (
+    normalized.cleanupRecordingHotkey &&
+    [
+      normalized.hotkey || DEFAULT_HOTKEY,
+      normalized.translation?.selectionHotkey,
+      normalized.cleanupToggleHotkey,
+    ].includes(normalized.cleanupRecordingHotkey)
+  ) {
+    normalized.cleanupRecordingHotkey = "";
   }
 
   if (isLocalSttEndpoint(normalized.whisperEndpoint)) {
@@ -1576,18 +1610,42 @@ export function mergeAppSettingsPatch(current: AppSettings, patch: AppSettingsPa
 }
 
 export function validateCleanupHotkey(
-  settings: Pick<AppSettings, "hotkey" | "translation" | "cleanupToggleHotkey">,
+  settings: Pick<
+    AppSettings,
+    "hotkey" | "translation" | "cleanupToggleHotkey" | "cleanupRecordingHotkey"
+  >,
 ): string {
   if (!settings.cleanupToggleHotkey) return "";
   const result = normalizeHotkey(settings.cleanupToggleHotkey);
   if (!result.valid || !result.normalized)
     throw new Error(result.error || "Неверная горячая клавиша");
   if (
-    [settings.hotkey, settings.translation.selectionHotkey].some(
-      (key) => normalizeHotkey(key).normalized === result.normalized,
+    [settings.hotkey, settings.translation.selectionHotkey, settings.cleanupRecordingHotkey].some(
+      (key) => key && normalizeHotkey(key).normalized === result.normalized,
     )
   ) {
     throw new Error("Горячая клавиша очистки конфликтует с диктовкой или переводом");
+  }
+  return result.normalized;
+}
+
+export function validateCleanupRecordingHotkey(
+  settings: Pick<
+    AppSettings,
+    "hotkey" | "translation" | "cleanupToggleHotkey" | "cleanupRecordingHotkey"
+  >,
+): string {
+  if (!settings.cleanupRecordingHotkey) return "";
+  const result = normalizeHotkey(settings.cleanupRecordingHotkey);
+  if (!result.valid || !result.normalized) {
+    throw new Error(result.error || "Неверная горячая клавиша");
+  }
+  if (
+    [settings.hotkey, settings.translation.selectionHotkey, settings.cleanupToggleHotkey].some(
+      (key) => key && normalizeHotkey(key).normalized === result.normalized,
+    )
+  ) {
+    throw new Error("Горячая клавиша ввода с очисткой конфликтует с другой клавишей");
   }
   return result.normalized;
 }
@@ -1623,6 +1681,8 @@ export function saveSettings(settings: AppSettingsPatch): Promise<void> {
     nextSettings.transcriptionStorageDir = "";
 
     nextSettings.cleanupToggleHotkey = validateCleanupHotkey(nextSettings);
+    nextSettings.cleanupRecordingHotkey = validateCleanupRecordingHotkey(nextSettings);
+    nextSettings.recordingHotkeyMode = parseRecordingHotkeyMode(nextSettings.recordingHotkeyMode);
     await store.set("settings", nextSettings);
     await store.save();
   });

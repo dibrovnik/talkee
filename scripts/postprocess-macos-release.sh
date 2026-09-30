@@ -16,8 +16,16 @@ if [[ ! -d "${APP_PATH}" ]]; then
   exit 1
 fi
 
-echo "Ad-hoc signing ${APP_PATH} with stable identifier ${APP_IDENTIFIER}"
-codesign --force --deep --sign - --identifier "${APP_IDENTIFIER}" "${APP_PATH}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/macos-signing-identity.sh"
+SIGNING_IDENTITY="$(talkee_signing_identity)"
+if [[ "${SIGNING_IDENTITY}" == "-" ]]; then
+  echo "Ad-hoc signing ${APP_PATH}; macOS permissions may reset after the next rebuild" >&2
+else
+  echo "Signing ${APP_PATH} with stable identity ${SIGNING_IDENTITY}"
+fi
+codesign --force --deep --sign "${SIGNING_IDENTITY}" --identifier "${APP_IDENTIFIER}" "${APP_PATH}"
 
 echo "Rebuilding DMG from signed app bundle"
 rm -rf "${STAGING_DIR}"

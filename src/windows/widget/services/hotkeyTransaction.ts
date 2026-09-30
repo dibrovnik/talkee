@@ -37,37 +37,52 @@ export interface HotkeyTransactionDependencies {
 }
 
 function configuredHotkey(settings: AppSettings, target: HotkeyTarget): string {
-  return target === "cleanup"
-    ? settings.cleanupToggleHotkey
-    : target === "dictation"
-      ? settings.hotkey
-      : settings.translation.selectionHotkey;
+  switch (target) {
+    case "cleanup":
+      return settings.cleanupToggleHotkey;
+    case "dictationCleanup":
+      return settings.cleanupRecordingHotkey || "";
+    case "dictation":
+      return settings.hotkey;
+    case "selection":
+      return settings.translation.selectionHotkey;
+  }
 }
 
 function settingsPatch(target: HotkeyTarget, hotkey: string): AppSettingsPatch {
-  if (target === "cleanup") return { cleanupToggleHotkey: hotkey };
-  if (target === "dictation") {
-    return { hotkey };
+  switch (target) {
+    case "cleanup":
+      return { cleanupToggleHotkey: hotkey };
+    case "dictationCleanup":
+      return { cleanupRecordingHotkey: hotkey };
+    case "dictation":
+      return { hotkey };
+    case "selection":
+      return {
+        translation: {
+          selectionEnabled: true,
+          selectionHotkey: hotkey,
+        },
+      };
   }
-
-  return {
-    translation: {
-      selectionEnabled: true,
-      selectionHotkey: hotkey,
-    },
-  };
 }
 
 function rollbackPatch(settings: AppSettings, target: HotkeyTarget): AppSettingsPatch {
-  if (target === "cleanup") return { cleanupToggleHotkey: settings.cleanupToggleHotkey };
-  return target === "dictation"
-    ? { hotkey: settings.hotkey }
-    : {
+  switch (target) {
+    case "cleanup":
+      return { cleanupToggleHotkey: settings.cleanupToggleHotkey };
+    case "dictationCleanup":
+      return { cleanupRecordingHotkey: settings.cleanupRecordingHotkey };
+    case "dictation":
+      return { hotkey: settings.hotkey };
+    case "selection":
+      return {
         translation: {
           selectionEnabled: settings.translation.selectionEnabled,
           selectionHotkey: settings.translation.selectionHotkey,
         },
       };
+  }
 }
 
 function result(
@@ -104,8 +119,9 @@ export async function applyHotkeyTransaction(
   dependencies: HotkeyTransactionDependencies,
 ): Promise<HotkeyRegistrationResultPayload> {
   dependencies.log("validate", request, `candidate=${request.hotkey}`);
+  const allowsEmpty = request.target === "cleanup" || request.target === "dictationCleanup";
   const normalized =
-    request.target === "cleanup" && !request.hotkey
+    allowsEmpty && !request.hotkey
       ? { valid: true, normalized: "" }
       : normalizeHotkey(request.hotkey);
   const initialSettings = await dependencies.loadSettings();
@@ -125,7 +141,7 @@ export async function applyHotkeyTransaction(
     return result(request, false, nextHotkey, activeCurrent, dependencies.messages.stale);
   }
 
-  for (const otherTarget of ["dictation", "selection", "cleanup"] as const) {
+  for (const otherTarget of ["dictation", "selection", "cleanup", "dictationCleanup"] as const) {
     if (otherTarget === request.target || !nextHotkey) continue;
     const configuredOther = normalizeHotkey(
       configuredHotkey(initialSettings, otherTarget) || "",

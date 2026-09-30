@@ -40,7 +40,7 @@ interface UseWidgetHotkeyParams {
   onSelectionTranslationHotkey: () => void;
 }
 
-type HandyHotkeyIntent = "selection" | "voice" | "ignore";
+type HandyHotkeyIntent = "selection" | "voice" | "voice-cleanup" | "ignore";
 type SelectionHotkeyAction = "arm" | "trigger" | "consume";
 interface RegistrationAttemptResult {
   success: boolean;
@@ -53,12 +53,24 @@ export function resolveHandyHotkeyIntent({
   voiceHotkey,
   selectionHotkey,
   selectionEnabled,
+  cleanupRecordingHotkey = null,
 }: {
   eventHotkey: string | null;
   voiceHotkey: string | null;
   selectionHotkey: string | null;
   selectionEnabled: boolean;
+  cleanupRecordingHotkey?: string | null;
 }): HandyHotkeyIntent {
+  if (
+    cleanupRecordingHotkey &&
+    eventHotkey &&
+    eventHotkey === cleanupRecordingHotkey &&
+    eventHotkey !== voiceHotkey &&
+    eventHotkey !== selectionHotkey
+  ) {
+    return "voice-cleanup";
+  }
+
   if (
     selectionEnabled &&
     eventHotkey &&
@@ -109,12 +121,14 @@ export function useWidgetHotkey({
   const isHotkeyCaptureActiveRef = useRef(false);
   const activeCaptureRequestIdRef = useRef<string | null>(null);
   const cleanupRegisteredHotkeyRef = useRef<string | null>(null);
+  const cleanupRecordingRegisteredHotkeyRef = useRef<string | null>(null);
   const cleanupHotkeyArmedRef = useRef(false);
   const selectionRegisteredHotkeyRef = useRef<string | null>(null);
   const latestRequestIdsRef = useRef<Record<HotkeyTarget, string | null>>({
     dictation: null,
     selection: null,
     cleanup: null,
+    dictationCleanup: null,
   });
   const transactionQueueRef = useRef<Promise<void>>(Promise.resolve());
   const selectionHotkeyArmedRef = useRef(false);
@@ -182,11 +196,15 @@ export function useWidgetHotkey({
           DEFAULT_SELECTION_TRANSLATION_HOTKEY,
       );
 
+      const cleanupRecordingHotkey = hotkeyForComparison(
+        settingsRef.current?.cleanupRecordingHotkey,
+      );
       const intent = resolveHandyHotkeyIntent({
         eventHotkey,
         voiceHotkey,
         selectionHotkey,
         selectionEnabled: !!settingsRef.current?.translation.selectionEnabled,
+        cleanupRecordingHotkey,
       });
 
       if (intent === "selection") {
@@ -215,13 +233,14 @@ export function useWidgetHotkey({
         return;
       }
 
-      if (intent !== "voice") {
+      if (intent !== "voice" && intent !== "voice-cleanup") {
         return;
       }
 
+      const mode = settingsRef.current?.recordingHotkeyMode === "toggle" ? "toggle" : "hold";
       if (event.state === "Pressed") {
         activateWidgetForHotkey();
-        dispatch({ type: "HOTKEY_PRESSED" });
+        dispatch({ type: "HOTKEY_PRESSED", mode, cleanup: intent === "voice-cleanup" });
       } else {
         dispatch({ type: "HOTKEY_RELEASED" });
       }
@@ -274,13 +293,13 @@ export function useWidgetHotkey({
 
         activeHotkeyRef.current = nextHotkey;
         if (currentHotkey && currentHotkey !== nextHotkey) {
-          const stillUsedByVoice =
-            activeHotkeyRef !== registeredHotkeyRef &&
-            registeredHotkeyRef.current === currentHotkey;
-          const stillUsedBySelection =
-            activeHotkeyRef !== selectionRegisteredHotkeyRef &&
-            selectionRegisteredHotkeyRef.current === currentHotkey;
-          if (!stillUsedByVoice && !stillUsedBySelection) {
+          const stillUsed = [
+            registeredHotkeyRef,
+            selectionRegisteredHotkeyRef,
+            cleanupRegisteredHotkeyRef,
+            cleanupRecordingRegisteredHotkeyRef,
+          ].some((ref) => ref !== activeHotkeyRef && ref.current === currentHotkey);
+          if (!stillUsed) {
             await invoke("unregister_handy_hotkey", {
               hotkey: currentHotkey,
             }).catch(() => {});
@@ -359,6 +378,21 @@ export function useWidgetHotkey({
     }
   }, [attemptHotkeyRegistration, settingsLoaded, settingsRef, showError, t, unregisterHotkeyRef]);
 
+  const registerCleanupRecordingHotkey = useCallback(async () => {
+    if (!settingsLoaded) return;
+    const hotkey = settingsRef.current?.cleanupRecordingHotkey || "";
+    if (!hotkey) {
+      await unregisterHotkeyRef(cleanupRecordingRegisteredHotkeyRef);
+      return;
+    }
+    const result = await attemptHotkeyRegistration(
+      hotkey,
+      cleanupRecordingRegisteredHotkeyRef,
+      hotkey,
+    );
+    if (!result.success) showError(result.message || t("widget.hotkey.registerFailedGeneric"));
+  }, [attemptHotkeyRegistration, settingsLoaded, settingsRef, showError, t, unregisterHotkeyRef]);
+
   const registerCleanupHotkey = useCallback(async () => {
     if (!settingsLoaded) return;
     const hotkey = settingsRef.current?.cleanupToggleHotkey || "";
@@ -372,6 +406,10 @@ export function useWidgetHotkey({
   useEffect(() => {
     void registerCleanupHotkey();
   }, [registerCleanupHotkey, settings?.cleanupToggleHotkey]);
+
+  useEffect(() => {
+    void registerCleanupRecordingHotkey();
+  }, [registerCleanupRecordingHotkey, settings?.cleanupRecordingHotkey]);
 
   useEffect(() => {
     void registerCurrentHotkey();
@@ -391,8 +429,14 @@ export function useWidgetHotkey({
       await registerCurrentHotkey();
       await registerSelectionHotkey();
       await registerCleanupHotkey();
+      await registerCleanupRecordingHotkey();
     };
-  }, [registerCurrentHotkey, registerSelectionHotkey, registerCleanupHotkey]);
+  }, [
+    registerCurrentHotkey,
+    registerSelectionHotkey,
+    registerCleanupHotkey,
+    registerCleanupRecordingHotkey,
+  ]);
 
   useEffect(() => {
     const unlistenSettings = listen(SETTINGS_UPDATED_EVENT, async () => {
@@ -448,19 +492,32 @@ export function useWidgetHotkey({
               saveSettings,
               registerHotkey: (hotkey) => invoke("register_handy_hotkey", { hotkey }),
               unregisterHotkey: (hotkey) => invoke("unregister_handy_hotkey", { hotkey }),
-              getActiveHotkey: (target) =>
-                target === "dictation"
-                  ? registeredHotkeyRef.current
-                  : target === "cleanup"
-                    ? cleanupRegisteredHotkeyRef.current
-                    : selectionRegisteredHotkeyRef.current,
+              getActiveHotkey: (target) => {
+                switch (target) {
+                  case "dictation":
+                    return registeredHotkeyRef.current;
+                  case "cleanup":
+                    return cleanupRegisteredHotkeyRef.current;
+                  case "dictationCleanup":
+                    return cleanupRecordingRegisteredHotkeyRef.current;
+                  case "selection":
+                    return selectionRegisteredHotkeyRef.current;
+                }
+              },
               setActiveHotkey: (target, hotkey) => {
-                if (target === "dictation") {
-                  registeredHotkeyRef.current = hotkey;
-                } else if (target === "cleanup") {
-                  cleanupRegisteredHotkeyRef.current = hotkey;
-                } else {
-                  selectionRegisteredHotkeyRef.current = hotkey;
+                switch (target) {
+                  case "dictation":
+                    registeredHotkeyRef.current = hotkey;
+                    break;
+                  case "cleanup":
+                    cleanupRegisteredHotkeyRef.current = hotkey;
+                    break;
+                  case "dictationCleanup":
+                    cleanupRecordingRegisteredHotkeyRef.current = hotkey;
+                    break;
+                  case "selection":
+                    selectionRegisteredHotkeyRef.current = hotkey;
+                    break;
                 }
               },
               isCurrentRequest: (target, requestId) =>
@@ -495,7 +552,9 @@ export function useWidgetHotkey({
                   ? registeredHotkeyRef.current
                   : payload.target === "cleanup"
                     ? cleanupRegisteredHotkeyRef.current
-                    : selectionRegisteredHotkeyRef.current) ?? payload.hotkey,
+                    : payload.target === "dictationCleanup"
+                      ? cleanupRecordingRegisteredHotkeyRef.current
+                      : selectionRegisteredHotkeyRef.current) ?? payload.hotkey,
               message: t("settingsGeneralExtra.hotkey.applyFailed"),
             };
           }

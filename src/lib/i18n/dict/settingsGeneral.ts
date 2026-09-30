@@ -51,11 +51,28 @@ export const settingsGeneral = {
   },
 
   // Hotkey
-  "settings.hotkey.title": { ru: "Горячая клавиша", en: "Hotkey" },
+  "settings.hotkey.title": { ru: "Горячие клавиши", en: "Hotkeys" },
   "settings.hotkey.desc": {
     ru: "Нажмите на поле справа и введите новую комбинацию. Если сочетание занято, оставим предыдущую клавишу.",
     en: "Click the field on the right and press a new combination. If it's taken, the previous one is kept.",
   },
+  "settings.hotkey.plain": { ru: "Обычный ввод", en: "Plain dictation" },
+  "settings.hotkey.plainDesc": {
+    ru: "Запись без очистки текста.",
+    en: "Records without cleaning up the text.",
+  },
+  "settings.hotkey.cleanup": { ru: "Ввод с очисткой ИИ", en: "Dictation with AI cleanup" },
+  "settings.hotkey.cleanupDesc": {
+    ru: "Та же запись, но текст проходит через выбранный стиль очистки.",
+    en: "The same recording, with the selected cleanup style applied.",
+  },
+  "settings.hotkey.mode": { ru: "Как срабатывает", en: "How it starts" },
+  "settings.hotkey.modeDesc": {
+    ru: "Удерживать — запись идёт, пока клавиша нажата. По нажатию — первое нажатие начинает запись, повторное заканчивает.",
+    en: "Hold keeps recording while the keys are down. Press starts on the first press and stops on the next one.",
+  },
+  "settings.hotkey.modeHold": { ru: "Удерживать", en: "Hold" },
+  "settings.hotkey.modeToggle": { ru: "По нажатию", en: "Press" },
   "settings.hotkey.change": { ru: "Изменить", en: "Change" },
   "settings.hotkey.recording": { ru: "Запись", en: "Recording" },
   "settings.hotkey.checking": { ru: "Проверка", en: "Checking" },
@@ -125,8 +142,8 @@ export const settingsGeneral = {
     en: "Show icon in Dock",
   },
   "settings.dock.desc": {
-    ru: "Когда выключено, Talkee работает только в строке меню.",
-    en: "When off, Talkee runs from the menu bar only.",
+    ru: "Закрытие окна прячет Talkee в строку меню и убирает значок из Dock. Пока окно открыто, значок виден, если эта настройка включена.",
+    en: "Closing the window leaves Talkee in the menu bar and removes the Dock icon. While the window is open, the icon shows when this is on.",
   },
 
   // Models directory

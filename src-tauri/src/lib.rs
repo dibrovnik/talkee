@@ -68,7 +68,16 @@ pub fn run() {
         .on_menu_event(app_menu::handle_event)
         .on_window_event(|window, event| {
             if window.label() == "settings" {
-                if let tauri::WindowEvent::Destroyed = event {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    if let Err(err) = window.hide() {
+                        logger::log_error(
+                            "WINDOW",
+                            &format!("Failed to hide settings window: {err}"),
+                        );
+                    }
+                    dock::settings_window_closed(window.app_handle());
+                } else if let tauri::WindowEvent::Destroyed = event {
                     dock::settings_window_closed(window.app_handle());
                 }
                 return;

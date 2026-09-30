@@ -1,8 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { NATIVE_VOICE_LEVEL_EVENT } from "../../../lib/hotkeyEvents";
 import { useI18n } from "../../../lib/i18n";
+import { IconCopy } from "../../../lib/icons";
 import { Button } from "../../../ui/Button";
 import { TextTicker } from "../ticker/TextTicker";
 import {
@@ -11,7 +13,7 @@ import {
   type IslandVisualState,
   islandTransition,
 } from "./islandLayout";
-import { type IslandNotice, islandNoticeIsInteractive } from "./islandState";
+import { type IslandNotice, islandNoticeIsInteractive, islandShowsCopyButton } from "./islandState";
 
 const LEVEL_FRAME_MS = 1000 / 30;
 
@@ -23,6 +25,7 @@ export interface IslandPresentationProps {
   elapsedMs: number;
   tickerText: string;
   tickerLive: boolean;
+  copyText: string | null;
 }
 
 export function IslandPresentation({
@@ -33,9 +36,11 @@ export function IslandPresentation({
   elapsedMs,
   tickerText,
   tickerLive,
+  copyText,
 }: IslandPresentationProps): ReactElement {
   const { t } = useI18n();
   const reduced = usePrefersReducedMotion();
+  const showCopy = islandShowsCopyButton(state, copyText);
   const layout = computeIslandLayout(state, anchor, {
     cleanupEnabled,
     noticeText: notice?.message ?? "",
@@ -82,7 +87,17 @@ export function IslandPresentation({
         <Slot side="right" width={earWidth} height={tickerText ? anchor.notchHeight : undefined}>
           {layout.rightSlot === "level" && <LevelBars active={state === "recording"} />}
           {layout.rightSlot === "spinner" && <ProcessingSpinner />}
-          {layout.rightSlot === "check" && <DoneCheck />}
+          {layout.rightSlot === "check" &&
+            (showCopy && copyText ? (
+              <CopyButton
+                label={t("widget.idle.copy")}
+                onCopy={() => {
+                  void writeText(copyText);
+                }}
+              />
+            ) : (
+              <DoneCheck />
+            ))}
           {layout.rightSlot === "call" && <CallLabel label={t("widget.island.call")} />}
         </Slot>
         {layout.expanded && notice && (
@@ -250,6 +265,35 @@ function ProcessingSpinner(): ReactElement {
         animation: "spin 0.8s linear infinite",
       }}
     />
+  );
+}
+
+function CopyButton({ label, onCopy }: { label: string; onCopy: () => void }): ReactElement {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={(event) => {
+        event.stopPropagation();
+        onCopy();
+      }}
+      style={{
+        width: 22,
+        height: 22,
+        border: "none",
+        borderRadius: 11,
+        padding: 0,
+        background: "rgba(255,255,255,0.16)",
+        color: "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        pointerEvents: "auto",
+      }}
+    >
+      <IconCopy size={12} stroke={2} />
+    </button>
   );
 }
 

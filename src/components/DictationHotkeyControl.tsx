@@ -13,7 +13,7 @@ export function DictationHotkeyControl({
   livePreview = false,
   target = "dictation",
 }: {
-  target?: "dictation" | "cleanup";
+  target?: "dictation" | "cleanup" | "dictationCleanup";
   settings: AppSettings;
   onSettingsChange: (settings: AppSettings) => void;
   appearance?: "field" | "keycaps";
@@ -49,7 +49,11 @@ export function DictationHotkeyControl({
     : capture.active
       ? t("settings.hotkey.press")
       : formatHotkeyLabel(
-          target === "cleanup" ? settings.cleanupToggleHotkey : settings.hotkey || DEFAULT_HOTKEY,
+          target === "cleanup"
+            ? settings.cleanupToggleHotkey
+            : target === "dictationCleanup"
+              ? settings.cleanupRecordingHotkey
+              : settings.hotkey || DEFAULT_HOTKEY,
         );
   const pressedKeys = useLiveHotkeyPreview({
     enabled: livePreview,
@@ -90,18 +94,19 @@ export function DictationHotkeyControl({
           </>
         )}
       </div>
-      {target === "cleanup" && settings.cleanupToggleHotkey && (
-        <button
-          type="button"
-          className="ui-disclosure-link"
-          disabled={capture.submitting}
-          onClick={() => {
-            void capture.submit("");
-          }}
-        >
-          {t("cleanup.clear")}
-        </button>
-      )}
+      {(target === "cleanup" || target === "dictationCleanup") &&
+        (target === "cleanup" ? settings.cleanupToggleHotkey : settings.cleanupRecordingHotkey) && (
+          <button
+            type="button"
+            className="ui-disclosure-link"
+            disabled={capture.submitting}
+            onClick={() => {
+              void capture.submit("");
+            }}
+          >
+            {t("cleanup.clear")}
+          </button>
+        )}
       {(capture.active || capture.submitting || capture.tone !== "idle") && (
         <div
           role={capture.tone === "error" ? "alert" : "status"}

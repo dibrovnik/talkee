@@ -37,3 +37,10 @@ export function mapIslandState(input: IslandStateInput): IslandVisualState {
 export function islandNoticeIsInteractive(notice: IslandNotice | null): boolean {
   return Boolean(notice?.actionLabel);
 }
+
+/** How long the island keeps the copy button after processing finishes. */
+export const ISLAND_COPY_VISIBLE_MS = 3000;
+
+export function islandShowsCopyButton(state: IslandVisualState, text: string | null): boolean {
+  return state === "done" && Boolean(text?.trim());
+}

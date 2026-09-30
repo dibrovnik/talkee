@@ -71,23 +71,25 @@ fn update_preference(app: &AppHandle, show: bool) {
     apply_current_policy(app);
 }
 
-/// Called before the settings window is shown: in utility mode the app must
-/// become `Regular` and unhide so the window comes to the front.
+/// Called before the settings window is shown. The window needs `Regular`
+/// so it can come to the front, even after a previous close left the app
+/// as an accessory.
 pub fn prepare_settings_window(app: &AppHandle) {
-    if show_in_dock(app) {
-        return;
-    }
     apply_policy(app, ActivationPolicy::Regular);
     if let Err(err) = app.show() {
         logger::log_error("DOCK", &format!("Failed to show application: {err}"));
     }
 }
 
-/// Called after the settings window is closed: returns to utility mode if the
-/// Dock icon is turned off.
+/// The main window was hidden. Leave the Dock and the app switcher; the
+/// menu-bar icon and overlay stay.
 pub fn settings_window_closed(app: &AppHandle) {
-    if !show_in_dock(app) {
-        apply_policy(app, ActivationPolicy::Accessory);
+    apply_policy(app, ActivationPolicy::Accessory);
+    // Accessory can order windows out. The pill or island should stay on screen.
+    if let Some(window) = app.get_webview_window("widget") {
+        if let Err(err) = window.show() {
+            logger::log_error("DOCK", &format!("Failed to keep the widget visible: {err}"));
+        }
     }
 }
 

@@ -2,6 +2,7 @@
 compile_error!("talkee supports macOS only");
 
 mod ai;
+mod app_nap;
 mod call_capture;
 mod commands;
 mod download_cancel;
@@ -181,6 +182,8 @@ pub fn run() {
             stop_native_hotkey_capture,
             hotkey_manager::register_handy_hotkey,
             hotkey_manager::unregister_handy_hotkey,
+            app_nap::begin_work_activity,
+            app_nap::end_work_activity,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Talkee");

@@ -53,9 +53,9 @@
 
 ## 6. App Nap
 
-- [ ] 6.1 Команды `begin_work_activity` / `end_work_activity` (design.md, решение 12); регистрация в `lib.rs`
-- [ ] 6.2 Вызовы в пайплайне диктовки (`transcriptionPipeline.ts` / `useWidgetRecording.ts`) с `finally`
-- [ ] 6.3 Проверка: лог показывает begin/end для каждой диктовки, включая ошибочную
+- [x] 6.1 Команды `begin_work_activity` / `end_work_activity` (design.md, решение 12); регистрация в `lib.rs`
+- [x] 6.2 Вызовы в пайплайне диктовки (`transcriptionPipeline.ts` / `useWidgetRecording.ts`) с `finally`
+- [x] 6.3 Проверка: лог показывает begin/end для каждой диктовки, включая ошибочную
 
 ## 7. Итоговые замеры
 

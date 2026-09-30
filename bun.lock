@@ -17,6 +17,7 @@
         "react-dom": "^19.1.0",
       },
       "devDependencies": {
+        "@dibrovnik/pvs": "0.1.1",
         "@tailwindcss/vite": "^4.2.1",
         "@tauri-apps/cli": "2.11.4",
         "@types/react": "^19.1.8",
@@ -69,6 +70,8 @@
     "@babel/types": ["@babel/types@7.29.0", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A=="],
 
     "@derhuerst/http-basic": ["@derhuerst/http-basic@8.2.4", "", { "dependencies": { "caseless": "^0.12.0", "concat-stream": "^2.0.0", "http-response-object": "^3.0.1", "parse-cache-control": "^1.0.1" } }, "sha512-F9rL9k9Xjf5blCz8HsJRO4diy111cayL2vkY2XE4r4t3n0yPXVYy3KD3nJ1qbrSn9743UWSXH4IwuCa/HWlGFw=="],
+
+    "@dibrovnik/pvs": ["@dibrovnik/pvs@0.1.1", "", { "bin": { "pvs": "bin/pvs.js" } }, "sha512-L4Y326wCofy/n/lCoz9kegSjyF/dpeoLFcbA6f9InzUGg8y5RFzlmuRBOEuCdmN4+45FMCPKX+kYfs0HfVijFg=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.27.3", "", { "os": "aix", "cpu": "ppc64" }, "sha512-9fJMTNFTWZMh5qwrBItuziu834eOCUcEqymSH7pY+zoMVEZg3gcPuBNxH1EvfVYe9h0x/Ptw8KBzv7qxb7l8dg=="],
 

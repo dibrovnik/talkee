@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "targets": [
+    {
+      "file": "src-tauri/Cargo.toml",
+      "type": "replace",
+      "match": "\\nversion = \"[^\"]+\"",
+      "replace": "\nversion = \"$version\"",
+      "multiple": true
+    },
+    {
+      "file": "src-tauri/Cargo.lock",
+      "type": "replace",
+      "match": "(?<=\\nname = \"talkee(?:-llm)?\"\\n)version = \"[^\"]+\"",
+      "replace": "version = \"$version\"",
+      "multiple": true
+    }
+  ]
+}

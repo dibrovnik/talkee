@@ -81,7 +81,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Check version sync
-        run: bun run check:versions
+        run: bun run version:check
 
       - name: TypeScript type check
         run: bunx tsc --noEmit

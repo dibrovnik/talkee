@@ -285,6 +285,7 @@ function ModelStats({ stats }: { stats: LocalSttModelCardStats }): ReactElement 
       {items.map(({ key, title, value, Icon }) => (
         <div
           key={key}
+          role="img"
           title={title}
           aria-label={title}
           style={{
@@ -310,6 +311,7 @@ function ModelStats({ stats }: { stats: LocalSttModelCardStats }): ReactElement 
       ))}
       {stats.streamingLabel && (
         <div
+          role="img"
           title={stats.streamingLabel}
           aria-label={stats.streamingLabel}
           style={{

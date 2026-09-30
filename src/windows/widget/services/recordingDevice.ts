@@ -62,6 +62,8 @@ export async function resolveSelectedMicLabel(micId: string): Promise<string | n
     logError("RECORDING", `Failed to resolve selected mic label: ${formatErrorMessage(error)}`);
     return null;
   } finally {
-    permissionStream?.getTracks().forEach((track) => track.stop());
+    permissionStream?.getTracks().forEach((track) => {
+      track.stop();
+    });
   }
 }

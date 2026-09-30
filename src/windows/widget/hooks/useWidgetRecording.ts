@@ -1,11 +1,26 @@
-import { useCallback, useEffect, useRef } from "react";
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { invoke } from "@tauri-apps/api/core";
-
-import { AppSettings, getSettings } from "../../../lib/store";
-import { logError, logInfo } from "../../../lib/logger";
+import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useI18n } from "../../../lib/i18n";
+import { logError, logInfo } from "../../../lib/logger";
+import { type AppSettings, getSettings } from "../../../lib/store";
 import { formatErrorMessage } from "../../../lib/utils";
+import {
+  createNativeLiveDictationOptions,
+  isLocalSttStreamingEnabled,
+  isSttStreamingEnabled,
+  warmUpLiveDictationRuntime,
+} from "../services/dictationStreamOverlay";
+import { getVoiceAudioConstraints, resolveSelectedMicLabel } from "../services/recordingDevice";
+import { createRecordingRuntimeController } from "../services/recordingRuntime";
+import { waitForRuntimeWarmUpWithinBudget } from "../services/runtimeWarmup";
+import {
+  type DictationStreamOverlaySession,
+  processRecordingBlob,
+  startDictationStreamOverlaySession,
+} from "../services/transcriptionPipeline";
+import type { WidgetAction, WidgetMachineState } from "../services/widgetMachine";
+import type { WidgetNoticeTone } from "../widgetConstants";
 import {
   MAX_RECORDING_DURATION_MS,
   MIN_AUDIO_BLOB_BYTES,
@@ -13,22 +28,6 @@ import {
   widgetStackHeight,
   widgetStackWidth,
 } from "../widgetConstants";
-import type { WidgetNoticeTone } from "../widgetConstants";
-import { createRecordingRuntimeController } from "../services/recordingRuntime";
-import {
-  processRecordingBlob,
-  startDictationStreamOverlaySession,
-  type DictationStreamOverlaySession,
-} from "../services/transcriptionPipeline";
-import { getVoiceAudioConstraints, resolveSelectedMicLabel } from "../services/recordingDevice";
-import {
-  createNativeLiveDictationOptions,
-  isLocalSttStreamingEnabled,
-  isSttStreamingEnabled,
-  warmUpLiveDictationRuntime,
-} from "../services/dictationStreamOverlay";
-import { waitForRuntimeWarmUpWithinBudget } from "../services/runtimeWarmup";
-import type { WidgetAction, WidgetMachineState } from "../services/widgetMachine";
 
 const LOW_MIC_GRACE_MS = 1800;
 const LOW_MIC_SUSTAINED_MS = 2600;

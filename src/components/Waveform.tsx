@@ -55,7 +55,8 @@ export function Waveform({ stream, isActive }: WaveformProps) {
 
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const ctx = canvas.getContext("2d")!;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
       // Use actual display dimensions
       const dpr = window.devicePixelRatio || 1;
@@ -78,7 +79,7 @@ export function Waveform({ stream, isActive }: WaveformProps) {
       }
 
       const rms = Math.sqrt(sumSquares / dataArray.length);
-      const boostedLevel = Math.pow(Math.min(1, rms * 12.5), 0.54);
+      const boostedLevel = Math.min(1, rms * 12.5) ** 0.54;
       const quietFloor = rms > 0.003 ? 0.14 : 0;
       const levelTarget = Math.max(quietFloor, boostedLevel);
       levelRef.current = levelRef.current * 0.44 + levelTarget * 0.56;
@@ -96,7 +97,7 @@ export function Waveform({ stream, isActive }: WaveformProps) {
         for (let x = 0; x <= displayWidth; x += DRAW_STEP_PX) {
           const progress = x / displayWidth;
           const edgeFade = Math.sin(progress * Math.PI);
-          const envelope = Math.pow(Math.max(0, edgeFade), 1.08);
+          const envelope = Math.max(0, edgeFade) ** 1.08;
           const drift = Math.sin(time * 0.37 + line.phase) * 0.18;
           const primary = Math.sin(
             progress * Math.PI * (3.1 + line.wobble * 0.18) + time * line.speed + line.phase,
@@ -150,7 +151,8 @@ export function Waveform({ stream, isActive }: WaveformProps) {
   function drawEmpty() {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 

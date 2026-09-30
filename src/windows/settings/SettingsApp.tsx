@@ -1,49 +1,49 @@
-import { useState, useEffect } from "react";
-import type { CSSProperties } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
-import {
-  IconFileMusic,
-  IconHome,
-  IconCpu,
-  IconMessage,
-  IconLanguage,
-  IconSparkles,
-  IconAdjustmentsHorizontal,
-  Icon,
-} from "../../lib/icons";
-import { TitleBar } from "../../components/TitleBar";
-import { MainTab } from "./tabs/MainTab";
-import { FileTranscriptionTab } from "./tabs/FileTranscriptionTab";
-import { SettingsTab } from "./tabs/SettingsTab";
-import { SettingsTabs } from "./tabs/SettingsTabs";
-import { DevChatTab } from "./tabs/DevChatTab";
-import { TranslationTab } from "./tabs/TranslationTab";
+import type { CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { OnboardingFlow } from "../../components/onboarding/OnboardingFlow";
+import { TitleBar } from "../../components/TitleBar";
 import {
   DEV_ONBOARDING_REQUEST_EVENT,
-  SETTINGS_NAVIGATE_EVENT,
-  SETTINGS_UPDATED_EVENT,
   SELECTION_TEXT_REQUEST_EVENT,
   SELECTION_TEXT_RESPONSE_EVENT,
-  SettingsNavigatePayload,
+  SETTINGS_NAVIGATE_EVENT,
+  SETTINGS_UPDATED_EVENT,
   type SelectionTextRequestPayload,
+  type SettingsNavigatePayload,
 } from "../../lib/hotkeyEvents";
+import { type MsgKey, useI18n } from "../../lib/i18n";
 import {
-  getPermissionsPassed,
-  setPermissionsPassed,
+  type Icon,
+  IconAdjustmentsHorizontal,
+  IconCpu,
+  IconFileMusic,
+  IconHome,
+  IconLanguage,
+  IconMessage,
+  IconSparkles,
+} from "../../lib/icons";
+import { logError } from "../../lib/logger";
+import { checkAllPermissions } from "../../lib/permissions";
+import {
   getHistoryIndex,
+  getPermissionsPassed,
   getSettings,
+  setPermissionsPassed,
   type ThemePreference,
 } from "../../lib/store";
-import { checkAllPermissions } from "../../lib/permissions";
-import { logError } from "../../lib/logger";
 import { watchThemePreference } from "../../lib/theme";
 import {
   isSettingsTab,
   resolveInitialSettingsTab,
   type SettingsTab as Tab,
 } from "./settingsNavigation";
-import { useI18n, type MsgKey } from "../../lib/i18n";
+import { DevChatTab } from "./tabs/DevChatTab";
+import { FileTranscriptionTab } from "./tabs/FileTranscriptionTab";
+import { MainTab } from "./tabs/MainTab";
+import { SettingsTab } from "./tabs/SettingsTab";
+import { SettingsTabs } from "./tabs/SettingsTabs";
+import { TranslationTab } from "./tabs/TranslationTab";
 
 function resolveInitialTab(): Tab {
   return resolveInitialSettingsTab(window.location.search);
@@ -134,6 +134,7 @@ function SidebarLogo() {
         <div style={{ display: "flex", alignItems: "center", gap: 3, height: 22 }}>
           {[8, 16, 11, 19, 10].map((height, index) => (
             <span
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed set of logo bars, the order never changes.
               key={index}
               style={{
                 display: "block",

@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, type ReactElement } from "react";
 import { listen } from "@tauri-apps/api/event";
-
-import { IconCheck, IconLoader2 } from "../../lib/icons";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import { HISTORY_DELETED_EVENT, HISTORY_UPDATED_EVENT } from "../../lib/hotkeyEvents";
 import { useI18n } from "../../lib/i18n";
+import { IconCheck, IconLoader2 } from "../../lib/icons";
 import { logError } from "../../lib/logger";
 import { matchesOnboardingTestPhrase } from "../../lib/onboarding";
 import type { AppSettings, HistoryEntry } from "../../lib/store";

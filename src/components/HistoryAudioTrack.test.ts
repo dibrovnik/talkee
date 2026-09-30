@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
-
-import { buildHistoryAudioTrackSources } from "./HistoryAudioTrack";
 import type { HistoryEntry } from "../lib/store";
+import { buildHistoryAudioTrackSources } from "./HistoryAudioTrack";
 
 function entry(source: HistoryEntry["source"]): HistoryEntry {
   return {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-
+import { ONBOARDING_STT_MODELS } from "../config/onboardingSttModels";
 import {
   buildOnboardingLocalSttPatch,
   formatOnboardingDownloadProgress,
@@ -7,7 +7,6 @@ import {
   normalizeOnboardingTestPhrase,
   resolveOnboardingModelId,
 } from "./onboarding";
-import { ONBOARDING_STT_MODELS } from "../config/onboardingSttModels";
 
 describe("onboarding local STT helpers", () => {
   it("normalizes casing, spacing and е/ё without removing punctuation", () => {

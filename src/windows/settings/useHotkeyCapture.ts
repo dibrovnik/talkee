@@ -1,23 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { emit, listen } from "@tauri-apps/api/event";
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
   RefObject,
 } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { emit, listen } from "@tauri-apps/api/event";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   HOTKEY_CAPTURE_STATE_EVENT,
   HOTKEY_CHANGE_REQUEST_EVENT,
   HOTKEY_REGISTRATION_RESULT_EVENT,
-  NATIVE_HOTKEY_CAPTURE_EVENT,
   type HotkeyRegistrationResultPayload,
   type HotkeyTarget,
+  NATIVE_HOTKEY_CAPTURE_EVENT,
   type NativeHotkeyCapturePayload,
 } from "../../lib/hotkeyEvents";
-import { normalizeHotkey } from "../../lib/store";
 import { logError } from "../../lib/logger";
+import { normalizeHotkey } from "../../lib/store";
 
 export type HotkeyFeedbackTone = "idle" | "success" | "error";
 

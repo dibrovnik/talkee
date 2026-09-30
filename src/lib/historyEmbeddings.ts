@@ -1,9 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import {
+  type HistorySearchChunk,
   historySearchEmbeddingQuery,
   saveCachedHistorySearchIndex,
-  type HistorySearchChunk,
 } from "./devChatHistoryContext";
 import type { AppSettings } from "./store";
 

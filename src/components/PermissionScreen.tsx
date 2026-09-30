@@ -1,19 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { IconMicrophone, IconKeyboard, IconCheck, IconAlertCircle, IconVolume } from "../lib/icons";
+import { useCallback, useEffect, useState } from "react";
+import { useI18n } from "../lib/i18n";
+import { IconAlertCircle, IconCheck, IconKeyboard, IconMicrophone, IconVolume } from "../lib/icons";
+import { logError, logInfo } from "../lib/logger";
 import {
-  PermissionStatus,
   checkAccessibilityPermission,
   checkMicrophonePermission,
   checkSystemAudioPermission,
+  type PermissionStatus,
   requestMicrophonePermission,
   requestSystemAudioPermission,
 } from "../lib/permissions";
 import { getSettings } from "../lib/store";
-import { logError, logInfo } from "../lib/logger";
-import { useI18n } from "../lib/i18n";
 import { scaleWidgetDimension } from "../lib/widgetScale";
 import { widgetStackHeight, widgetStackWidth } from "../windows/widget/widgetConstants";
 import { OnboardingProgress } from "./onboarding/OnboardingShell";

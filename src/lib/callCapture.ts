@@ -1,22 +1,21 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
-
+import {
+  type FileTranscriptionProgress,
+  type FileTranscriptionResult,
+  type FileTranscriptionStatus,
+  toFileTranscriptionErrorMessage,
+  transcribeFileOnly,
+  transcribeFilePathOnly,
+} from "./fileTranscription";
 import { HISTORY_UPDATED_EVENT } from "./hotkeyEvents";
+import { tn } from "./i18n";
 import { logError, logInfo } from "./logger";
 import { beginProcessing, finishProcessing } from "./processingControl";
-import { tn } from "./i18n";
 import {
-  type FileTranscriptionResult,
-  toFileTranscriptionErrorMessage,
-  transcribeFilePathOnly,
-  transcribeFileOnly,
-  type FileTranscriptionProgress,
-  type FileTranscriptionStatus,
-} from "./fileTranscription";
-import {
+  type AppSettings,
   addHistoryEntry,
   getHistory,
-  type AppSettings,
   type HistoryEntry,
   type SpeakerTranscriptSegment,
   updateHistoryEntry,

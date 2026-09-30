@@ -49,7 +49,9 @@ export async function checkMicrophonePermission(): Promise<PermissionStatus> {
 export async function requestMicrophonePermission(): Promise<boolean> {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach((t) => t.stop());
+    stream.getTracks().forEach((t) => {
+      t.stop();
+    });
     return true;
   } catch {
     return false;

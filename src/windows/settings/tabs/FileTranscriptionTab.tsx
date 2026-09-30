@@ -1,9 +1,27 @@
-import { useEffect, useRef, useState } from "react";
-import type { ChangeEvent, DragEvent, JSX } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
+import type { ChangeEvent, DragEvent, JSX } from "react";
+import { useEffect, useRef, useState } from "react";
+import { SpeakerNameInput } from "../../../components/SpeakerNameInput";
+import { SummaryModal } from "../../../components/SummaryModal";
+import {
+  type FileTranscriptionProgress,
+  type FileTranscriptionStatus,
+  fileNameFromPath,
+  formatFileSize,
+  getFileTranscriptionPercent,
+  toFileTranscriptionErrorMessage,
+  transcribeFileOnly,
+  transcribeFilePathOnly,
+} from "../../../lib/fileTranscription";
+import {
+  CALL_CAPTURE_STOP_REQUEST_EVENT,
+  HISTORY_UPDATED_EVENT,
+  SETTINGS_UPDATED_EVENT,
+} from "../../../lib/hotkeyEvents";
+import { type TFunc, useI18n } from "../../../lib/i18n";
 import {
   IconAlertCircle,
   IconCheck,
@@ -14,37 +32,18 @@ import {
   IconSquare,
   IconX,
 } from "../../../lib/icons";
-
 import {
+  type AppSettings,
   addHistoryEntry,
   getHistory,
   getSettings,
-  HistoryEntry,
+  type HistoryEntry,
+  type SpeakerTranscriptSegment,
   saveSettings,
   updateHistoryEntry,
-  type AppSettings,
-  type SpeakerTranscriptSegment,
 } from "../../../lib/store";
-import {
-  CALL_CAPTURE_STOP_REQUEST_EVENT,
-  HISTORY_UPDATED_EVENT,
-  SETTINGS_UPDATED_EVENT,
-} from "../../../lib/hotkeyEvents";
-import { formatErrorMessage } from "../../../lib/utils";
 import { isSummaryAvailable } from "../../../lib/summarize";
-import { SummaryModal } from "../../../components/SummaryModal";
-import { SpeakerNameInput } from "../../../components/SpeakerNameInput";
-import { useI18n, type TFunc } from "../../../lib/i18n";
-import {
-  fileNameFromPath,
-  FileTranscriptionProgress,
-  FileTranscriptionStatus,
-  formatFileSize,
-  getFileTranscriptionPercent,
-  toFileTranscriptionErrorMessage,
-  transcribeFilePathOnly,
-  transcribeFileOnly,
-} from "../../../lib/fileTranscription";
+import { formatErrorMessage } from "../../../lib/utils";
 
 type ProcessingState = "idle" | FileTranscriptionStatus | "error";
 type SpeakerSetupIntent = "toggle" | "process";
@@ -1081,7 +1080,9 @@ export function FileTranscriptionTab({
 
       {!liveCallEntry ? (
         <>
+          {/* biome-ignore lint/a11y/useSemanticElements: file drop zone needs drag-and-drop handlers and a large layout; a <button> cannot host them. */}
           <section
+            // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: the drop zone intentionally exposes button semantics on a <section>.
             role="button"
             tabIndex={isProcessing ? -1 : 0}
             onClick={() => {
@@ -1439,6 +1440,7 @@ export function FileTranscriptionTab({
               >
                 {displayedResultEntry.segments?.map((segment, index) => (
                   <div
+                    // biome-ignore lint/suspicious/noArrayIndexKey: segments can share speaker and start time; the index keeps the key unique.
                     key={`${segment.speakerId}-${segment.start}-${index}`}
                     style={{
                       display: "grid",
@@ -1585,6 +1587,7 @@ export function FileTranscriptionTab({
       </section>
 
       {speakerSetupModalOpen && (
+        // biome-ignore lint/a11y/useKeyWithClickEvents: modal scrim closes on click; keyboard users have the Escape handler and the dialog controls.
         <div
           role="dialog"
           aria-modal="true"
@@ -1601,6 +1604,8 @@ export function FileTranscriptionTab({
           }}
           onClick={closeSpeakerSetupModal}
         >
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: the click handler only stops propagation so clicks inside the dialog do not close it. */}
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: the click handler only stops propagation so clicks inside the dialog do not close it. */}
           <div
             className="card"
             style={{

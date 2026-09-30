@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-
+import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
+import { useI18n } from "../lib/i18n";
 import { IconLoader2, IconPause, IconPlayerPlay } from "../lib/icons";
 import { logError } from "../lib/logger";
-import { readHistoryAudio, type HistoryEntry } from "../lib/store";
-import { useI18n } from "../lib/i18n";
+import { type HistoryEntry, readHistoryAudio } from "../lib/store";
 
 export interface AudioTrackSource {
   id: string;
@@ -412,6 +411,7 @@ export function HistoryAudioTrack({
       />
 
       {sources.map((source, index) => (
+        // biome-ignore lint/a11y/useMediaCaption: local microphone recordings have no caption track.
         <audio
           key={source.id}
           ref={(audio) => {

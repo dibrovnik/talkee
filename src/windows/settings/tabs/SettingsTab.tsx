@@ -1,4 +1,3 @@
-import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import {
@@ -7,25 +6,29 @@ import {
   isEnabled as isAutostartEnabled,
 } from "@tauri-apps/plugin-autostart";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import { useEffect, useRef, useState } from "react";
+import { DictationHotkeyControl } from "../../../components/DictationHotkeyControl";
+import { LANGUAGES } from "../../../config/languages";
+import { SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
+import { useI18n } from "../../../lib/i18n";
 import {
+  type Icon,
   IconCheck,
   IconChevronDown,
-  IconMail,
   IconDeviceDesktop,
+  IconMail,
   IconMoon,
   IconSearch,
   IconSun,
-  type Icon,
 } from "../../../lib/icons";
-
+import { logError, logInfo } from "../../../lib/logger";
 import {
+  type AppSettings,
+  type AppSettingsPatch,
   getSettings,
   mergeAppSettingsPatch,
   saveSettings,
-  AppSettings,
-  AppSettingsPatch,
 } from "../../../lib/store";
-import { DictationHotkeyControl } from "../../../components/DictationHotkeyControl";
 import { applyThemePreference } from "../../../lib/theme";
 import {
   formatWidgetScalePercent,
@@ -34,10 +37,6 @@ import {
   WIDGET_SCALE_MIN,
   WIDGET_SCALE_STEP,
 } from "../../../lib/widgetScale";
-import { SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
-import { logError, logInfo } from "../../../lib/logger";
-import { LANGUAGES } from "../../../config/languages";
-import { useI18n } from "../../../lib/i18n";
 
 const SETTING_ROW_COLUMNS = "minmax(0, 1fr) 280px";
 const SETTING_ROW_GAP = 16;
@@ -152,7 +151,7 @@ export function SettingsTab() {
 
     const fetchMics = async () => {
       try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        if (!navigator.mediaDevices?.enumerateDevices) {
           void logInfo("SETTINGS", "Media devices API not available");
           setMicStatus("empty");
           setMicMessage(t("settingsGeneralExtra.mic.unavailableEnv"));
@@ -172,7 +171,9 @@ export function SettingsTab() {
               await new Promise((r) => setTimeout(r, 50));
               devices = await navigator.mediaDevices.enumerateDevices();
               mics = devices.filter((d) => d.kind === "audioinput");
-              stream.getTracks().forEach((t) => t.stop());
+              stream.getTracks().forEach((t) => {
+                t.stop();
+              });
             } catch (permitErr) {
               void logInfo(
                 "SETTINGS",
@@ -635,7 +636,9 @@ export function SettingsTab() {
                   >
                     <IconSearch size={13} style={{ color: "var(--text-low)", flexShrink: 0 }} />
                     <input
-                      autoFocus
+                      ref={(el) => {
+                        el?.focus();
+                      }}
                       value={langSearch}
                       onChange={(e) => setLangSearch(e.target.value)}
                       placeholder={t("settings.recognitionLang.searchPlaceholder")}

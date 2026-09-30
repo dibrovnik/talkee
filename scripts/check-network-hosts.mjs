@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { dirname, extname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = resolve(SCRIPT_DIR, "..");
@@ -74,20 +74,22 @@ export function extractHosts(content) {
 
   content.split(/\r?\n/).forEach((line, index) => {
     const re = new RegExp(URL_RE.source, "g");
-    let match;
-    while ((match = re.exec(line)) !== null) {
+    let match = re.exec(line);
+    while (match !== null) {
       let hostname;
       try {
         hostname = new URL(match[0]).hostname;
       } catch {
-        continue;
+        hostname = undefined;
       }
-      if (!hostname || !isValidHostname(hostname)) continue;
-      results.push({
-        line: index + 1,
-        host: normalizeHost(hostname),
-        url: match[0],
-      });
+      if (hostname && isValidHostname(hostname)) {
+        results.push({
+          line: index + 1,
+          host: normalizeHost(hostname),
+          url: match[0],
+        });
+      }
+      match = re.exec(line);
     }
   });
 
@@ -136,7 +138,9 @@ export function collectFiles(rootDir, targets = SCAN_TARGETS) {
     } else if (stats.isDirectory()) {
       const out = [];
       walkFiles(abs, out);
-      out.forEach((file) => found.add(file));
+      out.forEach((file) => {
+        found.add(file);
+      });
     }
   }
 

@@ -1,8 +1,7 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
-
-import { getSettings } from "../store";
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { SETTINGS_UPDATED_EVENT } from "../hotkeyEvents";
+import { getSettings } from "../store";
 import { MESSAGES, type MsgKey } from "./messages";
 
 export type UiLanguage = "ru" | "en";

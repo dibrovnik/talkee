@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { HotkeyChangeRequestPayload, HotkeyTarget } from "../../../lib/hotkeyEvents";
-import { mergeAppSettingsPatch, type AppSettings } from "../../../lib/store";
+import { type AppSettings, mergeAppSettingsPatch } from "../../../lib/store";
 import {
   applyHotkeyTransaction,
   type HotkeyTransactionDependencies,

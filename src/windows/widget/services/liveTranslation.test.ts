@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { AppSettings } from "../../../lib/store";
 import { realtimeConfigurationFingerprint } from "../../../lib/realtimeModels";
+import type { AppSettings } from "../../../lib/store";
 
 import {
   applyLiveTranslationEvent,

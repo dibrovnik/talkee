@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-
+import type { AppSettings } from "../../../lib/store";
 import {
   buildSelectionTranslationPrompt,
   buildSelectionTranslationSourcePayload,
@@ -7,7 +7,6 @@ import {
   translateSelectedText,
   translateSelectedTextWithBackend,
 } from "./selectionTranslation";
-import type { AppSettings } from "../../../lib/store";
 
 function settings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {

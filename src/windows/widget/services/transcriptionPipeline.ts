@@ -1,42 +1,41 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-
+import { LANGUAGES } from "../../../config/languages";
 import {
-  AppSettings,
-  deleteHistoryEntry,
+  DICTATION_STREAM_UPDATE_EVENT,
+  type DictationStreamUpdatePayload,
+  HISTORY_DELETED_EVENT,
+} from "../../../lib/hotkeyEvents";
+import { tn } from "../../../lib/i18n";
+import { logError, logInfo } from "../../../lib/logger";
+import { beginProcessing, finishProcessing, isAbortError } from "../../../lib/processingControl";
+import {
+  type AppSettings,
   deleteHistoryAudio,
-  HistoryEntry,
+  deleteHistoryEntry,
+  type HistoryEntry,
   readHistoryAudio,
   saveHistoryAudio,
 } from "../../../lib/store";
-import { logError, logInfo } from "../../../lib/logger";
-import { tn } from "../../../lib/i18n";
-import { formatErrorMessage } from "../../../lib/utils";
-import {
-  DICTATION_STREAM_UPDATE_EVENT,
-  HISTORY_DELETED_EVENT,
-  type DictationStreamUpdatePayload,
-} from "../../../lib/hotkeyEvents";
-import { beginProcessing, finishProcessing, isAbortError } from "../../../lib/processingControl";
 import { resolveSummaryBackend } from "../../../lib/summarize";
-import { LANGUAGES } from "../../../config/languages";
+import { formatErrorMessage } from "../../../lib/utils";
+import type { LiveTranscriptionResult } from "./dictationStreamOverlay";
 import {
   createDictationOverlayState,
   dictationOverlayStateFromStreamUpdate,
   isSttStreamingEnabled,
   shouldApplyDictationStreamUpdate,
 } from "./dictationStreamOverlay";
-import type { LiveTranscriptionResult } from "./dictationStreamOverlay";
+import {
+  type AudioSignalStats,
+  guardTranscriptionResult,
+  isClearlySilentAudio,
+} from "./transcriptionGuard";
+import { resolveBatchTranscriptionModel } from "./transcriptionModel";
 import {
   resolveLiveTranscriptionReconciliationMode,
   shouldAcceptLiveTranscription,
 } from "./transcriptionReconciliation";
-import {
-  guardTranscriptionResult,
-  isClearlySilentAudio,
-  type AudioSignalStats,
-} from "./transcriptionGuard";
-import { resolveBatchTranscriptionModel } from "./transcriptionModel";
 
 export interface ProcessRecordingBlobParams {
   blob: Blob;
@@ -436,7 +435,7 @@ async function resolveFinalTranscription({
     Boolean(liveResult),
   );
 
-  if (!reconciliationMode) {
+  if (!reconciliationMode || !liveResult) {
     return (
       liveResult ||
       transcribeAudio({
@@ -453,7 +452,7 @@ async function resolveFinalTranscription({
     const sourceLabel = "OpenAI";
     logInfo(
       "DICTATION_STREAM",
-      `Reconciling ${sourceLabel} realtime text with full-audio batch result: realtime_chars=${liveResult!.cleaned.length}`,
+      `Reconciling ${sourceLabel} realtime text with full-audio batch result: realtime_chars=${liveResult.cleaned.length}`,
     );
     const batchResult = await transcribeAudio({
       audioBase64,
@@ -468,7 +467,7 @@ async function resolveFinalTranscription({
         "DICTATION_STREAM",
         `Batch reconciliation rejected text: reason=${guardedBatch.rejectionReason}; keeping ${sourceLabel} realtime text`,
       );
-      return liveResult!;
+      return liveResult;
     }
     if (guardedBatch.cleanedFallbackReason) {
       logInfo(
@@ -486,7 +485,7 @@ async function resolveFinalTranscription({
       "DICTATION_STREAM",
       `Batch reconciliation failed, keeping ${reconciliationMode} realtime text: ${formatErrorMessage(error)}`,
     );
-    return liveResult!;
+    return liveResult;
   }
 }
 
@@ -565,9 +564,11 @@ export async function processRecordingBlob({
 }: ProcessRecordingBlobParams): Promise<ProcessRecordingBlobResult> {
   const durationSeconds = Math.floor((Date.now() - recordingStartTimestamp) / 1000);
   if (isClearlySilentAudio(audioStats)) {
+    const peak = audioStats?.peak ?? 0;
+    const rms = audioStats?.rms ?? 0;
     logInfo(
       "API",
-      `Skipping STT for silent recording: peak=${audioStats!.peak.toFixed(6)}, rms=${audioStats!.rms.toFixed(6)}`,
+      `Skipping STT for silent recording: peak=${peak.toFixed(6)}, rms=${rms.toFixed(6)}`,
     );
     await dictationStream?.hide().catch(() => {});
     dictationStream?.dispose();

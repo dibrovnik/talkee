@@ -1,13 +1,13 @@
+import {
+  hasVerifiedRealtimeCapability,
+  REALTIME_TRANSLATION_ADAPTERS,
+} from "../../../lib/realtimeModels";
 import type {
   AppSettings,
   HistoryEntry,
   LiveTranslationChannel,
   LiveTranslationSegment,
 } from "../../../lib/store";
-import {
-  hasVerifiedRealtimeCapability,
-  REALTIME_TRANSLATION_ADAPTERS,
-} from "../../../lib/realtimeModels";
 
 export interface LiveTranslationConnectionConfig {
   provider: "openai" | "gemini";

@@ -1,13 +1,13 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_SELECTION_TRANSLATION_HOTKEY,
-  validateHotkey,
-  normalizeHotkey,
   formatHotkeyLabel,
-  normalizeSavedSettings,
   isReservedMacSystemHotkey,
   isUnsafeMacGlobalHotkey,
   needsHotkeySettingsMigration,
+  normalizeHotkey,
+  normalizeSavedSettings,
+  validateHotkey,
 } from "./store";
 
 describe("validateHotkey", () => {

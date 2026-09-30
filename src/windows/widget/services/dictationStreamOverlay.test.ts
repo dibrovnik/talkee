@@ -1,20 +1,19 @@
 import { describe, expect, test } from "bun:test";
-
+import {
+  realtimeConfigurationFingerprint,
+  STREAMING_STT_ADAPTERS,
+} from "../../../lib/realtimeModels";
+import type { AppSettings } from "../../../lib/store";
 import {
   createCallLiveDictationOptions,
-  createNativeLiveDictationOptions,
   createDictationOverlayState,
+  createNativeLiveDictationOptions,
   dictationOverlayStateFromStreamUpdate,
   isLocalSttStreamingEnabled,
   isSttStreamingEnabled,
   resolveLiveDictationRuntimeEndpoint,
   shouldApplyDictationStreamUpdate,
 } from "./dictationStreamOverlay";
-import type { AppSettings } from "../../../lib/store";
-import {
-  realtimeConfigurationFingerprint,
-  STREAMING_STT_ADAPTERS,
-} from "../../../lib/realtimeModels";
 
 describe("dictation stream overlay state", () => {
   test("maps partial, final and inserting states without losing request id", () => {
@@ -107,7 +106,8 @@ describe("dictation stream overlay state", () => {
   });
 
   test("does not inherit API streaming capability for a batch-only local model", () => {
-    const adapter = STREAMING_STT_ADAPTERS.find((item) => item.id === "openai")!;
+    const adapter = STREAMING_STT_ADAPTERS.find((item) => item.id === "openai");
+    if (!adapter) throw new Error("openai streaming adapter is missing");
     const apiValues = {
       apiKey: "secret",
       model: "gpt-realtime-whisper",
@@ -171,7 +171,8 @@ describe("dictation stream overlay state", () => {
   });
 
   test("enables an API streaming model after its exact configuration was verified", () => {
-    const adapter = STREAMING_STT_ADAPTERS.find((item) => item.id === "openai")!;
+    const adapter = STREAMING_STT_ADAPTERS.find((item) => item.id === "openai");
+    if (!adapter) throw new Error("openai streaming adapter is missing");
     const values = {
       apiKey: "secret",
       model: "gpt-realtime-whisper",

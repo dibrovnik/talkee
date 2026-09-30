@@ -1,16 +1,16 @@
 import {
+  type ReactElement,
+  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
-  type ReactElement,
-  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 
 import { IconDots } from "../lib/icons";
-import { resolveRowActionsMenuPosition, type MenuPosition } from "./rowActionsMenuPosition";
+import { type MenuPosition, resolveRowActionsMenuPosition } from "./rowActionsMenuPosition";
 
 export interface RowActionItem {
   key: string;
@@ -124,6 +124,7 @@ export function RowActionsMenu({
 
       {open &&
         createPortal(
+          // biome-ignore lint/a11y/useKeyWithClickEvents: the menu handles keyboard interaction via its own focus management; this handler only stops propagation.
           <div
             ref={menuRef}
             role="menu"

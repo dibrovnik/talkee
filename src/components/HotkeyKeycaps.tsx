@@ -31,6 +31,7 @@ export function HotkeyKeycaps({
         const pressed = pressedKeys.has(canonicalHotkeyPreviewKey(key));
         return (
           <span
+            // biome-ignore lint/suspicious/noArrayIndexKey: keycaps are a static, ordered list; the index disambiguates repeated key names.
             key={`${key}-${index}`}
             style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
           >

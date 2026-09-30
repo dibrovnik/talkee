@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import type { ReactElement, ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
-
+import type { ReactElement, ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { useI18n } from "../lib/i18n";
 import { logError } from "../lib/logger";
 import {
   getEmptyView,
@@ -9,7 +9,6 @@ import {
   STATS_UPDATED_EVENT,
   type TranscriptionStatsView,
 } from "../lib/stats";
-import { useI18n } from "../lib/i18n";
 
 type TranslateFn = ReturnType<typeof useI18n>["t"];
 

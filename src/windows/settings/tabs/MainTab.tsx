@@ -1,11 +1,45 @@
-import { lazy, Suspense, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import type {
-  FocusEvent as ReactFocusEvent,
-  PointerEvent as ReactPointerEvent,
-  ReactElement,
-} from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import type {
+  ReactElement,
+  FocusEvent as ReactFocusEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  HistoryAudioTrack,
+  HistoryAudioTrackPlaceholder,
+} from "../../../components/HistoryAudioTrack";
+import { type RowActionItem, RowActionsMenu } from "../../../components/RowActionsMenu";
+import { SpeakerNameInput } from "../../../components/SpeakerNameInput";
+import { TranscriptionStatsPanel } from "../../../components/TranscriptionStatsPanel";
+import { retryCallCaptureHistoryEntry } from "../../../lib/callCapture";
+import { retryFileHistoryEntry } from "../../../lib/fileTranscription";
+import {
+  HISTORY_CLEARED_EVENT,
+  HISTORY_DELETED_EVENT,
+  HISTORY_UPDATED_EVENT,
+  PROCESSING_CANCEL_REQUEST_EVENT,
+  type ProcessingCancelRequestPayload,
+  SETTINGS_UPDATED_EVENT,
+  WIDGET_RETRY_PROCESSING_EVENT,
+  type WidgetRetryProcessingPayload,
+} from "../../../lib/hotkeyEvents";
+import { type MsgKey, type TFunc, type UiLanguage, useI18n } from "../../../lib/i18n";
+import {
+  IconAlertCircle,
+  IconCheck,
+  IconCopy,
+  IconHelpCircle,
+  IconListCheck,
+  IconLoader2,
+  IconPencil,
+  IconRotate2,
+  IconSquare,
+  IconTrash,
+} from "../../../lib/icons";
+import { logError, logInfo } from "../../../lib/logger";
+import { cancelProcessing } from "../../../lib/processingControl";
 import {
   clearHistory,
   DEFAULT_HOTKEY,
@@ -14,50 +48,16 @@ import {
   getHistoryEntry,
   getHistoryIndex,
   getSettings,
-  toHistoryListEntry,
-  updateHistoryEntry,
   type HistoryEntry,
   type HistoryListEntry,
   type Speaker,
   type SpeakerTranscriptSegment,
+  toHistoryListEntry,
+  updateHistoryEntry,
 } from "../../../lib/store";
-import {
-  IconAlertCircle,
-  IconCheck,
-  IconCopy,
-  IconHelpCircle,
-  IconLoader2,
-  IconListCheck,
-  IconPencil,
-  IconRotate2,
-  IconSquare,
-  IconTrash,
-} from "../../../lib/icons";
-import {
-  HISTORY_CLEARED_EVENT,
-  HISTORY_DELETED_EVENT,
-  HISTORY_UPDATED_EVENT,
-  PROCESSING_CANCEL_REQUEST_EVENT,
-  SETTINGS_UPDATED_EVENT,
-  WIDGET_RETRY_PROCESSING_EVENT,
-  type ProcessingCancelRequestPayload,
-  type WidgetRetryProcessingPayload,
-} from "../../../lib/hotkeyEvents";
 import { isSummaryAvailable } from "../../../lib/summarize";
-import { retryCallCaptureHistoryEntry } from "../../../lib/callCapture";
-import { retryFileHistoryEntry } from "../../../lib/fileTranscription";
-import { cancelProcessing } from "../../../lib/processingControl";
 import { formatDurationMs } from "../../../lib/utils";
-import { logError, logInfo } from "../../../lib/logger";
-import { TranscriptionStatsPanel } from "../../../components/TranscriptionStatsPanel";
-import { RowActionsMenu, type RowActionItem } from "../../../components/RowActionsMenu";
-import {
-  HistoryAudioTrack,
-  HistoryAudioTrackPlaceholder,
-} from "../../../components/HistoryAudioTrack";
-import { SpeakerNameInput } from "../../../components/SpeakerNameInput";
 import { retryHistoryEntry } from "../../widget/services/transcriptionPipeline";
-import { useI18n, type TFunc, type UiLanguage, type MsgKey } from "../../../lib/i18n";
 
 const LazySummaryModal = lazy(() =>
   import("../../../components/SummaryModal").then((module) => ({
@@ -177,6 +177,7 @@ function SpeakerHistoryTranscript({
     <div style={{ display: "grid", gap: 8 }}>
       {segments.map((segment, index) => (
         <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: segments can share a start time; the index keeps the key unique.
           key={`${segment.start}-${index}`}
           style={{
             display: "grid",
@@ -794,7 +795,7 @@ export function MainTab({
     );
     setFullEntryCache((current) => {
       const cached = current.get(id);
-      if (!cached || cached.status !== "processing") return current;
+      if (cached?.status !== "processing") return current;
       return addFullEntryToCache(current, {
         ...cached,
         status: "interrupted",
@@ -896,6 +897,7 @@ export function MainTab({
   };
 
   const heroHintFooter = (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the handlers only pause/resume the hero carousel on hover, focus and pointer drag.
     <div
       onMouseEnter={() => setHeroPaused(true)}
       onMouseLeave={() => setHeroPaused(false)}

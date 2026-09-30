@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import type { ReactElement, PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import { SETTINGS_UPDATED_EVENT } from "../../lib/hotkeyEvents";
 import {
   IconCheck,
   IconChevronDown,
@@ -13,7 +13,6 @@ import {
   IconMicrophone,
   IconX,
 } from "../../lib/icons";
-import { SETTINGS_UPDATED_EVENT } from "../../lib/hotkeyEvents";
 import { applySavedTheme } from "../../lib/theme";
 import { WidgetErrorStatusBar } from "./WidgetErrorStatusBar";
 import {
@@ -441,6 +440,7 @@ export function WidgetTextOverlay(): ReactElement | null {
                   ) : null}
                   {translatedLiveSegments.map((segment, index) => (
                     <div
+                      // biome-ignore lint/suspicious/noArrayIndexKey: live segments can share channel and start time; the index keeps the key unique.
                       key={`${segment.channel}-${segment.startedAtMs}-${index}`}
                       style={{
                         minWidth: 0,

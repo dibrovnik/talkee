@@ -1,10 +1,22 @@
-import { useCallback, useEffect, useRef } from "react";
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-
+import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
-  AppSettings,
+  HANDY_HOTKEY_EVENT,
+  type HandyHotkeyEventPayload,
+  HOTKEY_CAPTURE_STATE_EVENT,
+  HOTKEY_CHANGE_REQUEST_EVENT,
+  HOTKEY_REGISTRATION_RESULT_EVENT,
+  type HotkeyCaptureStatePayload,
+  type HotkeyChangeRequestPayload,
+  type HotkeyTarget,
+  SETTINGS_UPDATED_EVENT,
+} from "../../../lib/hotkeyEvents";
+import { useI18n } from "../../../lib/i18n";
+import { logError, logInfo } from "../../../lib/logger";
+import {
+  type AppSettings,
   DEFAULT_HOTKEY,
   DEFAULT_SELECTION_TRANSLATION_HOTKEY,
   getSettings,
@@ -12,21 +24,8 @@ import {
   normalizeHotkey,
   saveSettings,
 } from "../../../lib/store";
-import {
-  HOTKEY_CAPTURE_STATE_EVENT,
-  HOTKEY_CHANGE_REQUEST_EVENT,
-  HOTKEY_REGISTRATION_RESULT_EVENT,
-  HANDY_HOTKEY_EVENT,
-  HandyHotkeyEventPayload,
-  HotkeyCaptureStatePayload,
-  HotkeyChangeRequestPayload,
-  HotkeyTarget,
-  SETTINGS_UPDATED_EVENT,
-} from "../../../lib/hotkeyEvents";
-import { logError, logInfo } from "../../../lib/logger";
-import { useI18n } from "../../../lib/i18n";
-import type { WidgetAction, WidgetMachineState } from "../services/widgetMachine";
 import { applyHotkeyTransaction } from "../services/hotkeyTransaction";
+import type { WidgetAction, WidgetMachineState } from "../services/widgetMachine";
 
 interface UseWidgetHotkeyParams {
   settingsLoaded: boolean;
@@ -414,7 +413,7 @@ export function useWidgetHotkey({
         latestRequestIdsRef.current[payload.target] = payload.requestId;
 
         const runTransaction = async (): Promise<void> => {
-          let result;
+          let result: Awaited<ReturnType<typeof applyHotkeyTransaction>>;
           try {
             result = await applyHotkeyTransaction(payload, {
               loadSettings: () => getSettings({ reload: true }),

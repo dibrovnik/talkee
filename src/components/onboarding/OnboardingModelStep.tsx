@@ -1,18 +1,18 @@
-import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
+import { useEffect, useState } from "react";
 
 import { ONBOARDING_STT_MODELS, type OnboardingSttModel } from "../../config/onboardingSttModels";
 import { SETTINGS_UPDATED_EVENT } from "../../lib/hotkeyEvents";
-import { IconCheck, IconDownload, IconLoader2, IconTrash, IconX } from "../../lib/icons";
 import { useI18n } from "../../lib/i18n";
+import { IconCheck, IconDownload, IconLoader2, IconTrash, IconX } from "../../lib/icons";
 import { logError, logInfo } from "../../lib/logger";
 import {
   buildOnboardingLocalSttPatch,
   formatOnboardingDownloadProgress,
   ONBOARDING_LOCAL_STT_ENDPOINT,
 } from "../../lib/onboarding";
-import { getSettings, saveSettings, type AppSettings } from "../../lib/store";
+import { type AppSettings, getSettings, saveSettings } from "../../lib/store";
 import { formatErrorMessage } from "../../lib/utils";
 import { LocalSttModelCard } from "../LocalSttModelCard";
 import { OnboardingShell } from "./OnboardingShell";
@@ -464,6 +464,7 @@ export function OnboardingModelStep({
       </div>
 
       {pendingDelete && (
+        // biome-ignore lint/a11y/useKeyWithClickEvents: modal scrim closes on click; keyboard users have the Escape handler and the dialog controls.
         <div
           role="dialog"
           aria-modal="true"
@@ -479,6 +480,8 @@ export function OnboardingModelStep({
           }}
           onClick={() => setPendingDelete(null)}
         >
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: the click handler only stops propagation so clicks inside the dialog do not close it. */}
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: the click handler only stops propagation so clicks inside the dialog do not close it. */}
           <div
             className="card"
             style={{

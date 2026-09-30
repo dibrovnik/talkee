@@ -1,7 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { IconX } from "../lib/icons";
-
+import { type ReactNode, useEffect, useState } from "react";
 import { useI18n } from "../lib/i18n";
+import { IconX } from "../lib/icons";
 
 /**
  * A panel that slides in from the right over a dimmed backdrop. Closes on the
@@ -48,6 +47,7 @@ export function SlideOverModal({
   }, []);
 
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: the backdrop closes the modal on click; keyboard users have Escape and the close button.
     <div
       onClick={requestClose}
       style={{
@@ -63,6 +63,7 @@ export function SlideOverModal({
         transition: "background 0.24s ease",
       }}
     >
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: the click handler only stops propagation so clicks inside the panel do not close the modal. */}
       <div
         onClick={(event) => event.stopPropagation()}
         role="dialog"

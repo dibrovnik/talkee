@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { existsSync, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = resolve(SCRIPT_DIR, "..");
@@ -34,10 +34,11 @@ const BACKTICK_RE = /`([^`]+)`/g;
 export function extractBackticked(content) {
   const withoutFences = content.replace(/```[\s\S]*?```/g, "");
   const tokens = new Set();
-  let match;
-  while ((match = BACKTICK_RE.exec(withoutFences)) !== null) {
+  let match = BACKTICK_RE.exec(withoutFences);
+  while (match !== null) {
     const token = match[1].trim();
     if (token.length > 0) tokens.add(token);
+    match = BACKTICK_RE.exec(withoutFences);
   }
   return [...tokens];
 }

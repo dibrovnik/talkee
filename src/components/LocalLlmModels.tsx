@@ -1,7 +1,9 @@
-import { useEffect, useState, type ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { type ReactElement, useEffect, useState } from "react";
+import { useI18n } from "../lib/i18n";
 import {
+  type Icon,
   IconAlertCircle,
   IconCheck,
   IconDownload,
@@ -11,18 +13,15 @@ import {
   IconTargetArrow,
   IconTrash,
   IconX,
-  type Icon,
 } from "../lib/icons";
-
-import { AppSettings } from "../lib/store";
-import { useI18n } from "../lib/i18n";
-import { ModelCardDisclosureButton } from "./ModelCardDisclosureButton";
 import {
   isLocalLlmEndpoint,
-  localLlmDeselectionSettingsPatch,
   localLlmDeleteSettingsPatch,
+  localLlmDeselectionSettingsPatch,
   selectedLocalLlmModelId,
 } from "../lib/localLlmSelection";
+import type { AppSettings } from "../lib/store";
+import { ModelCardDisclosureButton } from "./ModelCardDisclosureButton";
 
 interface LocalLlmModel {
   id: string;
@@ -177,7 +176,7 @@ export function LocalLlmModels({
     }
   };
 
-  const useForSummary = async (model: LocalLlmModel): Promise<void> => {
+  const selectForSummary = async (model: LocalLlmModel): Promise<void> => {
     setBusy(model.id);
     setError(null);
     try {
@@ -288,6 +287,7 @@ export function LocalLlmModels({
         }}
       >
         <div
+          role="img"
           title={t("models.stat.downloadSizeTitle", {
             value: model.size_label,
           })}
@@ -316,6 +316,7 @@ export function LocalLlmModels({
         </div>
 
         <div
+          role="img"
           title={t("models.stat.languagesTitle", { value: languageValueLabel })}
           aria-label={t("models.stat.languagesTitle", {
             value: languageValueLabel,
@@ -344,6 +345,7 @@ export function LocalLlmModels({
         {stats.map(({ key, title, Icon, value }) => (
           <div
             key={key}
+            role="img"
             title={title}
             aria-label={title}
             style={{
@@ -680,7 +682,7 @@ export function LocalLlmModels({
                           ) : (
                             <button
                               type="button"
-                              onClick={() => void useForSummary(model)}
+                              onClick={() => void selectForSummary(model)}
                               disabled={isBusy}
                               style={{
                                 ...ACTION_BUTTON_BASE,

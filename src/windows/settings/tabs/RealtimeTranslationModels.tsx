@@ -1,15 +1,15 @@
-import { useRef, useState, type ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { type ReactElement, useRef, useState } from "react";
 
 import { Dropdown } from "../../../components/Dropdown";
 import { ModelCardDisclosureButton } from "../../../components/ModelCardDisclosureButton";
-import { IconBolt, IconBroadcast, IconCheck } from "../../../lib/icons";
 import { useI18n } from "../../../lib/i18n";
+import { IconBolt, IconBroadcast, IconCheck } from "../../../lib/icons";
 import {
-  REALTIME_TRANSLATION_ADAPTERS,
   hasVerifiedRealtimeCapability,
-  realtimeConfigurationFingerprint,
+  REALTIME_TRANSLATION_ADAPTERS,
   type RealtimeTranslationAdapterId,
+  realtimeConfigurationFingerprint,
 } from "../../../lib/realtimeModels";
 import type { ApiAdapterSettings, AppSettings } from "../../../lib/store";
 
@@ -225,6 +225,7 @@ export function RealtimeTranslationModels({
                   </div>
                   {verified && (
                     <div
+                      role="img"
                       title={t("models.stat.streaming")}
                       aria-label={t("models.stat.streaming")}
                       style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 9 }}

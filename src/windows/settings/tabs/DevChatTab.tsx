@@ -1,7 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent, ReactElement, UIEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LANGUAGES } from "../../../config/languages";
+import {
+  buildDevChatHistoryContext,
+  type DevChatHistoryContext,
+  type DevChatHistorySource,
+  getCachedHistorySearchIndex,
+  shouldUseDevChatHistory,
+} from "../../../lib/devChatHistoryContext";
+import {
+  DEV_CHAT_LONG_TEXT_PROMPT,
+  DEV_CHAT_SYSTEM_PROMPT,
+  devChatCapabilitiesAnswer,
+  devChatCodeRefusal,
+  isDevChatCapabilitiesQuestion,
+  isDevChatCodeGenerationRequest,
+} from "../../../lib/devChatScope";
+import { embedHistoryQuery, ensureHistorySearchEmbeddings } from "../../../lib/historyEmbeddings";
+import { useI18n } from "../../../lib/i18n";
 import {
   IconArrowUp,
   IconCheck,
@@ -11,25 +28,8 @@ import {
   IconLoader2,
   IconRotate2,
 } from "../../../lib/icons";
-import {
-  buildDevChatHistoryContext,
-  getCachedHistorySearchIndex,
-  shouldUseDevChatHistory,
-  type DevChatHistoryContext,
-  type DevChatHistorySource,
-} from "../../../lib/devChatHistoryContext";
-import { embedHistoryQuery, ensureHistorySearchEmbeddings } from "../../../lib/historyEmbeddings";
-import {
-  DEV_CHAT_LONG_TEXT_PROMPT,
-  DEV_CHAT_SYSTEM_PROMPT,
-  devChatCapabilitiesAnswer,
-  devChatCodeRefusal,
-  isDevChatCapabilitiesQuestion,
-  isDevChatCodeGenerationRequest,
-} from "../../../lib/devChatScope";
-import { getHistory, getSettings, type AppSettings } from "../../../lib/store";
+import { type AppSettings, getHistory, getSettings } from "../../../lib/store";
 import { LOCAL_TEXT_PROCESSING_LIMITS, processLongTextWithPrompt } from "../../../lib/summarize";
-import { useI18n } from "../../../lib/i18n";
 import { formatDurationMs, formatErrorMessage } from "../../../lib/utils";
 import { translateSelectedText } from "../../widget/services/selectionTranslation";
 

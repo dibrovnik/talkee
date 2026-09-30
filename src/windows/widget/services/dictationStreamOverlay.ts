@@ -2,8 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 
 import type { DictationStreamUpdatePayload } from "../../../lib/hotkeyEvents";
 import { logInfo } from "../../../lib/logger";
-import type { AppSettings } from "../../../lib/store";
 import { canUseConfiguredRealtimeModel, STREAMING_STT_ADAPTERS } from "../../../lib/realtimeModels";
+import type { AppSettings } from "../../../lib/store";
 import type { WidgetTextOverlayState, WidgetTextOverlayStatus } from "../widgetConstants";
 
 export interface NativeLiveDictationOptions {

@@ -80,6 +80,7 @@ export function OnboardingConfetti(): ReactElement {
     <span className="onboarding-confetti" aria-hidden="true">
       {PARTICLES.map((particle, index) => (
         <span
+          // biome-ignore lint/suspicious/noArrayIndexKey: PARTICLES is a static constant, the order never changes.
           key={index}
           className="onboarding-confetti-particle"
           style={

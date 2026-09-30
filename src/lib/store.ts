@@ -1,11 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { load } from "@tauri-apps/plugin-store";
-
-import { DEFAULT_LOCAL_STT_ENDPOINT, DEFAULT_LOCAL_STT_MODEL } from "./modelMode";
-import { DEFAULT_WIDGET_SCALE, normalizeWidgetScale } from "./widgetScale";
-import { recordTranscriptionStats } from "./stats";
 import { logInfo } from "./logger";
+import { DEFAULT_LOCAL_STT_ENDPOINT, DEFAULT_LOCAL_STT_MODEL } from "./modelMode";
 import { createSerialTaskQueue } from "./serialTaskQueue";
+import { recordTranscriptionStats } from "./stats";
+import { DEFAULT_WIDGET_SCALE, normalizeWidgetScale } from "./widgetScale";
 
 export interface SummaryEntry {
   id: string;
@@ -1585,17 +1584,23 @@ export function findPrompt(
 }
 
 export function getSelectedCleanupPrompt(settings: AppSettings): PromptPreset {
-  return (
-    findPrompt(settings, settings.selectedCleanupPromptId) ??
-    BUILTIN_PROMPTS.find((preset) => preset.id === DEFAULT_CLEANUP_PROMPT_ID)!
-  );
+  const selected = findPrompt(settings, settings.selectedCleanupPromptId);
+  if (selected) return selected;
+  const fallback = BUILTIN_PROMPTS.find((preset) => preset.id === DEFAULT_CLEANUP_PROMPT_ID);
+  if (!fallback) {
+    throw new Error("Default cleanup prompt is missing from BUILTIN_PROMPTS");
+  }
+  return fallback;
 }
 
 export function getDefaultSummaryPrompt(settings: AppSettings): PromptPreset {
-  return (
-    findPrompt(settings, settings.defaultSummaryPromptId) ??
-    BUILTIN_PROMPTS.find((preset) => preset.id === DEFAULT_SUMMARY_PROMPT_ID)!
-  );
+  const selected = findPrompt(settings, settings.defaultSummaryPromptId);
+  if (selected) return selected;
+  const fallback = BUILTIN_PROMPTS.find((preset) => preset.id === DEFAULT_SUMMARY_PROMPT_ID);
+  if (!fallback) {
+    throw new Error("Default summary prompt is missing from BUILTIN_PROMPTS");
+  }
+  return fallback;
 }
 
 export interface PromptPresetInput {

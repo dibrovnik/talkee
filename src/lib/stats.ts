@@ -2,7 +2,6 @@ import { emit } from "@tauri-apps/api/event";
 import { load } from "@tauri-apps/plugin-store";
 
 import { logError } from "./logger";
-import type { HistoryEntry } from "./store";
 import {
   applyTranscriptionToStats,
   getEmptyView,
@@ -11,6 +10,7 @@ import {
   type TranscriptionStats,
   type TranscriptionStatsView,
 } from "./statsCore";
+import type { HistoryEntry } from "./store";
 
 export type { TranscriptionStats, TranscriptionStatsView } from "./statsCore";
 
@@ -62,7 +62,7 @@ export async function recordTranscriptionStats(entry: HistoryEntry): Promise<voi
     if (!entry || (entry.status !== undefined && entry.status !== "completed")) {
       return;
     }
-    if (!entry.cleaned || !entry.cleaned.trim()) {
+    if (!entry.cleaned?.trim()) {
       return;
     }
 

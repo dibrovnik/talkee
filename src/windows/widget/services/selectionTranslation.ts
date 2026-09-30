@@ -1,15 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
-
-import type { AppSettings } from "../../../lib/store";
+import { LANGUAGES } from "../../../config/languages";
 import { tn } from "../../../lib/i18n";
 import { logInfo } from "../../../lib/logger";
+import type { AppSettings } from "../../../lib/store";
 import {
   LOCAL_TEXT_PROCESSING_LIMITS,
   resolveSummaryBackend,
-  splitIntoChunks,
   type SummaryBackendKind,
+  splitIntoChunks,
 } from "../../../lib/summarize";
-import { LANGUAGES } from "../../../config/languages";
 
 const DIRECT_LIMIT_CHARS = 12000;
 const CHUNK_LIMIT_CHARS = 9000;
@@ -240,7 +239,7 @@ async function resolveLocalTranslatorBackend(
   }
 
   const localTranslator = translators.find((item) => item.provider === selectedProvider);
-  if (!localTranslator || localTranslator.status !== "ready") {
+  if (localTranslator?.status !== "ready") {
     const reason = localTranslator
       ? `${localTranslator.status}${localTranslator.message ? `: ${localTranslator.message}` : ""}`
       : "not listed";

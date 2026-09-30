@@ -457,7 +457,9 @@ describe("dev chat history context", () => {
       historyEntry("deleted", "2026-07-05T12:00:00.000Z", "Удалённая запись."),
     ]);
     expect(existing[0]).toBeDefined();
-    existing[0] = { ...existing[0]!, embedding: [0.1, 0.2] };
+    const firstEntry = existing[0];
+    if (!firstEntry) throw new Error("expected the first existing search index entry");
+    existing[0] = { ...firstEntry, embedding: [0.1, 0.2] };
 
     const reconciled = reconcileHistorySearchIndex(
       [

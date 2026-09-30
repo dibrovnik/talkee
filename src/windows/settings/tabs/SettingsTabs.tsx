@@ -1,16 +1,22 @@
+import { invoke } from "@tauri-apps/api/core";
+import { emit, listen } from "@tauri-apps/api/event";
 import {
+  type CSSProperties,
   lazy,
   Suspense,
-  useState,
+  useCallback,
   useEffect,
   useRef,
-  useCallback,
-  type CSSProperties,
+  useState,
 } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { emit } from "@tauri-apps/api/event";
+import { Dropdown } from "../../../components/Dropdown";
+import { LocalSttModelCard } from "../../../components/LocalSttModelCard";
+import { ModelCardDisclosureButton } from "../../../components/ModelCardDisclosureButton";
+import { SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
+import { type MsgKey, useI18n } from "../../../lib/i18n";
 import {
+  type Icon,
+  IconBolt,
   IconBriefcase,
   IconBroadcast,
   IconCheck,
@@ -18,7 +24,6 @@ import {
   IconDownload,
   IconGauge,
   IconGlobe,
-  Icon,
   IconLanguage,
   IconMessage,
   IconMicrophone,
@@ -29,18 +34,8 @@ import {
   IconTrash,
   IconTypography,
   IconX,
-  IconBolt,
 } from "../../../lib/icons";
-
-import {
-  AppSettings,
-  getSettings,
-  LocalModelSettings,
-  saveSettings,
-  listPromptsByKind,
-  upsertPrompt,
-  deletePrompt,
-} from "../../../lib/store";
+import { logInfo } from "../../../lib/logger";
 import {
   apiModelModeSettingsPatch,
   DEFAULT_LOCAL_STT_ENDPOINT,
@@ -48,21 +43,23 @@ import {
   localModelModeSettingsPatch,
   resolveProcessingMode,
 } from "../../../lib/modelMode";
-import { logInfo } from "../../../lib/logger";
-
-import { TRANSCRIPTION_STYLE_OPTIONS } from "../../../lib/transcriptionPrompts";
-import { isSummaryAvailable, generatePromptText } from "../../../lib/summarize";
-import { SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
-import { useI18n, type MsgKey } from "../../../lib/i18n";
-import { Dropdown } from "../../../components/Dropdown";
-import { LocalSttModelCard } from "../../../components/LocalSttModelCard";
-import { ModelCardDisclosureButton } from "../../../components/ModelCardDisclosureButton";
-import { RealtimeTranslationModels } from "./RealtimeTranslationModels";
 import {
   hasVerifiedRealtimeCapability,
   realtimeConfigurationFingerprint,
   STREAMING_STT_ADAPTERS,
 } from "../../../lib/realtimeModels";
+import {
+  type AppSettings,
+  deletePrompt,
+  getSettings,
+  type LocalModelSettings,
+  listPromptsByKind,
+  saveSettings,
+  upsertPrompt,
+} from "../../../lib/store";
+import { generatePromptText, isSummaryAvailable } from "../../../lib/summarize";
+import { TRANSCRIPTION_STYLE_OPTIONS } from "../../../lib/transcriptionPrompts";
+import { RealtimeTranslationModels } from "./RealtimeTranslationModels";
 
 const LocalLlmModels = lazy(() =>
   import("../../../components/LocalLlmModels").then((module) => ({
@@ -729,6 +726,8 @@ function OptionCard({
   disabled = false,
 }: OptionCardProps) {
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: option cards are selected with the mouse; each card contains its own focusable controls.
+    // biome-ignore lint/a11y/noStaticElementInteractions: option cards are composite clickable surfaces, not plain static elements.
     <div
       onClick={disabled ? undefined : onClick}
       style={{
@@ -1592,7 +1591,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
           return next;
         });
       }
-    } catch (err) {
+    } catch {
       setLocalInstalledModels((prev) =>
         Array.from(new Set([...prev, ...optimisticLocalInstalledModelsRef.current])),
       );
@@ -2669,6 +2668,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
           }}
         >
           <div
+            role="img"
             title={t("models.stat.downloadSizeTitle", { value: storageLabel })}
             aria-label={t("models.stat.downloadSizeTitle", {
               value: storageLabel,
@@ -2695,6 +2695,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
           </div>
 
           <div
+            role="img"
             title={t("models.stat.languagesTitle", {
               value: languageValueLabel,
             })}
@@ -2725,6 +2726,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
           {stats.map(({ key, title, Icon, value }) => (
             <div
               key={key}
+              role="img"
               title={title}
               aria-label={title}
               style={{
@@ -2751,6 +2753,7 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
 
           {model.supportsStreaming && (
             <div
+              role="img"
               title={t("models.stat.streaming")}
               aria-label={t("models.stat.streaming")}
               style={{
@@ -3055,29 +3058,72 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
 
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        <>
-          <div>
-            <div
-              style={{
-                fontSize: 17,
-                fontWeight: 700,
-                color: "var(--text-hi)",
-                marginBottom: 4,
-              }}
-            >
-              {t("models.modeSection.title")}
-            </div>
-            <div
-              style={{
-                fontSize: 13,
-                color: "var(--text-mid)",
-                lineHeight: 1.6,
-                marginBottom: 14,
-              }}
-            >
-              {t("models.modeSection.desc")}
-            </div>
+        <div>
+          <div
+            style={{
+              fontSize: 17,
+              fontWeight: 700,
+              color: "var(--text-hi)",
+              marginBottom: 4,
+            }}
+          >
+            {t("models.modeSection.title")}
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              color: "var(--text-mid)",
+              lineHeight: 1.6,
+              marginBottom: 14,
+            }}
+          >
+            {t("models.modeSection.desc")}
+          </div>
 
+          <div
+            style={{
+              display: "flex",
+              background: "var(--control-track)",
+              borderRadius: 10,
+              padding: 3,
+              gap: 2,
+            }}
+          >
+            {modeOptions.map(({ id, label, Icon }) => {
+              const active = visibleModelMode === id;
+
+              return (
+                <button
+                  key={id}
+                  onClick={() => handleModeChange(id)}
+                  style={{
+                    flex: 1,
+                    padding: "10px 0",
+                    borderRadius: 8,
+                    border: "none",
+                    fontSize: 13,
+                    fontWeight: active ? 700 : 500,
+                    fontFamily: "var(--font-main)",
+                    background: active ? "var(--dropdown-active)" : "transparent",
+                    color: active ? "var(--text-hi)" : "var(--text-mid)",
+                    cursor: "pointer",
+                    transition: "all 0.18s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 7,
+                  }}
+                >
+                  <Icon size={15} stroke={active ? 2.2 : 1.7} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {isApiMode && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div
               style={{
                 display: "flex",
@@ -3087,13 +3133,31 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                 gap: 2,
               }}
             >
-              {modeOptions.map(({ id, label, Icon }) => {
-                const active = visibleModelMode === id;
+              {(
+                [
+                  {
+                    id: "transcription",
+                    label: t("models.local.tabTranscription"),
+                    Icon: IconMicrophone,
+                  },
+                  {
+                    id: "text",
+                    label: t("models.local.tabText"),
+                    Icon: IconMessage,
+                  },
+                  {
+                    id: "translation",
+                    label: t("models.local.tabTranslation"),
+                    Icon: IconLanguage,
+                  },
+                ] as const
+              ).map(({ id, label, Icon }) => {
+                const active = apiModelKind === id;
 
                 return (
                   <button
                     key={id}
-                    onClick={() => handleModeChange(id)}
+                    onClick={() => setApiModelKind(id)}
                     style={{
                       flex: 1,
                       padding: "10px 0",
@@ -3114,362 +3178,370 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                   >
                     <Icon size={15} stroke={active ? 2.2 : 1.7} />
                     <span>{label}</span>
+                    {id === "text" && !apiTextModelConfigured && (
+                      <span
+                        title={t("summary.unavailable.tooltip")}
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: 999,
+                          background: "var(--accent)",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
                   </button>
                 );
               })}
             </div>
-          </div>
 
-          {isApiMode && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div
-                style={{
-                  display: "flex",
-                  background: "var(--control-track)",
-                  borderRadius: 10,
-                  padding: 3,
-                  gap: 2,
-                }}
-              >
-                {(
-                  [
-                    {
-                      id: "transcription",
-                      label: t("models.local.tabTranscription"),
-                      Icon: IconMicrophone,
-                    },
-                    {
-                      id: "text",
-                      label: t("models.local.tabText"),
-                      Icon: IconMessage,
-                    },
-                    {
-                      id: "translation",
-                      label: t("models.local.tabTranslation"),
-                      Icon: IconLanguage,
-                    },
-                  ] as const
-                ).map(({ id, label, Icon }) => {
-                  const active = apiModelKind === id;
+            {renderModeCommitRow("api")}
 
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => setApiModelKind(id)}
-                      style={{
-                        flex: 1,
-                        padding: "10px 0",
-                        borderRadius: 8,
-                        border: "none",
-                        fontSize: 13,
-                        fontWeight: active ? 700 : 500,
-                        fontFamily: "var(--font-main)",
-                        background: active ? "var(--dropdown-active)" : "transparent",
-                        color: active ? "var(--text-hi)" : "var(--text-mid)",
-                        cursor: "pointer",
-                        transition: "all 0.18s ease",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 7,
-                      }}
-                    >
-                      <Icon size={15} stroke={active ? 2.2 : 1.7} />
-                      <span>{label}</span>
-                      {id === "text" && !apiTextModelConfigured && (
-                        <span
-                          title={t("summary.unavailable.tooltip")}
-                          style={{
-                            width: 7,
-                            height: 7,
-                            borderRadius: 999,
-                            background: "var(--accent)",
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {renderModeCommitRow("api")}
-
-              {apiModelKind === "transcription" && (
-                <>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 15,
-                        fontWeight: 700,
-                        color: "var(--text-hi)",
-                        marginBottom: 4,
-                      }}
-                    >
-                      {t("models.apiSection.title")}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "var(--text-mid)",
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {t("models.apiSection.desc")}
-                    </div>
+            {apiModelKind === "transcription" && (
+              <>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: "var(--text-hi)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {t("models.apiSection.title")}
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {API_ADAPTERS.map((adapter) => {
-                      const isExpanded = expandedApiAdapter === adapter.id;
-                      const adapterValues = getApiAdapterValues(adapter);
-                      const adapterStatus = getAdapterStatus(
-                        adapter,
-                        adapterValues.apiKey,
-                        adapterValues.model,
-                        adapterValues.endpoint,
-                      );
-                      const selectedModelOption = getApiAdapterModelOption(
-                        adapter,
-                        adapterValues.model,
-                      );
-                      const realtimeCatalogAdapter = STREAMING_STT_ADAPTERS.find(
-                        (candidate) => candidate.id === adapter.id,
-                      );
-                      const streamingVerified = Boolean(
-                        !dirtyApiAdapters[adapter.id] &&
-                          realtimeCatalogAdapter &&
-                          hasVerifiedRealtimeCapability(
-                            realtimeCatalogAdapter,
-                            settings.apiAdapters?.[adapter.id],
-                          ),
-                      );
-                      const modelSelectValue = selectedModelOption?.id || CUSTOM_API_MODEL_VALUE;
-                      const isAdapterSelected = adapterStatus.isSelected;
-                      const isAdapterReady = adapterStatus.status === "success";
-                      const canSelectApiAdapter =
-                        Boolean(adapterValues.apiKey.trim()) && Boolean(adapterValues.model.trim());
-                      const isAdapterTestDisabled =
-                        adapterStatus.status === "testing" || !canSelectApiAdapter;
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--text-mid)",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {t("models.apiSection.desc")}
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {API_ADAPTERS.map((adapter) => {
+                    const isExpanded = expandedApiAdapter === adapter.id;
+                    const adapterValues = getApiAdapterValues(adapter);
+                    const adapterStatus = getAdapterStatus(
+                      adapter,
+                      adapterValues.apiKey,
+                      adapterValues.model,
+                      adapterValues.endpoint,
+                    );
+                    const selectedModelOption = getApiAdapterModelOption(
+                      adapter,
+                      adapterValues.model,
+                    );
+                    const realtimeCatalogAdapter = STREAMING_STT_ADAPTERS.find(
+                      (candidate) => candidate.id === adapter.id,
+                    );
+                    const streamingVerified = Boolean(
+                      !dirtyApiAdapters[adapter.id] &&
+                        realtimeCatalogAdapter &&
+                        hasVerifiedRealtimeCapability(
+                          realtimeCatalogAdapter,
+                          settings.apiAdapters?.[adapter.id],
+                        ),
+                    );
+                    const modelSelectValue = selectedModelOption?.id || CUSTOM_API_MODEL_VALUE;
+                    const isAdapterSelected = adapterStatus.isSelected;
+                    const isAdapterReady = adapterStatus.status === "success";
+                    const canSelectApiAdapter =
+                      Boolean(adapterValues.apiKey.trim()) && Boolean(adapterValues.model.trim());
+                    const isAdapterTestDisabled =
+                      adapterStatus.status === "testing" || !canSelectApiAdapter;
 
-                      return (
+                    return (
+                      <div
+                        key={adapter.id}
+                        className="card"
+                        style={{
+                          padding: 0,
+                          overflow: isExpanded ? "visible" : "hidden",
+                          position: "relative",
+                          zIndex: isExpanded ? 10 : 0,
+                          background: "var(--surface)",
+                        }}
+                      >
                         <div
-                          key={adapter.id}
-                          className="card"
                           style={{
-                            padding: 0,
-                            overflow: isExpanded ? "visible" : "hidden",
                             position: "relative",
-                            zIndex: isExpanded ? 10 : 0,
-                            background: "var(--surface)",
+                            padding: "12px 14px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            textAlign: "left",
+                            fontFamily: "var(--font-main)",
                           }}
                         >
                           <div
                             style={{
                               position: "relative",
-                              padding: "12px 14px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 12,
-                              textAlign: "left",
-                              fontFamily: "var(--font-main)",
+                              flex: 1,
+                              minWidth: 0,
                             }}
                           >
                             <div
                               style={{
-                                position: "relative",
-                                flex: 1,
-                                minWidth: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 10,
+                                marginBottom: 3,
                               }}
                             >
                               <div
                                 style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: 10,
-                                  marginBottom: 3,
+                                  fontSize: 15,
+                                  fontWeight: 700,
+                                  color: "var(--text-hi)",
                                 }}
                               >
-                                <div
-                                  style={{
-                                    fontSize: 15,
-                                    fontWeight: 700,
-                                    color: "var(--text-hi)",
-                                  }}
-                                >
-                                  {adapter.name}
-                                </div>
-                                <div
-                                  title={adapterStatus.message || undefined}
-                                  style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    color: adapterStatus.color,
-                                    padding: "5px 9px",
-                                    borderRadius: 999,
-                                    background: "var(--control-muted)",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {adapterStatus.label}
-                                </div>
+                                {adapter.name}
                               </div>
-                              <div style={{ paddingRight: 34 }}>
-                                <div
-                                  style={{
-                                    fontSize: 12,
-                                    lineHeight: 1.45,
-                                    color: "var(--text-mid)",
-                                  }}
-                                >
-                                  {t(API_ADAPTER_DESCRIPTION_KEYS[adapter.id])}{" "}
-                                  {t("models.adapter.recommendedModel", {
-                                    model: adapter.recommendedModel,
-                                  })}
-                                </div>
-                                {streamingVerified &&
-                                  (selectedModelOption?.supportsStreaming ||
-                                    !selectedModelOption) && (
-                                    <div
-                                      title={t("models.stat.streaming")}
-                                      aria-label={t("models.stat.streaming")}
+                              <div
+                                title={adapterStatus.message || undefined}
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: adapterStatus.color,
+                                  padding: "5px 9px",
+                                  borderRadius: 999,
+                                  background: "var(--control-muted)",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {adapterStatus.label}
+                              </div>
+                            </div>
+                            <div style={{ paddingRight: 34 }}>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  lineHeight: 1.45,
+                                  color: "var(--text-mid)",
+                                }}
+                              >
+                                {t(API_ADAPTER_DESCRIPTION_KEYS[adapter.id])}{" "}
+                                {t("models.adapter.recommendedModel", {
+                                  model: adapter.recommendedModel,
+                                })}
+                              </div>
+                              {streamingVerified &&
+                                (selectedModelOption?.supportsStreaming ||
+                                  !selectedModelOption) && (
+                                  <div
+                                    role="img"
+                                    title={t("models.stat.streaming")}
+                                    aria-label={t("models.stat.streaming")}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 5,
+                                      marginTop: 9,
+                                    }}
+                                  >
+                                    <IconBroadcast size={14} stroke={1.9} color="var(--text-hi)" />
+                                    <span
                                       style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 5,
-                                        marginTop: 9,
+                                        fontSize: 12,
+                                        fontWeight: 650,
+                                        color: "var(--text-hi)",
+                                        lineHeight: 1,
+                                        whiteSpace: "nowrap",
                                       }}
                                     >
-                                      <IconBroadcast
-                                        size={14}
-                                        stroke={1.9}
-                                        color="var(--text-hi)"
-                                      />
-                                      <span
-                                        style={{
-                                          fontSize: 12,
-                                          fontWeight: 650,
-                                          color: "var(--text-hi)",
-                                          lineHeight: 1,
-                                          whiteSpace: "nowrap",
-                                        }}
-                                      >
-                                        {t("models.stat.streaming")}
-                                      </span>
-                                    </div>
-                                  )}
-                              </div>
-                              <ModelCardDisclosureButton
-                                expanded={isExpanded}
-                                onToggle={() =>
-                                  setExpandedApiAdapter(isExpanded ? null : adapter.id)
-                                }
-                                label={t(isExpanded ? "mainTab.collapse" : "mainTab.expand")}
-                              />
+                                      {t("models.stat.streaming")}
+                                    </span>
+                                  </div>
+                                )}
                             </div>
+                            <ModelCardDisclosureButton
+                              expanded={isExpanded}
+                              onToggle={() => setExpandedApiAdapter(isExpanded ? null : adapter.id)}
+                              label={t(isExpanded ? "mainTab.collapse" : "mainTab.expand")}
+                            />
                           </div>
+                        </div>
 
-                          {isExpanded && (
+                        {isExpanded && (
+                          <div
+                            style={{
+                              borderTop: "1px solid var(--border-subtle)",
+                              padding: "12px 14px",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 10,
+                            }}
+                          >
                             <div
                               style={{
-                                borderTop: "1px solid var(--border-subtle)",
-                                padding: "12px 14px",
                                 display: "flex",
-                                flexDirection: "column",
+                                alignItems: "center",
                                 gap: 10,
                               }}
                             >
+                              <div className="label" style={{ width: 76, flexShrink: 0 }}>
+                                {t("models.field.apiKey")}
+                              </div>
+                              <input
+                                type="password"
+                                value={adapterValues.apiKey}
+                                onChange={(e) =>
+                                  updateApiAdapterValues(adapter, {
+                                    apiKey: e.target.value,
+                                  })
+                                }
+                                className="input"
+                                placeholder="API key"
+                                style={{
+                                  flex: 1,
+                                  minWidth: 0,
+                                  height: 36,
+                                  padding: "8px 10px",
+                                  fontFamily:
+                                    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                                  fontSize: 12,
+                                }}
+                              />
+                            </div>
+
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                              }}
+                            >
+                              <div className="label" style={{ width: 76, flexShrink: 0 }}>
+                                {t("models.field.model")}
+                              </div>
                               <div
                                 style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 10,
+                                  flex: 1,
+                                  minWidth: 0,
+                                  display: "grid",
+                                  gap: 6,
                                 }}
                               >
-                                <div className="label" style={{ width: 76, flexShrink: 0 }}>
-                                  {t("models.field.apiKey")}
-                                </div>
-                                <input
-                                  type="password"
-                                  value={adapterValues.apiKey}
-                                  onChange={(e) =>
+                                <Dropdown
+                                  value={modelSelectValue}
+                                  options={[
+                                    ...adapter.models.map((modelOption) => ({
+                                      value: modelOption.id,
+                                      label: `${modelOption.id}${modelOption.supportsStreaming ? ` · ${t("models.stat.streaming")}` : ""}`,
+                                    })),
+                                    {
+                                      value: CUSTOM_API_MODEL_VALUE,
+                                      label: t("models.field.customModel"),
+                                    },
+                                  ]}
+                                  onChange={(value) => {
                                     updateApiAdapterValues(adapter, {
-                                      apiKey: e.target.value,
-                                    })
-                                  }
-                                  className="input"
-                                  placeholder="API key"
-                                  style={{
-                                    flex: 1,
-                                    minWidth: 0,
-                                    height: 36,
-                                    padding: "8px 10px",
-                                    fontFamily:
-                                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                                    fontSize: 12,
+                                      model: value === CUSTOM_API_MODEL_VALUE ? "" : value,
+                                    });
                                   }}
                                 />
-                              </div>
-
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 10,
-                                }}
-                              >
-                                <div className="label" style={{ width: 76, flexShrink: 0 }}>
-                                  {t("models.field.model")}
-                                </div>
-                                <div
-                                  style={{
-                                    flex: 1,
-                                    minWidth: 0,
-                                    display: "grid",
-                                    gap: 6,
-                                  }}
-                                >
-                                  <Dropdown
-                                    value={modelSelectValue}
-                                    options={[
-                                      ...adapter.models.map((modelOption) => ({
-                                        value: modelOption.id,
-                                        label: `${modelOption.id}${modelOption.supportsStreaming ? ` · ${t("models.stat.streaming")}` : ""}`,
-                                      })),
-                                      {
-                                        value: CUSTOM_API_MODEL_VALUE,
-                                        label: t("models.field.customModel"),
-                                      },
-                                    ]}
-                                    onChange={(value) => {
+                                {modelSelectValue === CUSTOM_API_MODEL_VALUE && (
+                                  <input
+                                    type="text"
+                                    value={adapterValues.model}
+                                    onChange={(event) =>
                                       updateApiAdapterValues(adapter, {
-                                        model: value === CUSTOM_API_MODEL_VALUE ? "" : value,
-                                      });
+                                        model: event.currentTarget.value,
+                                      })
+                                    }
+                                    className="input"
+                                    placeholder={t("models.field.customModelPlaceholder")}
+                                    aria-label={t("models.field.customModelPlaceholder")}
+                                    style={{
+                                      width: "100%",
+                                      height: 36,
+                                      padding: "8px 10px",
+                                      fontFamily:
+                                        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                                      fontSize: 12,
                                     }}
                                   />
-                                  {modelSelectValue === CUSTOM_API_MODEL_VALUE && (
-                                    <input
-                                      type="text"
-                                      value={adapterValues.model}
-                                      onChange={(event) =>
-                                        updateApiAdapterValues(adapter, {
-                                          model: event.currentTarget.value,
-                                        })
-                                      }
-                                      className="input"
-                                      placeholder={t("models.field.customModelPlaceholder")}
-                                      aria-label={t("models.field.customModelPlaceholder")}
-                                      style={{
-                                        width: "100%",
-                                        height: 36,
-                                        padding: "8px 10px",
-                                        fontFamily:
-                                          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                                        fontSize: 12,
-                                      }}
-                                    />
-                                  )}
-                                </div>
+                                )}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  color: "var(--text-low)",
+                                  whiteSpace: "nowrap",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {t("models.field.recommended", {
+                                  model: adapter.recommendedModel,
+                                })}
+                              </div>
+                            </div>
+
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                              }}
+                            >
+                              <div className="label" style={{ width: 76, flexShrink: 0 }}>
+                                {t("models.field.host")}
+                              </div>
+                              <input
+                                type="url"
+                                value={adapterValues.endpoint}
+                                onChange={(e) =>
+                                  updateApiAdapterValues(adapter, {
+                                    endpoint: e.target.value,
+                                  })
+                                }
+                                className="input"
+                                placeholder={
+                                  adapter.defaultEndpoint
+                                    ? t("models.field.hostDefaultPlaceholder", {
+                                        endpoint: adapter.defaultEndpoint,
+                                      })
+                                    : t("models.field.hostPlaceholder")
+                                }
+                                style={{
+                                  flex: 1,
+                                  minWidth: 0,
+                                  height: 36,
+                                  padding: "8px 10px",
+                                  fontFamily:
+                                    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                                  fontSize: 12,
+                                }}
+                              />
+                              {adapterValues.endpoint.trim() ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateApiAdapterValues(adapter, {
+                                      endpoint: "",
+                                    })
+                                  }
+                                  style={{
+                                    border: "1px solid var(--border-dashed)",
+                                    background: "var(--control-muted)",
+                                    color: "var(--text-hi)",
+                                    borderRadius: 8,
+                                    padding: "7px 9px",
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    fontFamily: "var(--font-main)",
+                                    whiteSpace: "nowrap",
+                                    flexShrink: 0,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  {t("models.common.reset")}
+                                </button>
+                              ) : (
                                 <div
                                   style={{
                                     fontSize: 11,
@@ -3478,482 +3550,734 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                     flexShrink: 0,
                                   }}
                                 >
-                                  {t("models.field.recommended", {
-                                    model: adapter.recommendedModel,
-                                  })}
+                                  {t("models.common.optional")}
                                 </div>
-                              </div>
-
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 10,
-                                }}
-                              >
-                                <div className="label" style={{ width: 76, flexShrink: 0 }}>
-                                  {t("models.field.host")}
-                                </div>
-                                <input
-                                  type="url"
-                                  value={adapterValues.endpoint}
-                                  onChange={(e) =>
-                                    updateApiAdapterValues(adapter, {
-                                      endpoint: e.target.value,
-                                    })
-                                  }
-                                  className="input"
-                                  placeholder={
-                                    adapter.defaultEndpoint
-                                      ? t("models.field.hostDefaultPlaceholder", {
-                                          endpoint: adapter.defaultEndpoint,
-                                        })
-                                      : t("models.field.hostPlaceholder")
-                                  }
-                                  style={{
-                                    flex: 1,
-                                    minWidth: 0,
-                                    height: 36,
-                                    padding: "8px 10px",
-                                    fontFamily:
-                                      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                                    fontSize: 12,
-                                  }}
-                                />
-                                {adapterValues.endpoint.trim() ? (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      updateApiAdapterValues(adapter, {
-                                        endpoint: "",
-                                      })
-                                    }
-                                    style={{
-                                      border: "1px solid var(--border-dashed)",
-                                      background: "var(--control-muted)",
-                                      color: "var(--text-hi)",
-                                      borderRadius: 8,
-                                      padding: "7px 9px",
-                                      fontSize: 11,
-                                      fontWeight: 700,
-                                      fontFamily: "var(--font-main)",
-                                      whiteSpace: "nowrap",
-                                      flexShrink: 0,
-                                      cursor: "pointer",
-                                    }}
-                                  >
-                                    {t("models.common.reset")}
-                                  </button>
-                                ) : (
-                                  <div
-                                    style={{
-                                      fontSize: 11,
-                                      color: "var(--text-low)",
-                                      whiteSpace: "nowrap",
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    {t("models.common.optional")}
-                                  </div>
-                                )}
-                              </div>
-
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "flex-end",
-                                  gap: 10,
-                                  flexWrap: "wrap",
-                                }}
-                              >
-                                {isAdapterSelected ? (
-                                  <div
-                                    style={{
-                                      padding: "9px 12px",
-                                      borderRadius: 10,
-                                      border: "1px solid var(--success-border)",
-                                      background: "var(--success-soft)",
-                                      color: "var(--success-bright)",
-                                      fontSize: 12,
-                                      fontWeight: 700,
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 8,
-                                    }}
-                                  >
-                                    <IconCheck size={14} stroke={2.5} />
-                                    {t("models.common.selected")}
-                                  </div>
-                                ) : (
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 8,
-                                      flexWrap: "wrap",
-                                    }}
-                                  >
-                                    {isAdapterReady && (
-                                      <button
-                                        onClick={() => handleSelectApiAdapter(adapter)}
-                                        disabled={!canSelectApiAdapter}
-                                        style={{
-                                          padding: "9px 12px",
-                                          borderRadius: 10,
-                                          border: "1px solid var(--border-dashed)",
-                                          background: canSelectApiAdapter
-                                            ? "var(--control-muted)"
-                                            : "var(--control-muted)",
-                                          color: canSelectApiAdapter
-                                            ? "var(--text-hi)"
-                                            : "var(--text-mid)",
-                                          fontSize: 12,
-                                          fontWeight: 700,
-                                          fontFamily: "var(--font-main)",
-                                          cursor: canSelectApiAdapter ? "pointer" : "not-allowed",
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 8,
-                                        }}
-                                      >
-                                        <IconCheck size={14} stroke={2.5} />
-                                        {t("models.common.select")}
-                                      </button>
-                                    )}
-
-                                    <button
-                                      onClick={() => void handleApiAdapterTest(adapter)}
-                                      disabled={isAdapterTestDisabled}
-                                      style={{
-                                        padding: "9px 12px",
-                                        borderRadius: 10,
-                                        border: "1px solid var(--border-dashed)",
-                                        background: isAdapterTestDisabled
-                                          ? "var(--control-muted)"
-                                          : "var(--accent)",
-                                        color: isAdapterTestDisabled
-                                          ? "var(--text-mid)"
-                                          : "var(--accent-contrast)",
-                                        fontSize: 12,
-                                        fontWeight: 700,
-                                        fontFamily: "var(--font-main)",
-                                        cursor:
-                                          adapterStatus.status === "testing"
-                                            ? "wait"
-                                            : isAdapterTestDisabled
-                                              ? "not-allowed"
-                                              : "pointer",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 8,
-                                      }}
-                                    >
-                                      {adapterStatus.status === "testing" ? (
-                                        <>
-                                          <span className="loading-soft-ring" />
-                                          {t("models.test.checking")}
-                                        </>
-                                      ) : (
-                                        <>
-                                          <IconBolt size={14} stroke={2.2} />
-                                          {adapter.testable
-                                            ? t("models.test.testAndSave")
-                                            : t("models.test.saveButton")}
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
 
-              {apiModelKind === "text" && <TextModelCard settings={settings} update={update} />}
-              {apiModelKind === "translation" && (
-                <RealtimeTranslationModels settings={settings} update={update} />
-              )}
-            </div>
-          )}
-
-          {isLocalMode && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div
-                style={{
-                  display: "flex",
-                  background: "var(--control-track)",
-                  borderRadius: 10,
-                  padding: 3,
-                  gap: 2,
-                }}
-              >
-                {(
-                  [
-                    {
-                      id: "transcription",
-                      label: t("models.local.tabTranscription"),
-                      Icon: IconMicrophone,
-                    },
-                    {
-                      id: "text",
-                      label: t("models.local.tabText"),
-                      Icon: IconMessage,
-                    },
-                    {
-                      id: "other",
-                      label: t("models.local.tabOther"),
-                      Icon: IconLanguage,
-                    },
-                  ] as const
-                ).map(({ id, label, Icon }) => {
-                  const active = localModelKind === id;
-
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => setLocalModelKind(id)}
-                      style={{
-                        flex: 1,
-                        padding: "10px 0",
-                        borderRadius: 8,
-                        border: "none",
-                        fontSize: 13,
-                        fontWeight: active ? 700 : 500,
-                        fontFamily: "var(--font-main)",
-                        background: active ? "var(--dropdown-active)" : "transparent",
-                        color: active ? "var(--text-hi)" : "var(--text-mid)",
-                        cursor: "pointer",
-                        transition: "all 0.18s ease",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 7,
-                      }}
-                    >
-                      <Icon size={15} stroke={active ? 2.2 : 1.7} />
-                      <span>{label}</span>
-                      {id === "text" && !localTextModelSelected && (
-                        <span
-                          title={t("localLlm.required")}
-                          style={{
-                            width: 7,
-                            height: 7,
-                            borderRadius: 999,
-                            background: "var(--accent)",
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {renderModeCommitRow("local")}
-
-              {localModelKind === "transcription" && (
-                <>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 15,
-                        fontWeight: 700,
-                        color: "var(--text-hi)",
-                        marginBottom: 4,
-                      }}
-                    >
-                      {t("models.local.sectionTitle")}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "var(--text-mid)",
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {t("models.local.sectionDesc")}
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {LOCAL_MODEL_OPTIONS.map((model) => {
-                      const isExpanded = expandedLocalModel === model.id;
-                      const modelStatus = getLocalModelStatus(model);
-                      const modelActionState = localModelActionStates[model.id];
-                      const isRuntimeReady =
-                        modelStatus.status !== "unsupported" && model.runtimeReady === true;
-                      const isDownloaded = modelStatus.isInstalled;
-                      const isModelBusy =
-                        modelStatus.status === "installing" || modelStatus.status === "deleting";
-                      const isInstallDisabled = isModelBusy || !isRuntimeReady;
-                      const canSelect =
-                        isRuntimeReady &&
-                        modelStatus.isInstalled &&
-                        model.purpose !== "diarization";
-                      const downloadProgress =
-                        modelStatus.status === "installing"
-                          ? modelActionState?.progress
-                          : undefined;
-                      const downloadedLabel = formatLocalDownloadBytes(
-                        modelActionState?.downloadedBytes,
-                        { showZero: Boolean(modelActionState?.totalBytes) },
-                      );
-                      const totalLabel = formatLocalDownloadBytes(modelActionState?.totalBytes);
-
-                      return (
-                        <LocalSttModelCard
-                          key={model.id}
-                          name={model.name}
-                          description={t(LOCAL_MODEL_DESCRIPTION_KEYS[model.id])}
-                          recommendedLabel={
-                            model.recommended ? t("models.local.recommendedBadge") : undefined
-                          }
-                          statusLabel={modelStatus.label}
-                          statusColor={modelStatus.color}
-                          expanded={isExpanded}
-                          onToggle={() => setExpandedLocalModel(isExpanded ? null : model.id)}
-                          disclosureLabel={t(isExpanded ? "mainTab.collapse" : "mainTab.expand")}
-                          stats={{
-                            storageLabel: getLocalModelStorageLabel(model),
-                            storageTitle: t("models.stat.downloadSizeTitle", {
-                              value: getLocalModelStorageLabel(model),
-                            }),
-                            languageLabel: translateLanguageValue(model.languageLabel),
-                            languageTitle: t("models.stat.languagesTitle", {
-                              value: translateLanguageValue(model.languageLabel),
-                            }),
-                            speedLabel: translateSpeedValue(model.speed),
-                            speedTitle: t("models.stat.speedTitle", {
-                              value: translateSpeedValue(model.speed),
-                            }),
-                            accuracyLabel: translateAccuracyValue(model.accuracy),
-                            accuracyTitle: t("models.stat.accuracyTitle", {
-                              value: translateAccuracyValue(model.accuracy),
-                            }),
-                            streamingLabel: model.supportsStreaming
-                              ? t("models.stat.streaming")
-                              : undefined,
-                          }}
-                          notice={
-                            modelStatus.message &&
-                            modelStatus.status !== "installing" &&
-                            modelStatus.status !== "installed" &&
-                            modelStatus.status !== "selected"
-                              ? {
-                                  message: modelStatus.message,
-                                  tone: modelStatus.status === "error" ? "error" : "neutral",
-                                }
-                              : undefined
-                          }
-                          progress={
-                            modelStatus.status === "installing"
-                              ? {
-                                  message:
-                                    modelActionState?.message || t("models.download.loading"),
-                                  percent: downloadProgress,
-                                  valueLabel: downloadedLabel || t("models.download.preparing"),
-                                  downloadedLabel,
-                                  totalLabel,
-                                  totalTemplate: totalLabel
-                                    ? t("models.download.of", {
-                                        total: totalLabel,
-                                      })
-                                    : undefined,
-                                }
-                              : undefined
-                          }
-                          connectionLabel={modelStatus.connectionLabel || undefined}
-                          connectionColor={modelStatus.color}
-                          showConnectionCheck={
-                            modelStatus.status === "installed" || modelStatus.status === "selected"
-                          }
-                          actions={
-                            <>
-                              {canSelect && !modelStatus.isSelected && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleSelectLocalModel(model)}
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "flex-end",
+                                gap: 10,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              {isAdapterSelected ? (
+                                <div
                                   style={{
                                     padding: "9px 12px",
                                     borderRadius: 10,
-                                    border: "1px solid var(--border-dashed)",
-                                    background: "var(--control-muted)",
-                                    color: "var(--text-hi)",
+                                    border: "1px solid var(--success-border)",
+                                    background: "var(--success-soft)",
+                                    color: "var(--success-bright)",
                                     fontSize: 12,
                                     fontWeight: 700,
-                                    fontFamily: "var(--font-main)",
-                                    cursor: "pointer",
                                     display: "flex",
                                     alignItems: "center",
                                     gap: 8,
                                   }}
                                 >
                                   <IconCheck size={14} stroke={2.5} />
-                                  {t("models.common.select")}
-                                </button>
-                              )}
-
-                              {!isModelBusy && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (isDownloaded) {
-                                      setPendingDeleteModel(model);
-                                      return;
-                                    }
-
-                                    void handleInstallLocalSttModel(model);
-                                  }}
-                                  disabled={isInstallDisabled}
+                                  {t("models.common.selected")}
+                                </div>
+                              ) : (
+                                <div
                                   style={{
-                                    padding: "9px 12px",
-                                    borderRadius: 10,
-                                    border: "1px solid var(--border-dashed)",
-                                    background: isInstallDisabled
-                                      ? "var(--control-muted)"
-                                      : isDownloaded
-                                        ? "var(--control-muted)"
-                                        : "var(--accent)",
-                                    color: isInstallDisabled
-                                      ? "var(--text-mid)"
-                                      : isDownloaded
-                                        ? "var(--text-hi)"
-                                        : "var(--accent-contrast)",
-                                    fontSize: 12,
-                                    fontWeight: 700,
-                                    fontFamily: "var(--font-main)",
-                                    cursor: isInstallDisabled ? "not-allowed" : "pointer",
                                     display: "flex",
                                     alignItems: "center",
                                     gap: 8,
+                                    flexWrap: "wrap",
                                   }}
                                 >
-                                  {isDownloaded ? (
-                                    <>
-                                      <IconTrash size={14} stroke={2.2} />
-                                      {t("models.common.delete")}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <IconDownload size={14} stroke={2.2} />
-                                      {isRuntimeReady
-                                        ? t("models.common.download")
-                                        : t("models.common.unavailable")}
-                                    </>
+                                  {isAdapterReady && (
+                                    <button
+                                      onClick={() => handleSelectApiAdapter(adapter)}
+                                      disabled={!canSelectApiAdapter}
+                                      style={{
+                                        padding: "9px 12px",
+                                        borderRadius: 10,
+                                        border: "1px solid var(--border-dashed)",
+                                        background: canSelectApiAdapter
+                                          ? "var(--control-muted)"
+                                          : "var(--control-muted)",
+                                        color: canSelectApiAdapter
+                                          ? "var(--text-hi)"
+                                          : "var(--text-mid)",
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        fontFamily: "var(--font-main)",
+                                        cursor: canSelectApiAdapter ? "pointer" : "not-allowed",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                      }}
+                                    >
+                                      <IconCheck size={14} stroke={2.5} />
+                                      {t("models.common.select")}
+                                    </button>
                                   )}
-                                </button>
+
+                                  <button
+                                    onClick={() => void handleApiAdapterTest(adapter)}
+                                    disabled={isAdapterTestDisabled}
+                                    style={{
+                                      padding: "9px 12px",
+                                      borderRadius: 10,
+                                      border: "1px solid var(--border-dashed)",
+                                      background: isAdapterTestDisabled
+                                        ? "var(--control-muted)"
+                                        : "var(--accent)",
+                                      color: isAdapterTestDisabled
+                                        ? "var(--text-mid)"
+                                        : "var(--accent-contrast)",
+                                      fontSize: 12,
+                                      fontWeight: 700,
+                                      fontFamily: "var(--font-main)",
+                                      cursor:
+                                        adapterStatus.status === "testing"
+                                          ? "wait"
+                                          : isAdapterTestDisabled
+                                            ? "not-allowed"
+                                            : "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
+                                    }}
+                                  >
+                                    {adapterStatus.status === "testing" ? (
+                                      <>
+                                        <span className="loading-soft-ring" />
+                                        {t("models.test.checking")}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <IconBolt size={14} stroke={2.2} />
+                                        {adapter.testable
+                                          ? t("models.test.testAndSave")
+                                          : t("models.test.saveButton")}
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {apiModelKind === "text" && <TextModelCard settings={settings} update={update} />}
+            {apiModelKind === "translation" && (
+              <RealtimeTranslationModels settings={settings} update={update} />
+            )}
+          </div>
+        )}
+
+        {isLocalMode && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div
+              style={{
+                display: "flex",
+                background: "var(--control-track)",
+                borderRadius: 10,
+                padding: 3,
+                gap: 2,
+              }}
+            >
+              {(
+                [
+                  {
+                    id: "transcription",
+                    label: t("models.local.tabTranscription"),
+                    Icon: IconMicrophone,
+                  },
+                  {
+                    id: "text",
+                    label: t("models.local.tabText"),
+                    Icon: IconMessage,
+                  },
+                  {
+                    id: "other",
+                    label: t("models.local.tabOther"),
+                    Icon: IconLanguage,
+                  },
+                ] as const
+              ).map(({ id, label, Icon }) => {
+                const active = localModelKind === id;
+
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setLocalModelKind(id)}
+                    style={{
+                      flex: 1,
+                      padding: "10px 0",
+                      borderRadius: 8,
+                      border: "none",
+                      fontSize: 13,
+                      fontWeight: active ? 700 : 500,
+                      fontFamily: "var(--font-main)",
+                      background: active ? "var(--dropdown-active)" : "transparent",
+                      color: active ? "var(--text-hi)" : "var(--text-mid)",
+                      cursor: "pointer",
+                      transition: "all 0.18s ease",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 7,
+                    }}
+                  >
+                    <Icon size={15} stroke={active ? 2.2 : 1.7} />
+                    <span>{label}</span>
+                    {id === "text" && !localTextModelSelected && (
+                      <span
+                        title={t("localLlm.required")}
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: 999,
+                          background: "var(--accent)",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {renderModeCommitRow("local")}
+
+            {localModelKind === "transcription" && (
+              <>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: "var(--text-hi)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {t("models.local.sectionTitle")}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--text-mid)",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {t("models.local.sectionDesc")}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {LOCAL_MODEL_OPTIONS.map((model) => {
+                    const isExpanded = expandedLocalModel === model.id;
+                    const modelStatus = getLocalModelStatus(model);
+                    const modelActionState = localModelActionStates[model.id];
+                    const isRuntimeReady =
+                      modelStatus.status !== "unsupported" && model.runtimeReady === true;
+                    const isDownloaded = modelStatus.isInstalled;
+                    const isModelBusy =
+                      modelStatus.status === "installing" || modelStatus.status === "deleting";
+                    const isInstallDisabled = isModelBusy || !isRuntimeReady;
+                    const canSelect =
+                      isRuntimeReady && modelStatus.isInstalled && model.purpose !== "diarization";
+                    const downloadProgress =
+                      modelStatus.status === "installing" ? modelActionState?.progress : undefined;
+                    const downloadedLabel = formatLocalDownloadBytes(
+                      modelActionState?.downloadedBytes,
+                      { showZero: Boolean(modelActionState?.totalBytes) },
+                    );
+                    const totalLabel = formatLocalDownloadBytes(modelActionState?.totalBytes);
+
+                    return (
+                      <LocalSttModelCard
+                        key={model.id}
+                        name={model.name}
+                        description={t(LOCAL_MODEL_DESCRIPTION_KEYS[model.id])}
+                        recommendedLabel={
+                          model.recommended ? t("models.local.recommendedBadge") : undefined
+                        }
+                        statusLabel={modelStatus.label}
+                        statusColor={modelStatus.color}
+                        expanded={isExpanded}
+                        onToggle={() => setExpandedLocalModel(isExpanded ? null : model.id)}
+                        disclosureLabel={t(isExpanded ? "mainTab.collapse" : "mainTab.expand")}
+                        stats={{
+                          storageLabel: getLocalModelStorageLabel(model),
+                          storageTitle: t("models.stat.downloadSizeTitle", {
+                            value: getLocalModelStorageLabel(model),
+                          }),
+                          languageLabel: translateLanguageValue(model.languageLabel),
+                          languageTitle: t("models.stat.languagesTitle", {
+                            value: translateLanguageValue(model.languageLabel),
+                          }),
+                          speedLabel: translateSpeedValue(model.speed),
+                          speedTitle: t("models.stat.speedTitle", {
+                            value: translateSpeedValue(model.speed),
+                          }),
+                          accuracyLabel: translateAccuracyValue(model.accuracy),
+                          accuracyTitle: t("models.stat.accuracyTitle", {
+                            value: translateAccuracyValue(model.accuracy),
+                          }),
+                          streamingLabel: model.supportsStreaming
+                            ? t("models.stat.streaming")
+                            : undefined,
+                        }}
+                        notice={
+                          modelStatus.message &&
+                          modelStatus.status !== "installing" &&
+                          modelStatus.status !== "installed" &&
+                          modelStatus.status !== "selected"
+                            ? {
+                                message: modelStatus.message,
+                                tone: modelStatus.status === "error" ? "error" : "neutral",
+                              }
+                            : undefined
+                        }
+                        progress={
+                          modelStatus.status === "installing"
+                            ? {
+                                message: modelActionState?.message || t("models.download.loading"),
+                                percent: downloadProgress,
+                                valueLabel: downloadedLabel || t("models.download.preparing"),
+                                downloadedLabel,
+                                totalLabel,
+                                totalTemplate: totalLabel
+                                  ? t("models.download.of", {
+                                      total: totalLabel,
+                                    })
+                                  : undefined,
+                              }
+                            : undefined
+                        }
+                        connectionLabel={modelStatus.connectionLabel || undefined}
+                        connectionColor={modelStatus.color}
+                        showConnectionCheck={
+                          modelStatus.status === "installed" || modelStatus.status === "selected"
+                        }
+                        actions={
+                          <>
+                            {canSelect && !modelStatus.isSelected && (
+                              <button
+                                type="button"
+                                onClick={() => handleSelectLocalModel(model)}
+                                style={{
+                                  padding: "9px 12px",
+                                  borderRadius: 10,
+                                  border: "1px solid var(--border-dashed)",
+                                  background: "var(--control-muted)",
+                                  color: "var(--text-hi)",
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  fontFamily: "var(--font-main)",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                }}
+                              >
+                                <IconCheck size={14} stroke={2.5} />
+                                {t("models.common.select")}
+                              </button>
+                            )}
+
+                            {!isModelBusy && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isDownloaded) {
+                                    setPendingDeleteModel(model);
+                                    return;
+                                  }
+
+                                  void handleInstallLocalSttModel(model);
+                                }}
+                                disabled={isInstallDisabled}
+                                style={{
+                                  padding: "9px 12px",
+                                  borderRadius: 10,
+                                  border: "1px solid var(--border-dashed)",
+                                  background: isInstallDisabled
+                                    ? "var(--control-muted)"
+                                    : isDownloaded
+                                      ? "var(--control-muted)"
+                                      : "var(--accent)",
+                                  color: isInstallDisabled
+                                    ? "var(--text-mid)"
+                                    : isDownloaded
+                                      ? "var(--text-hi)"
+                                      : "var(--accent-contrast)",
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  fontFamily: "var(--font-main)",
+                                  cursor: isInstallDisabled ? "not-allowed" : "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                }}
+                              >
+                                {isDownloaded ? (
+                                  <>
+                                    <IconTrash size={14} stroke={2.2} />
+                                    {t("models.common.delete")}
+                                  </>
+                                ) : (
+                                  <>
+                                    <IconDownload size={14} stroke={2.2} />
+                                    {isRuntimeReady
+                                      ? t("models.common.download")
+                                      : t("models.common.unavailable")}
+                                  </>
+                                )}
+                              </button>
+                            )}
+
+                            {modelStatus.status === "installing" && (
+                              <button
+                                type="button"
+                                onClick={() => void handleCancelLocalSttDownload(model)}
+                                style={{
+                                  padding: "9px 12px",
+                                  borderRadius: 10,
+                                  border: "1px solid var(--border-dashed)",
+                                  background: "var(--control-muted)",
+                                  color: "var(--text-hi)",
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  fontFamily: "var(--font-main)",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                }}
+                              >
+                                <IconX size={14} stroke={2.2} />
+                                {t("models.common.cancel")}
+                              </button>
+                            )}
+                          </>
+                        }
+                      />
+                    );
+                  })}
+                </div>
+                {pendingDeleteModel && (
+                  // biome-ignore lint/a11y/useKeyWithClickEvents: modal scrim closes on click; keyboard users have the Escape handler and the dialog controls.
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="delete-local-model-title"
+                    style={{
+                      position: "fixed",
+                      inset: 0,
+                      zIndex: 1000,
+                      background: "var(--modal-scrim)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 20,
+                    }}
+                    onClick={() => setPendingDeleteModel(null)}
+                  >
+                    {/* biome-ignore lint/a11y/useKeyWithClickEvents: the click handler only stops propagation so clicks inside the dialog do not close it. */}
+                    {/* biome-ignore lint/a11y/noStaticElementInteractions: the click handler only stops propagation so clicks inside the dialog do not close it. */}
+                    <div
+                      className="card"
+                      style={{
+                        width: "min(420px, 100%)",
+                        background: "var(--bg)",
+                        padding: 18,
+                        boxShadow: "var(--shadow-modal)",
+                      }}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <div
+                        id="delete-local-model-title"
+                        style={{
+                          fontSize: 17,
+                          fontWeight: 750,
+                          color: "var(--text-hi)",
+                          marginBottom: 8,
+                        }}
+                      >
+                        {t("models.deleteDialog.title")}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          lineHeight: 1.6,
+                          color: "var(--text-mid)",
+                          marginBottom: 16,
+                        }}
+                      >
+                        {t("models.deleteDialog.body", {
+                          name: pendingDeleteModel.name,
+                        })}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setPendingDeleteModel(null)}
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: 10,
+                            border: "1px solid var(--border-dashed)",
+                            background: "var(--control-muted)",
+                            color: "var(--text-hi)",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            fontFamily: "var(--font-main)",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {t("models.common.cancel")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteLocalSttModel(pendingDeleteModel)}
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: 10,
+                            border: "1px solid var(--border-dashed)",
+                            background: "var(--accent)",
+                            color: "var(--accent-contrast)",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            fontFamily: "var(--font-main)",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {t("models.common.delete")}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {localModelKind === "text" && (
+              <Suspense
+                fallback={
+                  <div
+                    className="card"
+                    style={{
+                      padding: 14,
+                      fontSize: 13,
+                      color: "var(--text-mid)",
+                    }}
+                  >
+                    {t("models.download.loading")}
+                  </div>
+                }
+              >
+                <LocalLlmModels settings={settings} update={update} />
+              </Suspense>
+            )}
+
+            {localModelKind === "other" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: "var(--text-hi)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {t("models.localOther.sectionTitle")}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--text-mid)",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {t("models.localOther.sectionDesc")}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {LOCAL_OTHER_COMPONENTS.map((component) => {
+                    const componentStatus = getLocalOtherStatus(component);
+                    const isBusy =
+                      componentStatus.status === "installing" ||
+                      componentStatus.status === "deleting";
+                    const isExpanded = expandedLocalOtherComponent === component.id || isBusy;
+
+                    return (
+                      <div
+                        key={component.id}
+                        className="card"
+                        style={{
+                          padding: 0,
+                          overflow: "hidden",
+                          background: "var(--surface)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "relative",
+                            padding: "12px 14px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            textAlign: "left",
+                            fontFamily: "var(--font-main)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              position: "relative",
+                              flex: 1,
+                              minWidth: 0,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 10,
+                                marginBottom: 3,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: 15,
+                                  fontWeight: 700,
+                                  color: "var(--text-hi)",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                {component.name}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: componentStatus.color,
+                                  padding: "5px 9px",
+                                  borderRadius: 999,
+                                  background: "var(--control-muted)",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {componentStatus.label}
+                              </div>
+                            </div>
+                            <div style={{ paddingRight: 34 }}>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  lineHeight: 1.45,
+                                  color: "var(--text-mid)",
+                                }}
+                              >
+                                {t(component.descriptionKey)}
+                              </div>
+                              {renderLocalModelStats(component)}
+                            </div>
+                            <ModelCardDisclosureButton
+                              expanded={isExpanded}
+                              onToggle={() =>
+                                setExpandedLocalOtherComponent(isExpanded ? null : component.id)
+                              }
+                              label={t(isExpanded ? "mainTab.collapse" : "mainTab.expand")}
+                            />
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div
+                            style={{
+                              borderTop: "1px solid var(--border-subtle)",
+                              padding: "12px 14px",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 10,
+                            }}
+                          >
+                            {componentStatus.message && componentStatus.status !== "installed" && (
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  lineHeight: 1.6,
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  background:
+                                    componentStatus.status === "error"
+                                      ? "var(--danger-soft)"
+                                      : "var(--control-muted)",
+                                  color:
+                                    componentStatus.status === "error"
+                                      ? "var(--error-bright)"
+                                      : "var(--text-mid)",
+                                  border: `1px solid ${componentStatus.status === "error" ? "var(--danger-border)" : "var(--border-subtle)"}`,
+                                }}
+                              >
+                                {componentStatus.message}
+                              </div>
+                            )}
+
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "flex-end",
+                                gap: 8,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              {componentStatus.status === "installed" && (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    color: componentStatus.color,
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    marginRight: "auto",
+                                  }}
+                                >
+                                  <IconCheck size={15} stroke={2.5} />
+                                  {componentStatus.isSelected
+                                    ? t("models.localOther.selected")
+                                    : t("models.localOther.installedNotSelected")}
+                                </div>
                               )}
 
-                              {modelStatus.status === "installing" && (
+                              {!isBusy && componentStatus.isInstalled && (
                                 <button
                                   type="button"
-                                  onClick={() => void handleCancelLocalSttDownload(model)}
+                                  onClick={() =>
+                                    handleSelectLocalTranslator(
+                                      component,
+                                      !componentStatus.isSelected,
+                                    )
+                                  }
                                   style={{
                                     padding: "9px 12px",
                                     borderRadius: 10,
@@ -3969,327 +4293,42 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                     gap: 8,
                                   }}
                                 >
-                                  <IconX size={14} stroke={2.2} />
-                                  {t("models.common.cancel")}
+                                  {componentStatus.isSelected ? (
+                                    <>
+                                      <IconX size={14} stroke={2.2} />
+                                      {t("models.localOther.cancelSelection")}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <IconCheck size={14} stroke={2.5} />
+                                      {t("models.localOther.select")}
+                                    </>
+                                  )}
                                 </button>
                               )}
-                            </>
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                  {pendingDeleteModel && (
-                    <div
-                      role="dialog"
-                      aria-modal="true"
-                      aria-labelledby="delete-local-model-title"
-                      style={{
-                        position: "fixed",
-                        inset: 0,
-                        zIndex: 1000,
-                        background: "var(--modal-scrim)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: 20,
-                      }}
-                      onClick={() => setPendingDeleteModel(null)}
-                    >
-                      <div
-                        className="card"
-                        style={{
-                          width: "min(420px, 100%)",
-                          background: "var(--bg)",
-                          padding: 18,
-                          boxShadow: "var(--shadow-modal)",
-                        }}
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <div
-                          id="delete-local-model-title"
-                          style={{
-                            fontSize: 17,
-                            fontWeight: 750,
-                            color: "var(--text-hi)",
-                            marginBottom: 8,
-                          }}
-                        >
-                          {t("models.deleteDialog.title")}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            lineHeight: 1.6,
-                            color: "var(--text-mid)",
-                            marginBottom: 16,
-                          }}
-                        >
-                          {t("models.deleteDialog.body", {
-                            name: pendingDeleteModel.name,
-                          })}
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "flex-end",
-                            gap: 8,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => setPendingDeleteModel(null)}
-                            style={{
-                              padding: "10px 14px",
-                              borderRadius: 10,
-                              border: "1px solid var(--border-dashed)",
-                              background: "var(--control-muted)",
-                              color: "var(--text-hi)",
-                              fontSize: 12,
-                              fontWeight: 700,
-                              fontFamily: "var(--font-main)",
-                              cursor: "pointer",
-                            }}
-                          >
-                            {t("models.common.cancel")}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleDeleteLocalSttModel(pendingDeleteModel)}
-                            style={{
-                              padding: "10px 14px",
-                              borderRadius: 10,
-                              border: "1px solid var(--border-dashed)",
-                              background: "var(--accent)",
-                              color: "var(--accent-contrast)",
-                              fontSize: 12,
-                              fontWeight: 700,
-                              fontFamily: "var(--font-main)",
-                              cursor: "pointer",
-                            }}
-                          >
-                            {t("models.common.delete")}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
 
-              {localModelKind === "text" && (
-                <Suspense
-                  fallback={
-                    <div
-                      className="card"
-                      style={{
-                        padding: 14,
-                        fontSize: 13,
-                        color: "var(--text-mid)",
-                      }}
-                    >
-                      {t("models.download.loading")}
-                    </div>
-                  }
-                >
-                  <LocalLlmModels settings={settings} update={update} />
-                </Suspense>
-              )}
-
-              {localModelKind === "other" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 15,
-                        fontWeight: 700,
-                        color: "var(--text-hi)",
-                        marginBottom: 4,
-                      }}
-                    >
-                      {t("models.localOther.sectionTitle")}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "var(--text-mid)",
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {t("models.localOther.sectionDesc")}
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {LOCAL_OTHER_COMPONENTS.map((component) => {
-                      const componentStatus = getLocalOtherStatus(component);
-                      const isBusy =
-                        componentStatus.status === "installing" ||
-                        componentStatus.status === "deleting";
-                      const isExpanded = expandedLocalOtherComponent === component.id || isBusy;
-
-                      return (
-                        <div
-                          key={component.id}
-                          className="card"
-                          style={{
-                            padding: 0,
-                            overflow: "hidden",
-                            background: "var(--surface)",
-                          }}
-                        >
-                          <div
-                            style={{
-                              position: "relative",
-                              padding: "12px 14px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 12,
-                              textAlign: "left",
-                              fontFamily: "var(--font-main)",
-                            }}
-                          >
-                            <div
-                              style={{
-                                position: "relative",
-                                flex: 1,
-                                minWidth: 0,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: 10,
-                                  marginBottom: 3,
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    fontSize: 15,
-                                    fontWeight: 700,
-                                    color: "var(--text-hi)",
-                                    whiteSpace: "nowrap",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  }}
-                                >
-                                  {component.name}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    color: componentStatus.color,
-                                    padding: "5px 9px",
-                                    borderRadius: 999,
-                                    background: "var(--control-muted)",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {componentStatus.label}
-                                </div>
-                              </div>
-                              <div style={{ paddingRight: 34 }}>
-                                <div
-                                  style={{
-                                    fontSize: 12,
-                                    lineHeight: 1.45,
-                                    color: "var(--text-mid)",
-                                  }}
-                                >
-                                  {t(component.descriptionKey)}
-                                </div>
-                                {renderLocalModelStats(component)}
-                              </div>
-                              <ModelCardDisclosureButton
-                                expanded={isExpanded}
-                                onToggle={() =>
-                                  setExpandedLocalOtherComponent(isExpanded ? null : component.id)
-                                }
-                                label={t(isExpanded ? "mainTab.collapse" : "mainTab.expand")}
-                              />
-                            </div>
-                          </div>
-
-                          {isExpanded && (
-                            <div
-                              style={{
-                                borderTop: "1px solid var(--border-subtle)",
-                                padding: "12px 14px",
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 10,
-                              }}
-                            >
-                              {componentStatus.message &&
-                                componentStatus.status !== "installed" && (
-                                  <div
-                                    style={{
-                                      fontSize: 12,
-                                      lineHeight: 1.6,
-                                      padding: "8px 10px",
-                                      borderRadius: 8,
-                                      background:
-                                        componentStatus.status === "error"
-                                          ? "var(--danger-soft)"
-                                          : "var(--control-muted)",
-                                      color:
-                                        componentStatus.status === "error"
-                                          ? "var(--error-bright)"
-                                          : "var(--text-mid)",
-                                      border: `1px solid ${componentStatus.status === "error" ? "var(--danger-border)" : "var(--border-subtle)"}`,
-                                    }}
-                                  >
-                                    {componentStatus.message}
-                                  </div>
-                                )}
-
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "flex-end",
-                                  gap: 8,
-                                  flexWrap: "wrap",
-                                }}
-                              >
-                                {componentStatus.status === "installed" && (
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 8,
-                                      color: componentStatus.color,
-                                      fontSize: 12,
-                                      fontWeight: 600,
-                                      marginRight: "auto",
-                                    }}
-                                  >
-                                    <IconCheck size={15} stroke={2.5} />
-                                    {componentStatus.isSelected
-                                      ? t("models.localOther.selected")
-                                      : t("models.localOther.installedNotSelected")}
-                                  </div>
-                                )}
-
-                                {!isBusy && componentStatus.isInstalled && (
+                              {!isBusy &&
+                                (!componentStatus.isInstalled || componentStatus.canDelete) && (
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleSelectLocalTranslator(
-                                        component,
-                                        !componentStatus.isSelected,
-                                      )
-                                    }
+                                    onClick={() => {
+                                      if (componentStatus.isInstalled) {
+                                        void handleDeleteLocalTranslator(component);
+                                        return;
+                                      }
+
+                                      void handleInstallLocalTranslator(component);
+                                    }}
                                     style={{
                                       padding: "9px 12px",
                                       borderRadius: 10,
                                       border: "1px solid var(--border-dashed)",
-                                      background: "var(--control-muted)",
-                                      color: "var(--text-hi)",
+                                      background: componentStatus.isInstalled
+                                        ? "var(--control-muted)"
+                                        : "var(--accent)",
+                                      color: componentStatus.isInstalled
+                                        ? "var(--text-hi)"
+                                        : "var(--accent-contrast)",
                                       fontSize: 12,
                                       fontWeight: 700,
                                       fontFamily: "var(--font-main)",
@@ -4299,76 +4338,30 @@ export function SettingsTabs({ type }: SettingsTabsProps) {
                                       gap: 8,
                                     }}
                                   >
-                                    {componentStatus.isSelected ? (
+                                    {componentStatus.isInstalled ? (
                                       <>
-                                        <IconX size={14} stroke={2.2} />
-                                        {t("models.localOther.cancelSelection")}
+                                        <IconTrash size={14} stroke={2.2} />
+                                        {t("models.common.delete")}
                                       </>
                                     ) : (
                                       <>
-                                        <IconCheck size={14} stroke={2.5} />
-                                        {t("models.localOther.select")}
+                                        <IconDownload size={14} stroke={2.2} />
+                                        {t("models.common.download")}
                                       </>
                                     )}
                                   </button>
                                 )}
-
-                                {!isBusy &&
-                                  (!componentStatus.isInstalled || componentStatus.canDelete) && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (componentStatus.isInstalled) {
-                                          void handleDeleteLocalTranslator(component);
-                                          return;
-                                        }
-
-                                        void handleInstallLocalTranslator(component);
-                                      }}
-                                      style={{
-                                        padding: "9px 12px",
-                                        borderRadius: 10,
-                                        border: "1px solid var(--border-dashed)",
-                                        background: componentStatus.isInstalled
-                                          ? "var(--control-muted)"
-                                          : "var(--accent)",
-                                        color: componentStatus.isInstalled
-                                          ? "var(--text-hi)"
-                                          : "var(--accent-contrast)",
-                                        fontSize: 12,
-                                        fontWeight: 700,
-                                        fontFamily: "var(--font-main)",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 8,
-                                      }}
-                                    >
-                                      {componentStatus.isInstalled ? (
-                                        <>
-                                          <IconTrash size={14} stroke={2.2} />
-                                          {t("models.common.delete")}
-                                        </>
-                                      ) : (
-                                        <>
-                                          <IconDownload size={14} stroke={2.2} />
-                                          {t("models.common.download")}
-                                        </>
-                                      )}
-                                    </button>
-                                  )}
-                              </div>
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
-          )}
-        </>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }

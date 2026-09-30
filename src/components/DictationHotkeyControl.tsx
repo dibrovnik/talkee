@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 
 import { useI18n } from "../lib/i18n";
-import { DEFAULT_HOTKEY, formatHotkeyLabel, getSettings, type AppSettings } from "../lib/store";
+import { type AppSettings, DEFAULT_HOTKEY, formatHotkeyLabel, getSettings } from "../lib/store";
 import { useHotkeyCapture } from "../windows/settings/useHotkeyCapture";
 import { HotkeyKeycaps } from "./HotkeyKeycaps";
 import { useLiveHotkeyPreview } from "./useLiveHotkeyPreview";
@@ -60,6 +60,7 @@ export function DictationHotkeyControl({
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
+      {/* biome-ignore lint/a11y/useSemanticElements: custom hotkey-capture surface keeps its grid/keycaps layout; a <button> would change rendering. */}
       <div
         ref={capture.surfaceRef}
         role="button"

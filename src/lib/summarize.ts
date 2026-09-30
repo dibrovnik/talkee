@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-
-import { AppSettings, HistoryEntry } from "./store";
 import { tn } from "./i18n";
+import type { AppSettings, HistoryEntry } from "./store";
 
 /**
  * Long transcripts (videos / hour-long calls) don't fit a model's context, so

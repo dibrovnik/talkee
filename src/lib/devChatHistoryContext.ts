@@ -1,14 +1,14 @@
-import type { HistoryEntry } from "./store";
-import { formatDurationMs } from "./utils";
 import {
   buildOfflineHistoryEmbeddingQuery,
   filterOfflineHistoryQueryTokens,
   firstOfflineHistoryConceptMatchIndex,
   isOfflineConceptHistoryQuestion,
   matchOfflineHistoryConcepts,
-  scoreOfflineHistoryConcepts,
   type OfflineHistoryConcept,
+  scoreOfflineHistoryConcepts,
 } from "./offlineHistorySearchTemplates";
+import type { HistoryEntry } from "./store";
+import { formatDurationMs } from "./utils";
 
 export interface DevChatHistoryContext {
   directAnswer?: string;

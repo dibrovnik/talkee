@@ -1,11 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-
-import { AppSettings, type HistoryEntry } from "./store";
+import { tn } from "./i18n";
 import { logError, logInfo } from "./logger";
 import { beginProcessing, finishProcessing } from "./processingControl";
+import type { AppSettings, HistoryEntry } from "./store";
 import { formatErrorMessage } from "./utils";
-import { tn } from "./i18n";
 
 const fileInterruptedMessage = (): string => tn("fileTranscription.interrupted");
 

@@ -1,10 +1,9 @@
 import { describe, expect, it } from "bun:test";
-
-import type { AppSettings } from "./store";
 import {
   identifyFirstFileSpeakerAsUser,
   toFileTranscriptionErrorMessage,
 } from "./fileTranscription";
+import type { AppSettings } from "./store";
 
 function settings(overrides: Partial<AppSettings>): AppSettings {
   return {

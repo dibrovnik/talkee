@@ -1,22 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-
-import {
-  AppSettings,
-  getSettings,
-  getWidgetPosition,
-  saveWidgetPosition,
-} from "../../../lib/store";
-import { tn } from "../../../lib/i18n";
-import { logError, logInfo } from "../../../lib/logger";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   SELECTION_TEXT_REQUEST_EVENT,
   SELECTION_TEXT_RESPONSE_EVENT,
   type SelectionTextResponsePayload,
 } from "../../../lib/hotkeyEvents";
+import { tn } from "../../../lib/i18n";
+import { logError, logInfo } from "../../../lib/logger";
+import {
+  type AppSettings,
+  getSettings,
+  getWidgetPosition,
+  saveWidgetPosition,
+} from "../../../lib/store";
 import { formatErrorMessage } from "../../../lib/utils";
 import {
   DEFAULT_WIDGET_SCALE,
@@ -24,28 +23,28 @@ import {
   scaleWidgetDimension,
 } from "../../../lib/widgetScale";
 import {
+  type SelectionTranslationProgress,
+  selectionTranslationLanguageLabel,
+  translateSelectedText,
+} from "../services/selectionTranslation";
+import {
+  initialWidgetMachineState,
+  type WidgetAction,
+  type WidgetEffect,
+  type WidgetMachineState,
+  widgetReducer,
+} from "../services/widgetMachine";
+import type { WidgetTextOverlayStatus } from "../widgetConstants";
+import {
+  type WidgetNoticeState,
+  type WidgetState,
   widgetStackHeight,
   widgetStackWidth,
-  WidgetNoticeState,
-  WidgetState,
 } from "../widgetConstants";
 import { resolveInitialWidgetPosition } from "../widgetPositioning";
 import { useWidgetHotkey } from "./useWidgetHotkey";
 import { useWidgetNotice } from "./useWidgetNotice";
 import { useWidgetRecording } from "./useWidgetRecording";
-import {
-  selectionTranslationLanguageLabel,
-  translateSelectedText,
-  type SelectionTranslationProgress,
-} from "../services/selectionTranslation";
-import type { WidgetTextOverlayStatus } from "../widgetConstants";
-import {
-  initialWidgetMachineState,
-  widgetReducer,
-  WidgetAction,
-  WidgetEffect,
-  WidgetMachineState,
-} from "../services/widgetMachine";
 
 interface WidgetControllerOptions {
   onVoiceRecordingProcessing?: () => void;

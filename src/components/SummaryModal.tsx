@@ -1,30 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { IconCheck, IconClipboard, IconPencil, IconTrash } from "../lib/icons";
-
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SETTINGS_UPDATED_EVENT } from "../lib/hotkeyEvents";
+import { useI18n } from "../lib/i18n";
+import { IconCheck, IconClipboard, IconPencil, IconTrash } from "../lib/icons";
 import {
+  type AppSettings,
+  addSummaryToEntry,
+  deleteSummaryFromEntry,
   getSettings,
   HISTORY_MAX_SUMMARIES_PER_ENTRY,
-  listPromptsByKind,
-  addSummaryToEntry,
-  updateSummaryInEntry,
-  deleteSummaryFromEntry,
-  type AppSettings,
   type HistoryEntry,
+  listPromptsByKind,
   type SummaryEntry,
+  updateSummaryInEntry,
 } from "../lib/store";
 import {
-  summarizeTranscript,
   resolveSummaryBackend,
-  transcriptToText,
   type SummarizeProgress,
+  summarizeTranscript,
+  transcriptToText,
 } from "../lib/summarize";
 import { formatDurationMs, formatErrorMessage } from "../lib/utils";
-import { useI18n } from "../lib/i18n";
-import { SlideOverModal } from "./SlideOverModal";
-import { RowActionsMenu, type RowActionItem } from "./RowActionsMenu";
 import { Dropdown } from "./Dropdown";
+import { type RowActionItem, RowActionsMenu } from "./RowActionsMenu";
+import { SlideOverModal } from "./SlideOverModal";
 
 const PREFERRED_DEFAULT_PROMPT = "summary-short";
 const TEXT_PREVIEW_LIMIT = 250;

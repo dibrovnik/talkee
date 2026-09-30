@@ -1,22 +1,21 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, ReactElement, RefObject, SetStateAction } from "react";
-import { createPortal } from "react-dom";
 import { emit, listen } from "@tauri-apps/api/event";
-
-import { LANGUAGES } from "../../../config/languages";
+import type { Dispatch, ReactElement, RefObject, SetStateAction } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Dropdown } from "../../../components/Dropdown";
+import { LANGUAGES } from "../../../config/languages";
 import { SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
+import { useI18n } from "../../../lib/i18n";
 import { IconCheck, IconChevronDown, IconSearch } from "../../../lib/icons";
+import { logError } from "../../../lib/logger";
 import {
+  type AppSettings,
   DEFAULT_SELECTION_TRANSLATION_HOTKEY,
   formatHotkeyLabel,
   getSettings,
   saveSettings,
-  type AppSettings,
   type TranslationSettings,
 } from "../../../lib/store";
-import { useI18n } from "../../../lib/i18n";
-import { logError } from "../../../lib/logger";
 import { useHotkeyCapture } from "../useHotkeyCapture";
 
 const SETTING_ROW_COLUMNS = "minmax(0, 1fr) 280px";
@@ -137,6 +136,7 @@ function LanguageDropdownPortal({
   }
 
   return createPortal(
+    // biome-ignore lint/a11y/noStaticElementInteractions: the mousedown handler only stops propagation for the popover container.
     <div
       onMouseDown={(event) => event.stopPropagation()}
       style={{
@@ -166,7 +166,9 @@ function LanguageDropdownPortal({
       >
         <IconSearch size={13} style={{ color: "var(--text-low)", flexShrink: 0 }} />
         <input
-          autoFocus
+          ref={(el) => {
+            el?.focus();
+          }}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder={placeholder}
@@ -1406,6 +1408,7 @@ export function TranslationTab(): ReactElement {
             >
               {t("translation.selection.hotkeyLabel")}
             </label>
+            {/* biome-ignore lint/a11y/useSemanticElements: custom hotkey-capture surface keeps its grid layout; a <button> would change rendering. */}
             <div
               id="selection-translation-hotkey"
               ref={selectionHotkeyRef}

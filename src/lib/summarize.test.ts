@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { normalizeSavedSettings, type AppSettings } from "./store";
+import { type AppSettings, normalizeSavedSettings } from "./store";
 import {
   isSummaryAvailable,
   LOCAL_TEXT_PROCESSING_LIMITS,

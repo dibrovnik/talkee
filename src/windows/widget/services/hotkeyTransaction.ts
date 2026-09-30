@@ -3,7 +3,7 @@ import type {
   HotkeyRegistrationResultPayload,
   HotkeyTarget,
 } from "../../../lib/hotkeyEvents";
-import { normalizeHotkey, type AppSettingsPatch, type AppSettings } from "../../../lib/store";
+import { type AppSettings, type AppSettingsPatch, normalizeHotkey } from "../../../lib/store";
 
 export type HotkeyTransactionStage =
   | "validate"

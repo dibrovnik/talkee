@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { ReactElement } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import type { ReactElement } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { IconAlertCircle, IconInfoCircle } from "../../lib/icons";
 
 import {
@@ -70,6 +70,7 @@ export function WidgetNoticeOverlay(): ReactElement | null {
         overflow: "hidden",
       }}
     >
+      {/* biome-ignore lint/a11y/useSemanticElements: the notice bubble is a styled container with expand/collapse behaviour, not a plain <button>. */}
       <div
         ref={bubbleRef}
         role="button"

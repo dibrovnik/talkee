@@ -1,14 +1,12 @@
-import type { ComponentPropsWithoutRef, ForwardRefExoticComponent, RefAttributes } from "react";
-
+import { ArrowClockwiseIcon as RawIconRefresh } from "@phosphor-icons/react/ArrowClockwise";
+import { ArrowSquareOutIcon as RawIconExternalLink } from "@phosphor-icons/react/ArrowSquareOut";
+import { ArrowsClockwiseIcon as RawIconRotate2 } from "@phosphor-icons/react/ArrowsClockwise";
 import { ArrowUpIcon as RawIconArrowUp } from "@phosphor-icons/react/ArrowUp";
-import { SlidersHorizontalIcon as RawIconAdjustmentsHorizontal } from "@phosphor-icons/react/SlidersHorizontal";
-import { WarningCircleIcon as RawIconAlertCircle } from "@phosphor-icons/react/WarningCircle";
-import { WarningIcon as RawIconAlertTriangle } from "@phosphor-icons/react/Warning";
-import { LightningIcon as RawIconBolt } from "@phosphor-icons/react/Lightning";
 import { BriefcaseIcon as RawIconBriefcase } from "@phosphor-icons/react/Briefcase";
 import { BroadcastIcon as RawIconBroadcast } from "@phosphor-icons/react/Broadcast";
-import { CheckIcon as RawIconCheck } from "@phosphor-icons/react/Check";
 import { CaretDownIcon as RawIconChevronDown } from "@phosphor-icons/react/CaretDown";
+import { ChatCircleIcon as RawIconMessage } from "@phosphor-icons/react/ChatCircle";
+import { CheckIcon as RawIconCheck } from "@phosphor-icons/react/Check";
 import { ClipboardIcon as RawIconClipboard } from "@phosphor-icons/react/Clipboard";
 import { CloudIcon as RawIconCloud } from "@phosphor-icons/react/Cloud";
 import { CodeIcon as RawIconCode } from "@phosphor-icons/react/Code";
@@ -16,24 +14,21 @@ import { CopyIcon as RawIconCopy } from "@phosphor-icons/react/Copy";
 import { CpuIcon as RawIconCpu } from "@phosphor-icons/react/Cpu";
 import { CrownIcon as RawIconCrown } from "@phosphor-icons/react/Crown";
 import { DesktopIcon as RawIconDeviceDesktop } from "@phosphor-icons/react/Desktop";
-import { GearIcon as RawIconDeviceDesktopCog } from "@phosphor-icons/react/Gear";
 import { DotsThreeIcon as RawIconDots } from "@phosphor-icons/react/DotsThree";
 import { DownloadSimpleIcon as RawIconDownload } from "@phosphor-icons/react/DownloadSimple";
-import { ArrowSquareOutIcon as RawIconExternalLink } from "@phosphor-icons/react/ArrowSquareOut";
+import { EnvelopeIcon as RawIconMail } from "@phosphor-icons/react/Envelope";
 import { FileAudioIcon as RawIconFileMusic } from "@phosphor-icons/react/FileAudio";
 import { GaugeIcon as RawIconGauge } from "@phosphor-icons/react/Gauge";
+import { GearIcon as RawIconDeviceDesktopCog } from "@phosphor-icons/react/Gear";
 import { GlobeHemisphereWestIcon as RawIconGlobe } from "@phosphor-icons/react/GlobeHemisphereWest";
+import { HardDrivesIcon as RawIconServer } from "@phosphor-icons/react/HardDrives";
 import { HeadphonesIcon as RawIconHeadphones } from "@phosphor-icons/react/Headphones";
-import { QuestionIcon as RawIconHelpCircle } from "@phosphor-icons/react/Question";
 import { HouseIcon as RawIconHome } from "@phosphor-icons/react/House";
 import { InfoIcon as RawIconInfoCircle } from "@phosphor-icons/react/Info";
 import { KeyboardIcon as RawIconKeyboard } from "@phosphor-icons/react/Keyboard";
-import { TranslateIcon as RawIconLanguage } from "@phosphor-icons/react/Translate";
+import { LightningIcon as RawIconBolt } from "@phosphor-icons/react/Lightning";
 import { ListChecksIcon as RawIconListCheck } from "@phosphor-icons/react/ListChecks";
-import { SpinnerGapIcon as RawIconLoader2 } from "@phosphor-icons/react/SpinnerGap";
-import { SignOutIcon as RawIconLogout } from "@phosphor-icons/react/SignOut";
-import { EnvelopeIcon as RawIconMail } from "@phosphor-icons/react/Envelope";
-import { ChatCircleIcon as RawIconMessage } from "@phosphor-icons/react/ChatCircle";
+import { MagnifyingGlassIcon as RawIconSearch } from "@phosphor-icons/react/MagnifyingGlass";
 import { MicrophoneIcon as RawIconMicrophone } from "@phosphor-icons/react/Microphone";
 import { MoonIcon as RawIconMoon } from "@phosphor-icons/react/Moon";
 import { PauseIcon as RawIconPause } from "@phosphor-icons/react/Pause";
@@ -41,20 +36,26 @@ import { PencilSimpleIcon as RawIconPencil } from "@phosphor-icons/react/PencilS
 import { PhoneCallIcon as RawIconPhoneCall } from "@phosphor-icons/react/PhoneCall";
 import { PlayIcon as RawIconPlayerPlay } from "@phosphor-icons/react/Play";
 import { PlusIcon as RawIconPlus } from "@phosphor-icons/react/Plus";
-import { ArrowClockwiseIcon as RawIconRefresh } from "@phosphor-icons/react/ArrowClockwise";
-import { ArrowsClockwiseIcon as RawIconRotate2 } from "@phosphor-icons/react/ArrowsClockwise";
-import { MagnifyingGlassIcon as RawIconSearch } from "@phosphor-icons/react/MagnifyingGlass";
-import { HardDrivesIcon as RawIconServer } from "@phosphor-icons/react/HardDrives";
+import { QuestionIcon as RawIconHelpCircle } from "@phosphor-icons/react/Question";
+import { SignOutIcon as RawIconLogout } from "@phosphor-icons/react/SignOut";
+import { SlidersHorizontalIcon as RawIconAdjustmentsHorizontal } from "@phosphor-icons/react/SlidersHorizontal";
 import { SparkleIcon as RawIconSparkles } from "@phosphor-icons/react/Sparkle";
-import { SpeakerHighIcon as RawIconSpeakerphone } from "@phosphor-icons/react/SpeakerHigh";
+import {
+  SpeakerHighIcon as RawIconSpeakerphone,
+  SpeakerHighIcon as RawIconVolume,
+} from "@phosphor-icons/react/SpeakerHigh";
+import { SpinnerGapIcon as RawIconLoader2 } from "@phosphor-icons/react/SpinnerGap";
 import { SquareIcon as RawIconSquare } from "@phosphor-icons/react/Square";
 import { SunIcon as RawIconSun } from "@phosphor-icons/react/Sun";
 import { TargetIcon as RawIconTargetArrow } from "@phosphor-icons/react/Target";
-import { TrashIcon as RawIconTrash } from "@phosphor-icons/react/Trash";
 import { TextTIcon as RawIconTypography } from "@phosphor-icons/react/TextT";
+import { TranslateIcon as RawIconLanguage } from "@phosphor-icons/react/Translate";
+import { TrashIcon as RawIconTrash } from "@phosphor-icons/react/Trash";
 import { UserIcon as RawIconUser } from "@phosphor-icons/react/User";
-import { SpeakerHighIcon as RawIconVolume } from "@phosphor-icons/react/SpeakerHigh";
+import { WarningIcon as RawIconAlertTriangle } from "@phosphor-icons/react/Warning";
+import { WarningCircleIcon as RawIconAlertCircle } from "@phosphor-icons/react/WarningCircle";
 import { XIcon as RawIconX } from "@phosphor-icons/react/X";
+import type { ComponentPropsWithoutRef, ForwardRefExoticComponent, RefAttributes } from "react";
 
 export interface IconProps
   extends Omit<ComponentPropsWithoutRef<"svg">, "stroke">,

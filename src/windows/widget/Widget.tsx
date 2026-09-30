@@ -1,10 +1,48 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { cursorPosition, getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import type { ReactNode, PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  buildCallLiveSpeakerTranscript,
+  type CallCaptureSession,
+  checkpointCallTranscription,
+  formatCallLiveTranscript,
+  pauseCallCaptureMic,
+  restoreInterruptedCallCaptureHistory,
+  resumeCallCaptureMic,
+  saveCallCaptureMicTrack,
+  saveFailedCallCaptureEntry,
+  startCallCapture,
+  stopCallCapture,
+  transcribeCallCaptureSession,
+} from "../../lib/callCapture";
+import {
+  type FileTranscriptionProgress,
+  type FileTranscriptionStatus,
+  fileNameFromPath,
+  getFileTranscriptionPercent,
+  toFileTranscriptionErrorMessage,
+  transcribeFilePathOnly,
+} from "../../lib/fileTranscription";
+import {
+  APP_DATA_MIGRATION_ERROR_EVENT,
+  CALL_CAPTURE_STOP_REQUEST_EVENT,
+  type CallCaptureStopRequestPayload,
+  DICTATION_STREAM_UPDATE_EVENT,
+  type DictationStreamUpdatePayload,
+  HISTORY_CLEARED_EVENT,
+  HISTORY_DELETED_EVENT,
+  HISTORY_UPDATED_EVENT,
+  PROCESSING_CANCEL_REQUEST_EVENT,
+  type ProcessingCancelRequestPayload,
+  SETTINGS_UPDATED_EVENT,
+  WIDGET_RETRY_PROCESSING_EVENT,
+  type WidgetRetryProcessingPayload,
+} from "../../lib/hotkeyEvents";
+import { tn, useI18n } from "../../lib/i18n";
 import {
   IconCheck,
   IconCopy,
@@ -13,32 +51,8 @@ import {
   IconLoader2,
   IconPhoneCall,
 } from "../../lib/icons";
-
-import {
-  CALL_CAPTURE_STOP_REQUEST_EVENT,
-  HISTORY_CLEARED_EVENT,
-  HISTORY_DELETED_EVENT,
-  HISTORY_UPDATED_EVENT,
-  DICTATION_STREAM_UPDATE_EVENT,
-  APP_DATA_MIGRATION_ERROR_EVENT,
-  PROCESSING_CANCEL_REQUEST_EVENT,
-  SETTINGS_UPDATED_EVENT,
-  WIDGET_RETRY_PROCESSING_EVENT,
-  type DictationStreamUpdatePayload,
-  type CallCaptureStopRequestPayload,
-  type ProcessingCancelRequestPayload,
-  type WidgetRetryProcessingPayload,
-} from "../../lib/hotkeyEvents";
-import {
-  DEFAULT_SELECTION_TRANSLATION_HOTKEY,
-  getHistory,
-  getSettings,
-  addHistoryEntry,
-  reconcileInterruptedProcessing,
-  type HistoryEntry,
-  type TranslationSettings,
-  updateHistoryEntry,
-} from "../../lib/store";
+import { logError, logInfo } from "../../lib/logger";
+import { requestSystemAudioPermission, requiresSystemAudioPermission } from "../../lib/permissions";
 import {
   beginProcessing,
   cancelProcessing,
@@ -46,62 +60,47 @@ import {
   isAbortError,
 } from "../../lib/processingControl";
 import {
-  fileNameFromPath,
-  type FileTranscriptionProgress,
-  type FileTranscriptionStatus,
-  getFileTranscriptionPercent,
-  toFileTranscriptionErrorMessage,
-  transcribeFilePathOnly,
-} from "../../lib/fileTranscription";
-import { logError, logInfo } from "../../lib/logger";
-import { tn, useI18n } from "../../lib/i18n";
-import { requestSystemAudioPermission, requiresSystemAudioPermission } from "../../lib/permissions";
+  addHistoryEntry,
+  DEFAULT_SELECTION_TRANSLATION_HOTKEY,
+  getHistory,
+  getSettings,
+  type HistoryEntry,
+  reconcileInterruptedProcessing,
+  type TranslationSettings,
+  updateHistoryEntry,
+} from "../../lib/store";
 import { scaleWidgetDimension } from "../../lib/widgetScale";
-import {
-  buildCallLiveSpeakerTranscript,
-  checkpointCallTranscription,
-  formatCallLiveTranscript,
-  pauseCallCaptureMic,
-  restoreInterruptedCallCaptureHistory,
-  resumeCallCaptureMic,
-  saveFailedCallCaptureEntry,
-  saveCallCaptureMicTrack,
-  startCallCapture,
-  stopCallCapture,
-  transcribeCallCaptureSession,
-  type CallCaptureSession,
-} from "../../lib/callCapture";
 import { useWidgetController } from "./hooks/useWidgetController";
-import { WidgetRecordButton } from "./WidgetRecordButton";
-import { createRecordingRuntimeController } from "./services/recordingRuntime";
-import {
-  applyLiveTranslationEvent,
-  buildLiveTranslationHistoryEntry,
-  createLiveTranslationOverlayState,
-  liveTranslationVisibleSegments,
-  resolveLiveTranslationConnection,
-  type LiveTranslationEventPayload,
-  type LiveTranslationOverlayState,
-} from "./services/liveTranslation";
+import { requestCallMicrophoneStream, resolveCallMicrophoneLabel } from "./services/callMicrophone";
 import {
   createCallLiveDictationOptions,
   warmUpLiveDictationRuntime,
 } from "./services/dictationStreamOverlay";
-import { requestCallMicrophoneStream, resolveCallMicrophoneLabel } from "./services/callMicrophone";
-import { showWidgetErrorOverlay } from "./services/widgetErrorOverlay";
+import {
+  applyLiveTranslationEvent,
+  buildLiveTranslationHistoryEntry,
+  createLiveTranslationOverlayState,
+  type LiveTranslationEventPayload,
+  type LiveTranslationOverlayState,
+  liveTranslationVisibleSegments,
+  resolveLiveTranslationConnection,
+} from "./services/liveTranslation";
 import {
   createLiveTranslationOverlayRenderer,
   type LiveTranslationOverlayRenderer,
 } from "./services/liveTranslationOverlayRenderer";
+import { createRecordingRuntimeController } from "./services/recordingRuntime";
+import { showWidgetErrorOverlay } from "./services/widgetErrorOverlay";
+import { WidgetRecordButton } from "./WidgetRecordButton";
 import {
   ACTIVE_WIDGET_SHELL_HEIGHT,
   ACTIVE_WIDGET_SHELL_WIDTH,
   CALL_BUBBLE_SIZE,
   FILE_DROP_WIDGET_HEIGHT,
   FILE_DROP_WIDGET_WIDTH,
+  IDLE_HOVER_SCALE,
   IDLE_HOVER_WIDGET_HEIGHT,
   IDLE_HOVER_WIDGET_WIDTH,
-  IDLE_HOVER_SCALE,
   WIDGET_CONTROL_GAP,
   WIDGET_PRIMARY_INLINE_INSET,
   WIDGET_SHELL_HEIGHT,
@@ -204,7 +203,9 @@ function getCopyableText(entry: HistoryEntry | null | undefined): string | null 
 }
 
 function stopMediaStream(stream: MediaStream | null): void {
-  stream?.getTracks().forEach((track) => track.stop());
+  stream?.getTracks().forEach((track) => {
+    track.stop();
+  });
 }
 
 function isPermissionDeniedError(error: unknown): boolean {
@@ -2098,6 +2099,7 @@ function CallBubble({
       width={CALL_BUBBLE_SIZE}
       height={CALL_BUBBLE_SIZE}
     >
+      {/* biome-ignore lint/a11y/useFocusableInteractive lint/a11y/useSemanticElements: the bubble is a visual surface; the surrounding shell handles click and drag. */}
       <div
         aria-label={title}
         title={title}
@@ -2173,6 +2175,7 @@ function LiveTranslationBubble({
       width={CALL_BUBBLE_SIZE}
       height={CALL_BUBBLE_SIZE}
     >
+      {/* biome-ignore lint/a11y/useFocusableInteractive lint/a11y/useSemanticElements: the bubble is a visual surface; the surrounding shell handles click and drag. */}
       <div
         role="button"
         aria-label={title}
@@ -2462,7 +2465,7 @@ function FlowRecordingWidget({
       }
 
       const rms = Math.sqrt(sumSquares / dataArray.length);
-      const boostedLevel = Math.pow(Math.min(1, rms * 15), 0.58);
+      const boostedLevel = Math.min(1, rms * 15) ** 0.58;
       const quietFloor = rms > 0.003 ? 0.1 : 0.025;
       smoothedLevel = smoothedLevel * 0.48 + Math.max(quietFloor, boostedLevel) * 0.52;
 
@@ -2496,7 +2499,7 @@ function FlowRecordingWidget({
         </div>
       )}
       {showWave && (
-        <svg viewBox="0 0 190 34" preserveAspectRatio="none">
+        <svg viewBox="0 0 190 34" preserveAspectRatio="none" aria-hidden="true">
           {WIDGET_WAVES.map((wave) => (
             <path
               key={wave.className}
@@ -2549,6 +2552,7 @@ function ActiveWidgetShell({
   onPointerLeave?: () => void;
 } & DragHandlers) {
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: this draggable shell handles pointer gestures and clicks; keyboard control is provided by the widget's global hotkeys.
     <div
       style={{
         width,

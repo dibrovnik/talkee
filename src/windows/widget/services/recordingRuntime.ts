@@ -106,7 +106,9 @@ function waitForRecorderStop(recorder: MediaRecorder): Promise<void> {
 }
 
 function stopTracks(stream: MediaStream | null): void {
-  stream?.getTracks().forEach((track) => track.stop());
+  stream?.getTracks().forEach((track) => {
+    track.stop();
+  });
 }
 
 function base64ToBlob(base64: string, mimeType: string): Blob {
@@ -476,7 +478,7 @@ export function createRecordingRuntimeController(): RecordingRuntimeController {
         return true;
       }
 
-      if (!state.recorder || state.recorder.state !== "recording") {
+      if (state.recorder?.state !== "recording") {
         return false;
       }
 
@@ -505,7 +507,7 @@ export function createRecordingRuntimeController(): RecordingRuntimeController {
         return true;
       }
 
-      if (!state.recorder || state.recorder.state !== "paused") {
+      if (state.recorder?.state !== "paused") {
         return false;
       }
 

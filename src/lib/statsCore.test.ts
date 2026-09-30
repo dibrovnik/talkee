@@ -7,8 +7,8 @@ import {
   dayKeyOf,
   monthKeyOf,
   normalizeStats,
-  statsToView,
   type StatInput,
+  statsToView,
 } from "./statsCore";
 
 function input(overrides: Partial<StatInput> = {}): StatInput {

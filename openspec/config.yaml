@@ -41,6 +41,7 @@ rules:
     - Each task must be small enough for a single focused edit session and name the concrete files to touch.
     - Every task group ends with a verification task naming the exact command(s) to run.
     - Never mark a task done without running its verification.
+    - The last task of every change runs `bun run gate`.
   design:
     - List concrete file paths that change, with the reason for each.
 

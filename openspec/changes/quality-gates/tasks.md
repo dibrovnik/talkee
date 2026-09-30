@@ -34,7 +34,7 @@
 
 ## 5. Документация
 
-- [ ] 5.1 Создать `docs/quality.md` (design.md, решение 7)
-- [ ] 5.2 `AGENTS.md`: раздел «Команды» — `bun run gate`, `bun run format`; правило «перед завершением любой задачи запусти `bun run gate`»
-- [ ] 5.3 `openspec/config.yaml`: в `rules.tasks` добавить «последняя задача каждого изменения — `bun run gate`»
-- [ ] 5.4 Проверка: `bun run gate`; `openspec validate quality-gates --strict`
+- [x] 5.1 Создать `docs/quality.md` (design.md, решение 7)
+- [x] 5.2 `AGENTS.md`: раздел «Команды» — `bun run gate`, `bun run format`; правило «перед завершением любой задачи запусти `bun run gate`»
+- [x] 5.3 `openspec/config.yaml`: в `rules.tasks` добавить «последняя задача каждого изменения — `bun run gate`»
+- [x] 5.4 Проверка: `bun run gate`; `openspec validate quality-gates --strict`

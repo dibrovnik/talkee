@@ -33,6 +33,8 @@ Detailed rules live in one place each; see [Domain Rules](#domain-rules).
 
 Use `bun` everywhere (not npm/yarn).
 
+Before finishing any task, run `bun run gate` (see `docs/quality.md`).
+
 ```bash
 # Development (hot reload)
 bun run tauri dev
@@ -52,6 +54,10 @@ cargo check --manifest-path src-tauri/Cargo.toml
 # Tests
 bun test
 bun test scripts
+
+# Quality gate (run before finishing any task)
+bun run gate          # static checks, format, types/lint, tests
+bun run format        # apply Biome + rustfmt
 
 # Hygiene and release gates
 bun run check:naming

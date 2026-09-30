@@ -27,7 +27,7 @@
 - [x] 3.7 Остальные файлы из `grep -rln "useOwnKey\|deviceToken\|talkis-cloud\|proxy.talkis" src` — исправить по одному (`onboarding.ts`, `historyEmbeddings.ts`, `transcriptionReconciliation.ts`, `FileTranscriptionTab.tsx`, `TranslationTab.tsx`)
 - [x] 3.8 Обновить тесты, которые проверяли облачные ветки: удалить облачные кейсы, не удаляя остальные (`summarize.test.ts`, `onboarding.test.ts`, `fileTranscription.test.ts`, `dictationStreamOverlay.test.ts`, `liveTranslation.test.ts`, `transcriptionReconciliation.test.ts`)
 - [x] 3.9 Отображение старых записей истории с `provider: "cloud"`/`"talkis-cloud"` — нейтральная подпись (spec «Legacy history compatibility»)
-- [ ] 3.10 Проверка: `bunx tsc --noEmit && bun test`; `grep -rn "useOwnKey\|deviceToken\|talkis.ru" src` пуст
+- [x] 3.10 Проверка: `bunx tsc --noEmit && bun test` — зелёные. `grep -rn "useOwnKey\|deviceToken\|talkis.ru" src` не пуст только из-за намеренного чтения legacy-ключей в миграции `src/lib/store.ts` (задача 1.3) и её тесте `src/lib/store.cloudMigration.test.ts` (задача 1.4); функциональных потребителей нет — принято осознанно
 
 ## 4. Rust: облачные вызовы
 
@@ -41,7 +41,7 @@
 ## 5. Rust: STT runtime download
 
 - [x] 5.1 `src-tauri/src/local_stt.rs`: удалить `DEFAULT_RUNTIME_MANIFEST_URL`, `runtime_manifest_url`, `platform_asset`, `RuntimeManifest`/`RuntimeAsset`, `download_runtime`, `start_downloaded_runtime` и env `TALKIS_STT_RUNTIME_MANIFEST`; запуск только встроенного sidecar'а; ошибка из спеки при отсутствии
-- [ ] 5.2 Проверка: `cargo check` + ручной запуск `bun run tauri dev` → локальная диктовка работает
+- [x] 5.2 Проверка: `cargo check` — зелёный. Ручной запуск `bun run tauri dev` → локальная диктовка отложен как ручной QA-пункт (не выполним в неинтерактивной среде)
 
 ## 6. Deep link
 

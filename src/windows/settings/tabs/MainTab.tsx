@@ -14,6 +14,7 @@ import { type RowActionItem, RowActionsMenu } from "../../../components/RowActio
 import { SpeakerNameInput } from "../../../components/SpeakerNameInput";
 import { TranscriptionStatsPanel } from "../../../components/TranscriptionStatsPanel";
 import { retryCallCaptureHistoryEntry } from "../../../lib/callCapture";
+import { cleanupHistoryText, hasOriginalCleanupText } from "../../../lib/cleanupHistory";
 import { retryFileHistoryEntry } from "../../../lib/fileTranscription";
 import {
   HISTORY_CLEARED_EVENT,
@@ -286,6 +287,7 @@ export function MainTab({
   const [history, setHistory] = useState<HistoryListEntry[]>(() =>
     initialHistory.map(toInitialHistoryListEntry),
   );
+  const [originalIds, setOriginalIds] = useState<Set<string>>(() => new Set());
   const [copied, setCopied] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [retrySucceededId, setRetrySucceededId] = useState<string | null>(null);
@@ -552,7 +554,7 @@ export function MainTab({
 
   const copyEntryText = async (id: string): Promise<void> => {
     const entry = await loadFullEntry(id);
-    const text = entry?.cleaned.trim() ? entry.cleaned : "";
+    const text = entry ? cleanupHistoryText(entry, originalIds.has(id)) : "";
     if (!text) return;
     await copyText(id, text);
   };
@@ -982,9 +984,13 @@ export function MainTab({
                         const isExpanded = expandedIds.has(item.id);
                         const isLoadingFullEntry = loadingFullEntryIds.has(item.id);
                         const displayText =
-                          isExpanded && fullEntry ? fullEntry.cleaned : item.textPreview;
+                          isExpanded && fullEntry
+                            ? cleanupHistoryText(fullEntry, originalIds.has(item.id))
+                            : item.textPreview;
                         const displayTextLength =
-                          isExpanded && fullEntry ? fullEntry.cleaned.length : item.textLength;
+                          isExpanded && fullEntry
+                            ? cleanupHistoryText(fullEntry, originalIds.has(item.id)).length
+                            : item.textLength;
 
                         return (
                           <tr
@@ -1084,6 +1090,27 @@ export function MainTab({
                                       onToggle={() => toggleExpanded(item.id)}
                                     />
                                   )}
+                                  {isExpanded &&
+                                    fullEntry &&
+                                    source === "voice" &&
+                                    hasOriginalCleanupText(fullEntry) && (
+                                      <SegmentedControl
+                                        value={originalIds.has(item.id) ? "raw" : "cleaned"}
+                                        options={[
+                                          { value: "cleaned", label: t("cleanup.cleaned") },
+                                          { value: "raw", label: t("cleanup.raw") },
+                                        ]}
+                                        ariaLabel={t("cleanup.title")}
+                                        onChange={(value) =>
+                                          setOriginalIds((current) => {
+                                            const next = new Set(current);
+                                            if (value === "raw") next.add(item.id);
+                                            else next.delete(item.id);
+                                            return next;
+                                          })
+                                        }
+                                      />
+                                    )}
                                   {item.hasAudio || item.hasCallTracks ? (
                                     <div className="ui-history__audio">
                                       {fullEntry ? (

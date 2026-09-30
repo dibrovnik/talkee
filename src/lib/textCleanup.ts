@@ -72,7 +72,14 @@ export async function cleanupDictation(
       ]),
     );
     const guarded = guardTranscriptionResult({ raw, cleaned: text }, settings.language);
-    if (!guarded.transcription || guarded.cleanedFallbackReason || /<\/?think>/i.test(text))
+    if (
+      !guarded.transcription ||
+      guarded.cleanedFallbackReason ||
+      /<\/?think>/i.test(text) ||
+      /^(?:вот (?:исправленный|очищенный) текст|исправленный текст:|here is (?:the|your) (?:corrected|cleaned) text)/i.test(
+        text,
+      )
+    )
       return fallback("rejected");
     return { text: guarded.transcription.cleaned, applied: true, durationMs: now() - start };
   } catch {

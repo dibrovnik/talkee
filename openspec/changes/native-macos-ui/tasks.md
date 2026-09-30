@@ -27,7 +27,7 @@
 - [x] 4.1 Боковая панель: `SidebarItem`, группы, без логотипа (design.md, решение 5)
 - [x] 4.2 `SettingsTab.tsx` (Основные) + настройка «Показывать значок в Dock»
 - [x] 4.3 `TranslationTab.tsx` и `RealtimeTranslationModels.tsx`
-- [ ] 4.4 `MainTab.tsx` (история, статистика)
+- [x] 4.4 `MainTab.tsx` (история, статистика)
 - [ ] 4.5 `FileTranscriptionTab.tsx`
 - [ ] 4.6 `DevChatTab.tsx`
 - [ ] 4.7 `model/ModelsTab.tsx` и компоненты `LocalSttModelCard.tsx`, `LocalLlmModels.tsx`, `ModelCardDisclosureButton.tsx`

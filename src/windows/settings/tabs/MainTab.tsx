@@ -32,7 +32,6 @@ import {
   IconCopy,
   IconHelpCircle,
   IconListCheck,
-  IconLoader2,
   IconPencil,
   IconRotate2,
   IconSquare,
@@ -57,6 +56,9 @@ import {
 } from "../../../lib/store";
 import { isSummaryAvailable } from "../../../lib/summarize";
 import { formatDurationMs } from "../../../lib/utils";
+import { Button } from "../../../ui/Button";
+import { SegmentedControl } from "../../../ui/SegmentedControl";
+import { Spinner } from "../../../ui/Spinner";
 import { retryHistoryEntry } from "../../widget/services/transcriptionPipeline";
 
 const LazySummaryModal = lazy(() =>
@@ -174,49 +176,17 @@ function SpeakerHistoryTranscript({
   segments: SpeakerTranscriptSegment[];
 }): ReactElement {
   return (
-    <div style={{ display: "grid", gap: 8 }}>
+    <div className="ui-transcript">
       {segments.map((segment, index) => (
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: segments can share a start time; the index keeps the key unique.
           key={`${segment.start}-${index}`}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "84px minmax(0, 1fr)",
-            gap: 10,
-            alignItems: "start",
-            padding: index === 0 ? "0 0 10px" : "10px 0",
-            borderBottom: "1px solid var(--border-subtle)",
-          }}
+          className="ui-transcript__segment"
         >
-          <div
-            style={{
-              fontSize: 12,
-              color: "var(--text-low)",
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-            }}
-          >
-            {formatTimestamp(segment.start)}
-          </div>
-          <div style={{ display: "grid", gap: 3 }}>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: "var(--text-hi)",
-              }}
-            >
-              {segment.speakerLabel}
-            </div>
-            <div
-              style={{
-                fontSize: 13,
-                color: "var(--text-mid)",
-                lineHeight: 1.65,
-                overflowWrap: "anywhere",
-              }}
-            >
-              {segment.text}
-            </div>
+          <div className="ui-transcript__time">{formatTimestamp(segment.start)}</div>
+          <div className="ui-transcript__body">
+            <div className="ui-transcript__speaker">{segment.speakerLabel}</div>
+            <div className="ui-transcript__text">{segment.text}</div>
           </div>
         </div>
       ))}
@@ -255,20 +225,11 @@ function ExpandableHistoryText({
     textTooLong && !expanded ? `${text.slice(0, HISTORY_TEXT_PREVIEW_LIMIT).trimEnd()}...` : text;
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gap: expanded && speakerSegments ? 8 : 2,
-        color: "var(--text-mid)",
-        lineHeight: 1.7,
-        overflowWrap: "anywhere",
-        wordBreak: "break-word",
-      }}
-    >
+    <div className="ui-expandable-text">
       {expanded && speakerSegments ? (
         <>
           {editing && speakers?.length ? (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div className="ui-speaker-list">
               {speakers.map((speaker) => (
                 <SpeakerNameInput
                   key={speaker.id}
@@ -286,31 +247,9 @@ function ExpandableHistoryText({
       ) : (
         <span>{visibleText}</span>
       )}
-      {loading && (
-        <IconLoader2
-          className="loading-soft-icon"
-          size={13}
-          stroke={2}
-          title={t("mainTab.processing")}
-        />
-      )}
+      {loading && <Spinner size={13} label={t("mainTab.processing")} />}
       {shouldCollapse && (
-        <button
-          type="button"
-          onClick={onToggle}
-          style={{
-            marginLeft: 0,
-            padding: 0,
-            border: "none",
-            background: "transparent",
-            color: "var(--text-hi)",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            textDecoration: "none",
-            justifySelf: "start",
-          }}
-        >
+        <button type="button" className="ui-disclosure-link" onClick={onToggle}>
           {expanded ? t("mainTab.collapse") : t("mainTab.expand")}
         </button>
       )}
@@ -899,6 +838,7 @@ export function MainTab({
   const heroHintFooter = (
     // biome-ignore lint/a11y/noStaticElementInteractions: the handlers only pause/resume the hero carousel on hover, focus and pointer drag.
     <div
+      className="ui-hero"
       onMouseEnter={() => setHeroPaused(true)}
       onMouseLeave={() => setHeroPaused(false)}
       onFocus={() => setHeroPaused(true)}
@@ -908,158 +848,61 @@ export function MainTab({
       onPointerCancel={() => {
         heroPointerStartX.current = null;
       }}
-      style={{ display: "grid", gap: 8, touchAction: "pan-y" }}
     >
-      <div
-        key={activeHeroSlide.id}
-        className="main-hero-slide"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 16,
-          flexWrap: "wrap",
-          minWidth: 0,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            flex: "1 1 220px",
-            minWidth: 0,
-          }}
-        >
-          <span
-            className="subtle-row-text"
-            style={{
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {t(activeHeroSlide.titleKey)}
-          </span>
+      <div key={activeHeroSlide.id} className="ui-hero__slide main-hero-slide">
+        <div className="ui-hero__lead">
+          <span className="ui-hero__title">{t(activeHeroSlide.titleKey)}</span>
           {!isSupportHeroSlide && (
             <button
               type="button"
+              className="ui-icon-button"
               onClick={handleHeroAction}
               aria-expanded={hintHelpOpen}
               aria-label={t(activeHeroSlide.actionKey)}
               title={t(activeHeroSlide.actionKey)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 20,
-                height: 20,
-                padding: 0,
-                border: "none",
-                background: "none",
-                cursor: "pointer",
-                flexShrink: 0,
-                color: hintHelpOpen ? "var(--text-hi)" : "var(--text-low)",
-              }}
             >
               <IconHelpCircle size={16} stroke={2} />
             </button>
           )}
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            flexShrink: 0,
-          }}
-        >
+        <div className="ui-hero__meta">
           {isSupportHeroSlide && (
             <button
               type="button"
-              className="subtle-row-text subtle-row-link"
+              className="ui-link-button"
               onClick={handleHeroAction}
               aria-label={t(activeHeroSlide.actionKey)}
               title={t(activeHeroSlide.actionKey)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 0,
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
             >
               {t(activeHeroSlide.actionKey)}
             </button>
           )}
 
           {!isSupportHeroSlide && (
-            <div
-              className="subtle-row-text"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                whiteSpace: "nowrap",
-              }}
-            >
+            <span className="ui-hero__hotkey">
               <span>{t("mainTab.combination")}</span>
               <span>{hotkeyLabel}</span>
-            </div>
+            </span>
           )}
         </div>
       </div>
 
       {!isSupportHeroSlide && hintHelpOpen && (
-        <div
-          style={{
-            fontSize: 13,
-            color: "var(--text-mid)",
-            lineHeight: 1.65,
-          }}
-        >
-          {t("mainTab.howToStartHint")}
-        </div>
+        <div className="ui-hero__hint">{t("mainTab.howToStartHint")}</div>
       )}
     </div>
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="ui-tab">
       <TranscriptionStatsPanel footer={heroHintFooter} />
 
-      <section style={{ display: "grid", gap: 14 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 16,
-          }}
-        >
+      <section className="ui-history">
+        <div className="ui-history__header">
           <div>
-            <h2
-              style={{
-                fontSize: 18,
-                fontWeight: 700,
-                color: "var(--text-hi)",
-                margin: "0 0 4px",
-                letterSpacing: "-0.03em",
-              }}
-            >
-              {t("mainTab.historyTitle")}
-            </h2>
-            <div
-              style={{
-                fontSize: 13,
-                color: "var(--text-mid)",
-                lineHeight: 1.6,
-              }}
-            >
+            <h2 className="ui-history__title">{t("mainTab.historyTitle")}</h2>
+            <div className="ui-history__desc">
               {history.length > 0
                 ? t("mainTab.historyDescFilled")
                 : t("mainTab.historyDescEmpty", { hotkey: hotkeyLabel })}
@@ -1067,145 +910,65 @@ export function MainTab({
           </div>
 
           {history.length > 0 && (
-            <button
+            <Button
+              variant={isClearArmed ? "destructive" : "default"}
+              title={isClearArmed ? t("mainTab.clearAllConfirmTitle") : t("mainTab.clearAllTitle")}
               onClick={() => {
                 void clearAllHistory();
               }}
-              className={isClearArmed ? "btn btn-danger" : "btn"}
-              style={{ minHeight: 34, padding: "0 12px" }}
-              title={isClearArmed ? t("mainTab.clearAllConfirmTitle") : t("mainTab.clearAllTitle")}
             >
-              <IconTrash size={12} stroke={2} />{" "}
+              <IconTrash size={12} stroke={2} />
               {isClearArmed ? t("mainTab.confirm") : t("mainTab.clear")}
-            </button>
+            </Button>
           )}
         </div>
 
         {history.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              flexWrap: "wrap",
-            }}
-          >
-            <div
-              style={{
-                display: "inline-flex",
-                background: "var(--control-track)",
-                borderRadius: 10,
-                padding: 3,
-                gap: 2,
-              }}
-            >
-              {HISTORY_FILTER_OPTIONS.map((option) => {
-                const active = historyFilter === option.id;
-
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setHistoryFilter(option.id)}
-                    style={{
-                      minWidth: 72,
-                      padding: "7px 12px",
-                      borderRadius: 8,
-                      border: "none",
-                      fontSize: 12,
-                      fontWeight: active ? 700 : 500,
-                      background: active ? "var(--dropdown-active)" : "transparent",
-                      color: active ? "var(--text-hi)" : "var(--text-mid)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {t(option.labelKey)}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="ui-history__filters">
+            <SegmentedControl
+              value={historyFilter}
+              ariaLabel={t("mainTab.historyTitle")}
+              options={HISTORY_FILTER_OPTIONS.map((option) => ({
+                value: option.id,
+                label: t(option.labelKey),
+              }))}
+              onChange={setHistoryFilter}
+            />
           </div>
         )}
 
-        <div
-          style={{
-            display: "grid",
-            gap: 20,
-          }}
-        >
+        <div className="ui-history__body">
           {history.length === 0 ? (
-            <div
-              style={{
-                padding: "32px 20px",
-                borderRadius: 12,
-                border: "1px dashed var(--border-dashed)",
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 999,
-                  background: "var(--accent)",
-                  color: "var(--accent-contrast)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 16,
-                }}
-              >
+            <div className="ui-empty-state">
+              <div className="ui-empty-state__badge">
                 <span className="headline-accent" style={{ fontSize: 24 }}>
                   ◎
                 </span>
               </div>
-              <div className="label" style={{ marginBottom: 10 }}>
-                {t("mainTab.emptyTitle")}
-              </div>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 14,
-                  color: "var(--text-mid)",
-                  lineHeight: 1.7,
-                }}
-              >
+              <div className="ui-empty-state__title">{t("mainTab.emptyTitle")}</div>
+              <p className="ui-empty-state__hint">
                 {t("mainTab.emptyHintBefore")} <b>{hotkeyLabel}</b> {t("mainTab.emptyHintAfter")}
               </p>
             </div>
           ) : filteredHistory.length === 0 ? (
-            <div
-              style={{
-                padding: "28px 20px",
-                borderRadius: 12,
-                border: "1px dashed var(--border-dashed)",
-                textAlign: "center",
-                color: "var(--text-mid)",
-              }}
-            >
-              {t("mainTab.filterEmpty")}
-            </div>
+            <div className="ui-empty-state ui-empty-state--compact">{t("mainTab.filterEmpty")}</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div className="ui-history__groups">
               {groupedHistory.map((group, groupIndex) => (
                 <div
                   key={group.id}
-                  style={{
-                    display: "grid",
-                    gap: 8,
-                    ...(groupIndex > 0
+                  className="ui-history__group"
+                  style={
+                    groupIndex > 0
                       ? {
                           contentVisibility: "auto",
                           containIntrinsicSize: "auto 220px",
                         }
-                      : null),
-                  }}
+                      : undefined
+                  }
                 >
-                  <div className="label" style={{ paddingLeft: 4 }}>
-                    {group.label}
-                  </div>
-                  <table className="b-table" style={{ background: "transparent" }}>
+                  <div className="ui-history__day">{group.label}</div>
+                  <table className="b-table">
                     <thead>
                       <tr>
                         <th style={{ width: 108 }}>{t("mainTab.colTime")}</th>
@@ -1233,86 +996,42 @@ export function MainTab({
                                 focusedRowRefs.current.delete(item.id);
                               }
                             }}
-                            onDoubleClick={() => {
-                              void copyEntryText(item.id);
-                            }}
+                            className={
+                              focusedEntryId === item.id ? "b-table__row--focused" : undefined
+                            }
                             style={{
-                              background:
-                                focusedEntryId === item.id ? "rgba(0,0,0,0.04)" : "transparent",
                               borderBottom:
                                 index < group.items.length - 1
                                   ? "1px solid var(--table-row-border)"
                                   : "none",
-                              cursor: "default",
-                              transition: "background 0.18s ease",
+                            }}
+                            onDoubleClick={() => {
+                              void copyEntryText(item.id);
                             }}
                           >
-                            <td
-                              style={{
-                                verticalAlign: "top",
-                                color: "var(--text-low)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: 3,
-                                }}
-                              >
-                                <span style={{ whiteSpace: "nowrap" }}>
+                            <td className="ui-history__time-cell">
+                              <div className="ui-history__time">
+                                <span>
                                   {new Date(item.timestamp).toLocaleTimeString("ru-RU", {
                                     hour: "2-digit",
                                     minute: "2-digit",
                                   })}
                                 </span>
                                 {item.processingTime != null && (
-                                  <span
-                                    style={{
-                                      fontSize: 10,
-                                      opacity: 0.55,
-                                      letterSpacing: "0.02em",
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
+                                  <span className="ui-history__time-meta">
                                     {formatDurationMs(item.processingTime, lang)}
                                   </span>
                                 )}
                                 {historyFilter === "all" && (
-                                  <span
-                                    style={{
-                                      fontSize: 10,
-                                      opacity: 0.55,
-                                      letterSpacing: "0.02em",
-                                      lineHeight: 1.25,
-                                      whiteSpace: "normal",
-                                      overflowWrap: "normal",
-                                      wordBreak: "normal",
-                                      textWrap: "balance",
-                                    }}
-                                  >
+                                  <span className="ui-history__source">
                                     {t(sourceLabelKey(source))}
                                   </span>
                                 )}
                               </div>
                             </td>
-                            <td style={{ verticalAlign: "top", paddingLeft: 8 }}>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "flex-start",
-                                  gap: 8,
-                                  minWidth: 0,
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    flex: 1,
-                                    minWidth: 0,
-                                    display: "grid",
-                                    gap: 8,
-                                  }}
-                                >
+                            <td className="ui-history__text-cell">
+                              <div className="ui-history__row">
+                                <div className="ui-history__content">
                                   {item.status === "recording" || item.status === "processing" ? (
                                     <>
                                       {displayText ? (
@@ -1328,34 +1047,14 @@ export function MainTab({
                                         />
                                       ) : null}
                                       {item.errorMessage ? (
-                                        <div
-                                          style={{
-                                            color: "var(--text-low)",
-                                            fontSize: 12,
-                                            lineHeight: 1.55,
-                                          }}
-                                        >
+                                        <div className="ui-history__error-text">
                                           {item.errorMessage}
                                         </div>
                                       ) : null}
                                     </>
                                   ) : item.status === "failed" || item.status === "interrupted" ? (
                                     <>
-                                      <div
-                                        style={{
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: 8,
-                                          padding: "6px 10px",
-                                          borderRadius: 999,
-                                          background: "var(--danger-soft)",
-                                          border: "1px solid var(--danger-border)",
-                                          color: "var(--danger)",
-                                          fontSize: 12,
-                                          lineHeight: 1.4,
-                                          width: "fit-content",
-                                        }}
-                                      >
+                                      <div className="ui-status-pill">
                                         <IconAlertCircle size={13} stroke={2} />
                                         <span>
                                           {item.status === "interrupted"
@@ -1363,14 +1062,7 @@ export function MainTab({
                                             : t("mainTab.statusFailed")}
                                         </span>
                                       </div>
-                                      <div
-                                        style={{
-                                          color: "var(--text-mid)",
-                                          lineHeight: 1.7,
-                                          overflowWrap: "anywhere",
-                                          wordBreak: "break-word",
-                                        }}
-                                      >
+                                      <div className="ui-history__error-text">
                                         {item.errorMessage || t("mainTab.audioSavedLocally")}
                                       </div>
                                     </>
@@ -1393,14 +1085,7 @@ export function MainTab({
                                     />
                                   )}
                                   {item.hasAudio || item.hasCallTracks ? (
-                                    <div
-                                      style={{
-                                        width: "100%",
-                                        maxWidth: 520,
-                                        margin: "0 auto",
-                                        minWidth: 0,
-                                      }}
-                                    >
+                                    <div className="ui-history__audio">
                                       {fullEntry ? (
                                         <HistoryAudioTrack
                                           entry={fullEntry}
@@ -1418,66 +1103,34 @@ export function MainTab({
                                     </div>
                                   ) : null}
                                 </div>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    gap: 6,
-                                    width: 32,
-                                    flexShrink: 0,
-                                  }}
-                                >
+                                <div className="ui-history__actions">
                                   {item.status === "recording" ? (
-                                    <span aria-hidden="true" style={{ width: 32, height: 32 }} />
+                                    <span aria-hidden="true" style={{ width: 24, height: 24 }} />
                                   ) : item.status === "processing" ? (
-                                    <button
-                                      onClick={() => cancelEntry(item.id)}
-                                      className="btn btn-danger"
-                                      style={{
-                                        width: 32,
-                                        minWidth: 32,
-                                        height: 32,
-                                        minHeight: 32,
-                                        padding: 0,
-                                        flexShrink: 0,
-                                        borderRadius: 8,
-                                      }}
+                                    <Button
+                                      variant="destructive"
                                       title={t("mainTab.stopProcessing")}
+                                      onClick={() => cancelEntry(item.id)}
                                     >
                                       <IconSquare size={11} stroke={2} fill="currentColor" />
-                                    </button>
+                                    </Button>
                                   ) : (item.status === "failed" || item.status === "interrupted") &&
                                     ((source === "voice" && item.hasAudio) ||
                                       (source === "call" && item.hasCallTracks) ||
                                       (source === "file" && item.hasFilePath)) ? (
-                                    <button
+                                    <Button
+                                      disabled={retryingId === item.id}
+                                      title={t("mainTab.retryProcess")}
                                       onClick={() => {
                                         void retryEntry(item.id);
                                       }}
-                                      className="btn"
-                                      disabled={retryingId === item.id}
-                                      style={{
-                                        width: 32,
-                                        minWidth: 32,
-                                        height: 32,
-                                        minHeight: 32,
-                                        padding: 0,
-                                        flexShrink: 0,
-                                        borderRadius: 8,
-                                      }}
-                                      title={t("mainTab.retryProcess")}
                                     >
                                       {retryingId === item.id ? (
-                                        <IconLoader2
-                                          className="loading-soft-icon"
-                                          size={12}
-                                          stroke={2}
-                                        />
+                                        <Spinner size={12} label={t("mainTab.retryProcess")} />
                                       ) : (
                                         <IconRotate2 size={12} stroke={2} />
                                       )}
-                                    </button>
+                                    </Button>
                                   ) : (
                                     <RowActionsMenu
                                       label={t("rowMenu.actions")}
@@ -1526,22 +1179,13 @@ export function MainTab({
                                     />
                                   )}
                                   {item.status !== "processing" && item.status !== "recording" && (
-                                    <button
-                                      onClick={() => deleteEntry(item.id)}
-                                      className="btn btn-danger"
-                                      style={{
-                                        width: 32,
-                                        minWidth: 32,
-                                        height: 32,
-                                        minHeight: 32,
-                                        padding: 0,
-                                        flexShrink: 0,
-                                        borderRadius: 8,
-                                      }}
+                                    <Button
+                                      variant="destructive"
                                       title={t("mainTab.delete")}
+                                      onClick={() => deleteEntry(item.id)}
                                     >
                                       <IconTrash size={12} stroke={2} />
-                                    </button>
+                                    </Button>
                                   )}
                                 </div>
                               </div>
@@ -1554,27 +1198,18 @@ export function MainTab({
                 </div>
               ))}
               {hiddenHistoryCount > 0 && (
-                <button
-                  type="button"
-                  className="btn"
+                <Button
+                  className="ui-history__more"
                   onClick={() =>
                     setVisibleHistoryLimit((current) =>
                       Math.min(current + HISTORY_RENDER_INCREMENT, filteredHistory.length),
                     )
                   }
-                  style={{
-                    justifySelf: "center",
-                    marginTop: 2,
-                    padding: "10px 14px",
-                    borderRadius: 10,
-                    fontSize: 12,
-                    fontWeight: 700,
-                  }}
                 >
                   {t("mainTab.showMoreHistory", {
                     count: Math.min(HISTORY_RENDER_INCREMENT, hiddenHistoryCount),
                   })}
-                </button>
+                </Button>
               )}
             </div>
           )}

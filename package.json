@@ -17,6 +17,7 @@
     "verify:windows-release": "bun scripts/verify-windows-release.mjs",
     "check:versions": "bun scripts/check-version-sync.mjs",
     "check:network": "bun scripts/check-network-hosts.mjs",
+    "check:naming": "bun scripts/check-naming.mjs",
     "check:release": "bun run check:versions && bun run check && bun run smoke:hotkey && bun run build",
     "postprocess:macos-release": "VERSION=$(python3 -c \"import json; print(json.load(open('package.json'))['version'])\") && BUILD_ROOT=src-tauri/target/release/bundle bash scripts/postprocess-macos-release.sh \"$VERSION\"",
     "build:release": "bun scripts/build-release.mjs",

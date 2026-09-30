@@ -46,8 +46,8 @@
 
 ## 6. Защита от регрессии
 
-- [ ] 6.1 Создать `scripts/naming-allowlist.json` и `scripts/check-naming.mjs` (design.md, решение 5) + тест `scripts/check-naming.test.mjs`
-- [ ] 6.2 `package.json`: `"check:naming": "bun scripts/check-naming.mjs"`
-- [ ] 6.3 Проверка: `bun run check:naming` → exit 0
-- [ ] 6.4 Ручная проверка миграции: скопировать реальный `~/Library/Application Support/com.trixter.talkis` в резерв, запустить собранный talkee, убедиться, что история, настройки и модели на месте
-- [ ] 6.5 Проверка: `openspec validate rename-to-talkee --strict`
+- [x] 6.1 Создать `scripts/naming-allowlist.json` и `scripts/check-naming.mjs` (design.md, решение 5) + тест `scripts/check-naming.test.mjs`
+- [x] 6.2 `package.json`: `"check:naming": "bun scripts/check-naming.mjs"`
+- [x] 6.3 Проверка: `bun run check:naming` → exit 0
+- [x] 6.4 Ручная проверка миграции: скопировать реальный `~/Library/Application Support/com.trixter.talkis` в резерв, запустить собранный talkee, убедиться, что история, настройки и модели на месте
+- [x] 6.5 Проверка: `openspec validate rename-to-talkee --strict`

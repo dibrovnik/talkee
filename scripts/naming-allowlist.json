@@ -1,0 +1,15 @@
+{
+  "allow": [
+    "src-tauri/src/legacy_migration.rs",
+    "CHANGELOG.md",
+    "README.md",
+    "README.ru.md",
+    "scripts/check-naming.mjs",
+    "scripts/check-naming.test.mjs"
+  ],
+  "temporaryAllow": [
+    "scripts/verify-windows-release.mjs",
+    "src-tauri/windows/installer-hooks.nsh"
+  ],
+  "temporaryAllowReason": "drop-windows-linux-support removes Windows/Linux files next; they are not renamed here."
+}

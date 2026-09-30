@@ -2,10 +2,10 @@
 
 ## 1. Cargo и guard
 
-- [ ] 1.1 `src-tauri/Cargo.toml`: применить design.md, решение 3; удалить `windows-sys`, `pipewire`, `webkit2gtk`, `x11rb`, `tauri-plugin-single-instance`
-- [ ] 1.2 `src-tauri/sidecars/talkee-llm/Cargo.toml`: одна запись `llama-cpp-2` с `metal` в `[dependencies]`
-- [ ] 1.3 Добавить `compile_error!` guard (design.md, решение 2) в `src-tauri/src/lib.rs`, `src-tauri/src/bin/*.rs`, `src-tauri/sidecars/talkee-llm/src/main.rs`
-- [ ] 1.4 Проверка: `cargo check --manifest-path src-tauri/Cargo.toml --workspace` (будут ошибки из-за удалённых крейтов — исправляются в группе 2)
+- [x] 1.1 `src-tauri/Cargo.toml`: применить design.md, решение 3; удалить `windows-sys`, `pipewire`, `webkit2gtk`, `x11rb`, `tauri-plugin-single-instance`
+- [x] 1.2 `src-tauri/sidecars/talkee-llm/Cargo.toml`: одна запись `llama-cpp-2` с `metal` в `[dependencies]`
+- [x] 1.3 Добавить `compile_error!` guard (design.md, решение 2) в `src-tauri/src/lib.rs`, `src-tauri/src/bin/*.rs`, `src-tauri/sidecars/talkee-llm/src/main.rs`
+- [x] 1.4 Проверка: `cargo check --manifest-path src-tauri/Cargo.toml --workspace` (будут ошибки из-за удалённых крейтов — исправляются в группе 2)
 
 ## 2. Rust: удаление платформенных веток (по одному файлу, `cargo check` после каждого)
 

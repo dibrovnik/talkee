@@ -1,3 +1,6 @@
+#[cfg(not(target_os = "macos"))]
+compile_error!("talkee supports macOS only");
+
 use hound::WavReader;
 use serde_json::json;
 use sha2::{Digest, Sha256};

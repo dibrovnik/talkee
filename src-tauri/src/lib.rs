@@ -1,3 +1,6 @@
+#[cfg(not(target_os = "macos"))]
+compile_error!("talkee supports macOS only");
+
 mod ai;
 mod call_capture;
 mod commands;

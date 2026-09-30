@@ -3,6 +3,9 @@
 //! an OpenAI-compatible `/v1/chat/completions` endpoint so the desktop app can
 //! run summary locally. The GGUF model path is passed with `-m`.
 
+#[cfg(not(target_os = "macos"))]
+compile_error!("talkee supports macOS only");
+
 use serde_json::{json, Value};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};

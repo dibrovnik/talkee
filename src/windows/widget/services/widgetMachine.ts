@@ -10,6 +10,7 @@
  * the next state (Elm-style).
  */
 
+import { setTrayRecording } from "../../../lib/tray";
 import type { WidgetState } from "../widgetConstants";
 
 // ── State ───────────────────────────────────────────────────────────────────
@@ -88,6 +89,15 @@ export interface ReducerResult {
 // ── Pure reducer ────────────────────────────────────────────────────────────
 
 export function widgetReducer(state: WidgetMachineState, action: WidgetAction): ReducerResult {
+  const next = reduce(state, action);
+  const recording = next.state.widgetState === "recording";
+  if (recording !== (state.widgetState === "recording")) {
+    setTrayRecording(recording);
+  }
+  return next;
+}
+
+function reduce(state: WidgetMachineState, action: WidgetAction): ReducerResult {
   switch (action.type) {
     case "HOTKEY_PRESSED":
       return handleHotkeyPressed(state);

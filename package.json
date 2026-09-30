@@ -13,6 +13,7 @@
     "dev": "bun scripts/run-vite.mjs",
     "build": "tsc && bun scripts/run-vite.mjs build",
     "gate": "bun scripts/gate.mjs",
+    "icons": "bun scripts/generate-icons.mjs",
     "format": "biome format --write . && cargo fmt --all --manifest-path src-tauri/Cargo.toml",
     "lint": "biome lint .",
     "test": "bun test",
@@ -50,6 +51,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
     "@dibrovnik/pvs": "0.1.1",
+    "@resvg/resvg-js": "2.6.2",
     "@tailwindcss/vite": "^4.2.1",
     "@tauri-apps/cli": "2.11.4",
     "@types/bun": "1.4.2",

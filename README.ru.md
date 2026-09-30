@@ -33,11 +33,11 @@ Talkee сделан для повседневной работы: IDE, чаты,
 - Синхронный перевод системного звука через проверенное Realtime API-подключение, с опциональной озвучкой перевода на macOS.
 - Перевод выделенного текста по отдельной настраиваемой глобальной горячей клавише.
 - Транскрибация аудио и видео из вкладки `Файлы` или через перетаскивание файла на виджет.
-- Запись созвонов на macOS, Windows и Linux с отдельными дорожками микрофона и системного аудио.
+- Запись созвонов на macOS с отдельными дорожками микрофона и системного аудио.
 - Локальная история голосовых записей, файловых транскрибаций, созвонов и синхронных переводов.
 - Чат с настроенной текстовой моделью для поиска и анализа записей Talkee, саммари созвонов, поиска задач и перевода текста.
 - Единый управляемый локальный STT runtime `transcribe.cpp` для Whisper, GigaAM, Qwen ASR, NVIDIA Parakeet и локальные summary через управляемый GGUF LLM runtime.
-- Нативные сборки для macOS, Windows и Linux.
+- Нативная сборка для macOS (Apple Silicon).
 
 ## Последние изменения
 
@@ -225,12 +225,10 @@ Talkee сделан для повседневной работы: IDE, чаты,
 Скачайте последнюю сборку из GitHub Releases:
 
 - [macOS DMG](https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/Talkee-macos.dmg)
-- [Windows x64 installer](https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/Talkee-windows-x64-setup.exe)
-- [Linux x64 AppImage](https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/Talkee-linux-x64.AppImage)
 
-### Если ОС блокирует первый запуск
+### Если macOS блокирует первый запуск
 
-Talkee пока распространяется **без платной подписи кода**, поэтому Gatekeeper (macOS) и SmartScreen (Windows) показывают предупреждение о «непроверённом» приложении. Это **не вирус**: исходный код открыт (AGPL-3.0), сборки собираются публичным GitHub Actions из этого репозитория. Как открыть:
+Talkee пока распространяется **без платной подписи кода**, поэтому Gatekeeper показывает предупреждение о «непроверённом» приложении. Это **не вирус**: исходный код открыт (AGPL-3.0), сборки собираются публичным GitHub Actions из этого репозитория. Как открыть:
 
 **macOS** — «Не удалось проверить, что приложение Talkee не содержит вредоносного ПО»:
 
@@ -244,16 +242,11 @@ Talkee пока распространяется **без платной под�
 xattr -dr com.apple.quarantine /Applications/Talkee.app
 ```
 
-**Windows** — синее окно *«Система Windows защитила ваш компьютер»*:
-
-1. Нажмите **«Подробнее»**.
-2. Нажмите **«Выполнить в любом случае»**.
-
 При первом запуске выдайте нужные разрешения:
 
 - доступ к микрофону для записи;
-- Accessibility на macOS для автоматической вставки текста;
-- Screen and System Audio Recording на macOS для записи созвонов.
+- Accessibility для автоматической вставки текста;
+- Screen and System Audio Recording для записи созвонов.
 
 ## Переход с Talkis
 
@@ -284,7 +277,7 @@ Talkee использует встроенный ffmpeg sidecar для виде�
 - `Вы` из микрофона.
 - `Созвон` из системного аудио.
 
-Системный звук захватывается через Core Audio на macOS, WASAPI loopback на Windows и PipeWire monitor stream на Linux. На Linux нужен запущенный PipeWire и активное устройство вывода.
+Системный звук захватывается через macOS Core Audio (process/system tap).
 
 Запись появляется в истории сразу после запуска, а аудиодорожки и черновик
 текста регулярно сохраняются во время разговора. При streaming-модели текущий
@@ -347,13 +340,6 @@ bun run check:release
 bun run tauri build
 bun run build:release:macos
 bun run logs
-```
-
-На Ubuntu/Debian сначала установите нативные зависимости Tauri и сборки sidecar-ов:
-
-```bash
-sudo apt update
-sudo apt install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev libxdo-dev libasound2-dev librsvg2-dev patchelf clang libclang-dev cmake
 ```
 
 ## Структура проекта

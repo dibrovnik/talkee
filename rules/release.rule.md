@@ -20,22 +20,21 @@ This file defines the mandatory release workflow for Talkee. Follow it for every
 4. Run the release checks locally:
    - `bun run check:release`
    - `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkee-updater.key bun run build:release:macos`
-   - On native Windows/Linux runners, run `bun run build:release:windows` and `bun run build:release:linux` before claiming those artifacts are ready.
    - If the updater private key is password-protected, also set `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 5. Perform a detailed self-review of the full release diff.
 6. Write the review results to `docs/release/review-vX.Y.Z.md` using the review template.
 7. Run GitHub Actions release preflight on the release branch before merging or tagging:
    - Push `release/vX.Y.Z` and wait for `.github/workflows/release-preflight.yml`.
-   - Required green checks on the exact release commit: `Preflight macos`, `Preflight windows`, and `Preflight linux`.
+   - Required green check on the exact release commit: `Preflight macos`.
    - If preflight fails, fix the same release branch and rerun preflight. Do not create a tag just to test CI.
 8. If there are blockers, risks, or recommendations that need a decision, ask the user before merging to `main`.
 9. Only after review is complete, questions are resolved, and all preflight checks are green, merge or push the approved changes to `main`.
 10. Create and push the release tag `vX.Y.Z` from `main`.
-11. Let GitHub Actions build and publish the release for all currently supported release platforms.
+11. Let GitHub Actions build and publish the macOS release.
 
 ## Hard release gate
 
-- Do not create or push `vX.Y.Z` until release preflight has succeeded for macOS, Windows, and Linux on the exact commit that will be tagged.
+- Do not create or push `vX.Y.Z` until release preflight has succeeded for macOS on the exact commit that will be tagged.
 - The release workflow verifies those preflight check-runs before building. A tag without green preflight must fail before publishing artifacts.
 - Failed release preflight runs are fixed on the release branch. Failed tag-triggered release runs are exceptional and should not be used as the normal validation loop.
 
@@ -47,12 +46,12 @@ This file defines the mandatory release workflow for Talkee. Follow it for every
 - Widget position, notices, and onboarding permissions behave correctly.
 - Short or noisy recordings do not paste obvious hallucinated text.
 - `bun run check:release` passes.
-- Local production build passes via `bun run build:release:macos`; Windows/Linux production builds pass on their native runners or in GitHub Actions.
-- Release preflight is green for `Preflight macos`, `Preflight windows`, and `Preflight linux` on the exact release commit.
+- Local production build passes via `bun run build:release:macos`.
+- Release preflight is green for `Preflight macos` on the exact release commit.
 - Version numbers and release tag match.
 - The GitHub Actions release workflow still matches the documented process.
 - GitHub repository secrets include `TAURI_SIGNING_PRIVATE_KEY` and, if the key is password-protected, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
-- GitHub Release includes `latest.json`, macOS `.app.tar.gz`, Windows `.exe`, Linux `.AppImage`, and matching `.sig` files.
+- GitHub Release includes the macOS DMG, the signed macOS app archive, and matching `.sig` files.
 
 ## GitHub Actions release source of truth
 
@@ -61,7 +60,7 @@ This file defines the mandatory release workflow for Talkee. Follow it for every
 - Tag push is the canonical release trigger.
 - Release preflight is the canonical build validation before tag push.
 - The updater metadata endpoint is `https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/latest.json`.
-- Build all platforms that are actually ready in the workflow. Do not claim unsupported platforms in release notes.
+- Build the macOS release in the workflow. Do not claim unsupported platforms in release notes.
 
 ## Output expectations
 

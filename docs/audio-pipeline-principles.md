@@ -154,12 +154,6 @@ Important implementation details:
   handles in global state.
 - The native recorder owner thread is process-long and reused across recording
   sessions. Do not replace it with one short-lived OS thread per recording.
-- On Windows that owner thread performs the first WASAPI device lookup during
-  application startup and must stay alive. `cpal` caches an
-  `IMMDeviceEnumerator` created in a thread-local COM apartment; ending the
-  owning thread can leave later device lookups with an invalid COM pointer and
-  terminate the process with `STATUS_ACCESS_VIOLATION` instead of returning an
-  error.
 
 ## Dictation Translation
 
@@ -194,7 +188,7 @@ Fallback is required when:
 - a selected microphone exists, but only WebView `deviceId` can identify it reliably;
 - platform-specific microphone permissions or device routing behave differently than `cpal`.
 
-Do not remove the fallback unless selected-microphone parity is proven on macOS, Windows, and Linux.
+Do not remove the fallback unless selected-microphone parity is proven on macOS.
 
 Talkee Cloud dictation is batch-only. Do not start a realtime transcription
 session, stream microphone audio to the Cloud realtime endpoint, or show a live
@@ -256,9 +250,7 @@ Recording startup must not wait for a cold local runtime indefinitely. Give the
 live warm-up only a short budget; when it is exceeded, begin microphone capture
 and use the normal post-stop batch path while warm-up continues in the
 background. A managed runtime that fails readiness must be terminated instead
-of being left to occupy another port. On Windows, app startup and the NSIS
-installer also clean up orphaned Talkee sidecars so an older `talkee-stt.exe`
-cannot block an update or be reused by a newer runtime protocol.
+of being left to occupy another port.
 
 ## Local Whisper Hallucination Guardrails
 
@@ -342,15 +334,9 @@ Current system-audio support:
   `call_capture.rs`. The aggregate is private and tap-only: do not add the
   physical output device as a subdevice, because recording must observe output
   without joining or changing its playback route. Ordinary call capture must
-  always use the unmuted tap policy;
-- Windows: implemented via `cpal` WASAPI loopback on the default output device in `call_capture.rs`;
-- Linux: implemented via PipeWire default output monitor capture in `call_capture.rs`.
+  always use the unmuted tap policy.
 
-Linux call system capture is PipeWire-only. PulseAudio-only systems without PipeWire
-remain unsupported and should show an honest PipeWire unavailable / monitor not found
-error instead of silently falling back.
-
-For macOS, Windows, and Linux system track diagnostics, rely on stop-time logs:
+For macOS system track diagnostics, rely on stop-time logs:
 
 ```text
 System audio capture level: max=... dBFS, frames_above_noise_floor=...
@@ -428,14 +414,9 @@ Manual checks when behavior changes:
 - Ready `16 kHz mono PCM WAV` file skips ffmpeg.
 - MP3/MP4/WebM files still go through ffmpeg.
 - Long local call/file transcription with pauses does not produce repeated `Спасибо` / `Продолжение следует`.
-- macOS call capture does not regress; Windows call capture writes a non-empty `system.wav`; Linux PipeWire call capture writes a non-empty `system.wav`; Linux without PipeWire remains clearly unsupported.
+- macOS call capture does not regress.
 
 ## Release Notes For Audio Dependencies
 
-`cpal` pulls platform audio backends. Linux call system capture also depends on
-PipeWire.
-
-Linux release jobs need `libasound2-dev` for ALSA builds and
-`libpipewire-0.3-dev` for PipeWire system-audio capture. If changing `cpal`
-features, PipeWire bindings, or replacing the recorder backend, re-check
-`.github/workflows/release.yml` and Linux Tauri dependency installation.
+`cpal` pulls the macOS Core Audio backend. If changing `cpal` features or
+replacing the recorder backend, re-check the macOS build configuration.

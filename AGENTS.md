@@ -280,7 +280,7 @@ Stable principles:
 - Local STT input must be `WAV 16 kHz mono PCM16`; skip ffmpeg when audio already matches that format.
 - Keep ffmpeg for arbitrary files, video, unsupported formats, diarization preparation, and file chunking.
 - Long local Whisper jobs can hallucinate repeated caption-like text on silence. Preserve the no-context local runtime settings and the repetitive-text filters unless a replacement is tested against long silent recordings.
-- Call system-audio capture is implemented on all three desktop platforms: macOS via Core Audio (process/system tap), Windows via WASAPI loopback on the default output device (cpal), and Linux via a PipeWire monitor stream. Linux requires a running PipeWire daemon with an active output device; on PipeWire-less (pure PulseAudio) systems capture fails fast with a user-facing error by design.
+- Talkee is macOS only (Apple Silicon). Call system-audio capture uses the macOS Core Audio process/system tap exclusively.
 - Every audio path needs structured logs with enough evidence to debug runtime behavior: recorder stats, ffmpeg timing, STT endpoint, chunk index/size, and call-capture levels.
 
 ## Release Workflow

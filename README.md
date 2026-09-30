@@ -33,11 +33,11 @@ It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, 
 - Translate system audio in real time through a verified Realtime API connection, with optional spoken translation on macOS.
 - Translate selected text with a separate configurable global hotkey.
 - Transcribe audio and video files from the Files tab or by dropping files onto the widget.
-- Record calls with separate microphone and system-audio tracks on macOS, Windows, and Linux.
+- Record calls with separate microphone and system-audio tracks on macOS.
 - Keep local history for voice recordings, file transcriptions, calls, and live translations.
 - Chat with the configured text model to search and analyze Talkee records, summarize calls, find tasks, and translate text.
 - Run managed local STT through one native `transcribe.cpp` runtime for Whisper, GigaAM, Qwen ASR, NVIDIA Parakeet, plus local text summaries through a managed GGUF LLM runtime.
-- Build native bundles for macOS, Windows, and Linux.
+- Build a native macOS (Apple Silicon) bundle.
 
 ## Latest Changes
 
@@ -259,12 +259,10 @@ If a default port is busy, Talkee starts the managed runtime on a fallback port 
 Download the latest build from GitHub Releases:
 
 - [macOS DMG](https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/Talkee-macos.dmg)
-- [Windows x64 installer](https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/Talkee-windows-x64-setup.exe)
-- [Linux x64 AppImage](https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/Talkee-linux-x64.AppImage)
 
-### If your OS blocks the first launch
+### If macOS blocks the first launch
 
-Talkee is currently distributed **without paid code signing**, so Gatekeeper (macOS) and SmartScreen (Windows) show an "unverified app" warning. This is **not malware**: the source is open (AGPL-3.0) and the builds are produced by the public GitHub Actions workflow in this repo. How to open it:
+Talkee is currently distributed **without paid code signing**, so Gatekeeper shows an "unverified app" warning. This is **not malware**: the source is open (AGPL-3.0) and the builds are produced by the public GitHub Actions workflow in this repo. How to open it:
 
 **macOS** — "Apple could not verify Talkee is free of malware":
 
@@ -278,16 +276,11 @@ Or, in one command in Terminal (after moving it to Applications):
 xattr -dr com.apple.quarantine /Applications/Talkee.app
 ```
 
-**Windows** — the blue *"Windows protected your PC"* dialog:
-
-1. Click **More info**.
-2. Click **Run anyway**.
-
 On first launch, grant the permissions Talkee needs:
 
 - Microphone access for recording.
-- Accessibility permission on macOS for automatic paste.
-- Screen and System Audio Recording permission on macOS for call recording.
+- Accessibility permission for automatic paste.
+- Screen and System Audio Recording permission for call recording.
 
 After permissions are granted, Talkee stores the completed onboarding state and
 does not reopen native permission prompts on every launch. If an OS permission is
@@ -322,9 +315,7 @@ Call recording captures two tracks:
 - `You` from the microphone.
 - `Call` from system audio.
 
-System-audio capture is implemented with Core Audio on macOS, WASAPI loopback on
-Windows, and PipeWire monitor streams on Linux. Linux requires a running PipeWire
-daemon with an active output device.
+System-audio capture uses the macOS Core Audio process/system tap.
 
 The call appears in history as soon as recording starts. Talkee checkpoints
 both audio tracks and the transcript draft while the call is active. Streaming
@@ -352,7 +343,7 @@ The live text overlay keeps consecutive chunks from the same source together and
 - Nothing is pasted: check macOS System Settings -> Privacy & Security -> Accessibility and make sure Talkee is enabled.
 - Transcription contains unexpected foreign characters: choose a fixed recognition language such as `ru` or `en` instead of auto.
 - Local STT returns model errors: open `Модели` -> `Локально`, make sure the model is installed and selected, then reinstall it if the runtime reports missing files.
-- Call recording cannot start: grant Microphone and the OS system-audio permission, then start the call recording again. On Linux, also make sure PipeWire is running and an output device is active.
+- Call recording cannot start: grant Microphone and the System Audio Recording permission, then start the call recording again.
 - Need deeper diagnostics: open `~/.talkee/talkee.log` or run `bun run logs` during development.
 
 ## Product And Architecture Documentation
@@ -387,13 +378,6 @@ bun run check:release
 bun run tauri build
 bun run build:release:macos
 bun run logs
-```
-
-On Ubuntu/Debian, install native Tauri and sidecar build dependencies first:
-
-```bash
-sudo apt update
-sudo apt install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev libxdo-dev libasound2-dev librsvg2-dev patchelf clang libclang-dev cmake
 ```
 
 ## Project Structure

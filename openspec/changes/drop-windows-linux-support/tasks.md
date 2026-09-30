@@ -45,7 +45,7 @@
 
 ## 6. Документация
 
-- [ ] 6.1 `README.md`, `README.ru.md`: удалить разделы установки/сборки для Windows и Linux, ссылки на EXE/AppImage
-- [ ] 6.2 `AGENTS.md`: в «Audio Pipeline Rules» удалить абзац о WASAPI/PipeWire; указать «macOS only (Apple Silicon)»
-- [ ] 6.3 `docs/audio-pipeline-principles.md`, `docs/architecture/processing-modes.md`: удалить упоминания других ОС
-- [ ] 6.4 Проверка: `openspec validate drop-windows-linux-support --strict`
+- [x] 6.1 `README.md`, `README.ru.md`: удалить разделы установки/сборки для Windows и Linux, ссылки на EXE/AppImage
+- [x] 6.2 `AGENTS.md`: в «Audio Pipeline Rules» удалить абзац о WASAPI/PipeWire; указать «macOS only (Apple Silicon)»
+- [x] 6.3 `docs/audio-pipeline-principles.md`, `docs/architecture/processing-modes.md`: удалить упоминания других ОС
+- [x] 6.4 Проверка: `openspec validate drop-windows-linux-support --strict`

@@ -9,11 +9,11 @@
 
 ## 2. Скрипты
 
-- [ ] 2.1 `package.json`: скрипты `version:current`, `version:check`, `version:patch`, `version:minor`, `version:major`, `check:changelog` (design.md, решение 3)
-- [ ] 2.2 Создать `scripts/check-changelog.mjs` (design.md, решение 4) и тест `scripts/check-changelog.test.mjs` (раздел есть / раздела нет)
-- [ ] 2.3 Удалить `scripts/check-version-sync.mjs`, `scripts/check-version-sync.sh`, скрипт `check:versions`; в `check:release` заменить на `version:check`
-- [ ] 2.4 `.github/workflows/*`: заменить `check:versions` на `version:check`
-- [ ] 2.5 Проверка: `bun run version:check && bun run check:changelog && bun test scripts`
+- [x] 2.1 `package.json`: скрипты `version:current`, `version:check`, `version:patch`, `version:minor`, `version:major`, `check:changelog` (design.md, решение 3)
+- [x] 2.2 Создать `scripts/check-changelog.mjs` (design.md, решение 4) и тест `scripts/check-changelog.test.mjs` (раздел есть / раздела нет)
+- [x] 2.3 Удалить `scripts/check-version-sync.mjs`, `scripts/check-version-sync.sh`, скрипт `check:versions`; в `check:release` заменить на `version:check`
+- [x] 2.4 `.github/workflows/*`: заменить `check:versions` на `version:check`
+- [x] 2.5 Проверка: `bun run version:check && bun run check:changelog && bun test scripts`
 
 ## 3. Проверка bump на практике (в отдельной ветке)
 

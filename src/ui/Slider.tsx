@@ -3,6 +3,8 @@ import type { CSSProperties, ReactElement } from "react";
 export interface SliderProps {
   value: number;
   onChange: (value: number) => void;
+  /** Fired once the drag/keyboard interaction ends — use it to persist. */
+  onCommit?: () => void;
   min?: number;
   max?: number;
   step?: number;
@@ -16,6 +18,7 @@ export interface SliderProps {
 export function Slider({
   value,
   onChange,
+  onCommit,
   min = 0,
   max = 100,
   step = 1,
@@ -38,6 +41,10 @@ export function Slider({
       disabled={disabled}
       aria-label={ariaLabel}
       onChange={(event) => onChange(Number(event.target.value))}
+      onPointerUp={onCommit ? () => onCommit() : undefined}
+      onPointerCancel={onCommit ? () => onCommit() : undefined}
+      onKeyUp={onCommit ? () => onCommit() : undefined}
+      onBlur={onCommit ? () => onCommit() : undefined}
     />
   );
 }

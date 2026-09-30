@@ -1,12 +1,26 @@
-import type { ReactElement, ReactNode } from "react";
+import type { HTMLAttributes, ReactElement, ReactNode } from "react";
 
-export interface BadgeProps {
+export type BadgeVariant = "neutral" | "success" | "danger";
+
+export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   children: ReactNode;
+  variant?: BadgeVariant;
   className?: string;
 }
 
-export function Badge({ children, className }: BadgeProps): ReactElement {
+export function Badge({
+  children,
+  variant = "neutral",
+  className,
+  ...rest
+}: BadgeProps): ReactElement {
+  const classes = ["ui-badge", variant !== "neutral" ? `ui-badge--${variant}` : "", className ?? ""]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <span className={["ui-badge", className ?? ""].filter(Boolean).join(" ")}>{children}</span>
+    <span className={classes} {...rest}>
+      {children}
+    </span>
   );
 }

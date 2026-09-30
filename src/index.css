@@ -969,6 +969,10 @@ details summary:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, AccentColor 45%, transparent);
 }
 
+.ui-textfield--mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 .ui-textfield::placeholder {
   color: var(--label-3);
 }
@@ -980,11 +984,185 @@ details summary:focus {
   margin-bottom: 20px;
 }
 
+/* Top-level tab body: one column of sections. */
+.ui-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ui-tab-hint {
+  font-size: var(--fs-body);
+  color: var(--label-2);
+}
+
+.ui-form-feedback {
+  font-size: var(--fs-body);
+  color: var(--label-2);
+}
+
+.ui-form-feedback--error {
+  color: var(--danger);
+}
+
+.ui-form-feedback--success {
+  color: var(--success);
+}
+
+.ui-slider-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px;
+  align-items: center;
+  gap: 12px;
+  min-width: 160px;
+}
+
+.ui-slider-field__value {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  background: var(--control-muted);
+  color: var(--label);
+  font-size: var(--fs-subhead);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hotkey capture surface: looks like a field, shows the recorded combination. */
+.ui-input-hotkey {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 22px;
+  padding: 0 7px;
+  border: 1px solid var(--separator);
+  border-radius: 5px;
+  background: var(--control-bg);
+  color: var(--label);
+  font-size: var(--fs-body);
+}
+
+.ui-input-hotkey--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, AccentColor 45%, transparent);
+}
+
+.ui-input-hotkey:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, AccentColor 45%, transparent);
+}
+
+.ui-input-hotkey__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.ui-input-hotkey__hint {
+  flex-shrink: 0;
+  color: var(--label-3);
+  font-size: var(--fs-subhead);
+}
+
 .ui-form-section__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 0 2px;
   font-size: var(--fs-body);
   font-weight: 600;
   color: var(--label);
+}
+
+.ui-form-section__heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-title3);
+}
+
+/* A section that lives inside another group: no second surface, a separator. */
+.ui-form-section--nested {
+  gap: 4px;
+  margin: 0;
+  padding: 12px;
+}
+
+.ui-form-section--nested + .ui-form-section--nested {
+  border-top: 1px solid var(--separator);
+}
+
+.ui-form-section--nested .ui-form-group {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.ui-form-section--nested > .ui-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ui-form-section__action {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ui-form-section__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ui-form-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-callout);
+  font-weight: 600;
+  color: var(--label);
+}
+
+/* Vertical label-over-control stack used inside nested sections. */
+.ui-form-field {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ui-form-field > * {
+  min-width: 0;
+}
+
+.ui-form-field__label {
+  font-size: var(--fs-body);
+  color: var(--label-2);
+}
+
+.ui-form-hint {
+  font-size: var(--fs-subhead);
+  color: var(--label-3);
+}
+
+.ui-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .ui-form-group {
@@ -1099,6 +1277,7 @@ details summary:focus {
 .ui-badge {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   height: 16px;
   padding: 0 6px;
   border-radius: 999px;
@@ -1106,7 +1285,19 @@ details summary:focus {
   color: var(--label-2);
   font-size: var(--fs-caption);
   font-weight: 500;
+  white-space: nowrap;
 }
+
+.ui-badge--success {
+  background: var(--success-soft);
+  color: var(--success-bright);
+}
+
+.ui-badge--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 
 .ui-progress {
   width: 100%;

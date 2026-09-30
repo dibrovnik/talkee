@@ -159,7 +159,7 @@ fn update_stream_text(buffer: &mut String, incoming: &str, append: bool) {
 fn pcm16_rms(pcm: &[u8]) -> f32 {
     let mut sum_squares = 0.0f64;
     let mut samples = 0usize;
-    for bytes in pcm.chunks_exact(2) {
+    for bytes in pcm.as_chunks::<2>().0 {
         let sample = i16::from_le_bytes([bytes[0], bytes[1]]) as f64 / i16::MAX as f64;
         sum_squares += sample * sample;
         samples += 1;
@@ -228,7 +228,9 @@ fn resample_pcm16_mono(pcm: &[u8], source_rate: u32, target_rate: u32) -> Vec<u8
         return pcm.to_vec();
     }
     let samples = pcm
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|bytes| i16::from_le_bytes([bytes[0], bytes[1]]) as f32)
         .collect::<Vec<_>>();
     let output_len = ((samples.len() as u64 * target_rate as u64) / source_rate as u64) as usize;
@@ -1107,8 +1109,8 @@ where
                             if let Err(err) = socket.send(audio_message(&req.provider, chunk, false)).await {
                                 break Err(format!("Realtime audio send failed: {}", err));
                             }
-                            if req.provider == "openai" {
-                                if openai_commit_tracker.should_commit()
+                            if req.provider == "openai"
+                                && openai_commit_tracker.should_commit()
                                     && openai_pending_commits == 0
                                 {
                                     if let Some(message) = finish_message(&req.provider) {
@@ -1119,7 +1121,6 @@ where
                                         openai_pending_commits += 1;
                                     }
                                 }
-                            }
                         }
                         Some(RealtimeAudioCommand::Finish) | None => {
                             finishing = true;

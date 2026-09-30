@@ -972,7 +972,7 @@ fn session_directory(session_id: &str) -> Result<PathBuf, String> {
         .ok_or_else(|| "Папка записи созвона не найдена.".to_string())
 }
 
-fn read_manifest(directory: &PathBuf) -> Result<CallCaptureSession, String> {
+fn read_manifest(directory: &Path) -> Result<CallCaptureSession, String> {
     let path = directory.join("manifest.json");
     let json = fs::read_to_string(&path)
         .map_err(|error| format!("Не удалось прочитать manifest созвона: {}", error))?;
@@ -981,7 +981,7 @@ fn read_manifest(directory: &PathBuf) -> Result<CallCaptureSession, String> {
 }
 
 fn append_transcript_checkpoint(
-    directory: &PathBuf,
+    directory: &Path,
     checkpoint: &CallTranscriptCheckpoint,
 ) -> Result<(), String> {
     let path = directory.join(TRANSCRIPT_CHECKPOINT_FILE);
@@ -1057,7 +1057,7 @@ pub fn checkpoint_call_transcription(
     write_manifest(&session)
 }
 
-fn restore_transcript_checkpoints(directory: &PathBuf, state: &mut CallLiveTranscriptionState) {
+fn restore_transcript_checkpoints(directory: &Path, state: &mut CallLiveTranscriptionState) {
     let path = directory.join(TRANSCRIPT_CHECKPOINT_FILE);
     let Ok(content) = fs::read_to_string(path) else {
         return;
@@ -1079,7 +1079,7 @@ fn restore_transcript_checkpoints(directory: &PathBuf, state: &mut CallLiveTrans
     }
 }
 
-fn repair_pcm_wav_header(path: &PathBuf, directory: &PathBuf) -> Result<(), String> {
+fn repair_pcm_wav_header(path: &Path, directory: &Path) -> Result<(), String> {
     if path.extension().and_then(|value| value.to_str()) != Some("wav") || !path.is_file() {
         return Ok(());
     }

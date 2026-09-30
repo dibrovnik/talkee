@@ -19,11 +19,11 @@
 
 ## 3. Конфиг и ассеты
 
-- [ ] 3.1 Удалить `src-tauri/tauri.linux.conf.json`, `src-tauri/windows/`
-- [ ] 3.2 `src-tauri/tauri.conf.json`: удалить `bundle.windows`, `bundle.linux`; `bundle.targets: ["app", "dmg"]`; из `bundle.icon` убрать `icon.ico`
-- [ ] 3.3 Удалить `src-tauri/icons/icon.ico`, `Square*Logo.png`, `StoreLogo.png`, `src-tauri/icons/android/`, `src-tauri/icons/ios/`
-- [ ] 3.4 Удалить из `src-tauri/binaries/` Linux/Windows бинарники и устаревшие `*-stt-nvidia-*`, `*-stt-qwen-*`
-- [ ] 3.5 Проверка: `bun run tauri build` создаёт `.app` и `.dmg`
+- [x] 3.1 Удалить `src-tauri/tauri.linux.conf.json`, `src-tauri/windows/`
+- [x] 3.2 `src-tauri/tauri.conf.json`: удалить `bundle.windows`, `bundle.linux`; `bundle.targets: ["app", "dmg"]`; из `bundle.icon` убрать `icon.ico`
+- [x] 3.3 Удалить `src-tauri/icons/icon.ico`, `Square*Logo.png`, `StoreLogo.png`, `src-tauri/icons/android/`, `src-tauri/icons/ios/`
+- [x] 3.4 Удалить из `src-tauri/binaries/` Linux/Windows бинарники и устаревшие `*-stt-nvidia-*`, `*-stt-qwen-*`
+- [x] 3.5 Проверка: `bun run tauri build` создаёт `.app` и `.dmg`
 
 ## 4. Frontend
 

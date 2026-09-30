@@ -3,7 +3,7 @@
     "windows": [
       {
         "label": "widget",
-        "title": "Talkis",
+        "title": "Talkee",
         "url": "index.html?window=widget",
         "width": 78,
         "height": 32,

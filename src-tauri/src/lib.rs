@@ -219,7 +219,7 @@ pub fn run() {
             hotkey_manager::unregister_handy_hotkey,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Talkis");
+        .expect("error while running Talkee");
 }
 
 #[tauri::command]

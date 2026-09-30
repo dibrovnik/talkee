@@ -1,5 +1,5 @@
 #[cfg(target_os = "macos")]
-const APP_BUNDLE_ID: &str = "com.trixter.talkis";
+const APP_BUNDLE_ID: &str = "com.talkee.app";
 
 #[cfg(target_os = "macos")]
 #[link(name = "AVFoundation", kind = "framework")]

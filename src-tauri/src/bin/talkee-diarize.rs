@@ -11,7 +11,7 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const SERVER_NAME: &str = "talkis-diarize";
+const SERVER_NAME: &str = "talkee-diarize";
 const MODEL_ID: &str = "sherpa-diarization-pyannote-titanet-int8";
 const SEGMENTATION_FILE: &str = "pyannote-segmentation-3.0.int8.onnx";
 const EMBEDDING_FILE: &str = "nemo_en_titanet_small.onnx";
@@ -175,7 +175,7 @@ fn main() {
 fn parse_args() -> RuntimeConfig {
     let mut host = "127.0.0.1".to_string();
     let mut port = 8003u16;
-    let mut data_dir = env::temp_dir().join("talkis-diarize");
+    let mut data_dir = env::temp_dir().join("talkee-diarize");
     let mut models_dir = data_dir.join("models");
     let args = env::args().skip(1).collect::<Vec<_>>();
     let mut index = 0;
@@ -587,7 +587,7 @@ fn run_sherpa_binary_diarization(
 }
 
 fn resolve_sherpa_binary() -> Option<PathBuf> {
-    if let Ok(value) = env::var("TALKIS_SHERPA_DIARIZATION_BIN") {
+    if let Ok(value) = env::var("TALKEE_SHERPA_DIARIZATION_BIN") {
         let trimmed = value.trim();
         if !trimmed.is_empty() {
             let path = PathBuf::from(trimmed);
@@ -855,7 +855,7 @@ fn venv_is_usable(python: &Path) -> bool {
 }
 
 fn find_system_python() -> Option<String> {
-    env::var("TALKIS_SHERPA_PYTHON")
+    env::var("TALKEE_SHERPA_PYTHON")
         .ok()
         .filter(|value| !value.trim().is_empty())
         .filter(|value| python_is_supported(value))
@@ -879,7 +879,7 @@ fn install_portable_python(venv_dir: &Path) -> Result<String, (u16, String)> {
     let engine_dir = venv_dir
         .parent()
         .map(Path::to_path_buf)
-        .unwrap_or_else(|| env::temp_dir().join("talkis-diarize-python"));
+        .unwrap_or_else(|| env::temp_dir().join("talkee-diarize-python"));
     let python_path = portable_python_path(&engine_dir);
     if python_path.is_file() && python_is_supported_path(&python_path) {
         return Ok(python_path.to_string_lossy().to_string());
@@ -1206,7 +1206,7 @@ fn unique_temp_path(prefix: &str, extension: &str) -> PathBuf {
         .unwrap_or_default();
     let pid = std::process::id();
     env::temp_dir().join(format!(
-        "talkis-{}-{}-{}.{}",
+        "talkee-{}-{}-{}.{}",
         prefix,
         pid,
         now,

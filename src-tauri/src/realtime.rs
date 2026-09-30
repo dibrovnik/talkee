@@ -772,7 +772,7 @@ fn setup_message(req: &RealtimeConnectionRequest) -> Option<Value> {
                         "format": { "type": "audio/pcm", "rate": OPENAI_PCM_RATE },
                         "transcription": { "model": "gpt-4o-mini-transcribe" },
                         // Video can contain uninterrupted speech for minutes.
-                        // Talkis commits short turns itself so translation does
+                        // Talkee commits short turns itself so translation does
                         // not wait for server-side end-of-speech detection.
                         "turn_detection": null
                     }

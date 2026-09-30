@@ -21,12 +21,12 @@
 
 ## 3. Rust: строки и пути
 
-- [ ] 3.1 `logger.rs`: `~/.talkee/talkee.log`
-- [ ] 3.2 `history_storage.rs`: маркер `.talkee-app-data-layout-v3` (учесть старый маркер при чтении слоя)
-- [ ] 3.3 Имена sidecar'ов в `local_stt.rs`, `llm_runtime.rs`, `media/ffmpeg.rs`, `shutdown.rs`; в `cleanup_orphaned_sidecars` убивать и `talkee-*`, и `talkis-*` (design.md, решение 4)
-- [ ] 3.4 `commands/accessibility.rs` `APP_BUNDLE_ID`, `call_capture.rs:1888`, `paste.rs:600` sentinel, `lib.rs:241` сообщение ошибки, `tray.rs` подписи
-- [ ] 3.5 Env: `TALKIS_*` → `TALKEE_*` во всех `.rs`
-- [ ] 3.6 Проверка: `cargo check && cargo test` (manifest `src-tauri/Cargo.toml`)
+- [x] 3.1 `logger.rs`: `~/.talkee/talkee.log`
+- [x] 3.2 `history_storage.rs`: маркер `.talkee-app-data-layout-v3` (учесть старый маркер при чтении слоя)
+- [x] 3.3 Имена sidecar'ов в `local_stt.rs`, `llm_runtime.rs`, `media/ffmpeg.rs`, `shutdown.rs`; в `cleanup_orphaned_sidecars` убивать и `talkee-*`, и `talkis-*` (design.md, решение 4)
+- [x] 3.4 `commands/accessibility.rs` `APP_BUNDLE_ID`, `call_capture.rs:1888`, `paste.rs:600` sentinel, `lib.rs:241` сообщение ошибки, `tray.rs` подписи
+- [x] 3.5 Env: `TALKIS_*` → `TALKEE_*` во всех `.rs`
+- [x] 3.6 Проверка: `cargo check && cargo test` (manifest `src-tauri/Cargo.toml`)
 
 ## 4. Frontend
 

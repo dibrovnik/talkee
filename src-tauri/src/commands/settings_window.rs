@@ -29,7 +29,7 @@ fn show_and_focus_window(win: &tauri::WebviewWindow) {
 
 fn create_settings_window(app: &AppHandle, url: &str) -> Result<tauri::WebviewWindow, String> {
     let mut builder = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App(url.into()))
-        .title("Talkis")
+        .title("Talkee")
         .inner_size(920.0, 680.0)
         .min_inner_size(820.0, 560.0)
         .center();

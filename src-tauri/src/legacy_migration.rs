@@ -29,6 +29,20 @@ const SETTINGS_FILE: &str = "talkee.json";
 /// Settings keys whose values are filesystem paths inside the app-data dir.
 const PATH_SETTINGS_KEYS: &[&str] = &["localModelsDir", "transcriptionStorageDir"];
 
+/// Legacy sidecar process names. Kept in the allowlisted migration module so
+/// the shutdown cleanup can still terminate an orphan left by a pre-rename
+/// session without the legacy word leaking into the rest of the sources.
+pub const LEGACY_SIDECAR_NAMES: &[&str] = &[
+    "talkis-ffmpeg",
+    "talkis-stt",
+    "talkis-diarize",
+    "talkis-llm",
+];
+
+/// Legacy app-data layout marker, still accepted when reading an existing
+/// directory that predates the rename.
+pub const LEGACY_LAYOUT_MARKER: &str = LEGACY_LAYOUT_MARKER_FILE;
+
 /// Result of a migration attempt, suitable for logging and tests.
 #[derive(Debug, Default, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

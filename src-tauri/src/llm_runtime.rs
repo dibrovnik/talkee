@@ -11,7 +11,7 @@ use tauri_plugin_shell::ShellExt;
 use tokio::io::AsyncWriteExt;
 
 /// Name of the bundled `llama-server` sidecar (prepared by prepare-llm-sidecar.mjs).
-const LLM_RUNTIME_NAME: &str = "talkis-llm";
+const LLM_RUNTIME_NAME: &str = "talkee-llm";
 const LLM_DEFAULT_PORT: u16 = 8011;
 // Keep the managed runtime usable alongside local STT on 8–16 GB Windows
 // machines. An 8192-token context can exhaust memory while llama.cpp creates
@@ -272,7 +272,7 @@ fn drain_runtime_events(
 fn llm_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path()
         .app_data_dir()
-        .map_err(|err| format!("Не удалось найти папку данных Talkis: {}", err))
+        .map_err(|err| format!("Не удалось найти папку данных Talkee: {}", err))
         .map(|dir| dir.join("models").join("llm"))
 }
 
@@ -512,7 +512,7 @@ async fn chat_completions_ready_with_timeout(
 ) -> Result<(), String> {
     let url = format!("http://127.0.0.1:{}/v1/chat/completions", port);
     let payload = serde_json::json!({
-        "model": "talkis-llm",
+        "model": "talkee-llm",
         "messages": [
             { "role": "system", "content": "Ответь одним словом." },
             { "role": "user", "content": "ping" }

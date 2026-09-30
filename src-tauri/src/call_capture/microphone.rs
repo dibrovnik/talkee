@@ -140,7 +140,7 @@ pub fn start(
     let (stopped_tx, stopped_rx) = mpsc::channel();
 
     std::thread::Builder::new()
-        .name("talkis-call-microphone".to_string())
+        .name("talkee-call-microphone".to_string())
         .spawn(move || {
             run_thread(
                 app,

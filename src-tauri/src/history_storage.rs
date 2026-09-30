@@ -16,7 +16,7 @@ const STT_MODELS_DIR_NAME: &str = "stt";
 const LLM_MODELS_DIR_NAME: &str = "llm";
 const LEGACY_LOCAL_STT_DIR_NAME: &str = "local-stt";
 const LEGACY_LOCAL_LLM_DIR_NAME: &str = "local-llm";
-const APP_DATA_LAYOUT_MARKER_FILE: &str = ".talkis-app-data-layout-v3";
+const APP_DATA_LAYOUT_MARKER_FILE: &str = ".talkee-app-data-layout-v3";
 const LEGACY_GGML_STT_MODEL_FILES: &[&str] = &[
     "ggml-tiny.bin",
     "ggml-base.bin",
@@ -45,7 +45,7 @@ pub struct HistoryAudioRead {
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path()
         .app_data_dir()
-        .map_err(|err| format!("Не удалось найти папку данных Talkis: {}", err))
+        .map_err(|err| format!("Не удалось найти папку данных Talkee: {}", err))
 }
 
 fn default_history_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -140,7 +140,7 @@ fn validate_audio_path(path: &Path, roots: &[PathBuf]) -> Result<PathBuf, String
         }
     }
 
-    Err("Аудиофайл находится вне папки хранения Talkis.".to_string())
+    Err("Аудиофайл находится вне папки хранения Talkee.".to_string())
 }
 
 fn sanitize_entry_id(entry_id: &str) -> String {
@@ -654,9 +654,10 @@ pub async fn migrate_app_data_layout(
 ) -> Result<(), String> {
     let app_data = app_data_dir(&app)?;
     fs::create_dir_all(&app_data)
-        .map_err(|err| format!("Не удалось подготовить папку данных Talkis: {}", err))?;
+        .map_err(|err| format!("Не удалось подготовить папку данных Talkee: {}", err))?;
     let marker_path = app_data.join(APP_DATA_LAYOUT_MARKER_FILE);
-    if marker_path.is_file() {
+    let legacy_marker_path = app_data.join(crate::legacy_migration::LEGACY_LAYOUT_MARKER);
+    if marker_path.is_file() || legacy_marker_path.is_file() {
         return Ok(());
     }
 
@@ -805,7 +806,7 @@ mod tests {
             .map(|duration| duration.as_millis())
             .unwrap_or(0);
         let path = std::env::temp_dir().join(format!(
-            "talkis-history-audio-test-{}-{}-{}",
+            "talkee-history-audio-test-{}-{}-{}",
             name,
             std::process::id(),
             now_ms

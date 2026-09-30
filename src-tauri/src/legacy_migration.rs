@@ -96,10 +96,7 @@ pub fn run_startup_migration(app: &tauri::AppHandle) -> Result<MigrationReport, 
 /// Idempotent: existing files in `new_dir` are never overwritten and the
 /// migration marker short-circuits a repeat run. The legacy directory is left
 /// untouched.
-pub fn migrate_from_talkis(
-    old_dir: &Path,
-    new_dir: &Path,
-) -> Result<MigrationReport, String> {
+pub fn migrate_from_talkis(old_dir: &Path, new_dir: &Path) -> Result<MigrationReport, String> {
     let marker_path = new_dir.join(MIGRATION_MARKER_FILE);
     if marker_path.is_file() {
         return Ok(MigrationReport {
@@ -135,8 +132,7 @@ pub fn migrate_from_talkis(
         &new_dir.join(LEGACY_LAYOUT_MARKER_FILE),
         &new_dir.join(APP_DATA_LAYOUT_MARKER_FILE),
     )?;
-    let rewritten_paths =
-        rewrite_settings_paths(&new_dir.join(SETTINGS_FILE), old_dir, new_dir)?;
+    let rewritten_paths = rewrite_settings_paths(&new_dir.join(SETTINGS_FILE), old_dir, new_dir)?;
 
     write_marker(&marker_path)?;
 
@@ -250,9 +246,8 @@ fn rewrite_path(path: &str, old_dir: &Path, new_dir: &Path) -> Option<String> {
 
 fn write_marker(marker_path: &Path) -> Result<(), String> {
     if let Some(parent) = marker_path.parent() {
-        fs::create_dir_all(parent).map_err(|err| {
-            format!("Не удалось создать папку {}: {}", parent.display(), err)
-        })?;
+        fs::create_dir_all(parent)
+            .map_err(|err| format!("Не удалось создать папку {}: {}", parent.display(), err))?;
     }
 
     fs::write(marker_path, b"migrated\n")
@@ -305,28 +300,16 @@ mod tests {
     #[test]
     fn full_old_dir_copies_history_models_and_settings() {
         let (_root, old_dir, new_dir) = dirs();
-        write_file(
-            &old_dir.join("history/history.json"),
-            r#"{"entries":[]}"#,
-        );
-        write_file(
-            &old_dir.join("models/stt/ggml-tiny.bin"),
-            "model-bytes",
-        );
-        write_file(
-            &old_dir.join(LEGACY_LAYOUT_MARKER_FILE),
-            "",
-        );
+        write_file(&old_dir.join("history/history.json"), r#"{"entries":[]}"#);
+        write_file(&old_dir.join("models/stt/ggml-tiny.bin"), "model-bytes");
+        write_file(&old_dir.join(LEGACY_LAYOUT_MARKER_FILE), "");
         let settings = serde_json::json!({
             "uiLanguage": "en",
             "localModelsDir": old_dir.join("models/stt").to_string_lossy(),
             "transcriptionStorageDir": old_dir.join("storage").to_string_lossy(),
             "apiKey": "secret",
         });
-        write_file(
-            &old_dir.join(LEGACY_SETTINGS_FILE),
-            &settings.to_string(),
-        );
+        write_file(&old_dir.join(LEGACY_SETTINGS_FILE), &settings.to_string());
 
         let report = migrate_from_talkis(&old_dir, &new_dir).unwrap();
 
@@ -384,10 +367,7 @@ mod tests {
             "localModelsDir": old_dir.join("models").to_string_lossy(),
             "transcriptionStorageDir": "/somewhere/else".to_string(),
         });
-        write_file(
-            &old_dir.join(LEGACY_SETTINGS_FILE),
-            &settings.to_string(),
-        );
+        write_file(&old_dir.join(LEGACY_SETTINGS_FILE), &settings.to_string());
 
         migrate_from_talkis(&old_dir, &new_dir).unwrap();
 

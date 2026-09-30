@@ -47,7 +47,7 @@ pub fn configure_main_widget_window(win: &WebviewWindow) -> Result<(), String> {
     }))
     .map_err(|e| e.to_string())?;
 
-        {
+    {
         let main_thread_window = win.clone();
         win.run_on_main_thread(move || unsafe {
             match main_thread_window.ns_window() {
@@ -146,7 +146,7 @@ pub fn restore_widget_window(
         win.set_always_on_top(true).map_err(|e| e.to_string())?;
     }
 
-        if bring_to_front {
+    if bring_to_front {
         order_widget_window_front(app)?;
     }
 

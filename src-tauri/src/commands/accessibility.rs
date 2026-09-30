@@ -43,16 +43,16 @@ unsafe extern "C" {
 #[tauri::command]
 pub async fn open_accessibility_settings() -> Result<(), String> {
     unsafe {
-            let keys = [kAXTrustedCheckOptionPrompt];
-            let values = [kCFBooleanTrue];
-            let options = CFDictionaryCreate(
-                std::ptr::null(),
-                keys.as_ptr(),
-                values.as_ptr(),
-                1,
-                &kCFTypeDictionaryKeyCallBacks as *const _,
-                &kCFTypeDictionaryValueCallBacks as *const _,
-            );
+        let keys = [kAXTrustedCheckOptionPrompt];
+        let values = [kCFBooleanTrue];
+        let options = CFDictionaryCreate(
+            std::ptr::null(),
+            keys.as_ptr(),
+            values.as_ptr(),
+            1,
+            &kCFTypeDictionaryKeyCallBacks as *const _,
+            &kCFTypeDictionaryValueCallBacks as *const _,
+        );
         AXIsProcessTrustedWithOptions(options);
         CFRelease(options);
     }
@@ -62,7 +62,7 @@ pub async fn open_accessibility_settings() -> Result<(), String> {
 #[tauri::command]
 pub async fn reset_accessibility_permission() -> Result<(), String> {
     // In dev mode, there is no .app bundle so tccutil cannot find
-        // the bundle identifier. Just skip the reset — it is only
+    // the bundle identifier. Just skip the reset — it is only
     // useful for production builds where the user re-requests
     // permission after denial.
     if cfg!(dev) {

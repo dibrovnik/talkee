@@ -680,5 +680,4 @@ mod tests {
             "mock realtime failure"
         );
     }
-
 }

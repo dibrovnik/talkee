@@ -29,7 +29,7 @@ impl TranscriptionChunkSpec {
             Self {
                 extension: "wav",
                 mime_type: "audio/wav",
-                fallback_file_name: "talkis-transcription-chunk.wav",
+                fallback_file_name: "talkee-transcription-chunk.wav",
                 segment_seconds: local_segment_seconds
                     .filter(|seconds| *seconds > 0)
                     .unwrap_or(LOCAL_STT_FILE_TRANSCRIPTION_SEGMENT_SECONDS),
@@ -38,7 +38,7 @@ impl TranscriptionChunkSpec {
             Self {
                 extension: "mp3",
                 mime_type: "audio/mpeg",
-                fallback_file_name: "talkis-transcription-chunk.mp3",
+                fallback_file_name: "talkee-transcription-chunk.mp3",
                 segment_seconds: FILE_TRANSCRIPTION_SEGMENT_SECONDS,
             }
         }
@@ -140,7 +140,7 @@ pub async fn prepare_media_file_chunks_for_transcription(
                         file_name: input_path
                             .file_name()
                             .and_then(|value| value.to_str())
-                            .unwrap_or("talkis-transcription.wav")
+                            .unwrap_or("talkee-transcription.wav")
                             .to_string(),
                         mime_type: "audio/wav".to_string(),
                         size_bytes: metadata.len(),
@@ -253,7 +253,7 @@ pub async fn prepare_media_file_for_diarization(
     let temp_dir = unique_temp_path("file-diarization", "dir");
     fs::create_dir_all(&temp_dir)
         .map_err(|err| format!("Не удалось подготовить временную папку: {}", err))?;
-    let output_path = temp_dir.join("talkis-diarization.wav");
+    let output_path = temp_dir.join("talkee-diarization.wav");
     let ffmpeg_args = vec![
         "-hide_banner".to_string(),
         "-loglevel".to_string(),
@@ -358,7 +358,7 @@ pub async fn prepare_media_for_transcription(
 
     Ok(PrepareMediaResponse {
         audio_base64: base64::engine::general_purpose::STANDARD.encode(output_bytes),
-        file_name: "talkis-transcription.mp3".to_string(),
+        file_name: "talkee-transcription.mp3".to_string(),
         mime_type: "audio/mpeg".to_string(),
         size_bytes: metadata.len(),
     })
@@ -395,14 +395,14 @@ mod tests {
     #[test]
     fn local_transcription_chunk_spec_targets_wav_for_local_stt() {
         let spec = TranscriptionChunkSpec::for_target(true, None);
-        let output_pattern = spec.output_pattern(Path::new("/tmp/talkis-chunks"));
+        let output_pattern = spec.output_pattern(Path::new("/tmp/talkee-chunks"));
         let args = spec.ffmpeg_args(Path::new("/tmp/input.mp4"), &output_pattern);
 
         assert_eq!(spec.extension, "wav");
         assert_eq!(spec.mime_type, "audio/wav");
         assert_eq!(
             output_pattern,
-            PathBuf::from("/tmp/talkis-chunks/chunk-%05d.wav")
+            PathBuf::from("/tmp/talkee-chunks/chunk-%05d.wav")
         );
         assert!(has_arg_pair(&args, "-acodec", "pcm_s16le"));
         assert!(!has_arg_pair(&args, "-b:a", "32k"));
@@ -412,14 +412,14 @@ mod tests {
     #[test]
     fn remote_transcription_chunk_spec_keeps_mp3_upload_chunks() {
         let spec = TranscriptionChunkSpec::for_target(false, Some(25));
-        let output_pattern = spec.output_pattern(Path::new("/tmp/talkis-chunks"));
+        let output_pattern = spec.output_pattern(Path::new("/tmp/talkee-chunks"));
         let args = spec.ffmpeg_args(Path::new("/tmp/input.mp4"), &output_pattern);
 
         assert_eq!(spec.extension, "mp3");
         assert_eq!(spec.mime_type, "audio/mpeg");
         assert_eq!(
             output_pattern,
-            PathBuf::from("/tmp/talkis-chunks/chunk-%05d.mp3")
+            PathBuf::from("/tmp/talkee-chunks/chunk-%05d.mp3")
         );
         assert!(has_arg_pair(&args, "-b:a", "32k"));
         assert!(!has_arg_pair(&args, "-acodec", "pcm_s16le"));
@@ -429,7 +429,7 @@ mod tests {
     #[test]
     fn local_transcription_chunk_spec_accepts_model_window_override() {
         let spec = TranscriptionChunkSpec::for_target(true, Some(25));
-        let output_pattern = spec.output_pattern(Path::new("/tmp/talkis-chunks"));
+        let output_pattern = spec.output_pattern(Path::new("/tmp/talkee-chunks"));
         let args = spec.ffmpeg_args(Path::new("/tmp/input.wav"), &output_pattern);
 
         assert_eq!(spec.segment_seconds, 25);

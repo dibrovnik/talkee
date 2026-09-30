@@ -1,6 +1,6 @@
 # Release Rule
 
-This file defines the mandatory release workflow for Talkis. Follow it for every release without skipping steps.
+This file defines the mandatory release workflow for Talkee. Follow it for every release without skipping steps.
 
 ## Naming
 
@@ -19,7 +19,7 @@ This file defines the mandatory release workflow for Talkis. Follow it for every
 3. Refresh `README.md` before every release so the documented behavior, supported platforms, commands, and release notes are current.
 4. Run the release checks locally:
    - `bun run check:release`
-   - `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkis-updater.key bun run build:release:macos`
+   - `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkee-updater.key bun run build:release:macos`
    - On native Windows/Linux runners, run `bun run build:release:windows` and `bun run build:release:linux` before claiming those artifacts are ready.
    - If the updater private key is password-protected, also set `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 5. Perform a detailed self-review of the full release diff.
@@ -60,7 +60,7 @@ This file defines the mandatory release workflow for Talkis. Follow it for every
 - Preflight workflow file: `.github/workflows/release-preflight.yml`
 - Tag push is the canonical release trigger.
 - Release preflight is the canonical build validation before tag push.
-- The updater metadata endpoint is `https://github.com/SerTimBerrners-Lee/talkis/releases/latest/download/latest.json`.
+- The updater metadata endpoint is `https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/latest.json`.
 - Build all platforms that are actually ready in the workflow. Do not claim unsupported platforms in release notes.
 
 ## Output expectations

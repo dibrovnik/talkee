@@ -15,6 +15,7 @@ export const PROCESSING_CANCEL_REQUEST_EVENT = "processing-cancel-request";
 export const SELECTION_TEXT_REQUEST_EVENT = "selection-text-request";
 export const SELECTION_TEXT_RESPONSE_EVENT = "selection-text-response";
 export const DICTATION_STREAM_UPDATE_EVENT = "dictation-stream:update";
+export const APP_DATA_MIGRATION_ERROR_EVENT = "app-data-migration-error";
 
 export type HotkeyTarget = "dictation" | "selection";
 

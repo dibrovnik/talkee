@@ -45,7 +45,7 @@ pub(super) async fn run_ffmpeg(
     app: &tauri::AppHandle,
     args: Vec<String>,
 ) -> Result<Vec<u8>, String> {
-    match app.shell().sidecar("talkis-ffmpeg") {
+    match app.shell().sidecar("talkee-ffmpeg") {
         Ok(command) => {
             logger::log_info("MEDIA", "Running bundled ffmpeg sidecar");
             let started_at = Instant::now();
@@ -109,6 +109,6 @@ pub(super) async fn run_ffmpeg(
 
     #[cfg(not(debug_assertions))]
     {
-        Err("Встроенный медиаконвертер недоступен. Переустановите приложение или обратитесь в поддержку Talkis.".to_string())
+        Err("Встроенный медиаконвертер недоступен. Переустановите приложение или обратитесь в поддержку Talkee.".to_string())
     }
 }

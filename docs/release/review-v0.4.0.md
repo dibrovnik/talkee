@@ -11,7 +11,7 @@
 ## Scope
 
 - Key changes included in this release:
-  - Adds live system-audio translation through Talkis Cloud and verified OpenAI/Gemini Realtime adapters, with optional translated voice playback on macOS.
+  - Adds live system-audio translation through Talkee Cloud and verified OpenAI/Gemini Realtime adapters, with optional translated voice playback on macOS.
   - Adds streaming dictation for supported Cloud, API, and local STT configurations.
   - Replaces duplicated hotkey capture with one transactional capture, registration, persistence, rollback, and stale-request flow for dictation and selected-text translation.
   - Adds two-track call/live-translation audio handling so microphone and system audio can be saved and synchronously played from history.
@@ -48,10 +48,10 @@
 - Frontend tests: all 23 test files passed individually, `203/203` tests.
   - A plain repository-wide `bun test` invocation hit Bun 1.2.13 path/FD discovery errors on the external volume. Running each existing entrypoint with an explicit `./` path passed.
 - `cargo test --manifest-path src-tauri/Cargo.toml --lib`: passed, `92/92` tests.
-- `cargo test --manifest-path src-tauri/Cargo.toml --bin talkis-stt`: passed, `14/14` tests.
+- `cargo test --manifest-path src-tauri/Cargo.toml --bin talkee-stt`: passed, `14/14` tests.
   - Realtime localhost WebSocket tests require execution outside the restricted network sandbox; they passed there.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkis-updater.key bun run build:release:macos`:
-  - Release sidecars, frontend, Rust binary, `Talkis.app`, and updater `.app.tar.gz` were built successfully.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkee-updater.key bun run build:release:macos`:
+  - Release sidecars, frontend, Rust binary, `Talkee.app`, and updater `.app.tar.gz` were built successfully.
   - Updater signature and final DMG were not produced locally because `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is unset and the key requires an interactive password.
 - GitHub Release Preflight: pending for `Preflight macos`, `Preflight windows`, and `Preflight linux` on the final release commit.
 - Native/GitHub Windows build: pending Release Preflight.

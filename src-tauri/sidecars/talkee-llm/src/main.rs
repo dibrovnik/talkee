@@ -1,4 +1,4 @@
-//! Bundled local LLM runtime (`talkis-llm` sidecar). It mirrors `talkis-stt`: a tiny
+//! Bundled local LLM runtime (`talkee-llm` sidecar). It mirrors `talkee-stt`: a tiny
 //! raw-TCP HTTP server, but backed by llama.cpp (via `llama-cpp-2`) and exposing
 //! an OpenAI-compatible `/v1/chat/completions` endpoint so the desktop app can
 //! run summary locally. The GGUF model path is passed with `-m`.
@@ -18,7 +18,7 @@ use llama_cpp_2::model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel
 use llama_cpp_2::sampling::LlamaSampler;
 use llama_cpp_2::TokenToStringError;
 
-const SERVER_NAME: &str = "talkis-llm";
+const SERVER_NAME: &str = "talkee-llm";
 const ENGINE_NAME: &str = "llama.cpp";
 const MAX_REQUEST_BYTES: usize = 8 * 1024 * 1024;
 // The sidecar often runs together with local STT. Keep its default aligned
@@ -67,7 +67,7 @@ fn main() {
         }
     };
 
-    // llama contexts are not Sync; the server is single-threaded like talkis-stt,
+    // llama contexts are not Sync; the server is single-threaded like talkee-stt,
     // and the Mutex keeps the model usable from the connection loop.
     let model = Mutex::new(model);
 
@@ -223,7 +223,7 @@ fn route_request(
             200,
             json!({
                 "object": "list",
-                "data": [{ "id": SERVER_NAME, "object": "model", "owned_by": "talkis" }]
+                "data": [{ "id": SERVER_NAME, "object": "model", "owned_by": "talkee" }]
             }),
         ),
         ("POST", "/v1/chat/completions") => {
@@ -270,7 +270,7 @@ fn chat_completion(
     )?;
 
     Ok(json!({
-        "id": "chatcmpl-talkis-llm",
+        "id": "chatcmpl-talkee-llm",
         "object": "chat.completion",
         "model": SERVER_NAME,
         "choices": [{

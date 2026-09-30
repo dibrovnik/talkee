@@ -14,7 +14,7 @@ use transcribe_cpp::{
     TimestampKind, VoxtralRealtimeStreamOptions, WhisperRunOptions,
 };
 
-const SERVER_NAME: &str = "talkis-stt";
+const SERVER_NAME: &str = "talkee-stt";
 const RUNTIME_API_VERSION: u32 = 3;
 const MAX_REQUEST_BYTES: usize = 128 * 1024 * 1024;
 const WHISPER_RUN_EXT_KIND: u32 = 0x4E524857;
@@ -260,7 +260,7 @@ fn main() {
             Ok(stream) => {
                 let connection_config = config.clone();
                 if let Err(error) = std::thread::Builder::new()
-                    .name("talkis-stt-connection".to_string())
+                    .name("talkee-stt-connection".to_string())
                     .spawn(move || handle_connection(stream, &connection_config))
                 {
                     eprintln!("failed to spawn connection worker: {}", error);
@@ -320,7 +320,7 @@ fn default_data_dir() -> PathBuf {
         .unwrap_or_else(|_| env::temp_dir())
         .join("Library")
         .join("Application Support")
-        .join("com.trixter.talkis")
+        .join("com.talkee.app")
         .join("local-stt")
 }
 
@@ -1650,7 +1650,7 @@ mod tests {
 
     #[test]
     fn streaming_routes_support_fast_capability_probes() {
-        let root = env::temp_dir().join("talkis-stt-route-probe-test");
+        let root = env::temp_dir().join("talkee-stt-route-probe-test");
         let config = RuntimeConfig {
             host: "127.0.0.1".to_string(),
             port: 0,
@@ -1737,7 +1737,7 @@ mod tests {
 
     #[test]
     fn marker_path_sanitizes_model_ids_with_slashes() {
-        let root = env::temp_dir().join("talkis-stt-marker-test");
+        let root = env::temp_dir().join("talkee-stt-marker-test");
         let config = RuntimeConfig {
             host: "127.0.0.1".to_string(),
             port: 0,
@@ -1756,7 +1756,7 @@ mod tests {
 
     #[test]
     fn new_streaming_models_resolve_aliases_and_marker_paths() {
-        let root = env::temp_dir().join("talkis-stt-new-streaming-test");
+        let root = env::temp_dir().join("talkee-stt-new-streaming-test");
         let config = RuntimeConfig {
             host: "127.0.0.1".to_string(),
             port: 0,
@@ -1846,7 +1846,7 @@ mod tests {
     #[test]
     fn model_path_uses_gguf_only() {
         let root = env::temp_dir().join(format!(
-            "talkis-stt-test-{}",
+            "talkee-stt-test-{}",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .expect("time")

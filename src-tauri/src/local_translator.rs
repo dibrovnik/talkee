@@ -206,7 +206,7 @@ fn translator_dir(
 ) -> Result<PathBuf, String> {
     app.path()
         .app_data_dir()
-        .map_err(|err| format!("Не удалось найти папку данных Talkis: {}", err))
+        .map_err(|err| format!("Не удалось найти папку данных Talkee: {}", err))
         .map(|dir| dir.join("local-translators").join(definition.provider))
 }
 
@@ -766,7 +766,7 @@ mod tests {
     }
 
     #[test]
-    fn maps_talkis_languages_to_nllb_codes() {
+    fn maps_talkee_languages_to_nllb_codes() {
         assert_eq!(language_to_nllb("en"), Some("eng_Latn"));
         assert_eq!(language_to_nllb("ru"), Some("rus_Cyrl"));
         assert_eq!(language_to_nllb("de"), Some("deu_Latn"));
@@ -776,11 +776,11 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires TALKIS_NLLB_TEST_MODEL with an installed NLLB model"]
+    #[ignore = "requires TALKEE_NLLB_TEST_MODEL with an installed NLLB model"]
     fn translates_complete_multi_sentence_selection_with_installed_nllb() {
-        let model_dir = std::env::var_os("TALKIS_NLLB_TEST_MODEL")
+        let model_dir = std::env::var_os("TALKEE_NLLB_TEST_MODEL")
             .map(PathBuf::from)
-            .expect("TALKIS_NLLB_TEST_MODEL must point to the installed NLLB model");
+            .expect("TALKEE_NLLB_TEST_MODEL must point to the installed NLLB model");
         let translator = Arc::new(
             Translator::new(
                 model_dir,

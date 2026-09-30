@@ -1,7 +1,7 @@
-# Talkis Product UI Reference
+# Talkee Product UI Reference
 
-This reference captures the portable Talkis product UI language. Use it for Talkis screens and
-for other products that should feel inspired by Talkis without copying brand content.
+This reference captures the portable Talkee product UI language. Use it for Talkee screens and
+for other products that should feel inspired by Talkee without copying brand content.
 
 ## Style Thesis
 

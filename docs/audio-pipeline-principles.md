@@ -1,6 +1,6 @@
 # Audio Pipeline Principles
 
-This document is the working contract for Talkis audio changes. Future agents should update it when the audio architecture changes.
+This document is the working contract for Talkee audio changes. Future agents should update it when the audio architecture changes.
 
 ## Goals
 
@@ -8,7 +8,7 @@ This document is the working contract for Talkis audio changes. Future agents sh
 - Keep transcription quality stable.
 - Avoid moving expensive conversion into hot paths.
 - Keep local, cloud, file, and call behavior explicit instead of relying on hidden fallbacks.
-- Preserve enough logs to diagnose audio quality and runtime behavior from `~/.talkis/talkis.log`.
+- Preserve enough logs to diagnose audio quality and runtime behavior from `~/.talkee/talkee.log`.
 
 ## Pipeline Map
 
@@ -54,7 +54,7 @@ Widget live-translation button
 -> call_capture.rs system-audio stream plus optional cpal microphone stream
 -> mono / 16 kHz / PCM16 / 100 ms chunks
 -> bounded channels
--> Talkis Cloud (short-lived OpenAI secret) or configured OpenAI/Gemini API
+-> Talkee Cloud (short-lived OpenAI secret) or configured OpenAI/Gemini API
 -> separate realtime sessions per enabled audio source
 -> normalized partial/final text events
 -> existing widget-text overlay and history
@@ -73,7 +73,7 @@ Remote streaming STT is supported only for adapters whose exact key, model, and
 endpoint configuration passed a realtime handshake. A transport failure must not
 stop ordinary recording: the existing batch transcription remains the stop-time
 fallback. Local Whisper and WhisperX are not realtime translation adapters.
-In Cloud mode the desktop authenticates to `talkis-proxy` with its device token;
+In Cloud mode the desktop authenticates to `talkee-proxy` with its device token;
 the proxy checks the subscription and returns a short-lived OpenAI Realtime
 client secret. The primary cloud API key must never be returned to or stored by
 the desktop. API mode continues to use the user's verified adapter directly.
@@ -88,17 +88,17 @@ translated text, so speech and overlay do not come from separate translation
 requests. PCM16/24 kHz audio deltas stay in Rust and feed a bounded native
 playback queue; stale queued speech is discarded instead of increasing live
 latency without limit. Voice playback is currently enabled only on macOS, where
-the global Core Audio tap excludes the Talkis process from capture. Other
+the global Core Audio tap excludes the Talkee process from capture. Other
 platforms must not enable playback until their system-audio path can provide
 equivalent self-process exclusion. When original-audio ducking is enabled, the
-macOS tap uses `MutedWhenTapped` so the source remains available to Talkis at
+macOS tap uses `MutedWhenTapped` so the source remains available to Talkee at
 full capture level without also playing at full volume. The captured 16 kHz
-monitor feed is replayed through the self-excluded Talkis playback stream at low
+monitor feed is replayed through the self-excluded Talkee playback stream at low
 gain and mixed with the translated voice, so the original remains quietly
 audible without entering the translation loop;
 legacy `gpt-realtime-translate` settings are resolved to `gpt-realtime` at the
 runtime boundary. Continuous video speech must not be treated as one unbounded
-turn. Talkis disables server-side turn detection for this path and commits voiced
+turn. Talkee disables server-side turn detection for this path and commits voiced
 PCM in short, roughly two-second segments. Only one text response may be active
 at a time; audio received while a response is active stays in the next input
 buffer and is committed as soon as the
@@ -196,7 +196,7 @@ Fallback is required when:
 
 Do not remove the fallback unless selected-microphone parity is proven on macOS, Windows, and Linux.
 
-Talkis Cloud dictation is batch-only. Do not start a realtime transcription
+Talkee Cloud dictation is batch-only. Do not start a realtime transcription
 session, stream microphone audio to the Cloud realtime endpoint, or show a live
 transcript overlay while recording in Cloud mode. After recording stops, send
 the complete recorded WAV through the Cloud batch transcription path and use
@@ -257,7 +257,7 @@ live warm-up only a short budget; when it is exceeded, begin microphone capture
 and use the normal post-stop batch path while warm-up continues in the
 background. A managed runtime that fails readiness must be terminated instead
 of being left to occupy another port. On Windows, app startup and the NSIS
-installer also clean up orphaned Talkis sidecars so an older `talkis-stt.exe`
+installer also clean up orphaned Talkee sidecars so an older `talkee-stt.exe`
 cannot block an update or be reused by a newer runtime protocol.
 
 ## Local Whisper Hallucination Guardrails
@@ -272,7 +272,7 @@ This is not a UI recursion bug. It usually means Whisper received a long low-sig
 
 Preserve these safeguards:
 
-- `src-tauri/src/bin/talkis-stt.rs`
+- `src-tauri/src/bin/talkee-stt.rs`
   - `params.set_no_context(true)`
   - `params.set_suppress_nst(true)`
   - low temperature / no temperature increment
@@ -360,7 +360,7 @@ If `max=-120.0 dBFS` and `frames_above_noise_floor=0`, the system track is silen
 
 ## macOS Development Permissions
 
-Run the macOS dev binary from `Talkis Dev.app` with a stable Apple Development
+Run the macOS dev binary from `Talkee Dev.app` with a stable Apple Development
 code-signing identity. An ad-hoc signature uses a designated requirement tied
 to the binary's changing CDHash, so rebuilding makes TCC treat the next process
 as a different application even when the old checkbox remains visible.

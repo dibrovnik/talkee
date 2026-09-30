@@ -336,7 +336,7 @@ mod tests {
     }
 
     #[test]
-    fn normalizes_talkis_hotkey_labels_for_handy_keys() {
+    fn normalizes_talkee_hotkey_labels_for_handy_keys() {
         assert_eq!(
             normalize_for_handy_keys("Control+Alt+Shift+Space"),
             "Ctrl+Alt+Shift+Space"

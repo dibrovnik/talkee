@@ -12,8 +12,8 @@ use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 use tokio::io::AsyncWriteExt;
 
-const WHISPER_RUNTIME_NAME: &str = "talkis-stt";
-const DIARIZATION_RUNTIME_NAME: &str = "talkis-diarize";
+const WHISPER_RUNTIME_NAME: &str = "talkee-stt";
+const DIARIZATION_RUNTIME_NAME: &str = "talkee-diarize";
 const WHISPER_RUNTIME_API_VERSION: u32 = 3;
 pub const MODEL_DOWNLOAD_PROGRESS_EVENT: &str = "local-stt-model-download-progress";
 pub const LOCAL_DIARIZATION_MODEL_ID: &str = "sherpa-diarization-pyannote-titanet-int8";
@@ -329,14 +329,14 @@ fn find_available_runtime_port(kind: LocalRuntimeKind, preferred_port: u16) -> R
 fn runtime_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path()
         .app_data_dir()
-        .map_err(|err| format!("Не удалось найти папку данных Talkis: {}", err))
+        .map_err(|err| format!("Не удалось найти папку данных Talkee: {}", err))
         .map(|dir| dir.join("runtime").join("stt"))
 }
 
 pub fn default_models_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path()
         .app_data_dir()
-        .map_err(|err| format!("Не удалось найти папку данных Talkis: {}", err))
+        .map_err(|err| format!("Не удалось найти папку данных Talkee: {}", err))
         .map(|dir| dir.join("models").join("stt"))
 }
 
@@ -1210,7 +1210,7 @@ pub async fn ensure_runtime(
 ) -> Result<String, String> {
     let _start_guard = managed_runtime_start_lock().lock().await;
     let kind = managed_runtime_kind(models_url).ok_or_else(|| {
-        "Автоматический запуск локального runtime поддержан только для портов Talkis 8000/8003."
+        "Автоматический запуск локального runtime поддержан только для портов Talkee 8000/8003."
             .to_string()
     })?;
     let runtime_client = local_runtime_http_client();
@@ -1332,7 +1332,7 @@ mod tests {
 
     #[test]
     fn marker_path_sanitizes_model_ids_with_slashes() {
-        let models_dir = PathBuf::from("/tmp/talkis-models");
+        let models_dir = PathBuf::from("/tmp/talkee-models");
         let model = local_model_info("nvidia/nemotron-3.5-asr-streaming-0.6b").expect("model");
 
         assert_eq!(
@@ -1345,19 +1345,19 @@ mod tests {
     fn whisper_runtime_health_requires_current_live_api_version() {
         let stale = HealthResponse {
             status: Some("ok".to_string()),
-            runtime: Some("talkis-stt".to_string()),
+            runtime: Some("talkee-stt".to_string()),
             engine: Some("transcribe.cpp".to_string()),
             api_version: None,
         };
         let current = HealthResponse {
             status: Some("ok".to_string()),
-            runtime: Some("talkis-stt".to_string()),
+            runtime: Some("talkee-stt".to_string()),
             engine: Some("transcribe.cpp".to_string()),
             api_version: Some(WHISPER_RUNTIME_API_VERSION),
         };
         let previous = HealthResponse {
             status: Some("ok".to_string()),
-            runtime: Some("talkis-stt".to_string()),
+            runtime: Some("talkee-stt".to_string()),
             engine: Some("transcribe.cpp".to_string()),
             api_version: Some(WHISPER_RUNTIME_API_VERSION - 1),
         };
@@ -1379,14 +1379,14 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn stale_runtime_match_requires_the_exact_port_argument() {
-        let command = "/Applications/Talkis Dev.app/talkis-stt --host 127.0.0.1 --port 18000";
+        let command = "/Applications/Talkee Dev.app/talkee-stt --host 127.0.0.1 --port 18000";
         assert!(command_has_port_argument(command, 18000));
         assert!(!command_has_port_argument(command, 8000));
     }
 
     #[test]
     fn new_streaming_models_resolve_aliases_and_marker_paths() {
-        let models_dir = PathBuf::from("/tmp/talkis-models");
+        let models_dir = PathBuf::from("/tmp/talkee-models");
         let cases = [
             (
                 "nemotron-35-asr-streaming-06b",
@@ -1434,7 +1434,7 @@ mod tests {
 
     #[test]
     fn gigaam_resolves_base_model_and_gguf_aliases() {
-        let models_dir = PathBuf::from("/tmp/talkis-models");
+        let models_dir = PathBuf::from("/tmp/talkee-models");
         let model = local_model_info("ai-sage/GigaAM-v3").expect("model");
 
         assert_eq!(model.id, "ai-sage/GigaAM-v3");

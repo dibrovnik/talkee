@@ -33,7 +33,7 @@
 ## Checks run
 
 - `bun run check:release`: passed.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkis-updater.key bun run build:release:macos`: app, DMG, and updater tarball were built; command failed at updater signing with `incorrect updater private key password: Device not configured (os error 6)`.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkee-updater.key bun run build:release:macos`: app, DMG, and updater tarball were built; command failed at updater signing with `incorrect updater private key password: Device not configured (os error 6)`.
 - Native/GitHub Windows build: not run locally; expected to run in GitHub Actions matrix.
 - Native/GitHub Linux build: not run locally; expected to run in GitHub Actions matrix with `libasound2-dev`.
 - Additional checks:

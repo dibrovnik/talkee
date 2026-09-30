@@ -12,7 +12,7 @@
 
 - Key changes included in this release:
   - Re-publishes the v0.3.8-v0.3.10 app changes after the v0.3.10 Windows release job identified the remaining failure stage.
-  - Removes the duplicate `Prepare release sidecars` step from the release workflow. The `Run release checks` step already prepares release sidecars with `TALKIS_STT_RELEASE=1`, and the bundle step reuses those files.
+  - Removes the duplicate `Prepare release sidecars` step from the release workflow. The `Run release checks` step already prepares release sidecars with `TALKEE_STT_RELEASE=1`, and the bundle step reuses those files.
   - Makes `prepare-ffmpeg-sidecar.mjs` and `prepare-stt-sidecar.mjs` idempotent by skipping the copy when source and destination binaries are already identical.
   - Updates release versions and README release notes for v0.3.11.
 - User-facing changes:
@@ -28,12 +28,12 @@
 - `git diff --check`: passed.
 - `bun run check:versions`: passed for `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.
 - `bun run check:release`: passed.
-  - Sidecar preparation passed for ffmpeg, `talkis-stt`, `talkis-diarize`, and `talkis-llm`.
+  - Sidecar preparation passed for ffmpeg, `talkee-stt`, `talkee-diarize`, and `talkee-llm`.
   - `bunx tsc --noEmit` passed.
   - `cargo check --manifest-path src-tauri/Cargo.toml` passed.
   - Hotkey FSM smoke tests passed.
   - Vite production build passed with the existing warnings for `SummaryModal.tsx` mixed static/dynamic import and a large main chunk.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkis-updater.key bun run build:release:macos`: built release sidecars, frontend, Rust release binary, `Talkis.app`, and `Talkis.app.tar.gz`; failed only at updater signature because this shell does not have the correct `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` for the encrypted local key.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkee-updater.key bun run build:release:macos`: built release sidecars, frontend, Rust release binary, `Talkee.app`, and `Talkee.app.tar.gz`; failed only at updater signature because this shell does not have the correct `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` for the encrypted local key.
 - GitHub v0.3.10 release run:
   - macOS build: passed.
   - Windows build: passed `Run release checks`, failed `Prepare release sidecars`.

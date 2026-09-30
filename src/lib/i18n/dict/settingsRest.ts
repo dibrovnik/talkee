@@ -260,8 +260,8 @@ export const settingsRest = {
   },
   // Support
   "settingsGeneralExtra.support.mailSubject": {
-    ru: "Talkis — обращение в поддержку",
-    en: "Talkis — support request",
+    ru: "Talkee — обращение в поддержку",
+    en: "Talkee — support request",
   },
   "settingsGeneralExtra.support.mailBody": {
     ru: "Опишите проблему или вопрос:\n\n\n",

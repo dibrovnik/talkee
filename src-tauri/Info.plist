@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key>
-  <string>Talkis</string>
+  <string>Talkee</string>
   <key>CFBundleDisplayName</key>
-  <string>Talkis</string>
+  <string>Talkee</string>
   <key>NSMicrophoneUsageDescription</key>
-  <string>Предоставьте доступ к микрофону, чтобы Talkis мог записывать ваш голос для перевода в текст.</string>
+  <string>Предоставьте доступ к микрофону, чтобы Talkee мог записывать ваш голос для перевода в текст.</string>
   <key>NSAudioCaptureUsageDescription</key>
   <string>Предоставьте доступ к звуку системы для синхронного перевода и транскрибации созвонов.</string>
 </dict>

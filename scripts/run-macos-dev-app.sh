@@ -3,7 +3,7 @@ set -euo pipefail
 unsetopt BG_NICE
 
 if [[ $# -lt 1 ]]; then
-  print -u2 "Talkis macOS dev runner: missing Cargo command or executable path"
+  print -u2 "Talkee macOS dev runner: missing Cargo command or executable path"
   exit 2
 fi
 
@@ -40,15 +40,15 @@ if [[ "$1" == "run" ]]; then
     fi
   done
 
-  if [[ "${TALKIS_DEV_SKIP_BUILD:-0}" != "1" ]]; then
-    cargo build --bin talkis "${BUILD_ARGUMENTS[@]}"
+  if [[ "${TALKEE_DEV_SKIP_BUILD:-0}" != "1" ]]; then
+    cargo build --bin talkee "${BUILD_ARGUMENTS[@]}"
   fi
 
   target_root="${CARGO_TARGET_DIR:-${PWD}/target}"
   if [[ -n "${target_triple}" ]]; then
     target_root="${target_root}/${target_triple}"
   fi
-  SOURCE_EXECUTABLE="${target_root}/${profile}/talkis"
+  SOURCE_EXECUTABLE="${target_root}/${profile}/talkee"
 else
   SOURCE_EXECUTABLE="${1:A}"
   shift
@@ -56,21 +56,21 @@ else
 fi
 
 if [[ ! -f "${SOURCE_EXECUTABLE}" ]]; then
-  print -u2 "Talkis macOS dev runner: executable not found: ${SOURCE_EXECUTABLE}"
+  print -u2 "Talkee macOS dev runner: executable not found: ${SOURCE_EXECUTABLE}"
   exit 2
 fi
 
 SOURCE_EXECUTABLE="${SOURCE_EXECUTABLE:A}"
 
 SOURCE_DIR="${SOURCE_EXECUTABLE:h}"
-APP_DIR="${SOURCE_DIR}/bundle/macos/Talkis Dev.app"
+APP_DIR="${SOURCE_DIR}/bundle/macos/Talkee Dev.app"
 CONTENTS_DIR="${APP_DIR}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
-APP_EXECUTABLE="${MACOS_DIR}/Talkis"
+APP_EXECUTABLE="${MACOS_DIR}/Talkee"
 INFO_PLIST="${CONTENTS_DIR}/Info.plist"
 APP_VERSION="$(/usr/bin/plutil -extract version raw -o - "${PROJECT_ROOT}/package.json")"
-SIGNING_IDENTITY="${TALKIS_DEV_SIGNING_IDENTITY:-}"
+SIGNING_IDENTITY="${TALKEE_DEV_SIGNING_IDENTITY:-}"
 
 if [[ -z "${SIGNING_IDENTITY}" ]]; then
   SIGNING_IDENTITY="$(
@@ -81,9 +81,9 @@ fi
 
 if [[ -z "${SIGNING_IDENTITY}" ]]; then
   SIGNING_IDENTITY="-"
-  print -u2 "Talkis dev: no Apple Development signing identity found; macOS permissions may reset after each rebuild"
+  print -u2 "Talkee dev: no Apple Development signing identity found; macOS permissions may reset after each rebuild"
 else
-  print "Talkis dev: using stable signing identity ${SIGNING_IDENTITY}"
+  print "Talkee dev: using stable signing identity ${SIGNING_IDENTITY}"
 fi
 
 mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
@@ -94,7 +94,7 @@ if [[ -z "${target_triple}" ]]; then
   target_triple="$(rustc --print host-tuple)"
 fi
 
-for sidecar in talkis-ffmpeg talkis-stt talkis-diarize talkis-llm; do
+for sidecar in talkee-ffmpeg talkee-stt talkee-diarize talkee-llm; do
   prepared_sidecar="${PROJECT_ROOT}/src-tauri/binaries/${sidecar}-${target_triple}"
   target_sidecar="${SOURCE_DIR}/${sidecar}"
 
@@ -127,10 +127,10 @@ set_plist_bool() {
     /usr/libexec/PlistBuddy -c "Add :${key} bool ${value}" "${INFO_PLIST}"
 }
 
-set_plist_string "CFBundleDisplayName" "Talkis Dev"
-set_plist_string "CFBundleName" "Talkis Dev"
-set_plist_string "CFBundleExecutable" "Talkis"
-set_plist_string "CFBundleIdentifier" "com.trixter.talkis.dev"
+set_plist_string "CFBundleDisplayName" "Talkee Dev"
+set_plist_string "CFBundleName" "Talkee Dev"
+set_plist_string "CFBundleExecutable" "Talkee"
+set_plist_string "CFBundleIdentifier" "com.talkee.app.dev"
 set_plist_string "CFBundleInfoDictionaryVersion" "6.0"
 set_plist_string "CFBundlePackageType" "APPL"
 set_plist_string "CFBundleShortVersionString" "${APP_VERSION}"
@@ -146,18 +146,18 @@ codesign \
   --deep \
   --timestamp=none \
   --sign "${SIGNING_IDENTITY}" \
-  --identifier "com.trixter.talkis.dev" \
+  --identifier "com.talkee.app.dev" \
   --entitlements "${PROJECT_ROOT}/src-tauri/entitlements.plist" \
   "${APP_DIR}" >/dev/null
 
-print "Talkis dev: prepared signed app bundle ${APP_DIR}"
+print "Talkee dev: prepared signed app bundle ${APP_DIR}"
 
-if [[ "${TALKIS_DEV_PREPARE_ONLY:-0}" == "1" ]]; then
+if [[ "${TALKEE_DEV_PREPARE_ONLY:-0}" == "1" ]]; then
   exit 0
 fi
 
 if /usr/bin/pgrep -f "${APP_EXECUTABLE}" >/dev/null 2>&1; then
-  print "Talkis dev: stopping previous app instance before relaunch"
+  print "Talkee dev: stopping previous app instance before relaunch"
   /usr/bin/pkill -f "${APP_EXECUTABLE}" >/dev/null 2>&1 || true
   for _attempt in {1..40}; do
     if ! /usr/bin/pgrep -f "${APP_EXECUTABLE}" >/dev/null 2>&1; then
@@ -167,7 +167,7 @@ if /usr/bin/pgrep -f "${APP_EXECUTABLE}" >/dev/null 2>&1; then
   done
 fi
 
-print "Talkis dev: launching ${APP_DIR}"
+print "Talkee dev: launching ${APP_DIR}"
 
 open_pid=""
 terminate_app() {
@@ -192,7 +192,7 @@ open_pid=""
 # replacement process is running instead of killing it from an EXIT trap.
 for _attempt in {1..20}; do
   if /usr/bin/pgrep -f "${APP_EXECUTABLE}" >/dev/null 2>&1; then
-    print "Talkis dev: attached to relaunched app process"
+    print "Talkee dev: attached to relaunched app process"
     while /usr/bin/pgrep -f "${APP_EXECUTABLE}" >/dev/null 2>&1; do
       sleep 0.5
     done

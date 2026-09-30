@@ -1,5 +1,5 @@
 {
-  "name": "talkis",
+  "name": "talkee",
   "private": true,
   "version": "0.4.8",
   "license": "AGPL-3.0-or-later",
@@ -17,6 +17,7 @@
     "verify:windows-release": "bun scripts/verify-windows-release.mjs",
     "check:versions": "bun scripts/check-version-sync.mjs",
     "check:network": "bun scripts/check-network-hosts.mjs",
+    "check:naming": "bun scripts/check-naming.mjs",
     "check:release": "bun run check:versions && bun run check && bun run smoke:hotkey && bun run build",
     "postprocess:macos-release": "VERSION=$(python3 -c \"import json; print(json.load(open('package.json'))['version'])\") && BUILD_ROOT=src-tauri/target/release/bundle bash scripts/postprocess-macos-release.sh \"$VERSION\"",
     "build:release": "bun scripts/build-release.mjs",
@@ -25,8 +26,8 @@
     "build:release:linux": "bun scripts/build-release.mjs linux",
     "preview": "bun scripts/run-vite.mjs preview",
     "tauri": "bun scripts/run-tauri.mjs",
-    "logs": "tail -f ~/.talkis/talkis.log",
-    "logs:clear": "rm -f ~/.talkis/talkis.log"
+    "logs": "tail -f ~/.talkee/talkee.log",
+    "logs:clear": "rm -f ~/.talkee/talkee.log"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

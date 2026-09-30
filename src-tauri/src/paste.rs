@@ -144,19 +144,19 @@ fn is_warp_target(target: &LinuxPasteTarget) -> bool {
 }
 
 #[cfg(target_os = "linux")]
-fn is_talkis_window(target: &LinuxPasteTarget) -> bool {
-    target.wm_class.to_ascii_lowercase().contains("talkis")
+fn is_talkee_window(target: &LinuxPasteTarget) -> bool {
+    target.wm_class.to_ascii_lowercase().contains("talkee")
 }
 
 #[cfg(target_os = "linux")]
 pub fn remember_linux_paste_target_window() {
     match get_linux_active_window() {
         Ok(Some(target)) => {
-            if is_talkis_window(&target) {
+            if is_talkee_window(&target) {
                 logger::log_info(
                     "PASTE",
                     &format!(
-                        "Ignoring Talkis window as paste target: id={}, class=\"{}\", title=\"{}\"",
+                        "Ignoring Talkee window as paste target: id={}, class=\"{}\", title=\"{}\"",
                         target.window, target.wm_class, target.title
                     ),
                 );
@@ -597,7 +597,7 @@ fn clipboard_sentinel() -> String {
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_nanos())
         .unwrap_or_default();
-    format!("__TALKIS_SELECTION_SENTINEL_{}__", nanos)
+    format!("__TALKEE_SELECTION_SENTINEL_{}__", nanos)
 }
 
 fn selected_text_from_clipboard(copied_text: &str, sentinel: &str) -> Option<String> {

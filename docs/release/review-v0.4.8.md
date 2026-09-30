@@ -10,19 +10,19 @@
 
 ## Scope
 
-- Key changes included in this release: Windows installer closes running Talkis executables before replacing sidecars; stale managed local STT processes are cleaned up during startup and after readiness timeouts; live local STT warm-up no longer blocks microphone capture for the full runtime timeout; local batch transcription always selects an installed local model.
-- User-facing changes: updating Talkis on Windows no longer fails when `talkis-stt.exe` is running; recording starts promptly while local STT warms up; a stale cloud transcription model cannot break local Nemotron transcription.
+- Key changes included in this release: Windows installer closes running Talkee executables before replacing sidecars; stale managed local STT processes are cleaned up during startup and after readiness timeouts; live local STT warm-up no longer blocks microphone capture for the full runtime timeout; local batch transcription always selects an installed local model.
+- User-facing changes: updating Talkee on Windows no longer fails when `talkee-stt.exe` is running; recording starts promptly while local STT warms up; a stale cloud transcription model cannot break local Nemotron transcription.
 - Risky areas: Windows NSIS update lifecycle, process cleanup, local STT startup and model routing, recording start timing.
 
 ## Checks run
 
 - `bun run check:release`: passed locally on Windows (version sync, sidecar preparation, TypeScript, Rust check, hotkey smoke and production frontend build).
 - `bun run build:release:windows`: application and NSIS bundle built successfully; the local command stopped only at updater signing because no private updater key is installed on this workstation.
-- `bun run verify:windows-release`: passed for the installer hook, Talkis and all Windows sidecars.
-- GitHub Release Preflight: passed on the implementation commit in [run 32142550545](https://github.com/SerTimBerrners-Lee/talkis/actions/runs/32142550545); the final review-only commit must receive the same required check before tagging.
+- `bun run verify:windows-release`: passed for the installer hook, Talkee and all Windows sidecars.
+- GitHub Release Preflight: passed on the implementation commit in [run 32142550545](https://github.com/SerTimBerrners-Lee/talkee/actions/runs/32142550545); the final review-only commit must receive the same required check before tagging.
 - Native/GitHub Windows build: passed, including NSIS packaging and Windows x64 release verification.
 - Native/GitHub Linux build: passed for AppImage and DEB artifacts.
-- Additional manual checks: `bun test` passed 271/271; silent installation completed with exit code 0; installed `Talkis.exe` reports 0.4.8; installed `talkis-stt.exe` SHA-256 matches the bundled 0.4.8 sidecar; direct Nemotron multipart transcription returned HTTP 200 from the installed runtime.
+- Additional manual checks: `bun test` passed 271/271; silent installation completed with exit code 0; installed `Talkee.exe` reports 0.4.8; installed `talkee-stt.exe` SHA-256 matches the bundled 0.4.8 sidecar; direct Nemotron multipart transcription returned HTTP 200 from the installed runtime.
 
 ## Manual review
 

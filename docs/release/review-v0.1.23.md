@@ -26,7 +26,7 @@
 ## Checks run
 
 - `bun run check:release`: passed.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkis-updater.key bun run build:release:macos`: app, DMG, and updater tarball were built; command failed at updater signing with `incorrect updater private key password: Device not configured (os error 6)`.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkee-updater.key bun run build:release:macos`: app, DMG, and updater tarball were built; command failed at updater signing with `incorrect updater private key password: Device not configured (os error 6)`.
 - Native/GitHub Windows build: pending GitHub Actions for `v0.1.23`
 - Native/GitHub Linux build: pending GitHub Actions for `v0.1.23`
 - Additional manual checks:

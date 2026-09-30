@@ -84,8 +84,8 @@ export const settingsGeneral = {
   "settings.autostart.on": { ru: "Включен", en: "On" },
   "settings.autostart.off": { ru: "Выключен", en: "Off" },
   "settings.autostart.desc": {
-    ru: "Запускать Talkis автоматически при входе в систему.",
-    en: "Launch Talkis automatically when you log in.",
+    ru: "Запускать Talkee автоматически при входе в систему.",
+    en: "Launch Talkee automatically when you log in.",
   },
 
   // Models directory

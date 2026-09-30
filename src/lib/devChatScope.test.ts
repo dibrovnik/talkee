@@ -24,9 +24,9 @@ describe("dev chat scope", () => {
     ).toBe(false);
   });
 
-  it("describes only Talkis voice and text capabilities", () => {
+  it("describes only Talkee voice and text capabilities", () => {
     const answer = devChatCapabilitiesAnswer("ru");
-    expect(answer).toContain("записями Talkis");
+    expect(answer).toContain("записями Talkee");
     expect(answer).toContain("не пишу программный код");
     expect(answer).not.toContain("помогать с кодом");
     expect(DEV_CHAT_SCOPE_PROMPT).toContain("не изображай универсального ассистента");

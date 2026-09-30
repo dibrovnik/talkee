@@ -32,7 +32,7 @@ export const STREAMING_STT_ADAPTERS: RealtimeAdapterCatalogEntry[] = [
     models: [
       { id: "gpt-4o-mini-transcribe", supportsStreaming: true },
       { id: "gpt-4o-transcribe", supportsStreaming: true },
-      // Keep the legacy Talkis alias working for existing saved settings.
+      // Keep the legacy realtime model alias working for existing saved settings.
       { id: "gpt-realtime-whisper", supportsStreaming: true },
     ],
   },

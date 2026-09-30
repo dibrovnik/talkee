@@ -219,7 +219,7 @@ pub fn start_live_dictation_session(
     );
 
     thread::Builder::new()
-        .name("talkis-live-dictation".to_string())
+        .name("talkee-live-dictation".to_string())
         .spawn(move || {
             let result = if let Some(endpoint) = endpoint {
                 run_live_dictation_client(app, thread_request_id, endpoint, rx)
@@ -436,7 +436,7 @@ fn run_live_dictation_client(
     })?;
 
     let headers = format!(
-        "POST {} HTTP/1.1\r\nHost: {}:{}\r\nContent-Type: application/octet-stream\r\nX-Talkis-Audio-Format: pcm_s16le;rate={};channels={}\r\nConnection: close\r\n\r\n",
+        "POST {} HTTP/1.1\r\nHost: {}:{}\r\nContent-Type: application/octet-stream\r\nX-Talkee-Audio-Format: pcm_s16le;rate={};channels={}\r\nConnection: close\r\n\r\n",
         endpoint.path_and_query,
         endpoint.host,
         endpoint.port,
@@ -457,7 +457,7 @@ fn run_live_dictation_client(
     let reader_app = app.clone();
     let reader_request_id = request_id.clone();
     let reader = thread::Builder::new()
-        .name("talkis-live-dictation-reader".to_string())
+        .name("talkee-live-dictation-reader".to_string())
         .spawn(move || read_live_response(reader_stream, reader_app, reader_request_id))
         .map_err(|err| {
             let message = format!("Failed to spawn live STT reader: {}", err);

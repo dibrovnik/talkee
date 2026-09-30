@@ -27,7 +27,7 @@
 ## Checks run
 
 - `bun run check:release`: passed
-- `bun run build:release:macos`: local build reached `Talkis.app` and updater `.app.tar.gz`, then stopped because `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not present in the local environment; GitHub Actions is expected to run this step with repository secrets.
+- `bun run build:release:macos`: local build reached `Talkee.app` and updater `.app.tar.gz`, then stopped because `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not present in the local environment; GitHub Actions is expected to run this step with repository secrets.
 - Native/GitHub Windows build: GitHub Actions after tag
 - Native/GitHub Linux build: GitHub Actions after tag
 - Additional manual checks:

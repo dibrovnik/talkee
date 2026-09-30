@@ -539,7 +539,7 @@ fn platform_name() -> &'static str {
 fn call_capture_root(app: &AppHandle, _storage_dir: Option<&str>) -> Result<PathBuf, String> {
     app.path()
         .app_data_dir()
-        .map_err(|err| format!("Не удалось найти папку данных Talkis: {}", err))
+        .map_err(|err| format!("Не удалось найти папку данных Talkee: {}", err))
         .map(|dir| dir.join("history").join("call-capture"))
 }
 
@@ -1359,7 +1359,7 @@ pub async fn recover_call_capture_sessions(
         }
         state
             .errors
-            .push("Talkis восстановил запись после незавершённого сеанса.".to_string());
+            .push("Talkee восстановил запись после незавершённого сеанса.".to_string());
         session.status = CallCaptureStatus::Stopped;
         session.native_mic_active = false;
         session.ended_at = Some(Utc::now().to_rfc3339());
@@ -1816,9 +1816,9 @@ fn current_audio_process_object() -> Result<AudioObjectID, String> {
                 .ok_or_else(|| "CoreAudio process output pointer is null.".to_string())?,
         )
     };
-    status_result(status, "Translate Talkis PID to CoreAudio process")?;
+    status_result(status, "Translate Talkee PID to CoreAudio process")?;
     if process_object == 0 {
-        return Err("CoreAudio did not return an audio process for Talkis.".to_string());
+        return Err("CoreAudio did not return an audio process for Talkee.".to_string());
     }
     Ok(process_object)
 }
@@ -1838,7 +1838,7 @@ fn current_audio_process_object_for_tap() -> Result<AudioObjectID, String> {
         }
     }
     Err(last_error
-        .unwrap_or_else(|| "CoreAudio did not return an audio process for Talkis.".to_string()))
+        .unwrap_or_else(|| "CoreAudio did not return an audio process for Talkee.".to_string()))
 }
 
 #[cfg(target_os = "macos")]
@@ -1884,8 +1884,8 @@ fn build_macos_aggregate_description(
     let sub_tap_drift_key = cf_key(kAudioSubTapDriftCompensationKey)?;
     let sub_tap_uid_key = cf_key(kAudioSubTapUIDKey)?;
 
-    let name = CFString::from_str(&format!("Talkis Call Capture {}", session_id));
-    let aggregate_uid = CFString::from_str(&format!("com.trixter.talkis.call.{}", session_id));
+    let name = CFString::from_str(&format!("Talkee Call Capture {}", session_id));
+    let aggregate_uid = CFString::from_str(&format!("com.talkee.app.call.{}", session_id));
     let tap_uuid = CFString::from_str(tap_uuid);
     let true_value = CFBoolean::new(true);
     let false_value = CFBoolean::new(false);
@@ -2181,7 +2181,7 @@ fn run_linux_pipewire_capture(
     let ready_for_setup = ready_tx.clone();
     let setup_result = (|| -> Result<(), String> {
         let thread_loop =
-            unsafe { pw::thread_loop::ThreadLoopRc::new(Some("talkis-call-capture"), None) }
+            unsafe { pw::thread_loop::ThreadLoopRc::new(Some("talkee-call-capture"), None) }
                 .map_err(|err| {
                     linux_pipewire_error(
                         "Не удалось создать PipeWire loop для записи системного звука Linux",
@@ -2211,13 +2211,13 @@ fn run_linux_pipewire_capture(
             *pw::keys::MEDIA_TYPE => "Audio",
             *pw::keys::MEDIA_CATEGORY => "Capture",
             *pw::keys::MEDIA_ROLE => "Communication",
-            *pw::keys::MEDIA_NAME => "Talkis Call Capture",
-            *pw::keys::APP_NAME => "Talkis",
-            *pw::keys::APP_ID => "talkis.call-capture",
+            *pw::keys::MEDIA_NAME => "Talkee Call Capture",
+            *pw::keys::APP_NAME => "Talkee",
+            *pw::keys::APP_ID => "talkee.call-capture",
             *pw::keys::STREAM_CAPTURE_SINK => "true",
             *pw::keys::STREAM_MONITOR => "true",
         };
-        let stream = pw::stream::StreamBox::new(&core, "talkis-call-capture-system", props)
+        let stream = pw::stream::StreamBox::new(&core, "talkee-call-capture-system", props)
             .map_err(|err| {
                 linux_pipewire_error(
                     "Не удалось создать PipeWire stream для записи системного звука Linux",
@@ -2385,7 +2385,7 @@ fn start_linux_system_audio_capture(
     let session_id = session.id.clone();
     let thread_writer = Arc::clone(&writer);
     let thread = std::thread::Builder::new()
-        .name("talkis-pipewire-call-capture".to_string())
+        .name("talkee-pipewire-call-capture".to_string())
         .spawn(move || run_linux_pipewire_capture(session_id, thread_writer, ready_tx, stop_rx))
         .map_err(|err| {
             format!(
@@ -2660,22 +2660,22 @@ fn start_macos_system_audio_capture(
     session: &CallCaptureSession,
     save_audio: bool,
 ) -> Result<Option<MacosCallCaptureState>, String> {
-    let talkis_process = current_audio_process_object_for_tap();
-    let excluded_processes = match &talkis_process {
+    let talkee_process = current_audio_process_object_for_tap();
+    let excluded_processes = match &talkee_process {
         Ok(process_object) => {
             let excluded_process = NSNumber::numberWithUnsignedInt(*process_object);
             NSArray::from_retained_slice(&[excluded_process])
         }
         Err(error) if REQUIRE_SELF_AUDIO_EXCLUSION.load(Ordering::SeqCst) => {
             return Err(format!(
-                "Не удалось исключить озвучку Talkis из системного звука: {}",
+                "Не удалось исключить озвучку Talkee из системного звука: {}",
                 error
             ));
         }
         Err(error) => {
             logger::log_error(
                 "CALL_CAPTURE",
-                &format!("Talkis audio process exclusion unavailable: {}", error),
+                &format!("Talkee audio process exclusion unavailable: {}", error),
             );
             NSArray::<NSNumber>::from_slice(&[])
         }
@@ -2686,7 +2686,7 @@ fn start_macos_system_audio_capture(
             &excluded_processes,
         )
     };
-    let tap_name = NSString::from_str("Talkis Call Capture");
+    let tap_name = NSString::from_str("Talkee Call Capture");
     let tap_uuid = NSUUID::new();
 
     unsafe {
@@ -2700,11 +2700,11 @@ fn start_macos_system_audio_capture(
             CATapMuteBehavior::Unmuted
         });
     }
-    if let Ok(process_object) = talkis_process {
+    if let Ok(process_object) = talkee_process {
         logger::log_info(
             "CALL_CAPTURE",
             &format!(
-                "Core Audio tap excludes Talkis process object={}",
+                "Core Audio tap excludes Talkee process object={}",
                 process_object
             ),
         );
@@ -2846,7 +2846,7 @@ mod tests {
             .expect("system clock")
             .as_nanos();
         let path = std::env::temp_dir().join(format!(
-            "talkis-call-capture-{}-{}-{}",
+            "talkee-call-capture-{}-{}-{}",
             name,
             std::process::id(),
             nonce

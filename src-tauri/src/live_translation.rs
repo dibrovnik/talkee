@@ -290,7 +290,7 @@ fn start_translation_playback(volume: f32) -> Result<LiveTranslationPlaybackRunt
     let (started_tx, started_rx) = mpsc::sync_channel(1);
     let (stopped_tx, stopped_rx) = mpsc::channel();
     thread::Builder::new()
-        .name("talkis-live-translation-playback".to_string())
+        .name("talkee-live-translation-playback".to_string())
         .spawn(move || {
             let start = (|| -> Result<(cpal::Stream, Arc<Mutex<PlaybackMixer>>), String> {
                 let host = cpal::default_host();
@@ -560,7 +560,7 @@ fn spawn_translation_worker(
     let (result_tx, result_rx) = mpsc::channel();
     let (started_tx, started_rx) = mpsc::sync_channel(1);
     thread::Builder::new()
-        .name(format!("talkis-live-translation-{}", channel))
+        .name(format!("talkee-live-translation-{}", channel))
         .spawn(move || {
             let event_app = app.clone();
             let event_session_id = session_id.clone();
@@ -716,7 +716,7 @@ fn start_mic_capture(
     let (stop_tx, stop_rx) = mpsc::channel();
     let (started_tx, started_rx) = mpsc::channel();
     let (stopped_tx, stopped_rx) = mpsc::channel();
-    thread::Builder::new().name("talkis-live-translation-mic".to_string()).spawn(move || {
+    thread::Builder::new().name("talkee-live-translation-mic".to_string()).spawn(move || {
         let start = (|| -> Result<(cpal::Stream, Arc<Mutex<PcmEncoder>>, Arc<Mutex<Option<hound::WavWriter<BufWriter<File>>>>>), String> {
             let device = select_microphone(label.as_deref())?;
             let supported = device.default_input_config().map_err(|error| format!("Failed to read microphone format: {}", error))?;
@@ -779,7 +779,7 @@ pub async fn start_live_translation(
     #[cfg(not(target_os = "macos"))]
     if req.voice_enabled {
         return Err(
-            "Озвучка синхронного перевода пока доступна только на macOS: на этой платформе Talkis ещё не умеет исключать собственный звук из системного захвата."
+            "Озвучка синхронного перевода пока доступна только на macOS: на этой платформе Talkee ещё не умеет исключать собственный звук из системного захвата."
                 .to_string(),
         );
     }

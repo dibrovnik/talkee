@@ -13,7 +13,7 @@
 - Key changes included in this release:
   - Makes Windows onboarding download a local STT model before starting the managed runtime, reads installed models directly from disk, adds runtime warm-up, bypasses system proxies for loopback traffic, and drains sidecar stdout/stderr into structured logs.
   - Discovers Rust, Visual Studio C++ tools, CMake, and LLVM for Windows development commands and aligns application/sidecar CRT settings.
-  - Opens Talkis from the Windows widget, persists recognition/translation mode changes, and adds a hybrid native Windows title bar.
+  - Opens Talkee from the Windows widget, persists recognition/translation mode changes, and adds a hybrid native Windows title bar.
   - Replaces competing widget error surfaces with one expandable bottom status bar that supports copy, and makes Windows clipboard shortcuts independent of the active keyboard layout.
   - Keeps the floating widget persistent by preventing close requests, recreating a destroyed window, restoring hidden/minimized windows, and moving inaccessible windows onto an available monitor without taking keyboard focus.
   - Keeps macOS call capture from changing the default output route or opening a competing WebView microphone when native microphone capture is active.
@@ -21,7 +21,7 @@
 - User-facing changes:
   - Removes the long pre-download wait and the common local-runtime timeout path during Windows first-run setup.
   - Makes the Windows widget, mode selector, title bar, paste path, and error display behave consistently in daily use.
-  - Prevents a running Talkis process from remaining only in the tray with no accessible widget.
+  - Prevents a running Talkee process from remaining only in the tray with no accessible widget.
   - Prevents ordinary macOS call recording from making the call quieter or temporarily replacing the call application's microphone route.
 - Risky areas:
   - Managed local STT process startup, port selection, readiness detection, proxy bypass, and model/runtime synchronization.
@@ -35,19 +35,19 @@
 - `bun test`: passed, `265/265` tests across 35 files.
 - `cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check`: passed after applying the current Rustfmt output to the included STT changes.
 - `CARGO_INCREMENTAL=0 bun run check:release`: passed on Windows; includes synchronized `0.4.7` versions, sidecar preparation, TypeScript and Rust checks, hotkey smoke `6/6`, and the production frontend build.
-- `bun run build:release:windows`: compiled the optimized application and all release sidecars and created `Talkis_0.4.7_x64-setup.exe`; the command then stopped at updater signing because this workstation does not contain `TAURI_SIGNING_PRIVATE_KEY`.
-- `bun run verify:windows-release`: passed for `Talkis.exe`, ffmpeg, STT, diarization, LLM, and the NSIS installer. The application reports product/file version `0.4.7`; the installer is 32,582,406 bytes with local SHA-256 `219cba2ed23ee401ce5ae779e910b369e36e8a5ed1996872b05554d865360b33`.
+- `bun run build:release:windows`: compiled the optimized application and all release sidecars and created `Talkee_0.4.7_x64-setup.exe`; the command then stopped at updater signing because this workstation does not contain `TAURI_SIGNING_PRIVATE_KEY`.
+- `bun run verify:windows-release`: passed for `Talkee.exe`, ffmpeg, STT, diarization, LLM, and the NSIS installer. The application reports product/file version `0.4.7`; the installer is 32,582,406 bytes with local SHA-256 `219cba2ed23ee401ce5ae779e910b369e36e8a5ed1996872b05554d865360b33`.
 - `cargo test --release --manifest-path src-tauri/Cargo.toml --lib` with the static Windows CRT settings: compiled successfully, but the generated test harness could not start because a native model DLL reported `STATUS_ENTRYPOINT_NOT_FOUND`; no Rust test cases ran in that harness.
 - Standalone widget visibility tests: passed, `3/3` (disconnected monitor, inaccessible sliver, and already-visible position).
 - Local macOS build: not available from this Windows workstation; GitHub preflight is required.
-- Initial GitHub Release Preflight for preparation commit `63553ef`: passed in [run 32120887234](https://github.com/SerTimBerrners-Lee/talkis/actions/runs/32120887234).
+- Initial GitHub Release Preflight for preparation commit `63553ef`: passed in [run 32120887234](https://github.com/SerTimBerrners-Lee/talkee/actions/runs/32120887234).
 - Native/GitHub macOS build: passed in `24m26s`; release checks, ad-hoc post-processing, signed updater archive, and artifact upload completed.
 - Native/GitHub Windows x64 build: passed in `52m23s`; release checks, NSIS bundle, x64 architecture verification, updater signature, and artifact upload completed.
 - Native/GitHub Linux build: passed in `38m35s`; release checks, AppImage/deb bundle creation, updater signature, and artifact upload completed.
 - Exact-review GitHub Release Preflight: required on the final review-only commit before merge or tag.
 - Additional manual checks:
   - Reviewed every commit and the full file list from `v0.4.6` through the release branch; no generated binaries are included in Git.
-  - Confirmed `package.json`, both Cargo workspace versions, both Talkis entries in `Cargo.lock`, and `tauri.conf.json` are `0.4.7`.
+  - Confirmed `package.json`, both Cargo workspace versions, both Talkee entries in `Cargo.lock`, and `tauri.conf.json` are `0.4.7`.
   - Confirmed `.github/workflows/release-preflight.yml` and `.github/workflows/release.yml` still enforce three successful platform checks on the exact commit before publishing.
 
 ## Manual review

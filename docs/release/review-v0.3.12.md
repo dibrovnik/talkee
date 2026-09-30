@@ -31,12 +31,12 @@
 - `git diff --check`: passed.
 - `bun run check:versions`: passed for `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.
 - `bun run check:release`: passed.
-  - Sidecar preparation passed for ffmpeg, `talkis-stt`, `talkis-diarize`, and `talkis-llm`.
+  - Sidecar preparation passed for ffmpeg, `talkee-stt`, `talkee-diarize`, and `talkee-llm`.
   - `bunx tsc --noEmit` passed.
   - `cargo check --manifest-path src-tauri/Cargo.toml` passed.
   - Hotkey FSM smoke tests passed.
   - Vite production build passed with warnings for Bun's emulated Node version, `SummaryModal.tsx` mixed static/dynamic import, and a large main chunk.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkis-updater.key bun run build:release:macos`: built release sidecars, frontend, Rust release binary, `Talkis.app`, and `Talkis.app.tar.gz`; failed only at updater signature because this shell does not have the correct `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` for the encrypted local key.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkee-updater.key bun run build:release:macos`: built release sidecars, frontend, Rust release binary, `Talkee.app`, and `Talkee.app.tar.gz`; failed only at updater signature because this shell does not have the correct `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` for the encrypted local key.
 - GitHub Release Preflight: must be green for `Preflight macos`, `Preflight windows`, and `Preflight linux` on the final release commit before `main` merge and tag push.
   - First preflight run `29252319785` on commit `5aa28f5` passed macOS and Linux, passed Windows `Run release checks` and `Build frontend`, then failed Windows `Build bundles` with MSVC CRT mismatch around `libct2rs`.
   - Second preflight run `29254503310` on commit `8b07413` passed macOS, Linux, and Windows; Windows passed `Build bundles` after adding Windows `RUSTFLAGS=-C target-feature=+crt-static`.

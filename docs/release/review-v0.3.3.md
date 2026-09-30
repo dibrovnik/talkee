@@ -17,8 +17,8 @@
   - Reset the persisted system-audio flag only after permission-related call-capture failures.
   - Refresh README permission and call-recording behavior notes.
 - User-facing changes:
-  - Talkis should not ask for the same permissions again on every launch after the user has completed onboarding.
-  - If a permission is later denied or reset by the OS, Talkis asks again when that access is needed.
+  - Talkee should not ask for the same permissions again on every launch after the user has completed onboarding.
+  - If a permission is later denied or reset by the OS, Talkee asks again when that access is needed.
 - Risky areas:
   - macOS onboarding permission state.
   - Call-capture startup and system-audio permission probing.
@@ -29,7 +29,7 @@
 - `cargo check`: passed during implementation.
 - `git diff --check`: passed during implementation.
 - `bun run check:release`: passed.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=$HOME/.tauri/talkis-updater.key bun run build:release:macos`: app, DMG, and updater archive were built outside the sandbox; local updater signing then failed because the password-protected updater key needs `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=$HOME/.tauri/talkee-updater.key bun run build:release:macos`: app, DMG, and updater archive were built outside the sandbox; local updater signing then failed because the password-protected updater key needs `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 - Native/GitHub Windows build: pending GitHub Actions after tag publish.
 - Native/GitHub Linux build: pending GitHub Actions after tag publish.
 - Additional manual checks:

@@ -1,12 +1,21 @@
-use crate::{llm_runtime, logger};
+use crate::{legacy_migration, llm_runtime, logger};
 use tauri::AppHandle;
 
 const SIDECAR_PROCESS_NAMES: &[&str] = &[
-    "talkis-ffmpeg",
-    "talkis-stt",
-    "talkis-diarize",
-    "talkis-llm",
+    "talkee-ffmpeg",
+    "talkee-stt",
+    "talkee-diarize",
+    "talkee-llm",
 ];
+
+/// Current sidecar names plus the legacy names, so an orphaned sidecar left by
+/// a pre-rename session is cleaned up too.
+fn managed_sidecar_process_names() -> impl Iterator<Item = &'static str> {
+    SIDECAR_PROCESS_NAMES
+        .iter()
+        .chain(legacy_migration::LEGACY_SIDECAR_NAMES.iter())
+        .copied()
+}
 
 pub fn quit(app: &AppHandle) {
     logger::log_info("SHUTDOWN", "Graceful application exit requested");
@@ -31,7 +40,7 @@ fn terminate_sidecar_processes() {
 
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
-    for process_name in SIDECAR_PROCESS_NAMES {
+    for process_name in managed_sidecar_process_names() {
         let image_name = format!("{process_name}.exe");
         match Command::new("taskkill")
             .args(["/F", "/T", "/IM", &image_name])
@@ -80,8 +89,7 @@ fn terminate_sidecar_processes() {
         };
 
         if pid == current_pid
-            || !SIDECAR_PROCESS_NAMES
-                .iter()
+            || !managed_sidecar_process_names()
                 .any(|process_name| command.contains(process_name))
         {
             continue;
@@ -112,12 +120,15 @@ mod tests {
     fn shutdown_covers_every_bundled_sidecar() {
         assert_eq!(
             SIDECAR_PROCESS_NAMES,
-            &[
-                "talkis-ffmpeg",
-                "talkis-stt",
-                "talkis-diarize",
-                "talkis-llm"
-            ]
+            &["talkee-ffmpeg", "talkee-stt", "talkee-diarize", "talkee-llm"]
         );
+    }
+
+    #[test]
+    fn shutdown_also_covers_legacy_sidecar_names() {
+        let names: Vec<&str> = managed_sidecar_process_names().collect();
+        for legacy in legacy_migration::LEGACY_SIDECAR_NAMES {
+            assert!(names.contains(legacy), "missing legacy sidecar {legacy}");
+        }
     }
 }

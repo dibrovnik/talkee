@@ -1,11 +1,11 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Talkis",
-  "mainBinaryName": "Talkis",
+  "productName": "Talkee",
+  "mainBinaryName": "talkee",
   "version": "0.4.8",
-  "identifier": "com.trixter.talkis",
+  "identifier": "com.talkee.app",
   "build": {
-    "beforeDevCommand": "bun scripts/run-vite.mjs --talkis-check-dev-port && bun run dev",
+    "beforeDevCommand": "bun scripts/run-vite.mjs --talkee-check-dev-port && bun run dev",
     "devUrl": "http://localhost:14320",
     "beforeBuildCommand": "bun scripts/before-tauri-build.mjs",
     "frontendDist": "../dist"
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "widget",
-        "title": "Talkis",
+        "title": "Talkee",
         "url": "index.html?window=widget",
         "width": 129,
         "height": 54,
@@ -40,10 +40,10 @@
     "active": true,
     "targets": "all",
     "externalBin": [
-      "binaries/talkis-ffmpeg",
-      "binaries/talkis-stt",
-      "binaries/talkis-diarize",
-      "binaries/talkis-llm"
+      "binaries/talkee-ffmpeg",
+      "binaries/talkee-stt",
+      "binaries/talkee-diarize",
+      "binaries/talkee-llm"
     ],
     "icon": [
       "icons/32x32.png",

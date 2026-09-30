@@ -9,18 +9,18 @@ use tauri::{
     App, AppHandle, Manager,
 };
 
-const TRAY_ID: &str = "talkis-main-tray";
-const TRAY_OPEN_ID: &str = "talkis-tray-open";
-const TRAY_HISTORY_ID: &str = "talkis-tray-history";
-const TRAY_FILE_ID: &str = "talkis-tray-file";
-const TRAY_CHAT_ID: &str = "talkis-tray-chat";
-const TRAY_MODELS_ID: &str = "talkis-tray-models";
-const TRAY_TRANSLATOR_ID: &str = "talkis-tray-translator";
-const TRAY_PROMPTS_ID: &str = "talkis-tray-prompts";
-const TRAY_SETTINGS_ID: &str = "talkis-tray-settings";
+const TRAY_ID: &str = "talkee-main-tray";
+const TRAY_OPEN_ID: &str = "talkee-tray-open";
+const TRAY_HISTORY_ID: &str = "talkee-tray-history";
+const TRAY_FILE_ID: &str = "talkee-tray-file";
+const TRAY_CHAT_ID: &str = "talkee-tray-chat";
+const TRAY_MODELS_ID: &str = "talkee-tray-models";
+const TRAY_TRANSLATOR_ID: &str = "talkee-tray-translator";
+const TRAY_PROMPTS_ID: &str = "talkee-tray-prompts";
+const TRAY_SETTINGS_ID: &str = "talkee-tray-settings";
 #[cfg(debug_assertions)]
-const TRAY_ONBOARDING_ID: &str = "talkis-tray-onboarding";
-const TRAY_QUIT_ID: &str = "talkis-tray-quit";
+const TRAY_ONBOARDING_ID: &str = "talkee-tray-onboarding";
+const TRAY_QUIT_ID: &str = "talkee-tray-quit";
 
 struct TrayState {
     _tray: TrayIcon,
@@ -76,7 +76,7 @@ fn open_settings(app: &AppHandle) {
     run_settings_action("open settings", settings_window::open_settings(app.clone()));
 }
 
-fn open_talkis(app: &AppHandle) {
+fn open_talkee(app: &AppHandle) {
     if let Err(err) = widget::restore_widget_window(app, "tray-open", false) {
         logger::log_error(
             "TRAY",
@@ -94,7 +94,7 @@ fn open_settings_tab(app: &AppHandle, tab: &'static str) {
 }
 
 pub fn setup(app: &App) -> tauri::Result<()> {
-    let open_item = MenuItem::with_id(app, TRAY_OPEN_ID, "Открыть Talkis", true, None::<&str>)?;
+    let open_item = MenuItem::with_id(app, TRAY_OPEN_ID, "Открыть Talkee", true, None::<&str>)?;
     let navigation_separator = PredefinedMenuItem::separator(app)?;
     let history_item = MenuItem::with_id(app, TRAY_HISTORY_ID, "История", true, None::<&str>)?;
     let file_item =
@@ -122,13 +122,13 @@ pub fn setup(app: &App) -> tauri::Result<()> {
         None::<&str>,
     )?;
     let about_metadata = AboutMetadataBuilder::new()
-        .name(Some("Talkis"))
+        .name(Some("Talkee"))
         .version(Some(app.package_info().version.to_string()))
         .comments(Some("Голос в текст, транскрибация и перевод."))
         .build();
-    let about_item = PredefinedMenuItem::about(app, Some("О Talkis"), Some(about_metadata))?;
+    let about_item = PredefinedMenuItem::about(app, Some("О Talkee"), Some(about_metadata))?;
     let quit_separator = PredefinedMenuItem::separator(app)?;
-    let quit_item = MenuItem::with_id(app, TRAY_QUIT_ID, "Выйти из Talkis", true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, TRAY_QUIT_ID, "Выйти из Talkee", true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[
@@ -150,11 +150,11 @@ pub fn setup(app: &App) -> tauri::Result<()> {
     )?;
 
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
-        .tooltip("Talkis")
+        .tooltip("Talkee")
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match tray_action(event.id().as_ref()) {
-            Some(TrayAction::Open) => open_talkis(app),
+            Some(TrayAction::Open) => open_talkee(app),
             Some(TrayAction::History) => open_settings_tab(app, "main"),
             Some(TrayAction::FileTranscription) => open_settings_tab(app, "file"),
             Some(TrayAction::Chat) => open_settings_tab(app, "chat"),

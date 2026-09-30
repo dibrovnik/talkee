@@ -13,7 +13,7 @@
 - Key changes included in this release:
   - Added live local dictation for local streaming STT models with a text overlay that appears at recording start and updates from partial/final events.
   - Added native live dictation audio feeding, pause/resume handling, final text handoff, and fallback to the existing full-audio transcription path.
-  - Added local STT streaming/live endpoints in `talkis-stt` with NDJSON `started`, `partial`, `final`, and `error` events.
+  - Added local STT streaming/live endpoints in `talkee-stt` with NDJSON `started`, `partial`, `final`, and `error` events.
   - Improved text overlay lifecycle for live dictation, selected-text translation, insertion state, paste failure, and first-show startup races.
   - Added local selected-text translation flow, local translator runtime support, translation hotkey settings, and dev-chat translation affordances.
   - Improved local file transcription for WebM/video inputs and local streaming models.
@@ -27,7 +27,7 @@
   - Local file transcription handles WebM/video inputs more reliably with local streaming models.
 - Risky areas:
   - Native live recorder audio fan-out into live ASR sessions.
-  - `talkis-stt` live/streaming HTTP protocol and model-specific streaming options.
+  - `talkee-stt` live/streaming HTTP protocol and model-specific streaming options.
   - Overlay window ordering, cached payload handoff, and conflict prevention between dictation and translation overlays.
   - Local translator sidecar dependency footprint and release packaging.
   - Release updater signing depends on GitHub Actions secrets because the local updater key is encrypted.
@@ -38,7 +38,7 @@
 - `cargo fmt --check --manifest-path src-tauri/Cargo.toml`: passed.
 - `bun run check:release`: passed.
   - Version sync passed for `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.
-  - Sidecar preparation passed for ffmpeg, `talkis-stt`, `talkis-diarize`, and `talkis-llm`.
+  - Sidecar preparation passed for ffmpeg, `talkee-stt`, `talkee-diarize`, and `talkee-llm`.
   - `bunx tsc --noEmit` passed.
   - `cargo check --manifest-path src-tauri/Cargo.toml` passed.
   - Hotkey FSM smoke tests passed.
@@ -46,7 +46,7 @@
 - `bun test src/windows/widget/services/dictationStreamOverlay.test.ts src/windows/widget/services/selectionTranslation.test.ts src/lib/fileTranscription.test.ts src/lib/historyAudioRetention.test.ts src/lib/hotkeyValidation.test.ts src/windows/widget/hooks/useWidgetHotkey.test.ts`: passed, 64 tests.
 - `cargo test --manifest-path src-tauri/Cargo.toml streaming`: passed, 9 relevant tests.
 - `cargo test --manifest-path src-tauri/Cargo.toml live_`: passed, 4 relevant tests.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkis-updater.key bun run build:release:macos`: built release sidecars, frontend, Rust release binary, `Talkis.app`, and `Talkis.app.tar.gz`; failed only at updater signature because this shell does not have `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` for the encrypted local key.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkee-updater.key bun run build:release:macos`: built release sidecars, frontend, Rust release binary, `Talkee.app`, and `Talkee.app.tar.gz`; failed only at updater signature because this shell does not have `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` for the encrypted local key.
 - Native/GitHub Windows build: delegated to GitHub Actions release workflow.
 - Native/GitHub Linux build: delegated to GitHub Actions release workflow.
 - Additional manual checks:

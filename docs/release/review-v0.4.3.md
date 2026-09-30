@@ -24,10 +24,10 @@
 - `bun run check:versions`: passed at `0.4.3` for `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.
 - `bun run check:release`: passed.
   - Sidecar preparation, TypeScript, `cargo check`, six hotkey smoke tests, and the Vite production build passed.
-  - Vite repeated the existing mixed `SummaryModal.tsx` import and 894.00 kB main-chunk warnings tracked in `talkis-pc-884`.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkis-updater.key TAURI_SIGNING_PRIVATE_KEY_PASSWORD='' bun run build:release:macos`: passed.
-  - Built optimized release sidecars, frontend, Rust binary, `Talkis.app`, signed updater `.app.tar.gz`, `.sig`, and `Talkis_0.4.3_aarch64.dmg`.
-  - Strict recursive `codesign` verification passed with `Identifier=com.trixter.talkis`.
+  - Vite repeated the existing mixed `SummaryModal.tsx` import and 894.00 kB main-chunk warnings tracked in `talkee-pc-884`.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkee-updater.key TAURI_SIGNING_PRIVATE_KEY_PASSWORD='' bun run build:release:macos`: passed.
+  - Built optimized release sidecars, frontend, Rust binary, `Talkee.app`, signed updater `.app.tar.gz`, `.sig`, and `Talkee_0.4.3_aarch64.dmg`.
+  - Strict recursive `codesign` verification passed with `Identifier=com.trixter.talkee`.
   - `hdiutil verify` reports the final DMG checksum as valid.
   - SHA-256: DMG `5ecac3ca2103e382dd4f09e62b2f43eec5d111a370826173fb744b4b6d6563eb`; updater archive `70d72135f438e465cdde6341f175a6a85614a6c5abee11ec3b00d76de2e59fc4`; signature file `00795453db718cf8c9cacfed7aed28787990b5a6a75dfa69ef0c72030e8bcfaa`.
 - GitHub Release Preflight run `29903049523` on commit `785f57f`: passed for `Preflight macos`, `Preflight windows`, and `Preflight linux`.
@@ -35,8 +35,8 @@
 - Native/GitHub Windows build: passed in Release Preflight run `29903049523`, including the x86-64 PE architecture gate for the app and bundled sidecars.
 - Native/GitHub Linux build: passed in Release Preflight run `29903049523` on Ubuntu 24.04 with PipeWire development dependencies installed.
 - Additional manual checks:
-  - Reviewed the complete `v0.4.2..release/v0.4.3` source/config/documentation diff and the rebuilt arm64 `talkis-llm` sidecar.
-  - Verified the macOS app reports version `0.4.3`, bundle identifier `com.trixter.talkis`, and arm64 Mach-O application/LLM binaries.
+  - Reviewed the complete `v0.4.2..release/v0.4.3` source/config/documentation diff and the rebuilt arm64 `talkee-llm` sidecar.
+  - Verified the macOS app reports version `0.4.3`, bundle identifier `com.trixter.talkee`, and arm64 Mach-O application/LLM binaries.
 
 ## Manual review
 
@@ -51,7 +51,7 @@
 - Blockers:
   - Do not merge or tag until the review-result-only commit receives green `Preflight macos`, `Preflight windows`, and `Preflight linux` checks.
 - Non-blocking issues:
-  - `talkis-pc-884`: Vite reports a mixed static/dynamic `SummaryModal.tsx` import and an 894.00 kB main JavaScript chunk.
+  - `talkee-pc-884`: Vite reports a mixed static/dynamic `SummaryModal.tsx` import and an 894.00 kB main JavaScript chunk.
 - Follow-ups after release:
   - None identified yet.
 

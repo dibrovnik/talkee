@@ -5,6 +5,7 @@ mod download_cancel;
 mod history_storage;
 mod hotkey_capture;
 mod hotkey_manager;
+mod legacy_migration;
 mod live_dictation;
 mod live_translation;
 mod llm_runtime;
@@ -88,6 +89,11 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
             logger::log_info("INIT", "Application starting...");
+
+            // Must run before the settings store, history and windows are used,
+            // so the new app-data directory already contains the migrated data.
+            let _ = legacy_migration::run_startup_migration(app.handle());
+
             #[cfg(windows)]
             shutdown::cleanup_orphaned_sidecars();
             if let Err(err) = native_voice_recorder::init() {
@@ -213,7 +219,7 @@ pub fn run() {
             hotkey_manager::unregister_handy_hotkey,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Talkis");
+        .expect("error while running Talkee");
 }
 
 #[tauri::command]

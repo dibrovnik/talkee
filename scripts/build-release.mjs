@@ -19,7 +19,7 @@ function detectPlatform() {
 }
 
 const platform =
-  process.argv[2] || process.env.TALKIS_RELEASE_PLATFORM || detectPlatform();
+  process.argv[2] || process.env.TALKEE_RELEASE_PLATFORM || detectPlatform();
 const bundleTargets = {
   macos: ["app"],
   windows: ["nsis"],
@@ -37,8 +37,8 @@ if (!Object.hasOwn(bundleTargets, platform)) {
 
 const env = {
   ...process.env,
-  TALKIS_STT_RELEASE: process.env.TALKIS_STT_RELEASE || "1",
-  TALKIS_SKIP_BEFORE_BUILD: "1",
+  TALKEE_STT_RELEASE: process.env.TALKEE_STT_RELEASE || "1",
+  TALKEE_SKIP_BEFORE_BUILD: "1",
 };
 
 if (platform === "windows" && !(env.RUSTFLAGS || "").includes("+crt-static")) {
@@ -82,7 +82,7 @@ if (platform === "windows") {
 
 if (
   platform === "macos" &&
-  process.env.TALKIS_POSTPROCESS_MACOS_RELEASE !== "0"
+  process.env.TALKEE_POSTPROCESS_MACOS_RELEASE !== "0"
 ) {
   run("bun", ["run", "postprocess:macos-release"]);
 }

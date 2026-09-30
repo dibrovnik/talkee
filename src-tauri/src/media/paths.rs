@@ -16,7 +16,7 @@ pub(super) fn unique_temp_path(prefix: &str, extension: &str) -> PathBuf {
         .unwrap_or_default();
     let pid = std::process::id();
     env::temp_dir().join(format!(
-        "talkis-{}-{}-{}.{}",
+        "talkee-{}-{}-{}.{}",
         prefix,
         pid,
         now,

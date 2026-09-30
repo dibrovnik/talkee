@@ -16,20 +16,20 @@ export const components = {
 
   // Microphone help text per platform
   "permission.micHelp.macos": {
-    ru: "Если микрофон был отклонен, откройте Системные настройки -> Конфиденциальность -> Микрофон и включите Talkis.",
-    en: "If the microphone was denied, open System Settings -> Privacy -> Microphone and enable Talkis.",
+    ru: "Если микрофон был отклонен, откройте Системные настройки -> Конфиденциальность -> Микрофон и включите Talkee.",
+    en: "If the microphone was denied, open System Settings -> Privacy -> Microphone and enable Talkee.",
   },
   "permission.micHelp.windows": {
-    ru: "Если микрофон был отклонен, откройте Параметры -> Конфиденциальность и безопасность -> Микрофон и разрешите доступ для Talkis.",
-    en: "If the microphone was denied, open Settings -> Privacy & security -> Microphone and allow access for Talkis.",
+    ru: "Если микрофон был отклонен, откройте Параметры -> Конфиденциальность и безопасность -> Микрофон и разрешите доступ для Talkee.",
+    en: "If the microphone was denied, open Settings -> Privacy & security -> Microphone and allow access for Talkee.",
   },
   "permission.micHelp.linux": {
     ru: "Если микрофон недоступен, проверьте системные настройки звука и разрешения браузерного WebView для записи.",
     en: "If the microphone is unavailable, check your system sound settings and the WebView recording permissions.",
   },
   "permission.micHelp.default": {
-    ru: "Если микрофон был отклонен, откройте системные настройки приватности и разрешите доступ для Talkis.",
-    en: "If the microphone was denied, open your system privacy settings and allow access for Talkis.",
+    ru: "Если микрофон был отклонен, откройте системные настройки приватности и разрешите доступ для Talkee.",
+    en: "If the microphone was denied, open your system privacy settings and allow access for Talkee.",
   },
 
   // Paste / accessibility permission row
@@ -43,12 +43,12 @@ export const components = {
     en: "Required for the global hotkey and text insertion.",
   },
   "permission.paste.descLinux": {
-    ru: "Talkis использует буфер обмена и Ctrl+V. В некоторых Wayland/X11 окружениях автоматическая вставка может быть ограничена.",
-    en: "Talkis uses the clipboard and Ctrl+V. In some Wayland/X11 environments automatic insertion may be limited.",
+    ru: "Talkee использует буфер обмена и Ctrl+V. В некоторых Wayland/X11 окружениях автоматическая вставка может быть ограничена.",
+    en: "Talkee uses the clipboard and Ctrl+V. In some Wayland/X11 environments automatic insertion may be limited.",
   },
   "permission.paste.descDefault": {
-    ru: "Talkis использует буфер обмена и Ctrl+V. Отдельное системное разрешение обычно не требуется.",
-    en: "Talkis uses the clipboard and Ctrl+V. A separate system permission is usually not required.",
+    ru: "Talkee использует буфер обмена и Ctrl+V. Отдельное системное разрешение обычно не требуется.",
+    en: "Talkee uses the clipboard and Ctrl+V. A separate system permission is usually not required.",
   },
   "permission.paste.helpNotInApplications": {
     ru: "Приложение запущено не из Applications: {path}",
@@ -61,8 +61,8 @@ export const components = {
 
   // Header
   "permission.header.title": {
-    ru: "Доступы для Talkis",
-    en: "Permissions for Talkis",
+    ru: "Доступы для Talkee",
+    en: "Permissions for Talkee",
   },
   "permission.header.subtitle": {
     ru: "Осталось выдать системные разрешения для записи голоса, звука созвона и работы горячей клавиши.",
@@ -75,8 +75,8 @@ export const components = {
     en: "Move the app to Applications",
   },
   "permission.installWarning.desc": {
-    ru: "Текущая сборка запущена из временного места. Переместите Talkis в Applications и откройте оттуда.",
-    en: "The current build is running from a temporary location. Move Talkis to Applications and open it from there.",
+    ru: "Текущая сборка запущена из временного места. Переместите Talkee в Applications и откройте оттуда.",
+    en: "The current build is running from a temporary location. Move Talkee to Applications and open it from there.",
   },
 
   // Microphone permission row
@@ -93,14 +93,14 @@ export const components = {
     en: "Needed to capture call audio together with the microphone.",
   },
   "permission.systemAudio.help": {
-    ru: "Кнопка запускает короткую проверку захвата. Если доступа ещё нет, macOS предложит разрешить Talkis запись системного аудио.",
-    en: "The button runs a short capture check. If access is missing, macOS will ask you to allow Talkis to record system audio.",
+    ru: "Кнопка запускает короткую проверку захвата. Если доступа ещё нет, macOS предложит разрешить Talkee запись системного аудио.",
+    en: "The button runs a short capture check. If access is missing, macOS will ask you to allow Talkee to record system audio.",
   },
 
   // Hint block
   "permission.hint.systemAudioDenied": {
-    ru: "Если доступ был отклонен, откройте Системные настройки -> Конфиденциальность и безопасность -> Запись экрана и системного аудио и включите Talkis.",
-    en: "If access was denied, open System Settings -> Privacy & security -> Screen & System Audio Recording and enable Talkis.",
+    ru: "Если доступ был отклонен, откройте Системные настройки -> Конфиденциальность и безопасность -> Запись экрана и системного аудио и включите Talkee.",
+    en: "If access was denied, open System Settings -> Privacy & security -> Screen & System Audio Recording and enable Talkee.",
   },
   "permission.hint.reopenAfterMove": {
     ru: "После перемещения приложения в Applications откройте его заново.",
@@ -111,12 +111,12 @@ export const components = {
     en: "macOS does not apply access instantly. After changing the setting, return to the app.",
   },
   "permission.hint.restartAccessibility": {
-    ru: "Talkis пока не видит выданный Универсальный доступ. Перезапустите приложение: после запуска проверка продолжится автоматически с этого шага.",
-    en: "Talkis still cannot see the Accessibility permission. Restart the app; after launch, the check will automatically continue from this step.",
+    ru: "Talkee пока не видит выданный Универсальный доступ. Перезапустите приложение: после запуска проверка продолжится автоматически с этого шага.",
+    en: "Talkee still cannot see the Accessibility permission. Restart the app; after launch, the check will automatically continue from this step.",
   },
   "permission.hint.restartFailed": {
-    ru: "Не удалось перезапустить Talkis автоматически. Закройте и снова откройте приложение вручную.",
-    en: "Talkis could not restart automatically. Close and reopen the app manually.",
+    ru: "Не удалось перезапустить Talkee автоматически. Закройте и снова откройте приложение вручную.",
+    en: "Talkee could not restart automatically. Close and reopen the app manually.",
   },
 
   // Footer status line

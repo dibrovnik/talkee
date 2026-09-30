@@ -30,7 +30,7 @@
   - Selecting a transcribe STT model auto-selects it in LLM dropdown as well
 
 - Risky areas:
-  - Users with old `talkis.json` lacking `llmApiKey`/`whisperApiKey` — handled with `|| ""` fallback
+  - Users with old `talkee.json` lacking `llmApiKey`/`whisperApiKey` — handled with `|| ""` fallback
   - `audioBitsPerSecond: 24000` — some browsers/platforms may not support; MediaRecorder falls back gracefully
   - Transcribe model detection is name-based (`contains("transcribe")`) — third-party providers with non-standard naming won't benefit
 

@@ -796,7 +796,7 @@ async fn transcribe_audio_bytes_internal(
 
     let audio_bytes = if is_likely_local_url(&whisper_url) {
         let input_file_name = file_name.clone();
-        file_name = "talkis-local-stt.wav".to_string();
+        file_name = "talkee-local-stt.wav".to_string();
         mime_type = "audio/wav".to_string();
         media::convert_audio_to_local_stt_wav(&app, &audio_bytes, &input_file_name).await?
     } else {
@@ -1230,7 +1230,7 @@ async fn diarize_audio_file(
     let bytes = fs::read(wav_path)
         .map_err(|err| format!("Не удалось прочитать WAV для разделения говорящих: {}", err))?;
     let file_part = multipart::Part::bytes(bytes)
-        .file_name("talkis-diarization.wav")
+        .file_name("talkee-diarization.wav")
         .mime_str("audio/wav")
         .map_err(|err| format!("MIME error: {}", err))?;
     let form = multipart::Form::new()
@@ -1761,7 +1761,7 @@ pub struct EmbedTextResponse {
 }
 
 /// Run an explicit, user-initiated text-processing prompt (e.g. summary) against
-/// any OpenAI-compatible chat endpoint: Talkis Cloud-compatible, a bundled local
+/// any OpenAI-compatible chat endpoint: a bundled local
 /// runtime (127.0.0.1), or a user-provided endpoint. This is a deliberate user
 /// action, not the automatic transcription cleanup that stays disabled by policy.
 #[tauri::command]
@@ -2033,7 +2033,7 @@ async fn test_stt_connection(
     let response = request.send().await.map_err(|err| {
         if err.is_connect() {
             if is_likely_local_url(&models_url) {
-                "Локальный STT runtime пока недоступен. Нажмите «Скачать» для нужной Whisper-модели, Talkis запустит runtime автоматически.".to_string()
+                "Локальный STT runtime пока недоступен. Нажмите «Скачать» для нужной Whisper-модели, Talkee запустит runtime автоматически.".to_string()
             } else {
                 "Не удалось подключиться к STT endpoint. Проверьте адрес и сеть.".to_string()
             }
@@ -2209,7 +2209,7 @@ pub async fn list_stt_models(
         Ok(response) => Ok(response),
         Err(err) => Err(if err.is_connect() {
             if is_likely_local_url(&models_url) {
-                "Локальный STT runtime пока недоступен. Нажмите «Скачать» для нужной Whisper-модели, Talkis запустит runtime автоматически."
+                "Локальный STT runtime пока недоступен. Нажмите «Скачать» для нужной Whisper-модели, Talkee запустит runtime автоматически."
                     .to_string()
             } else {
                 "Не удалось подключиться к STT endpoint. Проверьте адрес и сеть.".to_string()
@@ -2269,7 +2269,7 @@ pub async fn warm_up_local_stt_runtime(
     let models_url = resolve_whisper_models_url(&whisper_url);
     if local_stt::managed_runtime_kind(&models_url) != Some(local_stt::LocalRuntimeKind::Whisper) {
         return Err(
-            "Автоматический прогрев доступен только для локального STT runtime Talkis.".to_string(),
+            "Автоматический прогрев доступен только для локального STT runtime Talkee.".to_string(),
         );
     }
 

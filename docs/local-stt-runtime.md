@@ -1,13 +1,13 @@
 # Local STT Runtime
 
-Talkis supports a managed local STT runtime named `talkis-stt`. The app uses it for local models without requiring Docker.
+Talkee supports a managed local STT runtime named `talkee-stt`. The app uses it for local models without requiring Docker.
 
 ## Runtime Lookup
 
-When a local model is installed, Talkis:
+When a local model is installed, Talkee:
 
 1. Checks whether the local OpenAI-compatible endpoint is already available at `http://127.0.0.1:8000`.
-2. Tries to start a bundled Tauri sidecar named `talkis-stt`.
+2. Tries to start a bundled Tauri sidecar named `talkee-stt`.
 3. If the sidecar is not bundled, downloads a platform-specific runtime from a manifest.
 4. Starts the downloaded runtime and waits for `/health`.
 5. Calls `POST /v1/models/:model` to install the selected model.
@@ -15,13 +15,13 @@ When a local model is installed, Talkis:
 The runtime manifest URL defaults to:
 
 ```text
-https://talkis.ru/downloads/talkis-stt/manifest.json
+https://talkee.ru/downloads/talkee-stt/manifest.json
 ```
 
 For development it can be overridden with:
 
 ```text
-TALKIS_STT_RUNTIME_MANIFEST=https://example.test/manifest.json
+TALKEE_STT_RUNTIME_MANIFEST=https://example.test/manifest.json
 ```
 
 ## Manifest Format
@@ -30,11 +30,11 @@ TALKIS_STT_RUNTIME_MANIFEST=https://example.test/manifest.json
 {
   "version": "0.1.0",
   "macos-aarch64": {
-    "url": "https://talkis.ru/downloads/talkis-stt/0.1.0/talkis-stt-aarch64-apple-darwin",
+    "url": "https://talkee.ru/downloads/talkee-stt/0.1.0/talkee-stt-aarch64-apple-darwin",
     "sha256": "..."
   },
   "macos-x86_64": {
-    "url": "https://talkis.ru/downloads/talkis-stt/0.1.0/talkis-stt-x86_64-apple-darwin",
+    "url": "https://talkee.ru/downloads/talkee-stt/0.1.0/talkee-stt-x86_64-apple-darwin",
     "sha256": "..."
   }
 }

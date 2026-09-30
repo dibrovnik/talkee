@@ -25,7 +25,7 @@
 ## Checks run
 
 - `bun run check:release`: passed.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkis-updater.key bun run build:release:macos`: app, DMG, and updater tarball were built; command failed at updater signing with `incorrect updater private key password: Device not configured (os error 6)`.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=/Users/trixter/.tauri/talkee-updater.key bun run build:release:macos`: app, DMG, and updater tarball were built; command failed at updater signing with `incorrect updater private key password: Device not configured (os error 6)`.
 - Native/GitHub Windows build: pending GitHub Actions for `v0.1.24`.
 - Native/GitHub Linux build: pending GitHub Actions for `v0.1.24`.
 - Additional manual checks:
@@ -50,7 +50,7 @@
   - No STT, ffmpeg, hallucination filter, diarization, or transcript assembly changes in this release.
 - README refreshed:
   - Current version updated to `0.1.24`.
-  - Call recording docs now state that Talkis falls back to the system default microphone when the saved selected microphone is unavailable.
+  - Call recording docs now state that Talkee falls back to the system default microphone when the saved selected microphone is unavailable.
 
 ## Findings
 

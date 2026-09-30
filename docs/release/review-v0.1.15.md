@@ -11,7 +11,7 @@
 ## Scope
 
 - Key changes included in this release:
-  - Added Talkis-managed local STT runtimes for Whisper, NVIDIA Parakeet MLX, and Qwen ASR.
+  - Added Talkee-managed local STT runtimes for Whisper, NVIDIA Parakeet MLX, and Qwen ASR.
   - Added bundled STT sidecar preparation for development, checks, and release builds.
   - Added local model install/delete/progress handling in the settings model UI.
   - Added chunked file transcription support for larger audio/video files.
@@ -28,13 +28,13 @@
 ## Checks run
 
 - `bun run check:release`: passed.
-- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkis-updater.key bun run build:release:macos`: app bundle and updater archive were created, then local updater signing failed because the local private key is password-protected and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not available in this shell.
+- `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkee-updater.key bun run build:release:macos`: app bundle and updater archive were created, then local updater signing failed because the local private key is password-protected and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is not available in this shell.
 - Additional manual checks:
   - Release build initially exposed invalid `src-tauri/src/bin` contents: `local_runtime_stub`, `nvidia_engine.py`, and `qwen_engine.py` were interpreted by Tauri as bundle binaries.
   - Removed the unused `local_runtime_stub`.
   - Moved embedded Python engine scripts to `src-tauri/src/runtime_engines` and updated `include_str!` paths.
   - Re-ran `bun run check:release` after the packaging fix: passed.
-  - Re-ran `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkis-updater.key bun run build:release:macos` after the packaging fix: reached updater signing, then failed only on the missing local key password.
+  - Re-ran `TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/talkee-updater.key bun run build:release:macos` after the packaging fix: reached updater signing, then failed only on the missing local key password.
   - First GitHub Actions run for tag `v0.1.15` failed in `Build macOS bundles` while compiling `whisper-rs` because `std::filesystem` requires a macOS deployment target of at least 10.15.
   - Set the release/app deployment target to macOS 11.0 in the workflow, local release script, and Tauri bundle config.
   - `git diff --check`: passed.

@@ -285,7 +285,7 @@ pub fn ensure_widget_notice_window(app: &AppHandle) -> Result<tauri::WebviewWind
         NOTICE_WINDOW_LABEL,
         WebviewUrl::App("index.html?window=widget-notice".into()),
     )
-    .title("Talkis Notice")
+    .title("Talkee Notice")
     .inner_size(NOTICE_WIDTH, NOTICE_HEIGHT)
     .resizable(false)
     .decorations(false)
@@ -321,7 +321,7 @@ pub fn ensure_widget_text_window(app: &AppHandle) -> Result<tauri::WebviewWindow
         TEXT_WINDOW_LABEL,
         WebviewUrl::App("index.html?window=widget-text".into()),
     )
-    .title("Talkis Text")
+    .title("Talkee Text")
     .inner_size(TEXT_OVERLAY_WIDTH, TEXT_OVERLAY_HEIGHT)
     .resizable(false)
     .decorations(false)

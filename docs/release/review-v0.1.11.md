@@ -30,8 +30,8 @@
 - `bun run check:release` - passed
 - `bun run build:release:macos` - passed
 - Additional manual checks:
-  - Confirmed generated macOS app bundle at `src-tauri/target/release/bundle/macos/Talkis.app`.
-  - Confirmed generated DMG at `src-tauri/target/release/bundle/dmg/Talkis_0.1.11_aarch64.dmg`.
+  - Confirmed generated macOS app bundle at `src-tauri/target/release/bundle/macos/Talkee.app`.
+  - Confirmed generated DMG at `src-tauri/target/release/bundle/dmg/Talkee_0.1.11_aarch64.dmg`.
   - Reviewed release diff for version, README, widget controls, autostart permissions, and history-clear copy-cache handling.
 
 ## Manual review

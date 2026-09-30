@@ -1,14 +1,14 @@
 [package]
-name = "talkis"
+name = "talkee"
 version = "0.4.8"
-description = "Talkis - Voice to Text Desktop Widget"
+description = "Talkee - Voice to Text Desktop Widget"
 authors = ["trixter"]
 license = "AGPL-3.0-or-later"
 edition = "2021"
-default-run = "talkis"
+default-run = "talkee"
 
 [workspace]
-members = ["sidecars/talkis-llm"]
+members = ["sidecars/talkee-llm"]
 default-members = ["."]
 resolver = "2"
 
@@ -18,7 +18,7 @@ edition = "2021"
 license = "AGPL-3.0-or-later"
 
 [lib]
-name = "talkis_lib"
+name = "talkee_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -52,6 +52,9 @@ hound = "3.5.1"
 tauri-plugin-dialog = "2"
 handy-keys = "0.2.4"
 ct2rs = { version = "0.9.19", default-features = false, features = ["all-tokenizers", "ruy"] }
+
+[dev-dependencies]
+tempfile = "3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 transcribe-cpp = { version = "0.1.1", default-features = false, features = ["metal"] }

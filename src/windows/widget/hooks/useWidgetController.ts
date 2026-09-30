@@ -421,7 +421,7 @@ export function useWidgetController({
     [],
   );
 
-  const requestTalkisSelectedText = useCallback((): Promise<string> => {
+  const requestTalkeeSelectedText = useCallback((): Promise<string> => {
     const requestId =
       typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
@@ -522,7 +522,7 @@ export function useWidgetController({
         targetLanguage,
       });
 
-      let selectedText = await requestTalkisSelectedText();
+      let selectedText = await requestTalkeeSelectedText();
       if (!isCurrentRequest()) return;
 
       if (!selectedText.trim()) {
@@ -638,7 +638,7 @@ export function useWidgetController({
     }
   }, [
     hideSelectionTextOverlay,
-    requestTalkisSelectedText,
+    requestTalkeeSelectedText,
     showError,
     showSelectionTextOverlay,
   ]);

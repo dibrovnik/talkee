@@ -1,13 +1,13 @@
-# Talkis - AGENTS.md
+# Talkee - AGENTS.md
 
-Talkis is a macOS voice-to-text application built with Tauri v2 (Rust backend) and React (TypeScript frontend), with a companion cloud platform (Next.js).
+Talkee is a macOS voice-to-text application built with Tauri v2 (Rust backend) and React (TypeScript frontend), with a companion cloud platform (Next.js).
 
 ## Project Rules
 
 All reusable project rules are connected from this root `AGENTS.md`.
 
 - For website or landing-page style work, follow `rules/style.rule.md`.
-- For reusable Talkis-inspired product UI work in this repo or other apps, use `skills/talkis-product-ui-style/`; keep it aligned with `rules/style.rule.md`.
+- For reusable Talkee-inspired product UI work in this repo or other apps, use `skills/talkee-product-ui-style/`; keep it aligned with `rules/style.rule.md`.
 - For release work, follow `rules/release.rule.md`.
 - Keep `skills/` for reusable Codex skills that may be installed outside this repo.
 - Keep `site/` for actual website files only; do not store agent rules there.
@@ -16,7 +16,7 @@ All reusable project rules are connected from this root `AGENTS.md`.
 ## Project Structure
 
 ```
-talkis/
+talkee/
 ├── src/                      # Frontend (React/TypeScript)
 │   ├── windows/
 │   │   ├── widget/           # Small floating widget window
@@ -26,7 +26,7 @@ talkis/
 │   │   ├── store.ts          # Persistent settings (tauri-plugin-store)
 │   │   ├── logger.ts         # Logging utilities
 │   │   ├── permissions.ts    # OS permission checks
-│   │   ├── cloudAuth.ts      # Cloud auth client (talkis.ru API)
+│   │   ├── cloudAuth.ts      # Cloud auth client (talkee.ru API)
 │   │   └── utils.ts          # Helper functions
 │   └── main.tsx              # Entry point (routes to widget/settings)
 ├── src-tauri/
@@ -40,9 +40,9 @@ talkis/
 │   ├── style.rule.md        # Website style rule
 │   └── release.rule.md      # Release workflow rule
 ├── skills/                  # Reusable Codex skills sourced from this repo
-│   └── talkis-product-ui-style/ # Portable Talkis product UI style skill
+│   └── talkee-product-ui-style/ # Portable Talkee product UI style skill
 ├── site/                    # Static website files
-├── talkis-web/              # Cloud platform (Next.js 15)
+├── talkee-web/              # Cloud platform (Next.js 15)
 │   ├── src/app/              # Pages: landing, auth, dashboard
 │   ├── src/components/       # Landing, dashboard, shared components
 │   ├── src/lib/              # Auth, Prisma, email
@@ -73,13 +73,13 @@ cd src-tauri && cargo check
 bun run check:release
 
 # View logs
-bun run logs          # tail -f ~/.talkis/talkis.log
-bun run logs:clear    # rm ~/.talkis/talkis.log
+bun run logs          # tail -f ~/.talkee/talkee.log
+bun run logs:clear    # rm ~/.talkee/talkee.log
 
-# ── talkis-web ──
-cd talkis-web && bun run dev       # Next.js dev server
-cd talkis-web && bunx tsc --noEmit # TS check
-cd talkis-web && bunx prisma migrate dev --name <name>  # DB migration
+# ── talkee-web ──
+cd talkee-web && bun run dev       # Next.js dev server
+cd talkee-web && bunx tsc --noEmit # TS check
+cd talkee-web && bunx prisma migrate dev --name <name>  # DB migration
 ```
 
 ## Design System
@@ -270,7 +270,7 @@ Key source files:
 - Native voice recording: `src-tauri/src/native_voice_recorder.rs`
 - STT request orchestration and hallucination filtering: `src-tauri/src/ai.rs`
 - Media conversion and chunking: `src-tauri/src/media.rs`
-- Managed local Whisper runtime: `src-tauri/src/bin/talkis-stt.rs`
+- Managed local Whisper runtime: `src-tauri/src/bin/talkee-stt.rs`
 - Call capture and call transcript assembly: `src-tauri/src/call_capture.rs`, `src/lib/callCapture.ts`
 
 Stable principles:
@@ -297,7 +297,7 @@ Stable principles:
 2. **Hotkeys:** Format is `Modifier+Key` (e.g., `Ctrl+Alt+Space`), always validate with `validateHotkey()`
 3. **Settings:** Load once at startup via `getSettings()`, save immediately on change
 4. **Window sizes:** Widget is 50x18 in its compact state; keep window sizing in sync with `src/windows/widget/widgetConstants.ts`
-5. **Logs location:** `~/.talkis/talkis.log`
+5. **Logs location:** `~/.talkee/talkee.log`
 6. **Package manager:** Use `bun` everywhere (not npm/yarn)
 7. **Dev-only features:** Gate behind `import.meta.env.DEV` (e.g., Prompt Preview)
 
@@ -449,8 +449,8 @@ bd prime                # Refresh Beads context
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
 
-## Talkis Beads storage safety
+## Talkee Beads storage safety
 
-- The repository may live on a removable volume. On macOS, keep `.beads` as a symlink to `~/Library/Application Support/Beads/talkis-pc/workspace`; do not replace it with a directory on the external volume.
+- The repository may live on a removable volume. On macOS, keep `.beads` as a symlink to `~/Library/Application Support/Beads/talkee-pc/workspace`; do not replace it with a directory on the external volume.
 - Before copying or backing up the Dolt data directory, stop the project server with `bd dolt stop`. Copying a live Dolt journal can produce an inconsistent backup.
 - Use the Homebrew `bd` and `dolt` installations and keep them current. Do not reinstall the legacy global `@beads/bd` npm wrapper.

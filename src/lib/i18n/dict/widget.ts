@@ -9,8 +9,8 @@ export const widget = {
     en: "The microphone is busy or unavailable. Close apps that may be using the microphone and try again.",
   },
   "widget.mic.unavailable": {
-    ru: "Выбранный микрофон недоступен. Проверьте микрофон в настройках Talkis.",
-    en: "The selected microphone is unavailable. Check the microphone in Talkis settings.",
+    ru: "Выбранный микрофон недоступен. Проверьте микрофон в настройках Talkee.",
+    en: "The selected microphone is unavailable. Check the microphone in Talkee settings.",
   },
   "widget.mic.startTimeout": {
     ru: "Микрофон не успел запуститься. Попробуйте ещё раз.",
@@ -248,7 +248,7 @@ export const widget = {
     en: "Couldn't register the hotkey.",
   },
   "widget.hotkey.conflict": {
-    ru: "Это сочетание уже используется другой функцией Talkis.",
-    en: "This shortcut is already used by another Talkis feature.",
+    ru: "Это сочетание уже используется другой функцией Talkee.",
+    en: "This shortcut is already used by another Talkee feature.",
   },
 } as const;

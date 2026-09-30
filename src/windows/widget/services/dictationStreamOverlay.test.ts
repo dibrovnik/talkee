@@ -131,7 +131,7 @@ describe("dictation stream overlay state", () => {
           streamingCapabilityFingerprint: fingerprint,
         },
       },
-    } as AppSettings;
+    } as unknown as AppSettings;
 
     expect(isLocalSttStreamingEnabled(settings)).toBe(false);
     expect(isSttStreamingEnabled(settings)).toBe(false);
@@ -147,7 +147,7 @@ describe("dictation stream overlay state", () => {
         "gigaam-v3-e2e-rnnt": { status: "downloaded" },
         "nemotron-35-asr-streaming-06b": { status: "downloaded" },
       },
-    } as AppSettings;
+    } as unknown as AppSettings;
 
     expect(createNativeLiveDictationOptions(settings, "dictation")).toBeNull();
     expect(createCallLiveDictationOptions(settings, "call")).toEqual({
@@ -190,7 +190,7 @@ describe("dictation stream overlay state", () => {
           realtimeTranscriptionEnabled: true,
           language: "ru",
           apiAdapters: { openai: values },
-        } as AppSettings,
+        } as unknown as AppSettings,
         "req-unverified",
       ),
     ).toBeNull();
@@ -207,7 +207,7 @@ describe("dictation stream overlay state", () => {
           streamingCapabilityFingerprint: fingerprint,
         },
       },
-    } as AppSettings;
+    } as unknown as AppSettings;
 
     expect(createNativeLiveDictationOptions(settings, "req-api")).toMatchObject({
       requestId: "req-api",

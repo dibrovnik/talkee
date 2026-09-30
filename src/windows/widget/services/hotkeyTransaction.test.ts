@@ -116,7 +116,7 @@ describe("applyHotkeyTransaction", () => {
     expect(result.success).toBe(true);
     expect(fixture.getStored().translation.selectionEnabled).toBe(true);
     expect(fixture.getStored().translation.selectionHotkey).toBe("Alt+Enter");
-    expect(fixture.active.selection).toBe("Alt+Enter");
+    expect(fixture.dependencies.getActiveHotkey("selection")).toBe("Alt+Enter");
   });
 
   test("registers a configured selection hotkey when runtime registration is missing", async () => {
@@ -131,7 +131,7 @@ describe("applyHotkeyTransaction", () => {
 
     expect(result.success).toBe(true);
     expect(fixture.registered).toEqual(["Control+Shift+Y"]);
-    expect(fixture.active.selection).toBe("Control+Shift+Y");
+    expect(fixture.dependencies.getActiveHotkey("selection")).toBe("Control+Shift+Y");
     expect(fixture.getStored().translation.selectionEnabled).toBe(true);
   });
 

@@ -14,7 +14,7 @@
 - [x] 2.2 `cargo fmt --all --manifest-path src-tauri/Cargo.toml` → коммит `style: apply rustfmt`
 - [x] 2.3 Создать `.git-blame-ignore-revs` с хешами коммитов 2.1 и 2.2
 - [x] 2.4 `bunx biome check --write .` (safe fixes); оставшиеся ошибки — по правилу из design.md, решение 1; `bun test` после исправлений → коммит `refactor: fix biome lint findings`
-- [ ] 2.5 `bunx tsc --noEmit -p tsconfig.test.json`; исправить ошибки типов в тестах → коммит
+- [x] 2.5 `bunx tsc --noEmit -p tsconfig.test.json`; исправить ошибки типов в тестах → коммит
 - [ ] 2.6 `cargo clippy --fix` + ручные исправления по правилу из design.md, решение 3; `cargo test --workspace` после → коммит `refactor: fix clippy findings`
 - [ ] 2.7 Проверка: `bunx biome ci .`, `cargo fmt --check`, `cargo clippy ... -D warnings`, `bun test`, `cargo test --workspace` — все зелёные
 

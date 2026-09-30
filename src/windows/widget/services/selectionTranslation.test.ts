@@ -8,13 +8,19 @@ import {
   translateSelectedTextWithBackend,
 } from "./selectionTranslation";
 
-function settings(overrides: Partial<AppSettings> = {}): AppSettings {
+type SettingsOverrides = Partial<Omit<AppSettings, "translation">> & {
+  translation?: Partial<AppSettings["translation"]>;
+};
+
+function settings(overrides: SettingsOverrides = {}): AppSettings {
+  const { translation, ...rest } = overrides;
   return {
     translation: {
       selectionTargetLanguage: "en",
       selectionLocalTranslatorProvider: "",
+      ...translation,
     },
-    ...overrides,
+    ...rest,
   } as AppSettings;
 }
 

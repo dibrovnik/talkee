@@ -7,6 +7,7 @@ import {
   needsHotkeySettingsMigration,
   normalizeHotkey,
   normalizeSavedSettings,
+  type TranslationSettings,
   validateHotkey,
 } from "./store";
 
@@ -443,7 +444,7 @@ describe("translation selection hotkey settings", () => {
               selectionEnabled: false,
               selectionTargetLanguage: "en",
               selectionHotkey: DEFAULT_SELECTION_TRANSLATION_HOTKEY,
-            },
+            } as TranslationSettings,
           },
         ),
       ).toBe(true);

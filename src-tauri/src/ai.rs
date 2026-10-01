@@ -1827,6 +1827,62 @@ pub struct EmbedTextResponse {
     pub embeddings: Vec<Vec<f32>>,
 }
 
+/// Provider-side "thinking" handling for a chat-completions request.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ThinkingMode {
+    /// Send nothing and let the provider default apply.
+    ProviderDefault,
+    /// DeepSeek enables thinking by default; a cleanup must not spend the 8/12 s
+    /// budget on a reasoning trace, so the toggle is sent explicitly.
+    Disabled,
+}
+
+/// DeepSeek enables thinking by default on its chat models. The toggle is only
+/// sent to DeepSeek endpoints or model ids: other [OI]-compatible servers reject
+/// unknown request fields, so they must keep the plain body.
+fn chat_thinking_mode(url: &str, model: &str) -> ThinkingMode {
+    let url = url.to_lowercase();
+    let model = model.to_lowercase();
+    if url.contains("deepseek") || model.starts_with("deepseek") {
+        ThinkingMode::Disabled
+    } else {
+        ThinkingMode::ProviderDefault
+    }
+}
+
+struct ChatCompletionRequest<'a> {
+    model: &'a str,
+    prompt: &'a str,
+    user_text: &'a str,
+    temperature: f64,
+    max_tokens: Option<i32>,
+    is_local: bool,
+    thinking: ThinkingMode,
+}
+
+/// Body of the [OI]-compatible chat-completions call. Pure so the serialization
+/// (including the provider-specific thinking toggle) is testable without a
+/// network request.
+fn chat_completion_payload(request: &ChatCompletionRequest<'_>) -> serde_json::Value {
+    let mut payload = serde_json::json!({
+        "model": request.model,
+        "messages": [
+            { "role": "system", "content": request.prompt },
+            { "role": "user", "content": request.user_text },
+        ],
+        "temperature": request.temperature,
+        "stream": false,
+    });
+    if request.is_local {
+        let max_tokens = request.max_tokens.unwrap_or(1024).clamp(64, 2048);
+        payload["max_tokens"] = serde_json::json!(max_tokens);
+    }
+    if request.thinking == ThinkingMode::Disabled {
+        payload["thinking"] = serde_json::json!({ "type": "disabled" });
+    }
+    payload
+}
+
 /// Run an explicit, user-initiated text-processing prompt (e.g. summary) against
 /// any OpenAI-compatible chat endpoint: a bundled local
 /// runtime (127.0.0.1), or a user-provided endpoint. This is a deliberate user
@@ -1873,19 +1929,15 @@ pub async fn process_text(req: ProcessTextRequest) -> Result<ProcessTextResponse
         ),
     );
 
-    let mut payload = serde_json::json!({
-        "model": model,
-        "messages": [
-            { "role": "system", "content": prompt },
-            { "role": "user", "content": text },
-        ],
-        "temperature": req.temperature.unwrap_or(0.3),
-        "stream": false,
+    let payload = chat_completion_payload(&ChatCompletionRequest {
+        model: &model,
+        prompt,
+        user_text: text,
+        temperature: req.temperature.unwrap_or(0.3),
+        max_tokens: req.max_tokens,
+        is_local,
+        thinking: chat_thinking_mode(&url, &model),
     });
-    if is_local {
-        let max_tokens = req.max_tokens.unwrap_or(1024).clamp(64, 2048);
-        payload["max_tokens"] = serde_json::json!(max_tokens);
-    }
 
     let client = if is_local {
         local_long_http_client()
@@ -3062,6 +3114,84 @@ mod tests {
         assert_eq!(response.mode, TranscriptionMode::Plain);
         assert!(response.speakers.is_none());
         assert!(response.segments.is_none());
+    }
+
+    #[test]
+    fn deepseek_text_requests_disable_thinking_explicitly() {
+        let endpoint = "https://api.deepseek.com/chat/completions";
+        let model = "deepseek-flash";
+        let payload = chat_completion_payload(&ChatCompletionRequest {
+            model,
+            prompt: "cleanup",
+            user_text: "исходный текст",
+            temperature: 0.2,
+            max_tokens: None,
+            is_local: false,
+            thinking: chat_thinking_mode(endpoint, model),
+        });
+
+        assert_eq!(chat_thinking_mode(endpoint, model), ThinkingMode::Disabled);
+        assert_eq!(
+            payload["thinking"],
+            serde_json::json!({ "type": "disabled" })
+        );
+        assert_eq!(payload["model"], model);
+        assert_eq!(payload["messages"][0]["content"], "cleanup");
+        assert_eq!(payload["messages"][1]["content"], "исходный текст");
+        assert_eq!(payload["temperature"], 0.2);
+        assert_eq!(payload["stream"], false);
+        // Remote cleanup requests keep no output cap.
+        assert!(payload.get("max_tokens").is_none());
+    }
+
+    #[test]
+    fn non_deepseek_text_requests_keep_the_plain_body() {
+        let payload = chat_completion_payload(&ChatCompletionRequest {
+            model: "gpt-4o-mini",
+            prompt: "cleanup",
+            user_text: "text",
+            temperature: 0.3,
+            max_tokens: Some(512),
+            is_local: false,
+            thinking: chat_thinking_mode(
+                "https://api.openai.com/v1/chat/completions",
+                "gpt-4o-mini",
+            ),
+        });
+
+        assert!(payload.get("thinking").is_none());
+        assert!(payload.get("max_tokens").is_none());
+        // A DeepSeek model id on a custom endpoint still opts out of thinking.
+        assert_eq!(
+            chat_thinking_mode("http://127.0.0.1:9000", "deepseek-chat"),
+            ThinkingMode::Disabled
+        );
+    }
+
+    #[test]
+    fn local_text_requests_keep_the_bounded_max_tokens_without_thinking() {
+        let endpoint = "http://127.0.0.1:8011/v1/chat/completions";
+        let model = "qwen3-1.7b-instruct-q4";
+        let local_payload = |max_tokens: Option<i32>| {
+            chat_completion_payload(&ChatCompletionRequest {
+                model,
+                prompt: "cleanup",
+                user_text: "text",
+                temperature: 0.3,
+                max_tokens,
+                is_local: true,
+                thinking: chat_thinking_mode(endpoint, model),
+            })
+        };
+
+        assert_eq!(
+            chat_thinking_mode(endpoint, model),
+            ThinkingMode::ProviderDefault
+        );
+        assert_eq!(local_payload(None)["max_tokens"], 1024);
+        assert_eq!(local_payload(Some(10_000))["max_tokens"], 2048);
+        assert_eq!(local_payload(Some(1))["max_tokens"], 64);
+        assert!(local_payload(None).get("thinking").is_none());
     }
 }
 

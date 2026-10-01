@@ -12,6 +12,7 @@ import {
   localModelOptionForModel,
   localSttOptionsForDisplay,
   TEXT_MODEL_OPTIONS,
+  TEXT_MODEL_PRESETS,
 } from "../windows/settings/tabs/settingsTabsTypes";
 
 const CURATED_LOCAL_IDS = [
@@ -92,6 +93,28 @@ describe("curated API STT suggestions", () => {
     for (const adapter of API_ADAPTERS) {
       expect(adapter).toHaveProperty("defaultEndpoint");
     }
+  });
+});
+
+describe("text-processing presets", () => {
+  it("offers DeepSeek as the main API preset with non-thinking cleanup", () => {
+    const deepseek = TEXT_MODEL_PRESETS.find((preset) => preset.id === "deepseek");
+
+    expect(deepseek).toBeDefined();
+    expect(deepseek?.recommended).toBe(true);
+    expect(deepseek?.endpoint).toBe("https://api.deepseek.com");
+    expect(deepseek?.model).toBe("deepseek-flash");
+    expect(deepseek?.nonThinking).toBe(true);
+    // The preset model stays selectable in the manual model list.
+    expect(TEXT_MODEL_OPTIONS).toContain("deepseek-flash");
+  });
+
+  it("never carries credentials: the user's key stays untouched by a preset", () => {
+    for (const preset of TEXT_MODEL_PRESETS) {
+      expect(Object.keys(preset)).not.toContain("apiKey");
+      expect(Object.keys(preset)).not.toContain("llmApiKey");
+    }
+    expect(TEXT_MODEL_OPTIONS).toContain("gpt-4o-mini");
   });
 });
 

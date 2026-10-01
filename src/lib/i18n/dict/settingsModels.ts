@@ -54,6 +54,12 @@ export const settingsModels = {
     en: "The text model responded. Settings saved.",
   },
   "models.textModel.testButton": { ru: "Тестировать", en: "Test" },
+  "models.textModel.presetLabel": { ru: "Пресет", en: "Preset" },
+  "models.textModel.customPreset": { ru: "Своя настройка", en: "Custom setup" },
+  "models.textModel.nonThinkingHint": {
+    ru: "Очистка выполняется без режима размышлений; ключ и модель можно изменить вручную.",
+    en: "Cleanup runs without a reasoning trace; the key and model can still be edited manually.",
+  },
 
   "models.modeCommit.label": { ru: "Режим: {mode}", en: "Mode: {mode}" },
   "models.modeCommit.select": { ru: "Выбрать", en: "Select" },

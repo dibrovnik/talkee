@@ -88,7 +88,40 @@ interface ApiAdapterModelOption {
 }
 
 const CUSTOM_API_MODEL_VALUE = "__custom_model__";
-const TEXT_MODEL_OPTIONS = ["gpt-4o-mini", "gpt-4.1-mini", "gpt-4.1"];
+
+interface TextModelPreset {
+  id: string;
+  label: string;
+  endpoint: string;
+  model: string;
+  /** Cleanup must run without a reasoning trace (DeepSeek enables it by default). */
+  nonThinking: boolean;
+  recommended?: boolean;
+}
+
+const CUSTOM_TEXT_PRESET_VALUE = "__custom_text_preset__";
+
+// The main text-processing suggestion: DeepSeek's [OI]-compatible endpoint with
+// thinking explicitly disabled. Choosing a preset only prefills the user's own
+// endpoint/model fields — the API key and any custom values stay untouched, and
+// no request is sent until the user asks for a connection check.
+const TEXT_MODEL_PRESETS: TextModelPreset[] = [
+  {
+    id: "deepseek",
+    label: "DeepSeek",
+    endpoint: "https://api.deepseek.com",
+    model: "deepseek-flash",
+    nonThinking: true,
+    recommended: true,
+  },
+];
+
+const TEXT_MODEL_OPTIONS = [
+  ...TEXT_MODEL_PRESETS.map((preset) => preset.model),
+  "gpt-4o-mini",
+  "gpt-4.1-mini",
+  "gpt-4.1",
+];
 
 const API_ADAPTER_CATALOG: ApiAdapterOption[] = [
   {
@@ -732,6 +765,7 @@ export {
   apiAdapterById,
   apiAdaptersForDisplay,
   CUSTOM_API_MODEL_VALUE,
+  CUSTOM_TEXT_PRESET_VALUE,
   isLocalSttEndpoint,
   KNOWN_LOCAL_MODEL_OPTIONS,
   LEGACY_API_ADAPTERS,
@@ -757,4 +791,6 @@ export {
   type RecognitionSectionKind,
   type SettingsTabsProps,
   TEXT_MODEL_OPTIONS,
+  TEXT_MODEL_PRESETS,
+  type TextModelPreset,
 };

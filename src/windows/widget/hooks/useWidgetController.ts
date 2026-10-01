@@ -80,7 +80,8 @@ export function useWidgetController({
   onVoiceRecordingStart,
   onVoiceRecordingStartFailed,
 }: WidgetControllerOptions = {}): WidgetControllerState {
-  const widgetWindow = getCurrentWindow();
+  // Tauri returns a new Window each call; keep effect dependencies stable.
+  const [widgetWindow] = useState(getCurrentWindow);
 
   // ── Centralized machine state ───────────────────────────────────────────
   const machineRef = useRef<WidgetMachineState>(initialWidgetMachineState);

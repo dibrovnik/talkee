@@ -1,6 +1,5 @@
-import type { KeyboardEvent, ReactElement } from "react";
-
-import { segmentIndexForKey } from "./keyboard";
+import * as RadioGroup from "@radix-ui/react-radio-group";
+import type { ReactElement } from "react";
 
 export interface SegmentedControlOption<Value extends string = string> {
   value: Value;
@@ -26,50 +25,34 @@ export function SegmentedControl<Value extends string = string>({
   disabled,
   className,
 }: SegmentedControlProps<Value>): ReactElement {
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (disabled) {
-      return;
-    }
-    const current = options.findIndex((option) => option.value === value);
-    const next = segmentIndexForKey(current, event.key, options.length);
-    if (next === null) {
-      return;
-    }
-    event.preventDefault();
-    const option = options[next];
-    if (option) {
-      onChange(option.value);
-    }
-  };
-
   return (
-    <div
-      role="radiogroup"
+    <RadioGroup.Root
+      value={value}
+      onValueChange={(next) => {
+        const option = options.find((option) => option.value === next);
+        if (option) onChange(option.value);
+      }}
+      orientation="horizontal"
+      disabled={disabled}
       aria-label={ariaLabel}
       className={["ui-segmented", className ?? ""].filter(Boolean).join(" ")}
-      onKeyDown={handleKeyDown}
     >
       {options.map((option) => {
         const selected = option.value === value;
         return (
-          // biome-ignore lint/a11y/useSemanticElements: a segmented control is a radiogroup of styled buttons; native radios cannot be rendered as macOS segments.
-          <button
+          <RadioGroup.Item
             key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            tabIndex={selected ? 0 : -1}
+            value={option.value}
             disabled={disabled}
             className={`ui-segment${selected ? " ui-segment--selected" : ""}`}
-            onClick={() => onChange(option.value)}
           >
             {option.label}
             {option.needsAttention ? (
               <span className="ui-segment__marker" title={option.label} aria-hidden="true" />
             ) : null}
-          </button>
+          </RadioGroup.Item>
         );
       })}
-    </div>
+    </RadioGroup.Root>
   );
 }

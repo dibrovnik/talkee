@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import { I18nProvider } from "./lib/i18n";
@@ -7,6 +8,12 @@ import { Widget } from "./windows/widget/Widget";
 import { WidgetNoticeOverlay } from "./windows/widget/WidgetNoticeOverlay";
 import { WidgetTextOverlay } from "./windows/widget/WidgetTextOverlay";
 
+const DevGallery = import.meta.env.DEV
+  ? lazy(() => import("./ui/Gallery").then((module) => ({ default: module.Gallery })))
+  : null;
+const isDevGallery =
+  import.meta.env.DEV && new URLSearchParams(window.location.search).has("ui-gallery");
+
 // Route based on Tauri window label passed via URL hash or query
 // Widget window opens at "/" — Settings window opens at "/settings"
 const isSettings =
@@ -15,6 +22,9 @@ const isSettings =
 const isWidgetNotice =
   new URLSearchParams(window.location.search).get("window") === "widget-notice";
 const isWidgetText = new URLSearchParams(window.location.search).get("window") === "widget-text";
+// Scope comfortable workspace controls to this window, including portals.
+document.documentElement.dataset.window = isSettings ? "settings" : "widget";
+
 const isWidgetShell = !isSettings && !isWidgetNotice && !isWidgetText;
 
 // The notch is outside the safe area. viewport-fit=cover lets the island paint
@@ -38,16 +48,27 @@ if (!rootElement) {
   throw new Error("Root element #root not found");
 }
 
-ReactDOM.createRoot(rootElement).render(
-  <I18nProvider>
-    {isSettings ? (
-      <SettingsApp />
-    ) : isWidgetNotice ? (
-      <WidgetNoticeOverlay />
-    ) : isWidgetText ? (
-      <WidgetTextOverlay />
-    ) : (
-      <Widget />
-    )}
-  </I18nProvider>,
-);
+if (isDevGallery && DevGallery) {
+  document.documentElement.dataset.window = "settings";
+  ReactDOM.createRoot(rootElement).render(
+    <div style={{ height: "100%", overflow: "auto", background: "var(--window-bg)", padding: 24 }}>
+      <Suspense fallback={null}>
+        <DevGallery />
+      </Suspense>
+    </div>,
+  );
+} else {
+  ReactDOM.createRoot(rootElement).render(
+    <I18nProvider>
+      {isSettings ? (
+        <SettingsApp />
+      ) : isWidgetNotice ? (
+        <WidgetNoticeOverlay />
+      ) : isWidgetText ? (
+        <WidgetTextOverlay />
+      ) : (
+        <Widget />
+      )}
+    </I18nProvider>,
+  );
+}

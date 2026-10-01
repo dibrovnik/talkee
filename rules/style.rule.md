@@ -2,7 +2,8 @@
 
 Use this rule whenever you create or edit Talkee UI: the settings window, onboarding, modals,
 the widget overlays, and shared components. Talkee is a macOS utility, so its UI follows the
-Apple Human Interface Guidelines and should read as a native macOS app, not as a web page.
+Apple Human Interface Guidelines for system integration. The main workspace takes its
+layout and comfortable density from the ChatGPT web interface, without copying its brand.
 
 This file is the single source of truth for the product style. `src/index.css` implements it,
 and `src/ui/` holds the primitives. `skills/talkee-product-ui-style/` only links here.
@@ -17,8 +18,9 @@ and `src/ui/` holds the primitives. `skills/talkee-product-ui-style/` only links
   uses them: the sidebar and the HUD overlays.
 - **Consistency.** Build every screen from the primitives below. The same control looks and
   behaves the same everywhere.
-- **Density for repeat use.** Use compact 13 pt body text, 22 pt controls, and grouped forms like
-  System Settings. Avoid oversized empty cards and marketing layouts.
+- **Comfortable workspace.** Use 14–15 px body text, captions of at least 12 px, 36 px controls
+  and 40 px primary actions. Group settings by purpose; avoid marketing layouts and nested
+  cards. Keep the widget, notch island and HUD overlays compact and unchanged.
 - **Accessibility.** Every control is keyboard-reachable with a visible focus ring. Respect
   Reduce Motion and Reduce Transparency, and keep text contrast at system levels.
 - **Language.** UI text is Russian, sentence case, and ends with an ellipsis («Настройки…») when
@@ -48,6 +50,9 @@ Tokens live in the `:root` block of `src/index.css`. Theme switching sets `color
 }
 ```
 
+- Comfortable typography is scoped through `html[data-window="settings"]`, including portal
+  content. Root tokens keep widget/HUD sizes. Workspace spacing uses 4/8/12/16/24/32 px,
+  a 240 px sidebar and a readable content column up to 900 px.
 - New markup uses these semantic tokens only. Legacy names in `src/index.css` (`--text-hi`,
   `--border`, `--surface`, ...) are aliases kept for older markup; do not use them in new code.
 - Status colors: `--danger` and `--success` (system red and green). Use them for state only,
@@ -70,10 +75,10 @@ Import from `src/ui` (`src/ui/index.ts`). A dev-only gallery (`src/ui/Gallery.ts
 | `SelectMenu` | Choices that need icons or descriptions | Custom list with full keyboard support |
 | `SegmentedControl` | Switching views or modes (2–5 options) | `radiogroup`; optional `needsAttention` marker |
 | `Slider` | Continuous values | NSSlider look; `onCommit` for saving on release |
-| `TextField`, `SecureField` | Text and secret input | 22 px, accent focus ring |
+| `TextField`, `SecureField` | Text and secret input | 36 px workspace / 22 px HUD, accent focus ring |
 | `FormSection` | Grouping settings | Title above, rounded `--control-bg` group, optional footer below |
 | `FormRow` | One setting in a group | Label left, control right, separators between rows |
-| `SidebarItem` | Settings sidebar navigation | 28 px, 16 px icon, `--selected-bg` when active |
+| `SidebarItem` | Settings sidebar navigation | 40 px in the workspace, 16 px icon, `--selected-bg` when active |
 | `Badge` | Short status labels | `variant`: `neutral`, `success`, `danger` |
 | `ProgressBar` | Determinate progress | `value` from 0 to 1 |
 | `Spinner` | Indeterminate progress | 12-stroke NSProgressIndicator look |
@@ -85,7 +90,9 @@ Shared CSS classes in `src/index.css` cover layouts that are not components: `ui
 ## Windows, Menus, and Materials
 
 - Settings window: native decorations with an overlay title bar and system traffic lights. The
-  `Sidebar` vibrancy fills the window, and the content area paints an opaque `--window-bg`.
+  `Sidebar` vibrancy fills the window beneath a restrained system-Canvas tint, and the
+  reading area paints opaque `Canvas`. This keeps explicit light/dark themes readable even
+  when native material and WebKit color-scheme do not switch together.
 - Widget overlays (`widget-notice`, `widget-text`): the native `HudWindow` material with a
   12 px radius. Their components draw no background of their own and use `--label` text in the
   dark color scheme.
@@ -120,3 +127,7 @@ Shared CSS classes in `src/index.css` cover layouts that are not components: `ui
 - One-off cards: glass panels, gradients, grid textures, decorative shadows, nested cards.
 - Hard-coded colors for text, backgrounds, or borders where a system token exists.
 - Custom-drawn replacements for controls that exist as primitives.
+
+Accessible Switch/RadioGroup/Select/Dialog/Tooltip behavior comes from focused Radix
+primitives behind `src/ui` wrappers. Radix is unstyled: Talkee tokens remain the visual
+source of truth. Keep native selects and simple button/input elements where sufficient.

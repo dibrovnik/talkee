@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
+import { TEXT_MODEL_PRESETS } from "../windows/settings/tabs/settingsTabsTypes";
 import { type AppSettings, normalizeSavedSettings } from "./store";
 import {
   isSummaryAvailable,
@@ -72,6 +73,24 @@ describe("resolveSummaryBackend local LLM behavior", () => {
       }),
     );
     expect(backend?.kind).toBe("local");
+  });
+
+  it("keeps the DeepSeek API preset on the custom runner, never the bundled one", () => {
+    const preset = TEXT_MODEL_PRESETS.find((candidate) => candidate.id === "deepseek");
+    const deepseekSettings = settings({
+      llmEndpoint: preset?.endpoint ?? "",
+      llmModel: preset?.model ?? "",
+      llmLocalModelId: "",
+      llmApiKey: "user-key",
+    });
+    const backend = resolveSummaryBackend(deepseekSettings);
+
+    expect(preset).toBeDefined();
+    // "custom" means the runner only calls process_text: the bundled runtime
+    // (start_local_llm) is never started for an API text model.
+    expect(backend?.kind).toBe("custom");
+    expect(backend?.label).toBe("https://api.deepseek.com");
+    expect(isSummaryAvailable(deepseekSettings)).toBe(true);
   });
 });
 

@@ -197,6 +197,16 @@ struct FileTranscriptionProgressPayload {
     current_chunk: usize,
     total_chunks: usize,
     message: String,
+    #[serde(flatten)]
+    work: Option<FileWorkProgress>,
+}
+
+#[derive(Serialize, Clone)]
+struct FileWorkProgress {
+    completed_chunks: usize,
+    completed_audio_seconds: Option<f64>,
+    total_audio_seconds: Option<f64>,
+    transcription_elapsed_seconds: f64,
 }
 
 const FILE_TRANSCRIPTION_PROGRESS_EVENT: &str = "file-transcription-progress";
@@ -1142,6 +1152,28 @@ fn emit_file_progress(
             current_chunk,
             total_chunks,
             message: message.to_string(),
+            work: None,
+        },
+    );
+}
+
+fn emit_file_work_progress(
+    app: &AppHandle,
+    request_id: &str,
+    current_chunk: usize,
+    total_chunks: usize,
+    message: &str,
+    work: FileWorkProgress,
+) {
+    let _ = app.emit(
+        FILE_TRANSCRIPTION_PROGRESS_EVENT,
+        FileTranscriptionProgressPayload {
+            request_id: request_id.to_string(),
+            status: "transcribing".to_string(),
+            current_chunk,
+            total_chunks,
+            message: message.to_string(),
+            work: Some(work),
         },
     );
 }
@@ -1577,16 +1609,26 @@ pub async fn transcribe_file_path(
         streaming_request_id: None,
     };
 
+    let transcription_started = std::time::Instant::now();
+    let total_audio_seconds = prepared.chunks.iter().try_fold(0.0, |sum, chunk| {
+        chunk.duration_seconds.map(|duration| sum + duration)
+    });
+    let mut completed_audio_seconds = Some(0.0);
     let mut parts = Vec::with_capacity(total_chunks);
     let mut stt_segments = Vec::<SttTranscriptSegment>::new();
     for (index, chunk) in prepared.chunks.iter().enumerate() {
-        emit_file_progress(
+        emit_file_work_progress(
             &app,
             &req.request_id,
-            "transcribing",
             index + 1,
             total_chunks,
             &format!("Распознаём фрагмент {} из {}", index + 1, total_chunks),
+            FileWorkProgress {
+                completed_chunks: index,
+                completed_audio_seconds,
+                total_audio_seconds,
+                transcription_elapsed_seconds: transcription_started.elapsed().as_secs_f64(),
+            },
         );
         logger::log_info(
             "FILE_TRANSCRIPTION",
@@ -1643,6 +1685,22 @@ pub async fn transcribe_file_path(
         if !text.is_empty() {
             parts.push(text);
         }
+        completed_audio_seconds = completed_audio_seconds
+            .zip(chunk.duration_seconds)
+            .map(|(completed, duration)| completed + duration);
+        emit_file_work_progress(
+            &app,
+            &req.request_id,
+            index + 1,
+            total_chunks,
+            &format!("Завершён фрагмент {} из {}", index + 1, total_chunks),
+            FileWorkProgress {
+                completed_chunks: index + 1,
+                completed_audio_seconds,
+                total_audio_seconds,
+                transcription_elapsed_seconds: transcription_started.elapsed().as_secs_f64(),
+            },
+        );
     }
 
     let _ = fs::remove_dir_all(&prepared.temp_dir);
@@ -2807,6 +2865,28 @@ pub async fn delete_stt_model(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn file_progress_does_not_complete_a_started_chunk() {
+        let payload = super::FileTranscriptionProgressPayload {
+            request_id: "file-1".to_string(),
+            status: "transcribing".to_string(),
+            current_chunk: 2,
+            total_chunks: 2,
+            message: String::new(),
+            work: Some(super::FileWorkProgress {
+                completed_chunks: 1,
+                completed_audio_seconds: Some(25.0),
+                total_audio_seconds: Some(40.0),
+                transcription_elapsed_seconds: 10.0,
+            }),
+        };
+        let json = serde_json::to_value(payload).unwrap();
+        assert_eq!(json["current_chunk"], 2);
+        assert_eq!(json["completed_chunks"], 1);
+        assert_eq!(json["completed_audio_seconds"], 25.0);
+        assert_eq!(json["request_id"], "file-1");
+    }
+
     use super::*;
 
     fn stt(start: f64, end: f64, text: &str) -> SttTranscriptSegment {

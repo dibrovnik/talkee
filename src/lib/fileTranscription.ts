@@ -2,11 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { tn } from "./i18n";
 import { logError, logInfo } from "./logger";
-import { beginProcessing, finishProcessing } from "./processingControl";
 import type { AppSettings, HistoryEntry } from "./store";
 import { formatErrorMessage } from "./utils";
-
-const fileInterruptedMessage = (): string => tn("fileTranscription.interrupted");
 
 const TRANSCRIPTION_MAX_BYTES = 25 * 1024 * 1024;
 const INPUT_MAX_BYTES = 200 * 1024 * 1024;
@@ -65,6 +62,10 @@ export interface FileTranscriptionProgress {
   currentChunk: number;
   totalChunks: number;
   message: string;
+  completedChunks?: number;
+  completedAudioSeconds?: number;
+  totalAudioSeconds?: number;
+  transcriptionElapsedSeconds?: number;
 }
 
 export interface FileTranscriptionResult {
@@ -176,6 +177,10 @@ interface FileTranscriptionProgressPayload {
   current_chunk: number;
   total_chunks: number;
   message: string;
+  completed_chunks?: number;
+  completed_audio_seconds?: number;
+  total_audio_seconds?: number;
+  transcription_elapsed_seconds?: number;
 }
 
 interface FilePathRequestSettings {
@@ -323,8 +328,9 @@ export function getFileTranscriptionPercent(
   if (status === "assembling") return 96;
 
   if (status === "transcribing" && progress && progress.totalChunks > 0) {
-    const currentChunk = Math.max(0, Math.min(progress.currentChunk, progress.totalChunks));
-    const chunkProgress = currentChunk / progress.totalChunks;
+    const completedChunks = progress.completedChunks ?? Math.max(0, progress.currentChunk - 1);
+    const completed = Math.max(0, Math.min(completedChunks, progress.totalChunks));
+    const chunkProgress = completed / progress.totalChunks;
     return Math.max(58, Math.min(94, Math.round(58 + chunkProgress * 36)));
   }
 
@@ -582,6 +588,10 @@ export async function transcribeFilePathOnly({
         currentChunk: event.payload.current_chunk || 0,
         totalChunks: event.payload.total_chunks || 0,
         message: event.payload.message || "",
+        completedChunks: event.payload.completed_chunks,
+        completedAudioSeconds: event.payload.completed_audio_seconds,
+        totalAudioSeconds: event.payload.total_audio_seconds,
+        transcriptionElapsedSeconds: event.payload.transcription_elapsed_seconds,
       };
 
       onStatus?.(progress.status);
@@ -656,64 +666,34 @@ export async function retryFileHistoryEntry(
   entry: HistoryEntry,
   settings: AppSettings,
 ): Promise<HistoryEntry> {
-  if (!entry.filePath) {
-    throw new Error(tn("fileTranscription.errNoSavedFile"));
-  }
-
-  const startedAt = Date.now();
-  const handle = await beginProcessing(entry, "update");
-
+  if (!entry.filePath) throw new Error(tn("fileTranscription.errNoSavedFile"));
+  const { subscribeFileJobs, startFileJob } = await import("./fileTranscriptionJobClient");
+  const { getHistoryEntry } = await import("./store");
+  const jobId = crypto.randomUUID();
+  let resolve!: () => void;
+  let reject!: (error: Error) => void;
+  const completed = new Promise<void>((done, fail) => {
+    resolve = done;
+    reject = fail;
+  });
+  const dispose = await subscribeFileJobs((jobs) => {
+    const job = jobs.find((item) => item.request.jobId === jobId);
+    if (!job) return;
+    if (job.state === "completed" || job.state === "interrupted") resolve();
+    else if (job.state === "failed")
+      reject(new Error(job.error || tn("fileTranscription.interrupted")));
+  });
   try {
-    const result = await transcribeFilePathOnly({
+    await startFileJob({
+      jobId,
       filePath: entry.filePath,
-      settings,
-      speakerDiarization: settings.fileSpeakerDiarization === true,
+      retryEntryId: entry.id,
+      mode: entry.mode === "speakers" || settings.fileSpeakerDiarization ? "speakers" : "plain",
       identifyFirstSpeakerAsUser: true,
     });
-
-    if (handle.isCancelled()) {
-      const interrupted: HistoryEntry = {
-        ...entry,
-        status: "interrupted",
-        errorMessage: fileInterruptedMessage(),
-      };
-      await finishProcessing(interrupted);
-      return interrupted;
-    }
-
-    const updated: HistoryEntry = {
-      ...entry,
-      raw: result.text,
-      cleaned: result.text,
-      status: "completed",
-      errorMessage: undefined,
-      processingTime: Date.now() - startedAt,
-      mode: result.mode,
-      speakers: result.speakers,
-      segments: result.segments,
-    };
-    await finishProcessing(updated);
-    return updated;
-  } catch (error) {
-    if (handle.isCancelled()) {
-      const interrupted: HistoryEntry = {
-        ...entry,
-        status: "interrupted",
-        errorMessage: fileInterruptedMessage(),
-      };
-      await finishProcessing(interrupted);
-      return interrupted;
-    }
-
-    const message = formatErrorMessage(error);
-    void logError("WIDGET_FILE", `File retry failed: ${message}`);
-    const userFacingMessage = toFileTranscriptionErrorMessage(error, { settings });
-    const failed: HistoryEntry = {
-      ...entry,
-      status: "failed",
-      errorMessage: userFacingMessage,
-    };
-    await finishProcessing(failed);
-    throw new Error(userFacingMessage);
+    await completed;
+    return (await getHistoryEntry(entry.id)) || entry;
+  } finally {
+    dispose();
   }
 }

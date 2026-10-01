@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+  getFileTranscriptionPercent,
   identifyFirstFileSpeakerAsUser,
   toFileTranscriptionErrorMessage,
 } from "./fileTranscription";
@@ -112,4 +113,16 @@ describe("file speaker identity", () => {
     expect(result.segments?.map((segment) => segment.speakerLabel)).toEqual(["Вы", "Гость 1"]);
     expect(result.text).toContain("[00:00:00] Вы: Здравствуйте");
   });
+});
+
+it("progress advances only after a chunk completes and reserves 100% for done", () => {
+  const progress = {
+    status: "transcribing" as const,
+    currentChunk: 2,
+    totalChunks: 2,
+    message: "",
+  };
+  expect(getFileTranscriptionPercent("transcribing", progress)).toBe(76);
+  expect(getFileTranscriptionPercent("transcribing", { ...progress, completedChunks: 2 })).toBe(94);
+  expect(getFileTranscriptionPercent("done", progress)).toBe(100);
 });

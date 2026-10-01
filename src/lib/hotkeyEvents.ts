@@ -10,6 +10,7 @@ export const HANDY_HOTKEY_EVENT = "handy-hotkey-event";
 export const SETTINGS_NAVIGATE_EVENT = "settings-navigate";
 export const DEV_ONBOARDING_REQUEST_EVENT = "dev-onboarding-request";
 export const DOCK_VISIBILITY_CHANGED_EVENT = "dock-visibility-changed";
+export const TRAY_CALL_ACTION_EVENT = "tray-call-action";
 export const CALL_CAPTURE_STOP_REQUEST_EVENT = "call-capture-stop-request";
 export const WIDGET_RETRY_PROCESSING_EVENT = "widget-retry-processing";
 export const PROCESSING_CANCEL_REQUEST_EVENT = "processing-cancel-request";
@@ -89,4 +90,19 @@ export interface DictationStreamUpdatePayload {
   status: "started" | "partial" | "final" | "error";
   text: string;
   message?: string;
+}
+
+export const FILE_JOB_START_EVENT = "file-job:start";
+export const FILE_JOB_CANCEL_EVENT = "file-job:cancel";
+export const FILE_JOB_SNAPSHOT_REQUEST_EVENT = "file-job:snapshot-request";
+export const FILE_JOB_SNAPSHOT_EVENT = "file-job:snapshot";
+export const FILE_JOB_UPDATE_EVENT = "file-job:update";
+
+export interface FileJobSnapshotRequest {
+  requestId: string;
+}
+
+export interface FileJobSnapshotResponse {
+  requestId: string;
+  jobs: import("./fileTranscriptionJobs").FileJobSnapshot[];
 }

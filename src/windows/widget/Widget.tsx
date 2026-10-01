@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { emit, listen } from "@tauri-apps/api/event";
+import { emit, emitTo, listen } from "@tauri-apps/api/event";
 import { Menu } from "@tauri-apps/api/menu";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -25,32 +25,39 @@ import {
   type FileTranscriptionStatus,
   fileNameFromPath,
   toFileTranscriptionErrorMessage,
-  transcribeFilePathOnly,
 } from "../../lib/fileTranscription";
+import {
+  createFileJobOwner,
+  executeFileJob,
+  type FileJobOwner,
+  type FileJobRequest,
+} from "../../lib/fileTranscriptionJobs";
 import {
   APP_DATA_MIGRATION_ERROR_EVENT,
   CALL_CAPTURE_STOP_REQUEST_EVENT,
   type CallCaptureStopRequestPayload,
   DICTATION_STREAM_UPDATE_EVENT,
   type DictationStreamUpdatePayload,
+  FILE_JOB_CANCEL_EVENT,
+  FILE_JOB_SNAPSHOT_EVENT,
+  FILE_JOB_SNAPSHOT_REQUEST_EVENT,
+  FILE_JOB_START_EVENT,
+  FILE_JOB_UPDATE_EVENT,
+  type FileJobSnapshotRequest,
   HISTORY_CLEARED_EVENT,
   HISTORY_DELETED_EVENT,
   HISTORY_UPDATED_EVENT,
   PROCESSING_CANCEL_REQUEST_EVENT,
   type ProcessingCancelRequestPayload,
   SETTINGS_UPDATED_EVENT,
+  TRAY_CALL_ACTION_EVENT,
   WIDGET_RETRY_PROCESSING_EVENT,
   type WidgetRetryProcessingPayload,
 } from "../../lib/hotkeyEvents";
 import { tn, useI18n } from "../../lib/i18n";
 import { logError, logInfo } from "../../lib/logger";
 import { requestSystemAudioPermission, requiresSystemAudioPermission } from "../../lib/permissions";
-import {
-  beginProcessing,
-  cancelProcessing,
-  finishProcessing,
-  isAbortError,
-} from "../../lib/processingControl";
+import { cancelProcessing } from "../../lib/processingControl";
 import {
   addHistoryEntry,
   DEFAULT_SELECTION_TRANSLATION_HOTKEY,
@@ -61,7 +68,7 @@ import {
   type TranslationSettings,
   updateHistoryEntry,
 } from "../../lib/store";
-import { setTrayRecording } from "../../lib/tray";
+import { setTrayRecording, updateCallMenu } from "../../lib/tray";
 import { scaleWidgetDimension } from "../../lib/widgetScale";
 import { useWidgetController } from "./hooks/useWidgetController";
 import { IslandPresentation } from "./island/IslandPresentation";
@@ -286,6 +293,16 @@ export function Widget(): ReactNode {
   // request from the table can reset the matching widget UI immediately (a local
   // `invoke` keeps running and would otherwise leave the spinner going).
   const callProcessingIdRef = useRef<string | null>(null);
+  const wakeFileJobRef = useRef<(() => void) | null>(null);
+  const fileJobExecutionRef = useRef<
+    (
+      request: FileJobRequest,
+      execution: import("../../lib/fileTranscriptionJobs").FileJobExecution,
+    ) => Promise<import("../../lib/fileTranscription").FileTranscriptionResult>
+  >(async () => {
+    throw new Error("File owner is not ready");
+  });
+  const fileJobsRef = useRef<FileJobOwner | null>(null);
   const fileProcessingIdRef = useRef<string | null>(null);
   const callMicPausedForVoiceRef = useRef(false);
   const callSystemAudioPermissionReadyRef = useRef(false);
@@ -298,6 +315,7 @@ export function Widget(): ReactNode {
   const liveAdapterIdRef = useRef("unknown");
   const liveAudioWatchdogTimerRef = useRef<number | null>(null);
   const stopLiveTranslationRef = useRef<() => Promise<void>>(async () => {});
+  const startCallListeningRef = useRef<() => Promise<void>>(async () => {});
   const stopCallListeningRef = useRef<() => Promise<void>>(async () => {});
   const pauseCallMicForVoice = useCallback(() => {
     if (callStateRef.current !== "recording") {
@@ -405,7 +423,12 @@ export function Widget(): ReactNode {
   const [fileDropName, setFileDropName] = useState("");
   const [fileStatus, setFileStatus] = useState<FileTranscriptionStatus | null>(null);
   const [fileProgress, setFileProgress] = useState<FileTranscriptionProgress | null>(null);
-  const [callState, setCallState] = useState<WidgetCallState>("idle");
+  const [callState, setCallStateValue] = useState<WidgetCallState>("idle");
+  const setCallState = useCallback((next: WidgetCallState): void => {
+    // Claim the transition before awaiting or React committing a render.
+    callStateRef.current = next;
+    setCallStateValue(next);
+  }, []);
   const [callSession, setCallSession] = useState<CallCaptureSession | null>(null);
   const [callStartedAt, setCallStartedAt] = useState<number>(0);
   const [callError, setCallError] = useState<string>("");
@@ -719,7 +742,15 @@ export function Widget(): ReactNode {
         if (payload.entryId === callProcessingIdRef.current) {
           resetCallProcessingUi();
         } else if (payload.entryId === fileProcessingIdRef.current) {
-          resetFileProcessingUi();
+          const job = fileJobsRef.current
+            ?.snapshot()
+            .find(
+              (job) =>
+                (job.request.retryEntryId || job.request.jobId) === payload.entryId &&
+                job.state === "running",
+            );
+          if (job) fileJobsRef.current?.cancel(job.request.jobId);
+          if (!job) resetFileProcessingUi();
         }
       },
     );
@@ -747,8 +778,36 @@ export function Widget(): ReactNode {
   }, []);
 
   useEffect(() => {
-    callStateRef.current = callState;
-  }, [callState]);
+    updateCallMenu(
+      callState,
+      state === "idle" && fileDropState === "idle" && liveTranslationState === "idle",
+    );
+  }, [callState, state, fileDropState, liveTranslationState]);
+
+  useEffect(() => {
+    const subscription = listen<"start" | "stop">(TRAY_CALL_ACTION_EVENT, ({ payload }) => {
+      const run = async (): Promise<void> => {
+        try {
+          if (payload === "start" && callStateRef.current === "idle") {
+            await startCallListeningRef.current();
+          } else if (payload === "stop" && callStateRef.current === "recording") {
+            await stopCallListeningRef.current();
+          }
+        } finally {
+          updateCallMenu(
+            callStateRef.current,
+            stateRef.current === "idle" &&
+              fileDropStateRef.current === "idle" &&
+              liveTranslationStateRef.current === "idle",
+          );
+        }
+      };
+      void run().catch((error) => logError("TRAY", `Call action failed: ${String(error)}`));
+    });
+    return () => {
+      void subscription.then((dispose) => dispose());
+    };
+  }, []);
 
   const showCallNotice = useCallback((message: string): void => {
     showWidgetErrorOverlay(message);
@@ -794,6 +853,7 @@ export function Widget(): ReactNode {
     clearFileDragLeaveTimer();
     clearFileCloseTimer();
     fileDragDepthRef.current = 0;
+    fileDropStateRef.current = "idle";
     setFileDropState("idle");
     setFileDropName("");
     setFileStatus(null);
@@ -858,8 +918,10 @@ export function Widget(): ReactNode {
     if (
       stateRef.current !== "idle" ||
       fileDropStateRef.current !== "idle" ||
-      callState !== "idle"
+      liveTranslationStateRef.current !== "idle" ||
+      callStateRef.current !== "idle"
     ) {
+      showCallNotice(tn("callCapture.busy"));
       return;
     }
 
@@ -1077,7 +1139,7 @@ export function Widget(): ReactNode {
   };
 
   const stopCallListening = async (): Promise<void> => {
-    if (!callSession || callState !== "recording") {
+    if (!callSession || callStateRef.current !== "recording") {
       return;
     }
 
@@ -1324,110 +1386,135 @@ export function Widget(): ReactNode {
       setCallSettings(null);
     }
   };
+  startCallListeningRef.current = startCallListening;
   stopCallListeningRef.current = stopCallListening;
 
-  fileProcessRef.current = async (filePath: string): Promise<void> => {
-    if (!filePath || !canAcceptFileDrop()) {
-      return;
+  useEffect(() => {
+    if (state === "idle" && callState === "idle" && liveTranslationState === "idle") {
+      wakeFileJobRef.current?.();
     }
+  }, [state, callState, liveTranslationState]);
 
+  fileJobExecutionRef.current = async (request, execution) => {
+    // Keep one queue slot while a capture owns the microphone/runtime, without polling.
+    if (
+      stateRef.current !== "idle" ||
+      callStateRef.current !== "idle" ||
+      liveTranslationStateRef.current !== "idle"
+    ) {
+      await new Promise<void>((resolve, reject) => {
+        const cleanup = (): void => {
+          wakeFileJobRef.current = null;
+          execution.signal.removeEventListener("abort", abort);
+        };
+        const abort = (): void => {
+          cleanup();
+          reject(new DOMException("Обработка прервана", "AbortError"));
+        };
+        wakeFileJobRef.current = () => {
+          cleanup();
+          resolve();
+        };
+        execution.signal.addEventListener("abort", abort, { once: true });
+        if (execution.signal.aborted) abort();
+      });
+    }
+    if (execution.signal.aborted) throw new DOMException("Обработка прервана", "AbortError");
     clearFileResetTimer();
     clearFileDragLeaveTimer();
     clearFileCloseTimer();
-    const fileName = fileNameFromPath(filePath);
+    fileProcessingIdRef.current = request.retryEntryId || request.jobId;
+    fileDropStateRef.current = "processing";
     setFileDropState("processing");
-    setFileDropName(fileName);
+    setFileDropName(fileNameFromPath(request.filePath));
     setFileStatus("preparing");
     setFileProgress(null);
-    await resizeWidgetForFileDrop(true);
-
-    const settings = await getSettings({ reload: true });
-    const startedAt = Date.now();
-    // Persist a "processing" row up front (keeping the source path for re-runs).
-    const baseEntry: HistoryEntry = {
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-      duration: 0,
-      raw: "",
-      cleaned: "",
-      source: "file",
-      fileName,
-      status: "processing",
-      filePath,
-    };
-    const handle = await beginProcessing(baseEntry, "add");
-    fileProcessingIdRef.current = baseEntry.id;
-
     try {
-      const transcription = await transcribeFilePathOnly({
-        filePath,
-        settings,
-        onStatus: setFileStatus,
-        onProgress: setFileProgress,
-        speakerDiarization: settings.fileSpeakerDiarization === true,
-        identifyFirstSpeakerAsUser: true,
+      await resizeWidgetForFileDrop(true);
+      const result = await executeFileJob(request, {
+        signal: execution.signal,
+        progress(progress) {
+          execution.progress(progress);
+          if (execution.signal.aborted) return;
+          setFileStatus(progress.status);
+          setFileProgress(progress);
+        },
       });
-
-      if (handle.isCancelled()) {
-        // UI was already reset by the stop handler; just record the outcome.
-        await finishProcessing({
-          ...baseEntry,
-          status: "interrupted",
-          errorMessage: t("widget.processing.interrupted"),
-        });
-        return;
+      if (!execution.signal.aborted) {
+        setLatestCopyText(result.text);
+        setPendingFileResultId(request.retryEntryId || request.jobId);
+        fileDropStateRef.current = "success";
+        setFileDropState("success");
+        setFileStatus("done");
+        setFileProgress(null);
+        scheduleFileDropReset();
       }
-      fileProcessingIdRef.current = null;
-
-      const entry: HistoryEntry = {
-        ...baseEntry,
-        raw: transcription.text,
-        cleaned: transcription.text,
-        status: "completed",
-        errorMessage: undefined,
-        processingTime: Date.now() - startedAt,
-        mode: transcription.mode,
-        speakers: transcription.speakers,
-        segments: transcription.segments,
-      };
-
-      await finishProcessing(entry);
-      setLatestCopyText(getCopyableText(entry));
-      setPendingFileResultId(entry.id);
-      setFileDropState("success");
-      setFileStatus("done");
-      setFileProgress(null);
-      scheduleFileDropReset();
+      return result;
     } catch (error) {
-      if (handle.isCancelled() || isAbortError(error)) {
-        // UI was already reset by the stop handler; just record the outcome.
-        await finishProcessing({
-          ...baseEntry,
-          status: "interrupted",
-          errorMessage: t("widget.processing.interrupted"),
-        });
-        return;
+      if (execution.signal.aborted) {
+        resetFileProcessingUi();
+      } else {
+        logError("FILE_JOBS", `File transcription failed: ${String(error)}`);
+        fileDropStateRef.current = "error";
+        setFileDropState("error");
+        setFileStatus(null);
+        setFileProgress(null);
+        setFileDropName(toFileTranscriptionErrorMessage(error));
+        scheduleFileDropReset();
       }
-      fileProcessingIdRef.current = null;
-
-      logError(
-        "WIDGET_FILE",
-        `File transcription failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      await finishProcessing({
-        ...baseEntry,
-        status: "failed",
-        errorMessage: toFileTranscriptionErrorMessage(error, { settings }),
-      });
-      setFileDropState("error");
-      setFileStatus(null);
-      setFileProgress(null);
-      setFileDropName(toFileTranscriptionErrorMessage(error, { settings }));
-      scheduleFileDropReset();
+      throw error;
     } finally {
-      handle.finish();
+      fileProcessingIdRef.current = null;
     }
   };
+
+  if (!fileJobsRef.current) {
+    fileJobsRef.current = createFileJobOwner(
+      (request, execution) => fileJobExecutionRef.current(request, execution),
+      (job) => {
+        void emitTo("settings", FILE_JOB_UPDATE_EVENT, job).catch((error) =>
+          logError("FILE_JOBS", `Publish failed: ${String(error)}`),
+        );
+      },
+    );
+  }
+
+  fileProcessRef.current = async (filePath: string): Promise<void> => {
+    if (!filePath || !canAcceptFileDrop()) return;
+    const settings = await getSettings();
+    fileJobsRef.current?.start({
+      jobId: crypto.randomUUID(),
+      filePath,
+      mode: settings.fileSpeakerDiarization ? "speakers" : "plain",
+      identifyFirstSpeakerAsUser: true,
+    });
+  };
+
+  useEffect(() => {
+    const start = listen<FileJobRequest>(FILE_JOB_START_EVENT, ({ payload }) => {
+      try {
+        fileJobsRef.current?.start(payload);
+      } catch (error) {
+        logError("FILE_JOBS", `Invalid start request: ${String(error)}`);
+      }
+    });
+    const cancel = listen<{ jobId: string }>(FILE_JOB_CANCEL_EVENT, ({ payload }) => {
+      fileJobsRef.current?.cancel(payload.jobId);
+    });
+    const snapshots = listen<FileJobSnapshotRequest>(
+      FILE_JOB_SNAPSHOT_REQUEST_EVENT,
+      ({ payload }) => {
+        void emitTo("settings", FILE_JOB_SNAPSHOT_EVENT, {
+          requestId: payload.requestId,
+          jobs: fileJobsRef.current?.snapshot() || [],
+        }).catch((error) => logError("FILE_JOBS", `Snapshot failed: ${String(error)}`));
+      },
+    );
+    return () => {
+      for (const subscription of [start, cancel, snapshots])
+        void subscription.then((dispose) => dispose());
+    };
+  }, []);
 
   useEffect(() => {
     let disposed = false;

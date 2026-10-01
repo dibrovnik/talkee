@@ -5,7 +5,7 @@ use std::path::Path;
 
 use super::ffmpeg::run_ffmpeg;
 use super::paths::{file_extension, unique_temp_path};
-use super::probe::local_stt_ready_wav_duration_seconds;
+use super::probe::{local_stt_ready_wav_duration_seconds, segment_durations};
 use super::types::{
     PrepareMediaRequest, PrepareMediaResponse, PreparedDiarizationAudio, PreparedMediaChunk,
     PreparedMediaChunks,
@@ -82,6 +82,15 @@ impl TranscriptionChunkSpec {
             "segment".to_string(),
             "-segment_time".to_string(),
             self.segment_seconds.to_string(),
+            "-segment_list".to_string(),
+            output_pattern
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+                .join("durations.csv")
+                .to_string_lossy()
+                .to_string(),
+            "-segment_list_type".to_string(),
+            "csv".to_string(),
             "-reset_timestamps".to_string(),
             "1".to_string(),
             output_pattern.to_string_lossy().to_string(),
@@ -145,6 +154,7 @@ pub async fn prepare_media_file_chunks_for_transcription(
                         mime_type: "audio/wav".to_string(),
                         size_bytes: metadata.len(),
                         start_offset_seconds: 0.0,
+                        duration_seconds: ready_wav_duration,
                     }],
                 });
             }
@@ -195,6 +205,9 @@ pub async fn prepare_media_file_chunks_for_transcription(
         return Err("Не удалось извлечь аудио из файла.".to_string());
     }
 
+    let durations = fs::read_to_string(chunks_dir.join("durations.csv"))
+        .map(|csv| segment_durations(&csv))
+        .unwrap_or_default();
     let mut chunks = Vec::with_capacity(chunk_paths.len());
     for path in chunk_paths {
         let metadata = fs::metadata(&path).map_err(|err| {
@@ -215,12 +228,14 @@ pub async fn prepare_media_file_chunks_for_transcription(
             .unwrap_or(chunk_spec.fallback_file_name)
             .to_string();
 
+        let duration_seconds = durations.get(&file_name).copied();
         chunks.push(PreparedMediaChunk {
             path,
             file_name,
             mime_type: chunk_spec.mime_type.to_string(),
             size_bytes: metadata.len(),
             start_offset_seconds: chunks.len() as f64 * chunk_spec.segment_seconds as f64,
+            duration_seconds,
         });
     }
 

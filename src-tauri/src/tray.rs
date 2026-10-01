@@ -20,6 +20,7 @@ const TRAY_ID: &str = "talkee-main-tray";
 const TRAY_ICON_PNG: &[u8] = include_bytes!("../icons/tray/tray@2x.png");
 const TRAY_ICON_RECORDING_PNG: &[u8] = include_bytes!("../icons/tray/tray-recording@2x.png");
 const TRAY_OPEN_ID: &str = "talkee-tray-open";
+const TRAY_CALL_ID: &str = "talkee-tray-call";
 const TRAY_HISTORY_ID: &str = "talkee-tray-history";
 const TRAY_FILE_ID: &str = "talkee-tray-file";
 const TRAY_CHAT_ID: &str = "talkee-tray-chat";
@@ -34,6 +35,8 @@ const TRAY_QUIT_ID: &str = "talkee-tray-quit";
 
 struct TrayState {
     _tray: TrayIcon,
+    call_item: MenuItem<Wry>,
+    call_action: Mutex<Option<CallAction>>,
     dock_item: CheckMenuItem<Wry>,
     cleanup_item: CheckMenuItem<Wry>,
     cleanup_styles: Submenu<Wry>,
@@ -42,6 +45,7 @@ struct TrayState {
 
 #[derive(Debug, PartialEq, Eq)]
 enum TrayAction {
+    Call,
     CleanupToggle,
     CleanupSelect(String),
     Open,
@@ -64,6 +68,7 @@ fn tray_action(menu_id: &str) -> Option<TrayAction> {
     }
     match menu_id {
         "talkee-cleanup-toggle" => Some(TrayAction::CleanupToggle),
+        TRAY_CALL_ID => Some(TrayAction::Call),
         TRAY_OPEN_ID => Some(TrayAction::Open),
         TRAY_HISTORY_ID => Some(TrayAction::History),
         TRAY_FILE_ID => Some(TrayAction::FileTranscription),
@@ -117,6 +122,13 @@ fn open_settings_tab(app: &AppHandle, tab: &'static str) {
 
 pub fn setup(app: &App) -> tauri::Result<()> {
     let open_item = MenuItem::with_id(app, TRAY_OPEN_ID, "Открыть Talkee…", true, None::<&str>)?;
+    let call_item = MenuItem::with_id(
+        app,
+        TRAY_CALL_ID,
+        "Начать запись созвона",
+        false,
+        None::<&str>,
+    )?;
     let history_item = MenuItem::with_id(app, TRAY_HISTORY_ID, "История…", true, None::<&str>)?;
     let file_item = MenuItem::with_id(
         app,
@@ -186,6 +198,7 @@ pub fn setup(app: &App) -> tauri::Result<()> {
         &[
             &open_item,
             &PredefinedMenuItem::separator(app)?,
+            &call_item,
             &history_item,
             &file_item,
             &chat_item,
@@ -231,6 +244,27 @@ pub fn setup(app: &App) -> tauri::Result<()> {
                     },
                 );
             }
+            Some(TrayAction::Call) => {
+                let state = app.state::<TrayState>();
+                let action = state
+                    .call_action
+                    .lock()
+                    .ok()
+                    .and_then(|mut action| action.take());
+                if let Some(action) = action {
+                    let _ = state.call_item.set_enabled(false);
+                    if let Err(error) = app.emit_to("widget", "tray-call-action", action) {
+                        logger::log_error(
+                            "TRAY",
+                            &format!("Failed to dispatch call action: {error}"),
+                        );
+                        if let Ok(mut current) = state.call_action.lock() {
+                            *current = Some(action);
+                        }
+                        let _ = state.call_item.set_enabled(true);
+                    }
+                }
+            }
             Some(TrayAction::Open) => open_talkee(app),
             Some(TrayAction::History) => open_settings_tab(app, "main"),
             Some(TrayAction::FileTranscription) => open_settings_tab(app, "file"),
@@ -253,6 +287,8 @@ pub fn setup(app: &App) -> tauri::Result<()> {
     let tray = builder.icon(icon).icon_as_template(true).build(app)?;
     app.manage(TrayState {
         _tray: tray,
+        call_item,
+        call_action: Mutex::new(None),
         dock_item,
         cleanup_item,
         cleanup_styles,
@@ -296,7 +332,32 @@ mod tests {
     use super::*;
 
     #[test]
+    fn call_menu_disables_busy_states_and_consumes_action_once() {
+        assert_eq!(
+            call_menu_presentation(CallMenuPhase::Idle, true).1,
+            Some(CallAction::Start)
+        );
+        assert_eq!(call_menu_presentation(CallMenuPhase::Idle, false).1, None);
+        assert_eq!(
+            call_menu_presentation(CallMenuPhase::Recording, false).1,
+            Some(CallAction::Stop)
+        );
+        for phase in [
+            CallMenuPhase::Starting,
+            CallMenuPhase::Processing,
+            CallMenuPhase::Success,
+            CallMenuPhase::Error,
+        ] {
+            assert_eq!(call_menu_presentation(phase, true).1, None);
+        }
+        let action = Mutex::new(Some(CallAction::Start));
+        assert_eq!(action.lock().unwrap().take(), Some(CallAction::Start));
+        assert_eq!(action.lock().unwrap().take(), None);
+    }
+
+    #[test]
     fn maps_supported_tray_menu_actions() {
+        assert_eq!(tray_action(TRAY_CALL_ID), Some(TrayAction::Call));
         assert_eq!(tray_action(TRAY_OPEN_ID), Some(TrayAction::Open));
         assert_eq!(tray_action(TRAY_HISTORY_ID), Some(TrayAction::History));
         assert_eq!(
@@ -377,4 +438,57 @@ pub fn update_cleanup_menu(
         .cleanup_item
         .set_checked(enabled)
         .map_err(|err| err.to_string())
+}
+
+#[derive(Clone, Copy, Serialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum CallAction {
+    Start,
+    Stop,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CallMenuPhase {
+    Idle,
+    Starting,
+    Recording,
+    Processing,
+    Success,
+    Error,
+}
+
+fn call_menu_presentation(
+    phase: CallMenuPhase,
+    available: bool,
+) -> (&'static str, Option<CallAction>) {
+    match phase {
+        CallMenuPhase::Idle if available => ("Начать запись созвона", Some(CallAction::Start)),
+        CallMenuPhase::Recording => ("Остановить запись созвона", Some(CallAction::Stop)),
+        CallMenuPhase::Starting => ("Начинаем запись созвона…", None),
+        CallMenuPhase::Processing => ("Завершаем созвон…", None),
+        _ => ("Начать запись созвона", None),
+    }
+}
+
+#[tauri::command]
+pub fn update_call_menu(
+    app: AppHandle,
+    phase: CallMenuPhase,
+    available: bool,
+) -> Result<(), String> {
+    let state = app.state::<TrayState>();
+    let (label, action) = call_menu_presentation(phase, available);
+    state
+        .call_item
+        .set_text(label)
+        .map_err(|error| error.to_string())?;
+    *state
+        .call_action
+        .lock()
+        .map_err(|error| error.to_string())? = action;
+    state
+        .call_item
+        .set_enabled(action.is_some())
+        .map_err(|error| error.to_string())
 }

@@ -196,6 +196,7 @@ pub fn run() {
             widget::hide_widget_text_overlay,
             widget::hide_widget_text_overlay_request,
             tray::set_tray_recording,
+            tray::update_call_menu,
             tray::update_cleanup_menu,
             paste::remember_paste_target_window,
             paste::copy_selected_text,

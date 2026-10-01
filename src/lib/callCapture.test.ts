@@ -49,3 +49,18 @@ describe("call live transcript", () => {
     ]);
   });
 });
+
+test("tray uses the shared call pipeline with synchronous duplicate guards", async () => {
+  const { readFileSync } = await import("node:fs");
+  const widget = readFileSync(new URL("../windows/widget/Widget.tsx", import.meta.url), "utf8");
+  const pipeline = readFileSync(new URL("./callCapture.ts", import.meta.url), "utf8");
+  expect(widget).toContain('listen<"start" | "stop">(TRAY_CALL_ACTION_EVENT');
+  expect(widget).toContain("await startCallListeningRef.current()");
+  expect(widget).toContain("await stopCallListeningRef.current()");
+  expect(widget).toContain("callStateRef.current = next");
+  expect(widget).toContain('callStateRef.current !== "idle"');
+  expect(widget).toContain('callStateRef.current !== "recording"');
+  // Call tracks are never gated by the voice-dictation retention setting.
+  expect(pipeline).not.toContain("saveRecordingAudio");
+  expect(pipeline).toContain("callTracks: session.tracks.map");
+});

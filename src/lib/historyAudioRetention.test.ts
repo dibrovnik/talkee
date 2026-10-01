@@ -156,3 +156,19 @@ describe("history storage compaction", () => {
     expect(keys).not.toContain("audioBase64");
   });
 });
+
+it("preserves both call tracks after success or failure with dictation audio disabled", () => {
+  expect(normalizeSavedSettings({ saveRecordingAudio: false }).saveRecordingAudio).toBe(false);
+  for (const status of ["completed", "failed"] as const) {
+    const tracks = [
+      { kind: "mic" as const, label: "Микрофон", path: "/tmp/call-mic.wav" },
+      { kind: "system" as const, label: "Система", path: "/tmp/call-system.wav" },
+    ];
+    const entry = { ...historyEntry({ id: "call-1", source: "call" }), status, callTracks: tracks };
+    const result = pruneHistoryAudioRetention([entry]);
+    expect(result.pathsToDelete).toEqual([]);
+    expect(result.history[0].callTracks).toEqual(tracks);
+    expect(compactHistoryEntryForStorage(entry).callTracks).toEqual(tracks);
+    expect(normalizeHistoryEntryFromStorage(entry).callTracks).toEqual(tracks);
+  }
+});

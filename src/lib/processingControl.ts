@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { HISTORY_UPDATED_EVENT } from "./hotkeyEvents";
 import { tn } from "./i18n";
@@ -10,6 +11,23 @@ import { addHistoryEntry, type HistoryEntry, updateHistoryEntry } from "./store"
 // which the widget forwards to cancelProcessing().
 
 const interruptedMessage = (): string => tn("processing.interrupted");
+
+/**
+ * Native request ids for long file jobs, keyed by history entry id. Aborting
+ * the JS signal only stops the UI from waiting: Rust keeps working unless it is
+ * told to stop, so cancellation also flags the matching native request.
+ */
+const nativeFileRequests = new Map<string, string>();
+
+export function registerNativeFileRequest(entryId: string, requestId: string): void {
+  if (entryId && requestId) {
+    nativeFileRequests.set(entryId, requestId);
+  }
+}
+
+export function clearNativeFileRequest(entryId: string): void {
+  nativeFileRequests.delete(entryId);
+}
 
 interface ActiveProcessing {
   cancelled: boolean;
@@ -99,6 +117,16 @@ export async function cancelProcessing(entryId: string): Promise<boolean> {
 
   item.cancelled = true;
   item.abort.abort();
+
+  // Ask the native pipeline to stop cooperatively. The invoke resolves as soon
+  // as the flag is set; the running request reports its own failure.
+  const nativeRequestId = nativeFileRequests.get(entryId);
+  if (nativeRequestId) {
+    void invoke("cancel_file_job", { requestId: nativeRequestId }).catch((error) => {
+      void logError("PROCESSING", `Native cancellation failed: ${String(error)}`);
+    });
+  }
+
   logInfo("PROCESSING", `Cancellation requested for entry=${entryId}`);
 
   try {

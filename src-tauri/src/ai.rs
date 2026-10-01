@@ -1,4 +1,5 @@
 mod errors;
+pub mod file_jobs;
 mod routing;
 
 use self::routing::{
@@ -27,6 +28,11 @@ static LOCAL_HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 static LOCAL_LONG_HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 const DICTATION_STREAM_UPDATE_EVENT: &str = "dictation-stream:update";
 
+/// Bounded budget for short interactive STT (dictation) requests.
+const BOUNDED_HTTP_TIMEOUT_SECS: u64 = 120;
+/// Budget for long file chunks, diarization and local model downloads.
+const LONG_HTTP_TIMEOUT_SECS: u64 = 1800;
+
 fn http_client() -> &'static reqwest::Client {
     HTTP_CLIENT.get_or_init(|| {
         reqwest::Client::builder()
@@ -34,7 +40,7 @@ fn http_client() -> &'static reqwest::Client {
             // immediately without requiring an app restart.
             .pool_max_idle_per_host(0)
             .connect_timeout(Duration::from_secs(15))
-            .timeout(Duration::from_secs(120))
+            .timeout(Duration::from_secs(BOUNDED_HTTP_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new())
     })
@@ -45,7 +51,7 @@ fn long_http_client() -> &'static reqwest::Client {
         reqwest::Client::builder()
             .pool_max_idle_per_host(0)
             .connect_timeout(Duration::from_secs(15))
-            .timeout(Duration::from_secs(1800))
+            .timeout(Duration::from_secs(LONG_HTTP_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new())
     })
@@ -58,7 +64,7 @@ fn local_http_client() -> &'static reqwest::Client {
             .no_proxy()
             .pool_max_idle_per_host(0)
             .connect_timeout(Duration::from_secs(15))
-            .timeout(Duration::from_secs(120))
+            .timeout(Duration::from_secs(BOUNDED_HTTP_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new())
     })
@@ -70,10 +76,54 @@ fn local_long_http_client() -> &'static reqwest::Client {
             .no_proxy()
             .pool_max_idle_per_host(0)
             .connect_timeout(Duration::from_secs(15))
-            .timeout(Duration::from_secs(1800))
+            .timeout(Duration::from_secs(LONG_HTTP_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new())
     })
+}
+
+/// Which HTTP client family an STT request may use.
+///
+/// Long file chunks need the 1800-second clients, while a short dictation keeps
+/// the bounded 120-second client so a hung endpoint still fails promptly. The
+/// long clients are never reused for dictation cleanup.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SttClientProfile {
+    /// Short interactive audio: the bounded client.
+    Bounded,
+    /// Long file chunks: the long client for the matching endpoint family.
+    Long,
+}
+
+/// Per-call STT options that differ between dictation and a file chunk.
+#[derive(Clone, Copy, Debug)]
+struct SttRequestOptions {
+    /// Speaker diarization needs timed segments from the runtime.
+    require_segments: bool,
+    /// Offset added to every returned segment inside a chunked file job.
+    segment_offset_seconds: f64,
+    /// Which HTTP client family may serve this request.
+    client_profile: SttClientProfile,
+}
+
+/// Dictation keeps the bounded budget; file chunks get the long one.
+pub fn stt_client_profile(is_file_chunk: bool) -> SttClientProfile {
+    if is_file_chunk {
+        SttClientProfile::Long
+    } else {
+        SttClientProfile::Bounded
+    }
+}
+
+impl SttClientProfile {
+    fn client(self, is_local_endpoint: bool) -> reqwest::Client {
+        match (self, is_local_endpoint) {
+            (SttClientProfile::Long, true) => (*local_long_http_client()).clone(),
+            (SttClientProfile::Long, false) => (*long_http_client()).clone(),
+            (SttClientProfile::Bounded, true) => (*local_http_client()).clone(),
+            (SttClientProfile::Bounded, false) => (*http_client()).clone(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -762,9 +812,20 @@ async fn transcribe_audio_bytes(
     file_name: String,
     mime_type: String,
 ) -> Result<TranscribeResponse, String> {
-    let result =
-        transcribe_audio_bytes_internal(app, req, audio_bytes, file_name, mime_type, false, 0.0)
-            .await?;
+    let result = transcribe_audio_bytes_internal(
+        app,
+        req,
+        audio_bytes,
+        file_name,
+        mime_type,
+        SttRequestOptions {
+            require_segments: false,
+            segment_offset_seconds: 0.0,
+            // Dictation is short: never the long file budget.
+            client_profile: stt_client_profile(false),
+        },
+    )
+    .await?;
     Ok(plain_transcribe_response(result.raw, result.cleaned))
 }
 
@@ -774,10 +835,15 @@ async fn transcribe_audio_bytes_internal(
     audio_bytes: Vec<u8>,
     mut file_name: String,
     mut mime_type: String,
-    require_segments: bool,
-    segment_offset_seconds: f64,
+    options: SttRequestOptions,
 ) -> Result<AudioTranscriptionResult, String> {
-    let client = http_client();
+    let SttRequestOptions {
+        require_segments,
+        segment_offset_seconds,
+        client_profile,
+    } = options;
+    // Runtime startup talks to the local managed endpoint only.
+    let client = local_http_client();
 
     // ── Step 1: Whisper Speech-to-Text ──────────────────────────────────
     let mut whisper_url = req
@@ -884,11 +950,7 @@ async fn transcribe_audio_bytes_internal(
             .or_else(|| Some(req.api_key.trim()).filter(|s| !s.is_empty()))
     };
 
-    let stt_client = if is_local_endpoint {
-        (*local_long_http_client()).clone()
-    } else {
-        (*client).clone()
-    };
+    let stt_client = client_profile.client(is_local_endpoint);
 
     let mut streaming_body: Option<WhisperResp> = None;
     if let Some(request_id) = live_streaming_request_id {
@@ -1214,6 +1276,26 @@ fn local_model_prefers_streaming_transcription(model: Option<&str>) -> bool {
         .unwrap_or(false)
 }
 
+/// Whether the plain-file path may use the streaming protocol for this request.
+///
+/// The managed streaming runtime starts a stream only for a concrete language;
+/// with `auto` (or an empty selection) it answers `unsupported language`, so the
+/// request must take the ordinary JSON path instead of failing.
+fn file_streaming_supported(
+    is_local_stt_endpoint: bool,
+    speaker_diarization: bool,
+    model: Option<&str>,
+    language: &str,
+) -> bool {
+    if !is_local_stt_endpoint || speaker_diarization {
+        return false;
+    }
+    if !local_model_prefers_streaming_transcription(model) {
+        return false;
+    }
+    !matches!(language.trim().to_lowercase().as_str(), "" | "auto")
+}
+
 fn local_file_transcription_segment_seconds(model: Option<&str>) -> Option<u32> {
     model
         .map(str::trim)
@@ -1524,12 +1606,21 @@ pub async fn transcribe_file_path(
         ensure_diarized_file_preconditions(&req)?;
     }
 
+    // Cooperative cancellation for this request only: it never stops the
+    // shared local runtime, so the next job still starts normally.
+    let job = file_jobs::begin(&req.request_id);
+    job.check()?;
+
     emit_file_progress(&app, &req.request_id, "preparing", 0, 0, "Готовим файл");
 
     let mut diarization_audio = None;
     let diarization_segments = if req.speaker_diarization {
         let prepared_diarization_audio =
             media::prepare_media_file_for_diarization(&app, &input_path).await?;
+        if job.is_cancelled() {
+            let _ = fs::remove_dir_all(&prepared_diarization_audio.temp_dir);
+            return Err(file_jobs::CANCELLED_MESSAGE.to_string());
+        }
         emit_file_progress(
             &app,
             &req.request_id,
@@ -1580,6 +1671,13 @@ pub async fn transcribe_file_path(
         }
     };
     let total_chunks = prepared.chunks.len();
+    if job.is_cancelled() {
+        let _ = fs::remove_dir_all(&prepared.temp_dir);
+        if let Some(audio) = &diarization_audio {
+            let _ = fs::remove_dir_all(&audio.temp_dir);
+        }
+        return Err(file_jobs::CANCELLED_MESSAGE.to_string());
+    }
     emit_file_progress(
         &app,
         &req.request_id,
@@ -1587,6 +1685,13 @@ pub async fn transcribe_file_path(
         0,
         total_chunks,
         "Распознаём фрагменты",
+    );
+
+    let file_streaming = file_streaming_supported(
+        is_local_stt_endpoint,
+        req.speaker_diarization,
+        req.whisper_model.as_deref(),
+        &req.language,
     );
 
     let base_req = TranscribeRequest {
@@ -1601,12 +1706,8 @@ pub async fn transcribe_file_path(
         file_name: None,
         mime_type: None,
         mode: Some("transcribe_only".to_string()),
-        streaming_enabled: Some(
-            is_local_stt_endpoint
-                && !req.speaker_diarization
-                && local_model_prefers_streaming_transcription(req.whisper_model.as_deref()),
-        ),
-        streaming_request_id: None,
+        streaming_enabled: Some(file_streaming),
+        streaming_request_id: file_streaming.then(|| req.request_id.clone()),
     };
 
     let transcription_started = std::time::Instant::now();
@@ -1617,6 +1718,13 @@ pub async fn transcribe_file_path(
     let mut parts = Vec::with_capacity(total_chunks);
     let mut stt_segments = Vec::<SttTranscriptSegment>::new();
     for (index, chunk) in prepared.chunks.iter().enumerate() {
+        if job.is_cancelled() {
+            let _ = fs::remove_dir_all(&prepared.temp_dir);
+            if let Some(audio) = &diarization_audio {
+                let _ = fs::remove_dir_all(&audio.temp_dir);
+            }
+            return Err(file_jobs::CANCELLED_MESSAGE.to_string());
+        }
         emit_file_work_progress(
             &app,
             &req.request_id,
@@ -1648,8 +1756,12 @@ pub async fn transcribe_file_path(
                     bytes,
                     chunk.file_name.clone(),
                     chunk.mime_type.clone(),
-                    req.speaker_diarization,
-                    chunk.start_offset_seconds,
+                    SttRequestOptions {
+                        require_segments: req.speaker_diarization,
+                        segment_offset_seconds: chunk.start_offset_seconds,
+                        // File chunks are long: never the dictation budget.
+                        client_profile: stt_client_profile(true),
+                    },
                 )
                 .await
                 {
@@ -1709,6 +1821,7 @@ pub async fn transcribe_file_path(
     }
 
     if let Some(diarization_segments) = diarization_segments {
+        job.check()?;
         emit_file_progress(
             &app,
             &req.request_id,
@@ -1719,6 +1832,7 @@ pub async fn transcribe_file_path(
         );
         let (raw, speakers, segments) =
             assemble_speaker_transcript(stt_segments, diarization_segments)?;
+        job.check()?;
         emit_file_progress(
             &app,
             &req.request_id,
@@ -1737,6 +1851,7 @@ pub async fn transcribe_file_path(
         });
     }
 
+    job.check()?;
     emit_file_progress(
         &app,
         &req.request_id,
@@ -1747,6 +1862,7 @@ pub async fn transcribe_file_path(
     );
 
     let raw = parts.join("\n\n");
+    job.check()?;
     Ok(plain_transcribe_response(raw.clone(), raw))
 }
 
@@ -2940,6 +3056,62 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn file_chunks_use_the_long_client_and_dictation_stays_bounded() {
+        assert_eq!(stt_client_profile(true), SttClientProfile::Long);
+        assert_eq!(stt_client_profile(false), SttClientProfile::Bounded);
+        // The long budget exists precisely because the bounded one is short, and
+        // the bounded one still covers the 8 s API / 12 s local cleanup budgets
+        // that live in the frontend.
+        const {
+            assert!(LONG_HTTP_TIMEOUT_SECS > BOUNDED_HTTP_TIMEOUT_SECS);
+            assert!(BOUNDED_HTTP_TIMEOUT_SECS >= 12);
+        }
+    }
+
+    #[test]
+    fn plain_file_streaming_needs_a_local_streaming_model_and_a_concrete_language() {
+        let nemotron = Some("nvidia/nemotron-3.5-asr-streaming-0.6b");
+
+        assert!(file_streaming_supported(true, false, nemotron, "ru"));
+        // Speaker separation still needs chunk segments: no streaming there.
+        assert!(!file_streaming_supported(true, true, nemotron, "ru"));
+        // Batch models and API endpoints keep their verified path.
+        assert!(!file_streaming_supported(
+            true,
+            false,
+            Some("whisper-large-v3-turbo"),
+            "ru"
+        ));
+        assert!(!file_streaming_supported(false, false, nemotron, "ru"));
+        // The managed runtime only starts a stream for a concrete language.
+        assert!(!file_streaming_supported(true, false, nemotron, "auto"));
+        assert!(!file_streaming_supported(true, false, nemotron, "AUTO"));
+        assert!(!file_streaming_supported(true, false, nemotron, ""));
+        assert!(!file_streaming_supported(true, false, nemotron, "   "));
+    }
+
+    #[test]
+    fn file_progress_payload_keeps_the_request_id_for_streaming_drafts() {
+        let payload = super::FileTranscriptionProgressPayload {
+            request_id: "job-42".to_string(),
+            status: "transcribing".to_string(),
+            current_chunk: 1,
+            total_chunks: 3,
+            message: String::new(),
+            work: Some(super::FileWorkProgress {
+                completed_chunks: 0,
+                completed_audio_seconds: Some(0.0),
+                total_audio_seconds: Some(75.0),
+                transcription_elapsed_seconds: 1.5,
+            }),
+        };
+        let json = serde_json::to_value(payload).unwrap();
+        // The streaming draft is addressed by exactly this id.
+        assert_eq!(json["request_id"], "job-42");
+        assert_eq!(json["completed_chunks"], 0);
+    }
 
     fn stt(start: f64, end: f64, text: &str) -> SttTranscriptSegment {
         SttTranscriptSegment {

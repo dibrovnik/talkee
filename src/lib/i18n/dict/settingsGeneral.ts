@@ -195,14 +195,14 @@ export const settingsGeneral = {
 
   // Recording audio
   "settings.recordingAudio.title": {
-    ru: "Сохранять аудио записей",
-    en: "Save recording audio",
+    ru: "Сохранять аудио диктовки",
+    en: "Save dictation audio",
   },
   "settings.recordingAudio.on": { ru: "Включено", en: "On" },
   "settings.recordingAudio.off": { ru: "Выключено", en: "Off" },
   "settings.recordingAudio.desc": {
-    ru: "Аудио диктовки хранится локально отдельными файлами только для последних 100 записей.",
-    en: "Dictation audio is stored locally as separate files for the latest 100 recordings only.",
+    ru: "Аудио диктовки хранится локально отдельными файлами только для последних 100 записей. Аудио созвонов сохраняется независимо от этого переключателя.",
+    en: "Dictation audio is stored locally as separate files for the latest 100 recordings only. Call audio is saved independently of this switch.",
   },
 
   // Support

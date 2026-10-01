@@ -204,6 +204,7 @@ pub fn run() {
             ai::transcribe_and_clean,
             ai::transcribe_only,
             ai::transcribe_file_path,
+            ai::file_jobs::cancel_file_job,
             ai::process_text,
             ai::embed_text,
             history_storage::migrate_app_data_layout,

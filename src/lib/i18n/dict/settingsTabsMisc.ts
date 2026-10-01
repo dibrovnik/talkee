@@ -1,5 +1,47 @@
 // Strings for settings tabs that do not have their own dictionary file.
 export const settingsTabsMisc = {
+  "fileTab.queue.title": { ru: "Очередь файлов", en: "File queue" },
+  "fileTab.queue.queued": { ru: "В очереди", en: "Queued" },
+  "fileTab.queue.running": { ru: "Обработка", en: "Processing" },
+  "fileTab.queue.completed": { ru: "Готово", en: "Done" },
+  "fileTab.queue.failed": { ru: "Ошибка", en: "Failed" },
+  "fileTab.queue.interrupted": { ru: "Прервано", en: "Interrupted" },
+  "fileTab.queue.cancel": { ru: "Отменить", en: "Cancel" },
+  "fileTab.elapsed": { ru: "Прошло {time}", en: "Elapsed {time}" },
+  "fileTab.eta": {
+    ru: "Распознавание: осталось ≈ {time}",
+    en: "Transcription: ≈ {time} remaining",
+  },
+  "fileTab.etaUnknown": {
+    ru: "Оставшееся время пока неизвестно",
+    en: "Remaining time not yet known",
+  },
+  "fileTab.etaCalculating": {
+    ru: "Оцениваем время",
+    en: "Estimating time",
+  },
+  "fileTab.stage": { ru: "Этап: {stage}", en: "Stage: {stage}" },
+  "fileTab.audioProgress": {
+    ru: "Обработано {done} из {total} аудио",
+    en: "{done} of {total} audio processed",
+  },
+  "fileTab.audioProgressUnknown": {
+    ru: "Длительность аудио ещё не измерена",
+    en: "Audio duration is not measured yet",
+  },
+  "fileTab.draft.title": {
+    ru: "Черновик распознавания (не финальный текст)",
+    en: "Recognition draft (not final text)",
+  },
+  "fileTab.etaDisclaimer": {
+    ru: "Оценка приблизительная и уточняется по скорости обработки.",
+    en: "The estimate is approximate and adjusts to the measured speed.",
+  },
+  "fileTab.queue.aria": {
+    ru: "Файловые задачи: {count}",
+    en: "File jobs: {count}",
+  },
+
   // ---- FileTranscriptionTab ----
 
   // Processing status labels (statusLabel)
@@ -318,4 +360,83 @@ export const settingsTabsMisc = {
     ru: "В виджете перевод сейчас выключен.",
     en: "Translation is currently off in the widget.",
   },
+
+  // ---- StatsTab ----
+  "statsTab.page.title": { ru: "Статистика", en: "Statistics" },
+  "statsTab.page.desc": {
+    ru: "Локальные графики использования и оценка пользы диктовки. Данные не отправляются наружу.",
+    en: "Local usage charts and the dictation benefit estimate. Nothing is sent anywhere.",
+  },
+  "statsTab.period.label": { ru: "Период", en: "Period" },
+  "statsTab.period.7": { ru: "7 дней", en: "7 days" },
+  "statsTab.period.30": { ru: "30 дней", en: "30 days" },
+  "statsTab.period.90": { ru: "90 дней", en: "90 days" },
+  "statsTab.period.all": { ru: "Всё время", en: "All time" },
+  "statsTab.filter.source": { ru: "Источник", en: "Source" },
+  "statsTab.filter.allSources": { ru: "Все источники", en: "All sources" },
+  "statsTab.filter.model": { ru: "Модель распознавания", en: "Recognition model" },
+  "statsTab.filter.allModels": { ru: "Все модели", en: "All models" },
+  "statsTab.metric.words": { ru: "Слова", en: "Words" },
+  "statsTab.metric.completed": { ru: "Успешные записи", en: "Successful recordings" },
+  "statsTab.metric.audio": { ru: "Длительность аудио", en: "Audio duration" },
+  "statsTab.metric.processing": { ru: "Время обработки", en: "Processing time" },
+  "statsTab.chart.words": { ru: "Слова по дням", en: "Words per day" },
+  "statsTab.chart.time": { ru: "Аудио и обработка по дням", en: "Audio and processing per day" },
+  "statsTab.chart.summaryTitle": { ru: "Текстовая сводка графика", en: "Chart text summary" },
+  "statsTab.table.day": { ru: "День", en: "Day" },
+  "statsTab.empty": {
+    ru: "За выбранный период данных нет. Записи появляются здесь после первой успешной диктовки.",
+    en: "No data for the selected period. Recordings appear here after the first successful dictation.",
+  },
+  "statsTab.filterEmpty": {
+    ru: "С выбранными фильтрами записей нет. Попробуйте другой источник или модель.",
+    en: "No recordings match the selected filters. Try another source or model.",
+  },
+  "statsTab.legacyNote": {
+    ru: "Разрезы по источникам и моделям собираются с момента обновления: более старые записи учтены только в общих счётчиках.",
+    en: "Source and model breakdowns start at the update: older recordings are only inside the totals.",
+  },
+  "statsTab.missing.audio": { ru: "{count} без измерения аудио", en: "{count} without audio data" },
+  "statsTab.missing.processing": {
+    ru: "{count} без измерения обработки",
+    en: "{count} without processing data",
+  },
+  "statsTab.savings.title": { ru: "Экономия времени на диктовке", en: "Time saved by dictating" },
+  "statsTab.savings.value": { ru: "Сэкономлено {time}", en: "Saved {time}" },
+  "statsTab.savings.formula": {
+    ru: "Формула: слова ÷ {wpm} слов/мин × 60 − (длительность записи + время обработки). Учитывается только обычная диктовка; файлы и созвоны не входят.",
+    en: "Formula: words ÷ {wpm} wpm × 60 − (recording duration + processing time). Only ordinary dictation counts; files and calls are excluded.",
+  },
+  "statsTab.savings.noSpeed": {
+    ru: "Задайте скорость печати, чтобы увидеть оценку экономии.",
+    en: "Set a typing speed to see the saved-time estimate.",
+  },
+  "statsTab.savings.noData": {
+    ru: "Для оценки пока нет диктовок с полными измерениями длительности и обработки.",
+    en: "No dictation with complete duration and processing measurements yet.",
+  },
+  "statsTab.savings.incomplete": {
+    ru: "Оценка неполная: у {count} диктовок нет части измерений, они не учитываются.",
+    en: "The estimate is incomplete: {count} dictations lack measurements and are excluded.",
+  },
+  "statsTab.savings.manualNote": {
+    ru: "Последующая ручная правка текста не измеряется.",
+    en: "Later manual edits of the text are not measured.",
+  },
+  "statsTab.savings.costNote": {
+    ru: "Затраты: {audio} аудио и {processing} обработки.",
+    en: "Costs: {audio} of audio and {processing} of processing.",
+  },
+  "statsTab.typing.current": {
+    ru: "Текущая скорость печати: {wpm} слов/мин",
+    en: "Current typing speed: {wpm} wpm",
+  },
+  "statsTab.typing.notSet": { ru: "Скорость печати не задана", en: "Typing speed is not set" },
+  "statsTab.typing.manual": { ru: "Слов в минуту", en: "Words per minute" },
+  "statsTab.typing.save": { ru: "Сохранить", en: "Save" },
+  "statsTab.typing.invalid": {
+    ru: "Введите целое число от {min} до {max}.",
+    en: "Enter a whole number from {min} to {max}.",
+  },
+  "statsTab.typing.openTest": { ru: "Измерить тестом", en: "Measure with a test" },
 } as const;

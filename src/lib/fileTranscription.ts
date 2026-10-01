@@ -1,7 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { DICTATION_STREAM_UPDATE_EVENT, type DictationStreamUpdatePayload } from "./hotkeyEvents";
 import { tn } from "./i18n";
 import { logError, logInfo } from "./logger";
+import { createDraftThrottleState, planDraftUpdate } from "./partialDraftThrottle";
 import type { AppSettings, HistoryEntry } from "./store";
 import { formatErrorMessage } from "./utils";
 
@@ -66,6 +68,12 @@ export interface FileTranscriptionProgress {
   completedAudioSeconds?: number;
   totalAudioSeconds?: number;
   transcriptionElapsedSeconds?: number;
+  /**
+   * Live draft of the chunk currently being recognised, only ever filled from
+   * real runtime streaming events. It is cleared when the chunk completes so
+   * the finished text is never shown twice.
+   */
+  partialText?: string;
 }
 
 export interface FileTranscriptionResult {
@@ -357,6 +365,12 @@ export function toFileTranscriptionErrorMessage(
     return tn("fileTranscription.errMediaConverterUnavailable");
   }
 
+  // Rust reports a cooperatively cancelled request with its own message; show
+  // the localized "stopped, you can retry" wording instead of the raw text.
+  if (normalized.includes("обработка прервана") || normalized.includes("processing interrupted")) {
+    return tn("fileTranscription.interrupted");
+  }
+
   if (normalized.includes("больше 25") || normalized.includes("too large")) {
     return tn("fileTranscription.errTooLargeShorter");
   }
@@ -567,6 +581,7 @@ export async function transcribeFilePathOnly({
   onProgress,
   speakerDiarization = false,
   identifyFirstSpeakerAsUser = false,
+  requestId: requestedId,
 }: {
   filePath: string;
   settings: AppSettings;
@@ -574,9 +589,18 @@ export async function transcribeFilePathOnly({
   onProgress?: (progress: FileTranscriptionProgress) => void;
   speakerDiarization?: boolean;
   identifyFirstSpeakerAsUser?: boolean;
+  /** Owner-supplied id so the same request can be cancelled from Rust. */
+  requestId?: string;
 }): Promise<FileTranscriptionResult> {
-  const requestId = crypto.randomUUID();
+  const requestId = requestedId?.trim() || crypto.randomUUID();
   const fileName = fileNameFromPath(filePath);
+
+  let lastProgress: FileTranscriptionProgress = {
+    status: "preparing",
+    currentChunk: 0,
+    totalChunks: 0,
+    message: "",
+  };
 
   const unlisten = await listen<FileTranscriptionProgressPayload>(
     FILE_TRANSCRIPTION_PROGRESS_EVENT,
@@ -592,10 +616,65 @@ export async function transcribeFilePathOnly({
         completedAudioSeconds: event.payload.completed_audio_seconds,
         totalAudioSeconds: event.payload.total_audio_seconds,
         transcriptionElapsedSeconds: event.payload.transcription_elapsed_seconds,
+        // A real progress event always replaces (and therefore clears) the draft.
+        partialText: undefined,
       };
 
+      lastProgress = progress;
       onStatus?.(progress.status);
       onProgress?.(progress);
+    },
+  );
+
+  // Nemotron's managed runtime streams while it recognises a chunk. The draft is
+  // shown only for real events addressed to this request, and it disappears as
+  // soon as the authoritative chunk result arrives, so finished text is never
+  // duplicated.
+  //
+  // The runtime emits partials per token; forwarding every one of them would
+  // flood the job snapshot and the settings webview, so UI updates are throttled
+  // by the shared pure rule (see partialDraftThrottle.ts).
+  const draftThrottle = createDraftThrottleState();
+  let pendingDraftText: string | undefined;
+  let pendingDraftTimer: number | null = null;
+  const clearPendingDraft = (): void => {
+    if (pendingDraftTimer !== null) {
+      window.clearTimeout(pendingDraftTimer);
+      pendingDraftTimer = null;
+    }
+    draftThrottle.pendingAt = null;
+  };
+  const emitDraft = (partialText: string | undefined): void => {
+    onProgress?.({ ...lastProgress, partialText });
+  };
+  const applyDraft = (partialText: string | undefined, now: number): void => {
+    const decision = planDraftUpdate(draftThrottle, now, partialText !== undefined);
+    if (decision.cancelPending) clearPendingDraft();
+    if (decision.scheduleAt !== null) {
+      draftThrottle.pendingAt = decision.scheduleAt;
+      pendingDraftTimer = window.setTimeout(
+        () => {
+          pendingDraftTimer = null;
+          draftThrottle.pendingAt = null;
+          draftThrottle.lastEmitAt = Date.now();
+          emitDraft(pendingDraftText);
+        },
+        Math.max(0, decision.scheduleAt - now),
+      );
+      return;
+    }
+    if (!decision.emitNow) return;
+    draftThrottle.lastEmitAt = now;
+    emitDraft(partialText);
+  };
+  const unlistenStream = await listen<DictationStreamUpdatePayload>(
+    DICTATION_STREAM_UPDATE_EVENT,
+    (event) => {
+      if (event.payload.requestId !== requestId || event.payload.status === "started") return;
+      const draft = event.payload.text.trim();
+      const next = event.payload.status === "partial" && draft ? draft : undefined;
+      pendingDraftText = next;
+      applyDraft(next, Date.now());
     },
   );
 
@@ -653,7 +732,9 @@ export async function transcribeFilePathOnly({
     );
     throw error;
   } finally {
+    clearPendingDraft();
     unlisten();
+    unlistenStream();
   }
 }
 

@@ -114,6 +114,7 @@ export const settingsRest = {
     en: "Dictation stats and recording history. Start recording with {hotkey}.",
   },
   "settingsApp.tab.main": { ru: "Главная", en: "Home" },
+  "settingsApp.tab.stats": { ru: "Статистика", en: "Statistics" },
   "settingsApp.tab.file": { ru: "Транскрибация", en: "Transcription" },
   "settingsApp.tab.interpreter": { ru: "Переводчик", en: "Translator" },
   "settingsApp.tab.chat": { ru: "Чат", en: "Chat" },

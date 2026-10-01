@@ -29,7 +29,9 @@ Widget hotkey/button
 File transcription:
 
 ```text
-Files tab / widget file drop
+Files tab / history retry / widget file drop
+-> path/options event to Widget-owned fileTranscriptionJobs queue
+-> history processing entry (source path retained)
 -> src/lib/fileTranscription.ts
 -> ai::transcribe_file_path()
 -> media.rs preparation/chunking
@@ -421,3 +423,77 @@ Manual checks when behavior changes:
 
 `cpal` pulls the macOS Core Audio backend. If changing `cpal` features or
 replacing the recorder backend, re-check the macOS build configuration.
+
+## Tray call controls
+
+The native tray sends explicit start/stop actions to the existing widget-owned
+call pipeline. The native action is consumed once and disabled until the owner
+publishes its next phase; synchronous widget phase refs additionally reject
+repeated requests before React renders. Starting/finishing phases and conflicting
+voice, file or live-translation activity disable start. Stop remains available
+while a call is recording. Permission and disk failures use existing call notices.
+
+`saveRecordingAudio` controls ordinary dictation only. Call mic/system tracks are
+written independently and preserved after STT failure for playback/retry. This does
+not override explicit history deletion, the 200-call/50 MB history limits, or the
+separate live-translation retention policy.
+
+## File Job Ownership
+
+The Widget owns the single serial file queue. Settings only sends native paths and
+options, subscribes before requesting a snapshot, and merges updates by job revision.
+Closing/hiding settings or changing tabs does not cancel a job. This is not restart
+recovery: exiting the application ends its runtime. History is persisted before
+inference, retains `filePath`, and retry uses the same owner. Video data never goes
+through `File.arrayBuffer()` in the settings workflow. Speaker setup remains an
+explicit prerequisite; ordinary files do not trigger model installation.
+
+Cancellation immediately marks the job interrupted and suppresses late progress
+and success, but keeps the serial slot until the native request settles. A queued job
+waits for dictation/call/live translation to become idle, without a polling loop.
+
+### Cooperative cancellation
+
+`ai::file_jobs` keeps one cancel flag per native `request_id`. `transcribe_file_path`
+registers the flag and checks it before preparation, after each preparation step,
+before every chunk, after diarization assembly and before returning the result. A
+cancelled request removes its temporary chunk/diarization directories and fails with
+the cancellation message, which the widget maps to the localized "stopped, you can
+retry" wording. `cancel_file_job` only sets that flag: it never stops the shared
+local runtime, and returning `false` for an unknown id is normal (the request may have
+finished between the click and the command). The guard unregisters itself on drop, so
+a settled request cannot be cancelled by a stale click and a later job with the same
+id starts clean. Late success after cancellation is never written to history.
+
+### Progress, durations and ETA
+
+Progress is measured, not assumed. Native progress reports the chunk that *started*
+and, separately, the chunks and audio seconds that *completed*, plus the monotonic
+elapsed transcription time. Durations come from the FFmpeg segment CSV (including a
+short last segment) or ready-WAV metadata. `getFileTranscriptionPercent` therefore
+stays below 100 until the result exists, and the last started chunk never reads as
+finished.
+
+`estimateFileTranscription` extrapolates only measured transcription work: it needs
+at least two completed chunks with a positive completed duration, the total audio
+seconds and a positive elapsed time. Cold start, preparation, diarization and assembly
+have no measurement, so they report "Оцениваем время" instead of a fabricated timer.
+The wording stays explicitly approximate, and a completed job reports zero remaining.
+
+### Streaming draft
+
+When the managed Nemotron runtime streams, chunk partial text is forwarded on the
+existing `dictation-stream:update` channel using the same request id as the file job.
+The settings tab shows it as a clearly labelled draft and it is cleared as soon as an
+authoritative progress event or the finished chunk text arrives, so completed text is
+never duplicated. No timer fabricates partial text, the model and endpoint are
+unchanged, and diarization keeps using its own verified non-streaming path. This is a
+within-session draft only: it is never treated as a finished transcription, and it is
+not part of restart recovery.
+
+The streaming path is used only when all three hold: the endpoint is local, the request
+is not diarized, and the selected model is a streaming one. A fourth condition is the
+language: the managed runtime only starts a stream for a concrete language, and answers
+`unsupported language` for `auto` or an empty selection. `file_streaming_supported`
+therefore disables both the `streaming` flag and the streaming request id for `auto`,
+so that case takes the ordinary JSON path and still succeeds instead of failing.

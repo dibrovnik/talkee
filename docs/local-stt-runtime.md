@@ -2,6 +2,31 @@
 
 Talkee supports a managed local STT runtime named `talkee-stt`. The app uses it for local models without requiring Docker.
 
+## Recommended catalog and compatibility
+
+The visible suggestions are limited to three Russian-capable models:
+
+| Model | Runtime id | Mode |
+| --- | --- | --- |
+| Nemotron 3.5 ASR Streaming 0.6B | `nvidia/nemotron-3.5-asr-streaming-0.6b` | streaming (main scenario) |
+| GigaAM v3 | `ai-sage/GigaAM-v3` | batch, 25-second segment window |
+| Whisper large-v3-turbo | `whisper-large-v3-turbo` | batch |
+
+Only Nemotron advertises native streaming; GigaAM and Whisper large-v3-turbo run as
+batch models in this runtime, and the file pipeline keeps the 25-second window for
+the GigaAM RNNT model (`local_file_transcription_segment_seconds`).
+
+The runtime registry itself is not trimmed: the resolver still maps earlier values —
+runtime ids (`whisper-small`), GGUF file names (`whisper-small-q4_k.gguf`,
+`gigaam-v3-e2e-rnnt-Q4_K_M.gguf`) and Hugging Face ids (`Qwen/Qwen3-ASR-0.6B`,
+`ai-sage/GigaAM-v3`) — so an already installed model and the user's saved choice
+keep working. Such models are shown in the models tab with a "previously
+installed" note instead of being dropped.
+
+Installs stay explicit: Talkee never downloads or removes a model on its own. A
+model that is no longer suggested is neither deleted nor hidden while its file is
+present; removing it requires the user's delete action.
+
 ## Runtime Lookup
 
 When a local model is installed, Talkee:

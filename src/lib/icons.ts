@@ -5,6 +5,7 @@ import { ArrowUpIcon as RawIconArrowUp } from "@phosphor-icons/react/ArrowUp";
 import { BriefcaseIcon as RawIconBriefcase } from "@phosphor-icons/react/Briefcase";
 import { BroadcastIcon as RawIconBroadcast } from "@phosphor-icons/react/Broadcast";
 import { CaretDownIcon as RawIconChevronDown } from "@phosphor-icons/react/CaretDown";
+import { ChartBarIcon as RawIconChartBar } from "@phosphor-icons/react/ChartBar";
 import { ChatCircleIcon as RawIconMessage } from "@phosphor-icons/react/ChatCircle";
 import { CheckIcon as RawIconCheck } from "@phosphor-icons/react/Check";
 import { ClipboardIcon as RawIconClipboard } from "@phosphor-icons/react/Clipboard";
@@ -78,6 +79,7 @@ const IconArrowUp = RawIconArrowUp as Icon;
 const IconBolt = RawIconBolt as Icon;
 const IconBriefcase = RawIconBriefcase as Icon;
 const IconBroadcast = RawIconBroadcast as Icon;
+const IconChartBar = RawIconChartBar as Icon;
 const IconCheck = RawIconCheck as Icon;
 const IconChevronDown = RawIconChevronDown as Icon;
 const IconClipboard = RawIconClipboard as Icon;
@@ -135,6 +137,7 @@ export {
   IconBolt,
   IconBriefcase,
   IconBroadcast,
+  IconChartBar,
   IconCheck,
   IconChevronDown,
   IconClipboard,

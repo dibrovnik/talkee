@@ -1,6 +1,9 @@
+import { resolveBatchTranscriptionModel } from "../windows/widget/services/transcriptionModel";
 import type { FileTranscriptionProgress, FileTranscriptionResult } from "./fileTranscription";
+import { tn } from "./i18n";
 import { logError } from "./logger";
 import { createSerialTaskQueue } from "./serialTaskQueue";
+import { withStatsCompletionMetadata } from "./stats";
 
 /** Only paths and user options cross webviews; credentials stay with the owner. */
 export interface FileJobRequest {
@@ -142,9 +145,13 @@ export async function executeFileJob(
   request: FileJobRequest,
   execution: FileJobExecution,
 ): Promise<FileTranscriptionResult> {
-  const { beginProcessing, cancelProcessing, finishProcessing } = await import(
-    "./processingControl"
-  );
+  const {
+    beginProcessing,
+    cancelProcessing,
+    clearNativeFileRequest,
+    finishProcessing,
+    registerNativeFileRequest,
+  } = await import("./processingControl");
   const { getSettings, getHistoryEntry } = await import("./store");
   const { fileNameFromPath, transcribeFilePathOnly, toFileTranscriptionErrorMessage } =
     await import("./fileTranscription");
@@ -162,6 +169,8 @@ export async function executeFileJob(
     status: "processing",
   };
   const handle = await beginProcessing(base, previous ? "update" : "add");
+  const nativeRequestId = `file-job:${request.jobId}`;
+  registerNativeFileRequest(base.id, nativeRequestId);
   const cancel = (): void => {
     void cancelProcessing(base.id).catch((error) =>
       logError("FILE_JOBS", `Cancellation failed: ${String(error)}`),
@@ -180,31 +189,44 @@ export async function executeFileJob(
       speakerDiarization: request.mode === "speakers",
       identifyFirstSpeakerAsUser: request.identifyFirstSpeakerAsUser,
       onProgress: execution.progress,
+      requestId: nativeRequestId,
     });
     if (aborted()) throw new DOMException("Обработка прервана", "AbortError");
-    await finishProcessing({
-      ...base,
-      raw: result.text,
-      cleaned: result.text,
-      status: "completed",
-      errorMessage: undefined,
-      processingTime: Date.now() - started,
-      mode: result.mode,
-      speakers: result.speakers,
-      segments: result.segments,
-    });
-    if (aborted()) throw new DOMException("Обработка прервана", "AbortError");
+    await finishProcessing(
+      withStatsCompletionMetadata(
+        {
+          ...base,
+          raw: result.text,
+          cleaned: result.text,
+          status: "completed",
+          errorMessage: undefined,
+          processingTime: Date.now() - started,
+          mode: result.mode,
+          speakers: result.speakers,
+          segments: result.segments,
+        },
+        {
+          sttModel: resolveBatchTranscriptionModel(settings),
+          processingTime: Date.now() - started,
+        },
+      ),
+    );
+    if (aborted()) throw new DOMException(tn("fileTranscription.interrupted"), "AbortError");
     return result;
   } catch (error) {
+    const wasAborted = aborted();
     await finishProcessing({
       ...base,
-      status: aborted() ? "interrupted" : "failed",
-      errorMessage: aborted() ? "Обработка прервана" : toFileTranscriptionErrorMessage(error),
+      status: wasAborted ? "interrupted" : "failed",
+      errorMessage: wasAborted
+        ? tn("fileTranscription.interrupted")
+        : toFileTranscriptionErrorMessage(error),
       processingTime: Date.now() - started,
     });
     throw error;
   } finally {
     execution.signal.removeEventListener("abort", cancel);
+    clearNativeFileRequest(base.id);
     handle.finish();
   }
 }

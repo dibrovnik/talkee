@@ -189,6 +189,41 @@ Radix отвечает только за поведение и доступно�
 | Стиль и Промпты | Стили и библиотека промптов читаются, выбранный вариант заметен, редактор промпта доступен клавиатурой |
 | Чат | Заголовок с пояснением, сообщения и источники читаемы, поле ввода и основная кнопка 40 px, прокрутка не ломается |
 | Переводчик | Заголовок с пояснением, переключатель вида отдельной строкой, группы настроек читаемы, ввод горячей клавиши работает как раньше |
+| Статистика | Периоды 7/30/90/всё время, фильтры источника и модели, плитки метрик, оба SVG-графика и текстовая сводка под ними; пустой период показывает нули без ошибок |
+
+### Файловые задачи: прогресс, ETA и результат
+
+Проверяется вручную в светлой и тёмной темах. Автотесты покрывают только чистые
+функции (`fileTranscriptionEta`, `fileTranscriptionJobs`, `statsTabView`), поэтому
+отметка ставится лишь после реального прогона.
+
+| Область | Проверка |
+|---|---|
+| Готовый WAV | Выбор через нативный диалог, этап «Готовим файл», результат появляется один раз |
+| Длинный MP4 | Drag-and-drop и диалог идут по нативному пути; видео не читается целиком в JS |
+| Прогресс | До первого завершённого фрагмента показывается «Оцениваем время», а не выдуманный остаток |
+| Прогресс | После двух завершённых фрагментов виден измеренный остаток и обработанная длительность; 100 % только после готового результата |
+| Черновик | Потоковый Nemotron показывает черновик только из реальных событий; завершённый текст не дублируется |
+| Очередь | Второй файл при занятой обработке встаёт в очередь и не запускает вторую тяжёлую задачу |
+| Навигация | Переключение вкладок, закрытие и открытие окна сохраняют ту же задачу и jobId |
+| Отмена | Отмена помечает задачу прерванной, поздний ответ не становится успехом, следующая задача стартует |
+| Текст | Читаемый транскрипт, копирование, временные метки и говорящие при диаризации |
+| Клавиатура | Пустое состояние, очередь, отмена и повтор доступны с клавиатуры |
+
+Паузы и тишина: GigaAM идёт фрагментами ≤25 секунд, Whisper-диаризация сохраняет
+свой проверенный путь. Числовые ожидания по ETA не фиксируются: допускается только
+пометка «приблизительно».
+
+### Статистика: приватность и миграция
+
+| Область | Проверка |
+|---|---|
+| Метрики | Слова, успешные записи, аудио и обработка совпадают с реальными записями периода |
+| Разрезы | Источник и модель фильтруют и плитки, и график |
+| Старые данные | После обновления схемы v2 → v3 общие счётчики сохранены, разрезы начинаются с нуля без ошибок |
+| Неполные данные | Запись без модели показана как «Неизвестно», отсутствующие измерения не выдумываются |
+| Очистка истории | Агрегаты статистики остаются, тексты и аудио удаляются |
+| Сеть | `bun run check:network` зелёный; запросов метрик нет |
 
 ### File owner native checkpoint — 2026-10-01
 
@@ -198,3 +233,19 @@ settings do not stop processing. App menu Settings reopens the window, Files rec
 one running task and displays measured elapsed/ETA after two completed chunks.
 Final completion remains to be recorded; no native drag-drop/cancellation/diarization
 or full theme-matrix signoff implied by this checkpoint.
+
+### 2026-10-01: what is automated and what is still owed
+
+The tables above are the checklist; this note records which rows have real evidence.
+Automated today: workspace geometry, Radix keyboard behaviour in the DEV gallery,
+settings navigation, tray menu phases, file-job ownership and snapshots, ETA maths,
+stats aggregates and migration, typing savings, and the CLI checks (`bunx tsc --noEmit`,
+`bun test`, `cargo test --lib`, `bun run check:network`, `bun run check:changelog`,
+`git diff --check`).
+
+Still owed by a human on a machine running this build — the checkboxes above must stay
+unticked until then: the whole-window theme and minimum-size pass, traffic lights and
+Reduce Motion/Transparency, tray start/stop of a real call including a refused
+permission, playback/retry/delete of both call tracks, drag-and-drop of a long MP4 with
+tab switching and window close/reopen, the ready-WAV/GigaAM/Whisper file matrix, and the
+combined end-to-end scenario in section 8.1 of the change tasks.

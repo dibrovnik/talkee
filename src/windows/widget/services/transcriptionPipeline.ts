@@ -10,6 +10,7 @@ import {
 import { tn } from "../../../lib/i18n";
 import { logError, logInfo } from "../../../lib/logger";
 import { beginProcessing, finishProcessing, isAbortError } from "../../../lib/processingControl";
+import { withStatsCompletionMetadata } from "../../../lib/stats";
 import {
   type AppSettings,
   deleteHistoryAudio,
@@ -691,15 +692,20 @@ export async function processRecordingBlob({
     }
 
     logInfo("API", `Transcription complete in ${processingTime}ms: "${result.cleaned}"`);
-    await finishProcessing({
-      ...entryWithSavedAudio,
-      raw: result.raw,
-      cleaned: result.cleaned,
-      dictationTranslation: result.dictationTranslation,
-      status: "completed",
-      errorMessage: undefined,
-      processingTime,
-    });
+    await finishProcessing(
+      withStatsCompletionMetadata(
+        {
+          ...entryWithSavedAudio,
+          raw: result.raw,
+          cleaned: result.cleaned,
+          dictationTranslation: result.dictationTranslation,
+          status: "completed",
+          errorMessage: undefined,
+          processingTime,
+        },
+        { sttModel: resolveBatchTranscriptionModel(settings), processingTime },
+      ),
+    );
 
     let pasteFailed = false;
     try {
@@ -802,6 +808,7 @@ export async function retryHistoryEntry(
   // Re-runs go through the same lifecycle: shown as "processing" again and
   // cancellable from the table.
   const handle = await beginProcessing(entry, "update");
+  const retryStarted = Date.now();
 
   try {
     const transcriptionCandidate = await transcribeAudio({
@@ -841,6 +848,7 @@ export async function retryHistoryEntry(
       await applyDictationCleanup(transcription, retrySettings),
       retrySettings,
     );
+    const processingTime = Date.now() - retryStarted;
 
     if (handle.isCancelled()) {
       const interrupted = buildInterruptedEntry(entry);
@@ -861,18 +869,21 @@ export async function retryHistoryEntry(
             settings,
           });
 
-    const updatedEntry: HistoryEntry = {
-      ...entry,
-      raw: result.raw,
-      cleaned: result.cleaned,
-      dictationTranslation: result.dictationTranslation,
-      status: "completed",
-      errorMessage: undefined,
-      audioPath: savedAudio.audioPath,
-      audioBase64: undefined,
-      audioMimeType: savedAudio.audioMimeType,
-      audioFileName: savedAudio.audioFileName,
-    };
+    const updatedEntry: HistoryEntry = withStatsCompletionMetadata(
+      {
+        ...entry,
+        raw: result.raw,
+        cleaned: result.cleaned,
+        dictationTranslation: result.dictationTranslation,
+        status: "completed",
+        errorMessage: undefined,
+        audioPath: savedAudio.audioPath,
+        audioBase64: undefined,
+        audioMimeType: savedAudio.audioMimeType,
+        audioFileName: savedAudio.audioFileName,
+      },
+      { sttModel: resolveBatchTranscriptionModel(retrySettings), processingTime },
+    );
 
     await finishProcessing(updatedEntry);
     if (!settings.saveRecordingAudio && entry.audioPath) {

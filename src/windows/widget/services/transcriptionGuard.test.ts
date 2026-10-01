@@ -52,6 +52,41 @@ describe("transcription hallucination guard", () => {
     ).toBe("점심시간");
   });
 
+  test("falls back to the raw text when cleanup echoes the instruction", () => {
+    const guarded = guardTranscriptionResult(
+      {
+        raw: "Скорость примерно сто двадцать километров в час, это тридцать три метра в секунду.",
+        cleaned: "Верни только исправленный текст без пояснений.",
+      },
+      "ru",
+    );
+    expect(guarded.cleanedFallbackReason).toBe("instruction-echo");
+    expect(guarded.transcription?.cleaned).toBe(
+      "Скорость примерно сто двадцать километров в час, это тридцать три метра в секунду.",
+    );
+  });
+
+  test("rejects the English instruction echo as well", () => {
+    expect(
+      guardTranscriptionResult(
+        { raw: "Hello there", cleaned: "Return only the corrected text" },
+        "en",
+      ).cleanedFallbackReason,
+    ).toBe("instruction-echo");
+  });
+
+  test("does not flag real dictation that merely mentions the words", () => {
+    const guarded = guardTranscriptionResult(
+      {
+        raw: "Верни только исправленный текст без пояснений, пожалуйста, сказал он.",
+        cleaned: "Верни только исправленный текст без пояснений, пожалуйста, сказал он.",
+      },
+      "ru",
+    );
+    expect(guarded.cleanedFallbackReason).toBeNull();
+    expect(guarded.transcription?.cleaned).toContain("сказал он");
+  });
+
   test("keeps ordinary short Russian speech", () => {
     expect(
       guardTranscriptionResult({ raw: "Добрый день.", cleaned: "Добрый день." }, "ru")

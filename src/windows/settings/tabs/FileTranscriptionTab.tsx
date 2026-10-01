@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { ChangeEvent, DragEvent, JSX } from "react";
+import type { JSX } from "react";
 import { useEffect, useRef, useState } from "react";
 import { SpeakerNameInput } from "../../../components/SpeakerNameInput";
 import { SummaryModal } from "../../../components/SummaryModal";
@@ -13,9 +13,14 @@ import {
   formatFileSize,
   getFileTranscriptionPercent,
   toFileTranscriptionErrorMessage,
-  transcribeFileOnly,
-  transcribeFilePathOnly,
 } from "../../../lib/fileTranscription";
+import { estimateFileTranscription } from "../../../lib/fileTranscriptionEta";
+import {
+  cancelFileJob,
+  startFileJob,
+  subscribeFileJobs,
+} from "../../../lib/fileTranscriptionJobClient";
+import type { FileJobSnapshot } from "../../../lib/fileTranscriptionJobs";
 import {
   CALL_CAPTURE_STOP_REQUEST_EVENT,
   HISTORY_UPDATED_EVENT,
@@ -33,7 +38,6 @@ import {
 } from "../../../lib/icons";
 import {
   type AppSettings,
-  addHistoryEntry,
   getHistory,
   getSettings,
   type HistoryEntry,
@@ -48,7 +52,7 @@ import { ProgressBar } from "../../../ui/ProgressBar";
 import { Spinner } from "../../../ui/Spinner";
 import { Toggle } from "../../../ui/Toggle";
 
-type ProcessingState = "idle" | FileTranscriptionStatus | "error";
+type ProcessingState = "idle" | "queued" | FileTranscriptionStatus | "error";
 type SpeakerSetupIntent = "toggle" | "process";
 interface SelectedTranscriptionFile {
   name: string;
@@ -342,7 +346,11 @@ export function FileTranscriptionTab({
   const nativeDropAtRef = useRef(0);
   const speakerDiarizationToggleRunRef = useRef(0);
   const settingsRef = useRef<AppSettings | null>(null);
+  const repairJobsRef = useRef(new Set<string>());
   const processFilePathRef = useRef<(filePath: string) => Promise<void>>(async () => {});
+  const [displayNow, setDisplayNow] = useState(Date.now());
+  const [jobs, setJobs] = useState<FileJobSnapshot[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<SelectedTranscriptionFile | null>(null);
   const [status, setStatus] = useState<ProcessingState>("idle");
   const [progress, setProgress] = useState<FileTranscriptionProgress | null>(null);
@@ -369,6 +377,7 @@ export function FileTranscriptionTab({
   const [speakerSetupForceRepair, setSpeakerSetupForceRepair] = useState(false);
 
   const isProcessing =
+    status === "queued" ||
     status === "reading" ||
     status === "converting" ||
     status === "uploading" ||
@@ -376,7 +385,29 @@ export function FileTranscriptionTab({
     status === "diarizing" ||
     status === "assembling" ||
     status === "transcribing";
-  const progressPercent = getFileTranscriptionPercent(status, progress);
+  const progressPercent = getFileTranscriptionPercent(
+    status === "queued" ? "preparing" : status,
+    progress,
+  );
+
+  const selectedJob = jobs.find((job) => job.request.jobId === selectedJobId);
+  const estimate = estimateFileTranscription(progress);
+  const elapsedSeconds = selectedJob
+    ? Math.max(
+        0,
+        Math.floor(
+          ((selectedJob.finishedAt || displayNow) -
+            (selectedJob.startedAt || selectedJob.createdAt)) /
+            1000,
+        ),
+      )
+    : 0;
+  useEffect(() => {
+    if (!isProcessing) return;
+    setDisplayNow(Date.now());
+    const timer = window.setInterval(() => setDisplayNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [isProcessing, selectedJobId]);
 
   const syncSpeakerSetupState = (settings: AppSettings): void => {
     const localWhisperOption = getDiarizationWhisperOption(settings);
@@ -581,59 +612,78 @@ export function FileTranscriptionTab({
     };
   }, [focusedEntryId]);
 
-  const processFile = async (file: File): Promise<void> => {
-    setSelectedFile({ name: file.name, size: file.size });
-    resetResult();
-    setStatus("reading");
-    let activeSettings: AppSettings | null = null;
-
-    try {
-      if (speakerDiarization) {
-        throw new Error(t("fileTab.error.speakerNeedsDialog"));
-      }
-      const settings = await getSettings();
-      activeSettings = settings;
-      const startedAt = Date.now();
-      const transcription = await transcribeFileOnly({
-        file,
-        settings,
-        onStatus: setStatus,
-      });
-      const entry: HistoryEntry = {
-        id: crypto.randomUUID(),
-        timestamp: new Date().toISOString(),
-        duration: 0,
-        raw: transcription.text,
-        cleaned: transcription.text,
-        source: "file",
-        fileName: file.name,
-        fileSize: file.size,
-        status: "completed",
-        processingTime: Date.now() - startedAt,
-        mode: "plain",
-      };
-
-      await addHistoryEntry(entry);
-      await emit(HISTORY_UPDATED_EVENT, entry);
-      setResultEntry(entry);
-      setConvertedInfo(
-        transcription.converted
-          ? t("fileTab.convertedInfo", {
-              name: transcription.uploadedFileName,
-              size: formatFileSize(transcription.uploadedSizeBytes),
-            })
-          : "",
+  useEffect(() => {
+    let mounted = true;
+    const subscription = subscribeFileJobs((next) => {
+      if (mounted) setJobs(next);
+    });
+    void subscription.catch((caughtError) => {
+      if (mounted) setError(toFileTranscriptionErrorMessage(caughtError));
+    });
+    return () => {
+      mounted = false;
+      void subscription.then(
+        (dispose) => dispose(),
+        () => {},
       );
+    };
+  }, []);
+
+  useEffect(() => {
+    if (focusedEntryId) setSelectedJobId(null);
+  }, [focusedEntryId]);
+
+  useEffect(() => {
+    const job =
+      jobs.find((item) => item.request.jobId === selectedJobId) ||
+      (!selectedJobId && !focusedEntryId ? jobs[jobs.length - 1] : undefined);
+    if (!job) return;
+    if (!selectedJobId) setSelectedJobId(job.request.jobId);
+    setSelectedFile({ name: fileNameFromPath(job.request.filePath), size: null });
+    setProgress(job.progress || null);
+    setError(job.error || "");
+    if (job.state === "queued") setStatus("queued");
+    else if (job.state === "running") setStatus(job.progress?.status || "preparing");
+    else if (job.state === "completed" && job.result) {
       setStatus("done");
-    } catch (caughtError) {
-      setError(
-        toFileTranscriptionErrorMessage(caughtError, {
-          settings: activeSettings,
-        }),
-      );
+      setResultEntry({
+        id: job.request.retryEntryId || job.request.jobId,
+        timestamp: new Date(job.createdAt).toISOString(),
+        duration: 0,
+        raw: job.result.text,
+        cleaned: job.result.text,
+        source: "file",
+        fileName: fileNameFromPath(job.request.filePath),
+        filePath: job.request.filePath,
+        status: "completed",
+        mode: job.result.mode,
+        speakers: job.result.speakers,
+        segments: job.result.segments,
+      });
+    } else {
       setStatus("error");
+      setError(job.error || t("fileTab.queue.interrupted"));
+      if (
+        job.state === "failed" &&
+        job.request.mode === "speakers" &&
+        isSpeakerSetupRepairError(job.error) &&
+        !repairJobsRef.current.has(job.request.jobId)
+      ) {
+        repairJobsRef.current.add(job.request.jobId);
+        setPendingSpeakerFilePath(job.request.filePath);
+        setSpeakerSetupIntent("process");
+        setSpeakerSetupForceRepair(true);
+        setSpeakerSetupError(job.error || "");
+        setSpeakerSetupModalOpen(true);
+      }
     }
-  };
+  }, [jobs, selectedJobId, focusedEntryId]);
+
+  /**
+   * There is no webview File path for large media: the drop zone opens the
+   * native dialog, which returns a real filesystem path, and native
+   * drag-and-drop is handled by the webview event listener above.
+   */
 
   const processFilePath = async (
     filePath: string,
@@ -645,7 +695,8 @@ export function FileTranscriptionTab({
     setStatus("idle");
 
     try {
-      const settings = await refreshSpeakerInstalledModels(await getSettings({ reload: true }));
+      const loaded = await getSettings({ reload: true });
+      const settings = speakerMode ? await refreshSpeakerInstalledModels(loaded) : loaded;
       settingsRef.current = settings;
       syncSpeakerSetupState(settings);
 
@@ -658,36 +709,15 @@ export function FileTranscriptionTab({
         return;
       }
 
-      setStatus("preparing");
-      const startedAt = Date.now();
-      const transcription = await transcribeFilePathOnly({
+      const jobId = crypto.randomUUID();
+      setSelectedJobId(jobId);
+      setStatus("queued");
+      await startFileJob({
+        jobId,
         filePath,
-        settings,
-        onStatus: setStatus,
-        onProgress: setProgress,
-        speakerDiarization: speakerMode,
+        mode: speakerMode ? "speakers" : "plain",
         identifyFirstSpeakerAsUser: true,
       });
-      const entry: HistoryEntry = {
-        id: crypto.randomUUID(),
-        timestamp: new Date().toISOString(),
-        duration: 0,
-        raw: transcription.text,
-        cleaned: transcription.text,
-        source: "file",
-        fileName,
-        status: "completed",
-        processingTime: Date.now() - startedAt,
-        mode: transcription.mode,
-        speakers: transcription.speakers,
-        segments: transcription.segments,
-      };
-
-      await addHistoryEntry(entry);
-      await emit(HISTORY_UPDATED_EVENT, entry);
-      setResultEntry(entry);
-      setConvertedInfo("");
-      setStatus("done");
     } catch (caughtError) {
       if (speakerMode && isSpeakerSetupRepairError(caughtError)) {
         setSpeakerDiarization(false);
@@ -735,7 +765,7 @@ export function FileTranscriptionTab({
       nativeDropAtRef.current = Date.now();
 
       const filePath = event.payload.paths[0];
-      if (!filePath || isProcessingRef.current) {
+      if (!filePath) {
         return;
       }
 
@@ -748,8 +778,6 @@ export function FileTranscriptionTab({
   }, []);
 
   const openFileDialog = async (): Promise<void> => {
-    if (isProcessing) return;
-
     try {
       const selected = await open({
         multiple: false,
@@ -781,29 +809,6 @@ export function FileTranscriptionTab({
     } catch (caughtError) {
       setError(toFileTranscriptionErrorMessage(caughtError));
       setStatus("error");
-    }
-  };
-
-  const handleInputChange = (event: ChangeEvent<HTMLInputElement>): void => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-
-    if (file) {
-      void processFile(file);
-    }
-  };
-
-  const handleDrop = (event: DragEvent<HTMLDivElement>): void => {
-    event.preventDefault();
-    setIsDragOver(false);
-
-    if (Date.now() - nativeDropAtRef.current < 1000) {
-      return;
-    }
-
-    const file = event.dataTransfer.files?.[0];
-    if (file) {
-      void processFile(file);
     }
   };
 
@@ -1059,9 +1064,46 @@ export function FileTranscriptionTab({
         ref={inputRef}
         type="file"
         accept="audio/*,video/*,.mp3,.wav,.m4a,.mp4,.mov,.webm,.ogg,.flac,.mpeg,.mpga,.avi,.mkv"
-        onChange={handleInputChange}
         style={{ display: "none" }}
       />
+
+      {jobs.length > 0 && (
+        <section
+          aria-label={t("fileTab.queue.aria", { count: String(jobs.length) })}
+          style={{ display: "grid", gap: 8, marginBottom: 16 }}
+        >
+          <div className="ui-section-row__title">{t("fileTab.queue.title")}</div>
+          {jobs.map((job) => (
+            <div
+              key={job.request.jobId}
+              style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}
+            >
+              <Button
+                variant={selectedJobId === job.request.jobId ? "primary" : "default"}
+                aria-current={selectedJobId === job.request.jobId ? "true" : undefined}
+                onClick={() => {
+                  resetResult();
+                  setSelectedJobId(job.request.jobId);
+                }}
+              >
+                {fileNameFromPath(job.request.filePath)} · {t(`fileTab.queue.${job.state}`)}
+              </Button>
+              {(job.state === "queued" || job.state === "running") && (
+                <Button
+                  aria-label={`${t("fileTab.queue.cancel")}: ${fileNameFromPath(job.request.filePath)}`}
+                  onClick={() => {
+                    void cancelFileJob(job.request.jobId).catch((caughtError) =>
+                      setError(toFileTranscriptionErrorMessage(caughtError)),
+                    );
+                  }}
+                >
+                  {t("fileTab.queue.cancel")}
+                </Button>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
 
       {!liveCallEntry ? (
         <>
@@ -1069,17 +1111,15 @@ export function FileTranscriptionTab({
           <section
             // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: the drop zone intentionally exposes button semantics on a <section>.
             role="button"
-            tabIndex={isProcessing ? -1 : 0}
+            tabIndex={0}
             className={`ui-dropzone${isDragOver ? " ui-dropzone--over" : ""}${
               isProcessing ? " ui-dropzone--busy" : ""
             }`}
             onClick={() => {
-              if (!isProcessing) {
-                void openFileDialog();
-              }
+              void openFileDialog();
             }}
             onKeyDown={(event) => {
-              if (isProcessing || (event.key !== "Enter" && event.key !== " ")) {
+              if (event.key !== "Enter" && event.key !== " ") {
                 return;
               }
 
@@ -1091,7 +1131,12 @@ export function FileTranscriptionTab({
               setIsDragOver(true);
             }}
             onDragLeave={() => setIsDragOver(false)}
-            onDrop={handleDrop}
+            onDrop={(event) => {
+              // Native drag-and-drop already delivered the path; never read the
+              // whole file into the webview.
+              event.preventDefault();
+              setIsDragOver(false);
+            }}
           >
             <div className="ui-dropzone__content">
               <div className="ui-dropzone__icon">
@@ -1108,9 +1153,49 @@ export function FileTranscriptionTab({
                 </div>
                 <div className="ui-dropzone__status">
                   {selectedFile
-                    ? `${selectedFile.size !== null ? `${formatFileSize(selectedFile.size)} · ` : ""}${statusLabel(status, progress, t)}${isProcessing ? ` · ${progressPercent}%` : ""}`
+                    ? `${selectedFile.size !== null ? `${formatFileSize(selectedFile.size)} · ` : ""}${status === "queued" ? t("fileTab.queue.queued") : statusLabel(status, progress, t)}${isProcessing ? ` · ${progressPercent}%` : ""}`
                     : t("fileTab.dropzone.hint")}
                 </div>
+
+                {/*
+                  Live status: stage, elapsed and an explicitly approximate
+                  remaining time. Everything here is hidden from assistive tech
+                  by the surrounding summary line; the block below is the single
+                  polite live region so a long job does not spam VoiceOver.
+                */}
+                {isProcessing && selectedJob && (
+                  <div className="ui-dropzone__converted" role="status" aria-live="polite">
+                    {t("fileTab.stage", { stage: statusLabel(status, progress, t) })}
+                    {" · "}
+                    {t("fileTab.elapsed", { time: formatTimestamp(elapsedSeconds) })}
+                    {" · "}
+                    {estimate.remainingSeconds === null
+                      ? t("fileTab.etaCalculating")
+                      : t("fileTab.eta", { time: formatTimestamp(estimate.remainingSeconds) })}
+                  </div>
+                )}
+
+                {isProcessing &&
+                selectedJob &&
+                status === "transcribing" &&
+                progress?.completedAudioSeconds !== undefined &&
+                progress.totalAudioSeconds ? (
+                  <div className="ui-dropzone__converted">
+                    {t("fileTab.audioProgress", {
+                      done: formatTimestamp(progress.completedAudioSeconds),
+                      total: formatTimestamp(progress.totalAudioSeconds),
+                    })}
+                    {estimate.remainingSeconds === null ? ` · ${t("fileTab.etaDisclaimer")}` : ""}
+                  </div>
+                ) : null}
+
+                {progress?.partialText ? (
+                  <div className="ui-dropzone__converted" data-draft="true">
+                    <div className="ui-history__variant-label">{t("fileTab.draft.title")}</div>
+                    <div className="ui-expandable-text">{progress.partialText}</div>
+                  </div>
+                ) : null}
+
                 {convertedInfo && <div className="ui-dropzone__converted">{convertedInfo}</div>}
               </div>
 

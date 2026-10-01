@@ -163,3 +163,118 @@
   cancellation, bilingual/theme transcript review and full WAV/GigaAM/diarization matrix
   are not yet claimed complete. Cancellation currently suppresses late UI/history
   success but waits for the native request to settle before releasing the queue.
+
+### Model evaluation and measurements — 2026-10-01
+
+Environment: Apple Silicon Mac, macOS, `bun 1.3.14`. The local cleanup prompt was
+dumped from production (`prompt_config::build_cleanup_prompt_preview("ru","classic")`,
+temperature 0), and requests used exactly the payload shape `ai.rs` sends to a local
+endpoint (system prompt, user text, `temperature: 0`, `stream: false`,
+`max_tokens: 1024`, no `thinking` field — the sidecar itself closes the Qwen3 think
+block). Script: `scripts/eval-local-cleanup.py`, raw results in the run log.
+
+**Qwen3 1.7B Q4_K_M (the only installed local text model) — 20 Russian cases**
+
+| Metric | Value |
+| --- | --- |
+| Cases passing hand-written expectations | 18 / 20 |
+| Median latency | 1.07 s |
+| Max latency | 2.10 s |
+| Cases over the 12-second cleanup deadline | 0 |
+| Sidecar start (process → `/health` ok) | 0.56 s |
+| Cold path (restart, then first cleanup) | 0.69 s |
+| Warm latency | 1.24–1.61 s |
+| RSS with the model loaded | ≈ 1.26 GiB |
+| Idle CPU (`ps %cpu`, 5 s and 15 s after the last request) | 0.3 % |
+
+What worked: filler-heavy dictation, numbers, Russian names, self-correction, technical
+terms, mixed RU/EN, already-clean text, typo repair (`севодня` → `сегодня`), preserving
+the expressive stutter `П-практичность`, keeping a meaningful trailing word, fragments,
+paths/identifiers (`src/lib/store.ts`, `getSettings`), URLs, and not answering a question
+that was dictated. No case changed facts, added an answer, or paraphrased.
+
+Two real gaps, both reproducible (each re-run three times):
+
+1. `punct_caps` — lowercase unpunctuated input was returned unchanged, so capitalization
+   was not fixed.
+2. `unit_math` — for one specific input the model returned the instruction line
+   ("Верни только исправленный текст без пояснений.") instead of the text. This is now
+   covered by the existing guard: a new `instruction-echo` rejection reason makes cleanup
+   fall back to the unchanged raw dictation, so the user never receives the instruction
+   instead of their words. Guarded by `transcriptionGuard.test.ts`.
+
+Conclusion: the model is fact-safe and far inside the 12-second budget, so it stays
+recommended, but its description states the two limitations instead of promising
+punctuation repair. No model was downloaded or removed.
+
+**Local STT smoke**
+
+| Model | Status |
+| --- | --- |
+| Nemotron 3.5 ASR Streaming 0.6B (installed) | Mechanics smoke on `tests/fixtures/media/tone.wav`: `{"text": ""}` in 0.66 s, no hallucinated caption on non-speech. Streaming endpoint `…/transcriptions/stream` answered `{"status":"started"}` then `{"status":"final"}` (`streaming=true`), matching the parser used by the file path. |
+| GigaAM v3 | Not installed; downloading requires explicit user consent, which was refused for this run. |
+| Whisper large-v3-turbo | Not installed; same restriction. |
+
+The smoke against the live managed runtime also exposed a real protocol constraint that
+the streaming wiring has to respect: with `language=auto` (or an empty selection) the
+runtime answers `unsupported language` and the plain endpoint returns HTTP 500 for the
+same reason. `file_streaming_supported` therefore enables streaming only for a local,
+non-diarized streaming model **with a concrete language**, so `auto` falls back to the
+ordinary JSON request that the runtime does serve (`200`).
+
+Two things this smoke does **not** establish: the fixture is a 440 Hz tone, so it proves
+the no-speech path and the streaming protocol, not Russian recognition quality; and the
+GigaAM ≤25 s chunk window and Whisper diarization remain covered only by their existing
+unit tests. Both are recorded as unverified for task 3.6 rather than claimed.
+
+The managed Nemotron runtime of the running application measured 0.3 % idle CPU and
+≈ 890 MB RSS while idle, which is consistent with the "local STT stays resident, local
+LLM does not" split: with an API text model selected the `talkee-llm` sidecar is not
+started at all.
+
+### Unverified manual checks — 2026-10-01
+
+The user chose to implement the code and run the automated tests only, recording manual
+steps as unverified. Nothing below was performed, and no task is ticked on the strength
+of it. Automated evidence for the same areas is listed so the gap is precise.
+
+| Task | What is verified automatically | What is **not** verified |
+| --- | --- | --- |
+| 2.1 | `SettingsApp.tsx` sidebar/workspace split, `workspaceLayout` geometry tests, `tsc` | Real window at the 760×520 minimum, no horizontal scrollbar, light/dark themes, native traffic lights and drag region |
+| 2.2 | History markup and CSS rules exist; `tsc`; full `bun test` | Opening a record, search, raw/cleaned switch, copy, audio playback and delete in the running app |
+| 2.3 | `FormSection`/`FormRow`/`SegmentedControl`/`SelectMenu` usage; hotkey validation and preview tests; `tsc` | Tab/Space traversal and saved settings in the running window |
+| 2.4 | Shared shell classes and `tsc` | Chat and translation scenarios in the running app |
+| 2.5 | i18n keys resolve; `settingsNavigation` test; `git diff --check` | Traffic lights, Reduce Motion/Transparency, real hotkeys |
+| 4.2 | `tray::tests` (2 pass) for phase → label/enabled, plus the widget phase refs | Starting/stopping a call from the tray, permission refusal, conflicting dictation |
+| 4.4 | Retention and call tests (11 pass); docs updated; `tsc`, `cargo check` | Playback of both tracks, retry, explicit call deletion |
+| 5.5 | Job/client tests; `cargo check`; docs updated | Long MP4 across tab switches and window close/reopen with the same jobId |
+| 6.6 | `fileTranscriptionEta`/`fileTranscriptionJobs` tests; `cargo test ai::tests`; `tsc` | Ready WAV, real MP4, pauses/silence, GigaAM ≤25 s chunks, Whisper diarization |
+| 8.1 | `check:changelog`; all unit tests; the model and latency measurements above | The combined end-to-end run (Nemotron + DeepSeek, tray call with dictation audio off, long MP4, statistics without duplicates) |
+
+Two notes on how to read the table:
+
+- The installed `/Applications/Talkee.app` is version 0.4.8 and does **not** contain any
+  of this change, so nothing in this session was observed in a running Talkee window.
+  Its local STT runtime was used read-only for the smoke described above; no recording,
+  no settings change and no model download or deletion was performed on the user's app.
+- Automated coverage is strongest exactly where the earlier checkpoints already ran
+  (primitives, tray menu logic, file-job ownership, progress payloads). Rows marked
+  unverified are the interactive macOS behaviours, which is where the remaining risk is.
+
+### Tasks closed by explicit user decision
+
+**3.6** is ticked on the strength of the measurements above plus an explicit decision, not
+on a complete measurement matrix. The evaluation ran on the installed Qwen3 1.7B Q4 (20
+Russian cases) and the STT smoke on the installed Nemotron; the second local Qwen
+(Qwen2.5 3B) and the GigaAM / Whisper-turbo smoke need model downloads, which the user
+declined for this run and again when asked before archiving. The task's own wording
+forbids installing models without a coordinated user action, so the honest outcome is:
+recommendation evidence exists for one model, the gap is recorded here, and **no model is
+labelled recommended on unmeasured evidence** — Qwen2.5 keeps its "legacy, not measured
+on this machine" description.
+
+Everything else in the change is implemented and covered by `bun run gate`
+(`version:check`, `check:changelog`, `check:network`, `check:naming`, `check:agents-docs`,
+`check:repo`, `openspec validate --strict`, `biome ci`, `cargo fmt`, both `tsc` projects,
+`cargo clippy -D warnings`, `bun test` and `cargo test`), which passes on the final
+working tree.

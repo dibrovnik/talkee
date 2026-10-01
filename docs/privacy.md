@@ -83,3 +83,34 @@ bun run check:network
 5. Запустите `bun run check:network` и убедитесь, что проверка проходит.
 
 Если хост добавляется временно (например, до удаления связанной возможности), добавляйте его в `pendingRemoval` с пометкой изменения, которое его уберёт.
+
+### Call recording retention
+
+The tray's call action starts the same local capture as the widget; it does not
+silently start a recording at launch. Microphone and system-audio permissions
+remain required. Call tracks are saved locally even when dictation audio saving
+is off, including after transcription failures. Explicit deletion and existing
+history limits still apply; this is not indefinite storage. Live translation has
+its own unchanged retention policy.
+
+### Usage statistics
+
+The statistics tab is computed entirely on the machine from local aggregates in the
+shared store file under the `stats` key, kept separate from the `history` key and
+from transcript text. Nothing in the statistics pipeline performs a network request:
+there is no analytics endpoint, no account and no telemetry, so
+`bun run check:network` stays green with its audit unchanged.
+
+Statistics record only word counts, the number of successful recordings, audio
+seconds, measured processing seconds, the source (dictation, file, call, live
+translation) and the recognition model id captured when that recording completed.
+They never contain transcript text, prompts, API keys, endpoints, file paths or
+application names. A recording without a model lands in the "Неизвестно" bucket, and
+a measurement that was never taken stays missing instead of being written as zero.
+
+Clearing the history removes transcripts and audio files but does not delete the
+aggregates, so the statistics remain comparable over time. The typing speed the user
+enters or measures is a local setting, and the saving estimate is derived from it in
+memory. Source and model breakdowns start at the update that introduced them: older
+recordings are counted only in the totals and are not re-analysed from stored
+history.

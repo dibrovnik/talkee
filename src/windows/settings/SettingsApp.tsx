@@ -15,6 +15,7 @@ import { type MsgKey, useI18n } from "../../lib/i18n";
 import {
   type Icon,
   IconAdjustmentsHorizontal,
+  IconChartBar,
   IconCpu,
   IconDeviceDesktopCog,
   IconFileMusic,
@@ -46,6 +47,7 @@ import { FileTranscriptionTab } from "./tabs/FileTranscriptionTab";
 import { MainTab } from "./tabs/MainTab";
 import { SettingsTab } from "./tabs/SettingsTab";
 import { SettingsTabs } from "./tabs/SettingsTabs";
+import { StatsTab } from "./tabs/StatsTab";
 import { TranslationTab } from "./tabs/TranslationTab";
 import {
   CONTENT_DRAG_REGION_HEIGHT,
@@ -81,7 +83,6 @@ interface SidebarTab {
   id: Tab;
   labelKey: MsgKey;
   icon: Icon;
-  note: string;
 }
 
 // Group the reading workspace first, then processing configuration,
@@ -92,19 +93,21 @@ const SIDEBAR_GROUPS: SidebarTab[][] = [
       id: "main",
       labelKey: "settingsApp.tab.main",
       icon: IconHome,
-      note: "История записей",
     },
     {
       id: "file",
       labelKey: "settingsApp.tab.file",
       icon: IconFileMusic,
-      note: "Транскрибация",
     },
     {
       id: "chat",
       labelKey: "settingsApp.tab.chat",
       icon: IconMessage,
-      note: "Чат с записями и текстом",
+    },
+    {
+      id: "stats",
+      labelKey: "settingsApp.tab.stats",
+      icon: IconChartBar,
     },
   ],
   [
@@ -112,19 +115,16 @@ const SIDEBAR_GROUPS: SidebarTab[][] = [
       id: "model",
       labelKey: "settingsApp.tab.model",
       icon: IconCpu,
-      note: "Ключи и подключение модели",
     },
     {
       id: "style",
       labelKey: "settingsApp.tab.style",
       icon: IconSparkles,
-      note: "Стиль обработки и Промпты для саммари",
     },
     {
       id: "interpreter",
       labelKey: "settingsApp.tab.interpreter",
       icon: IconLanguage,
-      note: "Перевод диктовки, выделения и живой речи",
     },
   ],
   [
@@ -132,7 +132,6 @@ const SIDEBAR_GROUPS: SidebarTab[][] = [
       id: "settings",
       labelKey: "settingsApp.tab.settings",
       icon: IconAdjustmentsHorizontal,
-      note: "Язык, микрофон и горячая клавиша",
     },
     ...(import.meta.env.DEV
       ? [
@@ -140,7 +139,6 @@ const SIDEBAR_GROUPS: SidebarTab[][] = [
             id: "ui" as Tab,
             labelKey: "settingsApp.tab.ui" as MsgKey,
             icon: IconDeviceDesktopCog,
-            note: "Витрина примитивов",
           },
         ]
       : []),
@@ -477,6 +475,7 @@ export function SettingsApp() {
                   </div>
                   {activeTab === "model" && <SettingsTabs type="model" />}
                   {activeTab === "style" && <SettingsTabs type="style" />}
+                  {activeTab === "stats" && <StatsTab />}
                   {activeTab === "interpreter" && <TranslationTab />}
                   {import.meta.env.DEV && activeTab === "ui" && <Gallery />}
                 </div>

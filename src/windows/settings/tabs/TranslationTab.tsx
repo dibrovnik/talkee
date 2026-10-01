@@ -228,15 +228,22 @@ export function TranslationTab(): ReactElement {
 
   return (
     <div className="ui-tab">
-      <SegmentedControl
-        value={activeView}
-        ariaLabel={t("translation.view.live")}
-        options={[
-          { value: "live" as const, label: t("translation.view.live") },
-          { value: "other" as const, label: t("translation.view.other") },
-        ]}
-        onChange={setActiveView}
-      />
+      <div className="ui-page-header">
+        <div className="ui-page-header__title">{t("translation.page.title")}</div>
+        <div className="ui-page-header__desc">{t("translation.page.desc")}</div>
+      </div>
+
+      <div className="ui-view-switch">
+        <SegmentedControl
+          value={activeView}
+          ariaLabel={t("translation.view.live")}
+          options={[
+            { value: "live" as const, label: t("translation.view.live") },
+            { value: "other" as const, label: t("translation.view.other") },
+          ]}
+          onChange={setActiveView}
+        />
+      </div>
 
       {activeView === "other" ? (
         <>

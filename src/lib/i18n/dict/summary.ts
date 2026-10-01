@@ -49,6 +49,10 @@ export const summary = {
   "summary.actions": { ru: "Действия", en: "Actions" },
 
   "devChat.title": { ru: "Чат с моделью", en: "Model chat" },
+  "devChat.subtitle": {
+    ru: "Вопросы по записям и тексту на выбранной модели. Ответы опираются на историю транскрибаций.",
+    en: "Ask about your recordings and text using the selected model. Answers are grounded in your transcription history.",
+  },
   "devChat.clear": { ru: "Очистить", en: "Clear" },
   "devChat.empty": { ru: "Сообщений пока нет.", en: "No messages yet." },
   "devChat.input": { ru: "Сообщение", en: "Message" },

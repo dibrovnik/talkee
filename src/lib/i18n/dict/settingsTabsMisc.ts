@@ -199,6 +199,11 @@ export const settingsTabsMisc = {
     en: "Loading translator…",
   },
   "translation.title": { ru: "Переводчик", en: "Translator" },
+  "translation.page.title": { ru: "Переводчик", en: "Translator" },
+  "translation.page.desc": {
+    ru: "Синхронный перевод речи в реальном времени и перевод обычной диктовки или выделенного текста.",
+    en: "Live speech translation in real time, plus translation of ordinary dictation or selected text.",
+  },
   "translation.view.live": {
     ru: "Синхронный перевод (API)",
     en: "Live translation (API)",

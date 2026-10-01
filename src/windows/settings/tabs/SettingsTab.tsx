@@ -11,7 +11,7 @@ import { DictationHotkeyControl } from "../../../components/DictationHotkeyContr
 import { LANGUAGES } from "../../../config/languages";
 import { DOCK_VISIBILITY_CHANGED_EVENT, SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
 import { useI18n } from "../../../lib/i18n";
-import { IconCheck, IconChevronDown, IconMail, IconSearch } from "../../../lib/icons";
+import { IconMail } from "../../../lib/icons";
 import { logError, logInfo } from "../../../lib/logger";
 import { checkMicrophonePermission } from "../../../lib/permissions";
 import {
@@ -33,6 +33,7 @@ import { Button } from "../../../ui/Button";
 import { FormRow } from "../../../ui/FormRow";
 import { FormSection } from "../../../ui/FormSection";
 import { SegmentedControl } from "../../../ui/SegmentedControl";
+import { SelectMenu } from "../../../ui/SelectMenu";
 import { Slider } from "../../../ui/Slider";
 import { TextField } from "../../../ui/TextField";
 import { Toggle } from "../../../ui/Toggle";
@@ -52,16 +53,9 @@ export function SettingsTab() {
   const { lang, t } = useI18n();
   const [settings, setSettings] = useState<AppSettings | null>(null);
 
-  // Language picker state
-  const [langSearch, setLangSearch] = useState("");
-  const [langOpen, setLangOpen] = useState(false);
-  const langRef = useRef<HTMLDivElement>(null);
-
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
-  const [micOpen, setMicOpen] = useState(false);
   const [micStatus, setMicStatus] = useState<MicAvailabilityState>("empty");
   const [, setMicMessage] = useState(t("settingsGeneralExtra.mic.checking"));
-  const micRef = useRef<HTMLDivElement>(null);
 
   const settingsRef = useRef<AppSettings | null>(null);
   const widgetScaleSaveRequestRef = useRef(0);
@@ -216,16 +210,6 @@ export function SettingsTab() {
     };
   }, [settings?.micId]);
 
-  // Close dropdowns on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
-      if (micRef.current && !micRef.current.contains(e.target as Node)) setMicOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
   const update = async (patch: AppSettingsPatch): Promise<AppSettings | null> => {
     if (!settingsRef.current) return null;
     const s = mergeAppSettingsPatch(settingsRef.current, patch);
@@ -332,13 +316,6 @@ export function SettingsTab() {
 
   if (!settings) return null;
 
-  const filteredLangs = LANGUAGES.filter(
-    (l) =>
-      l.name.toLowerCase().includes(langSearch.toLowerCase()) ||
-      l.native.toLowerCase().includes(langSearch.toLowerCase()) ||
-      l.code.toLowerCase().includes(langSearch.toLowerCase()),
-  );
-  const currentLang = LANGUAGES.find((l) => l.code === settings.language);
   const selectedMicrophone = microphones.find((m) => m.deviceId === settings.micId) || null;
   const visibleMicrophoneLabel = selectedMicrophone
     ? getMicrophoneLabel(selectedMicrophone, microphones.indexOf(selectedMicrophone))
@@ -348,8 +325,27 @@ export function SettingsTab() {
   const realtimeTranscriptionActive = settings.realtimeTranscriptionEnabled;
   const micSelectDisabled = microphones.length === 0 || micStatus === "permission-needed";
 
+  // Radix owns focus, type-ahead and Escape for these lists; the visible value
+  // keeps the native name plus the display name, as before.
+  const languageOptions = LANGUAGES.map((language) => ({
+    value: language.code,
+    label: `${language.native} (${language.name})`,
+  }));
+  const microphoneOptions = [
+    { value: "", label: t("settings.mic.systemDefault") },
+    ...microphones.map((mic, index) => ({
+      value: mic.deviceId,
+      label: getMicrophoneLabel(mic, index),
+    })),
+  ];
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+    <div className="ui-tab">
+      <div className="ui-page-header">
+        <div className="ui-page-header__title">{t("settingsGeneralExtra.page.title")}</div>
+        <div className="ui-page-header__desc">{t("settingsGeneralExtra.page.desc")}</div>
+      </div>
+
       <FormSection title={t("settings.uiLanguage.title")}>
         <FormRow
           label={t("settings.uiLanguage.title")}
@@ -370,6 +366,7 @@ export function SettingsTab() {
         />
         <FormRow
           label={t("settings.theme.title")}
+          description={t("settings.theme.desc")}
           control={
             <SegmentedControl
               value={settings.theme}
@@ -391,254 +388,35 @@ export function SettingsTab() {
       <FormSection title={t("settings.recognitionLang.title")}>
         <FormRow
           label={t("settings.recognitionLang.title")}
+          description={t("settings.recognitionLang.desc")}
           control={
-            <div ref={langRef} style={{ position: "relative", width: "100%" }}>
-              <Button
-                onClick={() => setLangOpen((o) => !o)}
-                style={{
-                  width: "100%",
-                  justifyContent: "space-between",
-                  gap: 8,
-                }}
-              >
-                <span
-                  style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {currentLang ? `${currentLang.native} (${currentLang.name})` : settings.language}
-                </span>
-                <IconChevronDown
-                  size={11}
-                  stroke={2}
-                  style={{
-                    flexShrink: 0,
-                    transform: langOpen ? "rotate(180deg)" : "none",
-                    transition: "transform 0.15s",
-                  }}
-                />
-              </Button>
-              {langOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 6px)",
-                    right: 0,
-                    width: 320,
-                    maxHeight: 320,
-                    background: "var(--control-bg)",
-                    border: "1px solid var(--separator)",
-                    borderRadius: "var(--radius-group)",
-                    boxShadow: "var(--shadow-panel)",
-                    zIndex: 100,
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: 8,
-                      borderBottom: "1px solid var(--separator)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
-                    <IconSearch size={11} style={{ color: "var(--label-3)", flexShrink: 0 }} />
-                    <input
-                      ref={(el) => {
-                        el?.focus();
-                      }}
-                      value={langSearch}
-                      onChange={(e) => setLangSearch(e.target.value)}
-                      placeholder={t("settings.recognitionLang.searchPlaceholder")}
-                      style={{
-                        border: "none",
-                        outline: "none",
-                        background: "transparent",
-                        font: "inherit",
-                        fontSize: "var(--fs-callout)",
-                        color: "var(--label)",
-                        flex: 1,
-                      }}
-                    />
-                  </div>
-                  <div style={{ overflow: "auto", flex: 1 }}>
-                    {filteredLangs.length === 0 ? (
-                      <div
-                        style={{
-                          padding: "10px 12px",
-                          fontSize: "var(--fs-callout)",
-                          color: "var(--label-3)",
-                        }}
-                      >
-                        {t("common.notFound")}
-                      </div>
-                    ) : (
-                      filteredLangs.map((language) => {
-                        const active = settings.language === language.code;
-
-                        return (
-                          <button
-                            key={language.code}
-                            type="button"
-                            onClick={() => {
-                              void update({ language: language.code });
-                              setLangOpen(false);
-                              setLangSearch("");
-                            }}
-                            className={["ui-menu-item", active ? "ui-menu-item--active" : ""]
-                              .filter(Boolean)
-                              .join(" ")}
-                          >
-                            <span className="ui-menu-item__hint">{language.code}</span>
-                            <span style={{ flex: 1 }}>{language.native}</span>
-                            <span className="ui-menu-item__hint">{language.name}</span>
-                            {active && (
-                              <IconCheck
-                                size={11}
-                                stroke={2.5}
-                                style={{ color: "var(--label)", flexShrink: 0 }}
-                              />
-                            )}
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <SelectMenu
+              className="ui-select-field"
+              value={settings.language}
+              ariaLabel={t("settings.recognitionLang.title")}
+              placeholder={t("settings.recognitionLang.searchPlaceholder")}
+              options={languageOptions}
+              onChange={(code) => {
+                void update({ language: code });
+              }}
+            />
           }
         />
         <FormRow
           label={t("settings.mic.title")}
+          description={t("settings.mic.desc")}
           control={
-            <div ref={micRef} style={{ position: "relative", width: "100%" }}>
-              <Button
-                disabled={micSelectDisabled}
-                onClick={() => {
-                  if (micSelectDisabled) return;
-                  setMicOpen((o) => !o);
-                }}
-                style={{
-                  width: "100%",
-                  justifyContent: "space-between",
-                  gap: 8,
-                }}
-              >
-                <span
-                  style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {microphones.length === 0
-                    ? t("settings.mic.systemDefault")
-                    : visibleMicrophoneLabel}
-                </span>
-                <IconChevronDown
-                  size={11}
-                  stroke={2}
-                  style={{
-                    flexShrink: 0,
-                    transform: micOpen ? "rotate(180deg)" : "none",
-                    transition: "transform 0.15s",
-                  }}
-                />
-              </Button>
-
-              {micOpen && microphones.length > 0 && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 6px)",
-                    right: 0,
-                    width: "100%",
-                    maxHeight: 240,
-                    background: "var(--control-bg)",
-                    border: "1px solid var(--separator)",
-                    borderRadius: "var(--radius-group)",
-                    boxShadow: "var(--shadow-panel)",
-                    zIndex: 100,
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div style={{ overflow: "auto", flex: 1, padding: "4px 0" }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void update({ micId: "" });
-                        setMicOpen(false);
-                      }}
-                      className={[
-                        "ui-menu-item",
-                        settings.micId === "" ? "ui-menu-item--active" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      <span
-                        style={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {t("settings.mic.systemDefault")}
-                      </span>
-                      {settings.micId === "" && (
-                        <IconCheck
-                          size={11}
-                          stroke={2.5}
-                          style={{ color: "var(--label)", flexShrink: 0 }}
-                        />
-                      )}
-                    </button>
-                    {microphones.map((m, i) => {
-                      const active = settings.micId === m.deviceId;
-
-                      return (
-                        <button
-                          key={m.deviceId}
-                          type="button"
-                          onClick={() => {
-                            void update({ micId: m.deviceId });
-                            setMicOpen(false);
-                          }}
-                          className={["ui-menu-item", active ? "ui-menu-item--active" : ""]
-                            .filter(Boolean)
-                            .join(" ")}
-                        >
-                          <span
-                            style={{
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {getMicrophoneLabel(m, i)}
-                          </span>
-                          {active && (
-                            <IconCheck
-                              size={11}
-                              stroke={2.5}
-                              style={{ color: "var(--label)", flexShrink: 0 }}
-                            />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
+            <SelectMenu
+              className="ui-select-field"
+              value={settings.micId}
+              disabled={micSelectDisabled}
+              ariaLabel={t("settings.mic.title")}
+              placeholder={visibleMicrophoneLabel}
+              options={microphoneOptions}
+              onChange={(micId) => {
+                void update({ micId });
+              }}
+            />
           }
         />
       </FormSection>
@@ -736,14 +514,14 @@ export function SettingsTab() {
               />
               <div
                 style={{
-                  height: 22,
-                  borderRadius: 5,
+                  height: 36,
+                  borderRadius: "var(--radius-control)",
                   background: "var(--control-track)",
                   color: "var(--label)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: "var(--fs-subhead)",
+                  fontSize: 13,
                   fontWeight: 600,
                   fontVariantNumeric: "tabular-nums",
                 }}

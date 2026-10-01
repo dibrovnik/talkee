@@ -218,4 +218,18 @@ export const settingsGeneral = {
     ru: "Откроется почтовый клиент с письмом на {email}. Опишите проблему или вопрос – мы поможем.",
     en: "Your email client will open a message to {email}. Describe the problem or question – we'll help.",
   },
+
+  // Page header (windows/settings/tabs/SettingsTab.tsx)
+  "settingsGeneralExtra.page.title": {
+    ru: "Основные настройки",
+    en: "General settings",
+  },
+  "settingsGeneralExtra.page.desc": {
+    ru: "Язык, микрофон, горячие клавиши, индикатор записи и запуск приложения.",
+    en: "Language, microphone, hotkeys, recording indicator and app startup.",
+  },
+  "settingsGeneralExtra.mic.status": {
+    ru: "Микрофон для записи голоса.",
+    en: "Microphone used to record your voice.",
+  },
 } as const;

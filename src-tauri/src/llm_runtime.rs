@@ -689,10 +689,23 @@ pub struct LocalLlmModel {
     downloaded: bool,
 }
 
+const DAILY_CLEANUP_MODEL_IDS: [&str; 2] = ["qwen3-1.7b-instruct-q4", "qwen2.5-3b-instruct-q4"];
+
+fn visible_cleanup_model(id: &str, downloaded: bool) -> bool {
+    DAILY_CLEANUP_MODEL_IDS.contains(&id) || downloaded
+}
+
 #[tauri::command]
-pub fn list_local_llm_models(app: AppHandle) -> Vec<LocalLlmModel> {
-    LLM_CATALOG
+pub fn list_local_llm_models(
+    app: AppHandle,
+    selected_model_id: Option<String>,
+) -> Vec<LocalLlmModel> {
+    let mut models = LLM_CATALOG
         .iter()
+        .filter(|model| {
+            visible_cleanup_model(model.id, is_downloaded(&app, model))
+                || selected_model_id.as_deref() == Some(model.id)
+        })
         .map(|model| LocalLlmModel {
             id: model.id.to_string(),
             label: model.label.to_string(),
@@ -709,11 +722,31 @@ pub fn list_local_llm_models(app: AppHandle) -> Vec<LocalLlmModel> {
             recommended: model.recommended,
             downloaded: is_downloaded(&app, model),
         })
-        .collect()
+        .collect::<Vec<_>>();
+    models.sort_by_key(|model| {
+        DAILY_CLEANUP_MODEL_IDS
+            .iter()
+            .position(|id| *id == model.id)
+            .unwrap_or(2)
+    });
+    models
 }
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn new_installations_offer_only_two_small_russian_cleanup_models() {
+        let visible: Vec<&str> = LLM_CATALOG
+            .iter()
+            .filter(|model| visible_cleanup_model(model.id, false))
+            .map(|model| model.id)
+            .collect();
+        assert_eq!(visible, DAILY_CLEANUP_MODEL_IDS);
+        assert!(!visible_cleanup_model("qwen3-8b-instruct-q4", false));
+        assert!(visible_cleanup_model("qwen3-8b-instruct-q4", true));
+        assert!(model_info("qwen3-8b-instruct-q4").is_some());
+    }
+
     use super::*;
 
     #[test]

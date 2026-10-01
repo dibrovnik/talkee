@@ -2,7 +2,8 @@ import type { MsgKey } from "../../../lib/i18n";
 import { DEFAULT_LOCAL_STT_ENDPOINT, DEFAULT_LOCAL_STT_MODEL } from "../../../lib/modelMode";
 
 type LocalRuntimeKind = "whisper" | "diarization";
-type LocalModelKind = "transcription" | "text" | "other";
+/** Sub-sections inside the recognition section (API and local branches). */
+type RecognitionSectionKind = "transcription" | "translation";
 
 const LOCAL_RUNTIME_ENDPOINTS: Record<LocalRuntimeKind, string> = {
   whisper: DEFAULT_LOCAL_STT_ENDPOINT,
@@ -573,6 +574,12 @@ const LEGACY_LOCAL_MODEL_OPTIONS: LocalModelOption[] = LOCAL_MODEL_CATALOG.filte
   (model) => !CURATED_LOCAL_MODEL_IDS.includes(model.id),
 ).map((model) => ({ ...model, legacy: true }));
 
+/** Every local model the runtime supports: curated suggestions plus kept ones. */
+const KNOWN_LOCAL_MODEL_OPTIONS: LocalModelOption[] = [
+  ...LOCAL_MODEL_OPTIONS,
+  ...LEGACY_LOCAL_MODEL_OPTIONS,
+];
+
 /** Resolve any known local model by its catalog id (curated or legacy). */
 function localModelOptionById(id: string): LocalModelOption | undefined {
   const normalized = id.trim().toLowerCase();
@@ -620,9 +627,11 @@ function localSttOptionsForDisplay({
   const selected = normalize(selectedModel || "");
 
   const legacy = LEGACY_LOCAL_MODEL_OPTIONS.filter((option) => {
-    const model = option.model.toLowerCase();
+    const keys = [option.id.toLowerCase(), option.model.toLowerCase()];
     return (
-      installed.has(model) || downloaded.has(model) || (selected.length > 0 && selected === model)
+      keys.some((key) => installed.has(key)) ||
+      keys.some((key) => downloaded.has(key)) ||
+      (selected.length > 0 && keys.includes(selected))
     );
   });
 
@@ -724,6 +733,7 @@ export {
   apiAdaptersForDisplay,
   CUSTOM_API_MODEL_VALUE,
   isLocalSttEndpoint,
+  KNOWN_LOCAL_MODEL_OPTIONS,
   LEGACY_API_ADAPTERS,
   LEGACY_LOCAL_MODEL_OPTIONS,
   LOCAL_MODEL_DESCRIPTION_KEYS,
@@ -735,7 +745,6 @@ export {
   LOCAL_STT_PRESET_MODEL,
   type LocalModelActionState,
   type LocalModelDownloadProgressEvent,
-  type LocalModelKind,
   type LocalModelOption,
   type LocalOtherComponent,
   type LocalRuntimeKind,
@@ -745,6 +754,7 @@ export {
   localSttOptionsForDisplay,
   type ModelMode,
   type PromptPreview,
+  type RecognitionSectionKind,
   type SettingsTabsProps,
   TEXT_MODEL_OPTIONS,
 };

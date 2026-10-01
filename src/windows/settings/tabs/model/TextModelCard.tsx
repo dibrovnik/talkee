@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ModelCardDisclosureButton } from "../../../../components/ModelCardDisclosureButton";
 import { useI18n } from "../../../../lib/i18n";
 import { IconBolt } from "../../../../lib/icons";
+import { resolveTextProcessingMode } from "../../../../lib/modelMode";
 import type { AppSettings } from "../../../../lib/store";
 import { Badge } from "../../../../ui/Badge";
 import { Button } from "../../../../ui/Button";
@@ -34,6 +35,9 @@ function TextModelCard({
   const model = (settings.llmModel || "").trim();
   const apiKey = (settings.llmApiKey || settings.apiKey || "").trim();
   const isLocalEndpoint = /127\.0\.0\.1|localhost/i.test(endpoint);
+  // The text-processing mode is decided by the text endpoint alone: this card is
+  // the API branch and never inherits the recognition mode.
+  const apiTextActive = resolveTextProcessingMode(settings) === "api";
   const hasSelectedModel = Boolean(model) && model.toLowerCase() !== "none";
   const configured = hasSelectedModel && (isLocalEndpoint || Boolean(apiKey));
   const isKnownModel = TEXT_MODEL_OPTIONS.includes(settings.llmModel);
@@ -113,6 +117,9 @@ function TextModelCard({
           </div>
           <div className="ui-model-card__body">
             <div className="ui-model-card__desc">{t("models.textModel.desc")}</div>
+            {!apiTextActive && (
+              <div className="ui-model-card__hint">{t("models.textSection.apiInactiveHint")}</div>
+            )}
           </div>
           <ModelCardDisclosureButton
             expanded={expanded}

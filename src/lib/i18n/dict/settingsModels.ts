@@ -58,6 +58,11 @@ export const settingsModels = {
   "models.modeCommit.label": { ru: "Режим: {mode}", en: "Mode: {mode}" },
   "models.modeCommit.select": { ru: "Выбрать", en: "Select" },
   "models.modeCommit.active": { ru: "Используется", en: "In use" },
+  "models.modeCommit.activeModel": { ru: "Используется: {model}", en: "In use: {model}" },
+  "models.modeCommit.selectLocalHint": {
+    ru: "Выберите локальную модель ниже, чтобы переключить обработку текста.",
+    en: "Pick a local model below to switch text processing.",
+  },
 
   // ── Recognition mode section ──
   "models.modeSection.title": {
@@ -68,7 +73,19 @@ export const settingsModels = {
     ru: "Вы можете в любой момент переключаться между своим API-ключом и локальной моделью.",
     en: "You can switch between your own API key and a local model at any time.",
   },
+  "models.modeSection.active": { ru: "Активно: {model}", en: "Active: {model}" },
   "models.mode.local": { ru: "Локально", en: "Local" },
+
+  // ── Text-processing (LLM) section, independent of the recognition mode ──
+  "models.textSection.title": { ru: "Обработка текста", en: "Text processing" },
+  "models.textSection.desc": {
+    ru: "Выбирается отдельно от распознавания: свой API-ключ или локальная модель. Просмотр секции не меняет настройки.",
+    en: "Chosen separately from recognition: your own API key or a local model. Browsing the section does not change settings.",
+  },
+  "models.textSection.apiInactiveHint": {
+    ru: "Сейчас текст обрабатывает локальная модель; эти поля не используются.",
+    en: "Text is currently processed by the local model; these fields are not used.",
+  },
 
   // ── API adapters section ──
   "models.apiSection.title": {
@@ -82,6 +99,10 @@ export const settingsModels = {
   "models.adapter.recommendedModel": {
     ru: "Рекомендуемая модель: {model}.",
     en: "Recommended model: {model}.",
+  },
+  "models.adapter.legacyHint": {
+    ru: "Ранее настроенный адаптер: больше не входит в рекомендации, настройки и ключ сохранены.",
+    en: "Previously configured adapter: no longer suggested; its settings and key are kept.",
   },
 
   // Per-adapter descriptions (ru = the original constant text)
@@ -278,6 +299,10 @@ export const settingsModels = {
     en: "Pick a model, download it through the local STT runtime, and use it without the cloud.",
   },
   "models.local.recommendedBadge": { ru: "Рекомендуем", en: "Recommended" },
+  "models.local.legacyHint": {
+    ru: "Ранее установленная модель: больше не входит в рекомендации, файл и настройки сохранены.",
+    en: "Previously installed model: no longer suggested; its file and settings are kept.",
+  },
 
   // Per-model descriptions (ru = the original constant text)
   "models.local.whisper-large-v3-turbo.description": {

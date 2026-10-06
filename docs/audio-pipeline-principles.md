@@ -497,3 +497,67 @@ language: the managed runtime only starts a stream for a concrete language, and 
 `unsupported language` for `auto` or an empty selection. `file_streaming_supported`
 therefore disables both the `streaming` flag and the streaming request id for `auto`,
 so that case takes the ordinary JSON path and still succeeds instead of failing.
+
+## Dictation cleanup hotkeys
+
+The main hotkey and widget click follow the saved `cleanupEnabled` switch. The
+dedicated cleanup hotkey forces cleanup on for that take only; it does not write
+the global setting. Both hold and toggle recording modes use this same contract.
+The pill/island indicator shows the saved setting while idle and the captured
+effective choice during recording/processing.
+
+## Cleanup latency and diagnostic evidence
+
+Text processing alone uses a small persistent HTTP pool (one idle connection per
+host, 30-second idle TTL). STT/file/download clients retain their existing policy.
+Remote clients retain system-proxy support; local clients bypass it. DeepSeek
+receives `thinking.type=disabled`. Cleanup has an absolute 8-second API / 12-second
+local deadline, does not replay failed POSTs or issue paid background warm-ups,
+and never accepts a response marked `finish_reason=length`. Long summary/chat
+operations keep their existing budgets and output handling. Built-in cleanup
+prompts are cached by language and selected preset id; custom prompts stay live.
+
+Each dictation/attempt has a `request_id`; retries have a fresh id and retain the
+history `entry_id`. Correlate `RECORDING`, `STT`, `CLEANUP`, `LLM`, `PASTE` and
+`API` records. These are diagnostic measurements, not a guarantee of immediate
+provider response or successful insertion into another application's editor.
+
+| Event | Safe evidence |
+| --- | --- |
+| recording choice / cleanup decision | trigger, global/effective flag, override, backend, model, preset, input size |
+| cleanup request/end | prompt version, budget, prep/cleanup milliseconds, applied/reason/error code, output size |
+| LLM start/headers/response/end | request/entry id, operation, host/path, model, status, headers/total milliseconds, safe error code |
+| provider metadata | request id, finish reason, supplied token/cache/reasoning counts; absent usage is unavailable, not zero |
+| STT/paste stage | request/entry id, start/end, outcome, stage milliseconds |
+| pipeline end | request id and pipeline_total_ms |
+
+Error categories include missing configuration, `connect`, `transport`, `read`,
+`timeout`, `http_NNN`, `parse`, `empty_response`, `truncated` and frontend
+quality rejection. Raw provider error bodies and request payloads are not logged.
+
+## Rotating local logs
+
+The active log is `~/.talkee/talkee.log`; the three newest archives are `.1`, `.2`,
+`.3` (newest first). Each is limited to 5 MiB, so the set is at most 20 MiB for a
+single app writer. Oversized legacy logs retain only a bounded tail of complete
+records on the next write. Entries are single-line, UTF-8-safe and bounded to
+16 KiB; known key/Auth fields and endpoint credentials/query are redacted.
+Newly opened log files use owner-only 0600 permissions. Disk/rotation failures
+report a safe stderr category and do not interrupt dictation or append without
+limits. Keep only one running app instance writing this path; the lock is
+process-local.
+
+- `bun run logs` follows replacement files through rotation (`tail -F`).
+- The application's clear command serializes deletion of active + archives with
+  writes. `bun run logs:clear` deletes the same four exact names; use this CLI
+  command only while the app is stopped. Neighboring files are untouched.
+- For a diagnostic audit read existing archives `.3`, `.2`, `.1`, then the active
+  file, and filter by date/time and `request_id`/`entry_id`. For example:
+  `grep 'request_id=YOUR_ID' ~/.talkee/talkee.log*`. Missing archives are normal.
+- Unit tests capture native diagnostic records in memory and use temporary files
+  for rotation tests, not the user's real app log.
+
+No live hardware/VPN or external LLM latency/quality benchmark was performed in
+this change: the user requested automated verification instead. Mock-server
+tests exercise pooling, connection failure/recovery, statuses, deadlines and
+metadata; prompt fixtures do not prove model inference quality.

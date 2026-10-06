@@ -988,13 +988,10 @@ pub fn stop_native_voice_recording() -> Result<NativeVoiceRecordingResult, Strin
                 );
                 Some(result)
             }
-            Err(err) => {
+            Err(_) => {
                 logger::log_error(
                     "LIVE_DICTATION",
-                    &format!(
-                        "Live dictation failed, full-audio transcription fallback will be used: {}",
-                        err
-                    ),
+                    "Live dictation failed, full-audio transcription fallback will be used",
                 );
                 None
             }

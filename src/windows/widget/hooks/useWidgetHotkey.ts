@@ -91,6 +91,10 @@ export function resolveHandyHotkeyIntent({
   return "ignore";
 }
 
+export function resolveRecordingHotkeyCleanup(intent: "voice" | "voice-cleanup"): true | null {
+  return intent === "voice-cleanup" ? true : null;
+}
+
 export function resolveSelectionHotkeyAction(
   state: HandyHotkeyEventPayload["state"],
   armed: boolean,
@@ -240,7 +244,7 @@ export function useWidgetHotkey({
       const mode = settingsRef.current?.recordingHotkeyMode === "toggle" ? "toggle" : "hold";
       if (event.state === "Pressed") {
         activateWidgetForHotkey();
-        dispatch({ type: "HOTKEY_PRESSED", mode, cleanup: intent === "voice-cleanup" });
+        dispatch({ type: "HOTKEY_PRESSED", mode, cleanup: resolveRecordingHotkeyCleanup(intent) });
       } else {
         dispatch({ type: "HOTKEY_RELEASED" });
       }

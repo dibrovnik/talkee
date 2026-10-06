@@ -22,6 +22,8 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
+static TEXT_HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+static LOCAL_TEXT_HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 static LONG_HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 static LOCAL_HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
@@ -79,6 +81,33 @@ fn local_long_http_client() -> &'static reqwest::Client {
             .timeout(Duration::from_secs(LONG_HTTP_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new())
+    })
+}
+
+/// Only text processing reuses connections; audio clients retain their VPN policy.
+fn text_http_client(is_local: bool) -> &'static reqwest::Client {
+    let slot = if is_local {
+        &LOCAL_TEXT_HTTP_CLIENT
+    } else {
+        &TEXT_HTTP_CLIENT
+    };
+    slot.get_or_init(|| {
+        let mut builder = reqwest::Client::builder()
+            .pool_max_idle_per_host(1)
+            .pool_idle_timeout(Duration::from_secs(30))
+            .retry(reqwest::retry::never())
+            .connect_timeout(Duration::from_secs(15))
+            .timeout(Duration::from_secs(if is_local {
+                LONG_HTTP_TIMEOUT_SECS
+            } else {
+                BOUNDED_HTTP_TIMEOUT_SECS
+            }));
+        if is_local {
+            builder = builder.no_proxy();
+        }
+        builder
+            .build()
+            .expect("valid text HTTP client configuration")
     })
 }
 
@@ -176,7 +205,7 @@ impl LocalStreamingTranscriptionError {
                 if matches!(status, 401 | 403) {
                     errors::local_stt_runtime_rejected_message(status, &body)
                 } else {
-                    format!("Whisper streaming API error ({}): {}", status, body)
+                    format!("Whisper streaming API error ({})", status)
                 }
             }
             LocalStreamingTranscriptionError::Request(message)
@@ -542,11 +571,8 @@ fn drain_local_streaming_lines(
 fn parse_local_streaming_event(
     line: &str,
 ) -> Result<LocalStreamingTranscriptionEvent, LocalStreamingTranscriptionError> {
-    serde_json::from_str::<LocalStreamingTranscriptionEvent>(line).map_err(|e| {
-        LocalStreamingTranscriptionError::Parse(format!(
-            "Whisper streaming response parse error: {}; line={}",
-            e, line
-        ))
+    serde_json::from_str::<LocalStreamingTranscriptionEvent>(line).map_err(|_| {
+        LocalStreamingTranscriptionError::Parse("Whisper streaming response parse error".into())
     })
 }
 
@@ -983,19 +1009,16 @@ async fn transcribe_audio_bytes_internal(
                     segments: Vec::new(),
                 });
             }
-            Err(LocalStreamingTranscriptionError::Http { status: 404, body }) => {
+            Err(LocalStreamingTranscriptionError::Http { status: 404, .. }) => {
                 logger::log_info(
                     "WHISPER",
-                    &format!(
-                        "Streaming endpoint unavailable, falling back to JSON transcription: {}",
-                        body
-                    ),
+                    "Streaming endpoint unavailable, falling back to JSON transcription: status=404",
                 );
             }
             Err(err) => {
                 let message = err.into_message();
                 emit_dictation_stream_update(&app, request_id, "error", "", Some(&message));
-                logger::log_error("WHISPER", &message);
+                logger::log_error("WHISPER", "Streaming transcription failed");
                 return Err(message);
             }
         }
@@ -1035,11 +1058,14 @@ async fn transcribe_audio_bytes_internal(
             let body = whisper_res.text().await.unwrap_or_default();
             if is_local_endpoint && matches!(status.as_u16(), 401 | 403) {
                 let err = errors::local_stt_runtime_rejected_message(status.as_u16(), &body);
-                logger::log_error("WHISPER", &err);
+                logger::log_error(
+                    "WHISPER",
+                    &format!("Local STT rejected request: status={}", status.as_u16()),
+                );
                 return Err(err);
             }
 
-            let err = format!("Whisper API error ({}): {}", status, body);
+            let err = format!("Whisper API error ({})", status);
             logger::log_error("WHISPER", &err);
             return Err(err);
         }
@@ -1051,7 +1077,10 @@ async fn transcribe_audio_bytes_internal(
         })?
     };
     let raw = whisper_body.text.trim().to_string();
-    logger::log_info("WHISPER", &format!("Transcribed: \"{}\"", raw));
+    logger::log_info(
+        "WHISPER",
+        &format!("Transcribed: chars={}", raw.chars().count()),
+    );
 
     if raw.is_empty() {
         logger::log_info("WHISPER", "Empty transcription, returning empty response");
@@ -1078,8 +1107,8 @@ async fn transcribe_audio_bytes_internal(
         logger::log_info(
             "WHISPER",
             &format!(
-                "Detected likely repetitive silence hallucination, dropping transcription: \"{}\"",
-                raw
+                "Detected likely repetitive silence hallucination, dropping transcription: chars={}",
+                raw.chars().count()
             ),
         );
         return Ok(AudioTranscriptionResult {
@@ -1093,8 +1122,8 @@ async fn transcribe_audio_bytes_internal(
         logger::log_info(
             "WHISPER",
             &format!(
-                "Detected likely silence hallucination, dropping transcription: \"{}\"",
-                raw
+                "Detected likely silence hallucination, dropping transcription: chars={}",
+                raw.chars().count()
             ),
         );
         return Ok(AudioTranscriptionResult {
@@ -1115,8 +1144,8 @@ async fn transcribe_audio_bytes_internal(
         logger::log_info(
             "WHISPER",
             &format!(
-                "Detected likely short uncertain transcription, dropping result: \"{}\" duration={:?} segments={:?}",
-                raw, whisper_body.duration, whisper_body.segments
+                "Detected likely short uncertain transcription, dropping result: chars={} duration={:?} segments={}",
+                raw.chars().count(), whisper_body.duration, whisper_body.segments.len()
             ),
         );
         return Ok(AudioTranscriptionResult {
@@ -1903,6 +1932,12 @@ struct ModelListItem {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ProcessTextRequest {
     #[serde(default)]
+    pub request_id: Option<String>,
+    #[serde(default)]
+    pub entry_id: Option<String>,
+    #[serde(default)]
+    pub operation: Option<String>,
+    #[serde(default)]
     pub deadline_ms: Option<u64>,
     pub text: String,
     pub prompt: String,
@@ -1999,136 +2034,221 @@ fn chat_completion_payload(request: &ChatCompletionRequest<'_>) -> serde_json::V
     payload
 }
 
-/// Run an explicit, user-initiated text-processing prompt (e.g. summary) against
-/// any OpenAI-compatible chat endpoint: a bundled local
-/// runtime (127.0.0.1), or a user-provided endpoint. This is a deliberate user
-/// action, including optional dictation cleanup.
+/// Each started operation has one terminal record; payloads never enter logs.
 #[tauri::command]
 pub async fn process_text(req: ProcessTextRequest) -> Result<ProcessTextResponse, String> {
+    static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let started = std::time::Instant::now();
+    let generated = format!(
+        "text-{}-{}",
+        std::process::id(),
+        SEQUENCE.fetch_add(1, Ordering::Relaxed)
+    );
+    let request_id = logger::safe_field(req.request_id.as_deref().unwrap_or(&generated));
+    let entry_id = logger::safe_field(req.entry_id.as_deref().unwrap_or("none"));
+    let operation = if req.operation.as_deref() == Some("cleanup") {
+        "cleanup"
+    } else {
+        "text"
+    };
+    let url = resolve_chat_completions_url(req.endpoint.as_deref());
+    logger::log_info("LLM", &format!(
+        "event=start request_id={} entry_id={} operation={} endpoint={} model={} local={} input_chars={} deadline_ms={}",
+        request_id, entry_id, operation, logger::safe_url(&url), logger::safe_field(req.model.as_deref().unwrap_or("gpt-4o-mini")),
+        is_likely_local_url(&url), req.text.chars().count(), req.deadline_ms.map(|v| v.to_string()).unwrap_or_else(|| "none".into())
+    ));
+    let result = process_text_inner(&req, &url, &request_id).await;
+    let (outcome, code, output_chars) = match &result {
+        Ok(response) => (
+            "success",
+            "none".to_string(),
+            response.result.chars().count(),
+        ),
+        Err(error) => ("error", text_error_code(error), 0),
+    };
+    logger::log_info("LLM", &format!(
+        "event=end request_id={} entry_id={} operation={} outcome={} error_code={} total_ms={} output_chars={}",
+        request_id, entry_id, operation, outcome, code, started.elapsed().as_millis(), output_chars
+    ));
+    result
+}
+
+fn text_error_code(error: &str) -> String {
+    error
+        .strip_prefix("[text:")
+        .and_then(|v| v.split_once(']').map(|v| v.0))
+        .map(logger::safe_field)
+        .unwrap_or_else(|| "unknown".into())
+}
+
+#[derive(Deserialize)]
+struct TextModelMessage {
+    content: Option<String>,
+}
+#[derive(Deserialize)]
+struct TextModelChoice {
+    message: Option<TextModelMessage>,
+    finish_reason: Option<String>,
+}
+#[derive(Deserialize)]
+struct TextModelResponse {
+    choices: Option<Vec<TextModelChoice>>,
+    usage: Option<serde_json::Value>,
+}
+
+fn text_usage_fields(usage: Option<&serde_json::Value>) -> String {
+    let Some(usage) = usage else {
+        return "usage=unavailable".into();
+    };
+    let fields = [
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens",
+        "prompt_cache_hit_tokens",
+        "prompt_cache_miss_tokens",
+    ]
+    .iter()
+    .filter_map(|key| {
+        usage
+            .get(*key)
+            .and_then(serde_json::Value::as_u64)
+            .map(|v| format!("{}={}", key, v))
+    })
+    .chain(
+        usage
+            .get("completion_tokens_details")
+            .and_then(|v| v.get("reasoning_tokens"))
+            .and_then(serde_json::Value::as_u64)
+            .map(|v| format!("reasoning_tokens={}", v)),
+    )
+    .collect::<Vec<_>>()
+    .join(" ");
+    if fields.is_empty() {
+        "usage=unavailable".into()
+    } else {
+        fields
+    }
+}
+
+async fn process_text_inner(
+    req: &ProcessTextRequest,
+    url: &str,
+    request_id: &str,
+) -> Result<ProcessTextResponse, String> {
     let text = req.text.trim();
     let prompt = req.prompt.trim();
-
     if text.is_empty() {
-        return Err("Нет текста для обработки".to_string());
+        return Err("[text:empty_input] Нет текста для обработки".into());
     }
     if prompt.is_empty() {
-        return Err("Промпт пустой".to_string());
+        return Err("[text:empty_prompt] Промпт пустой".into());
     }
-
-    let url = resolve_chat_completions_url(req.endpoint.as_deref());
-    let is_local = is_likely_local_url(&url);
+    let is_local = is_likely_local_url(url);
     let model = req
         .model
         .as_deref()
         .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .unwrap_or("gpt-4o-mini")
-        .to_string();
+        .filter(|v| !v.is_empty())
+        .unwrap_or("gpt-4o-mini");
     let api_key = req
         .api_key
         .as_deref()
         .map(str::trim)
-        .filter(|value| !value.is_empty());
-
+        .filter(|v| !v.is_empty());
     if api_key.is_none() && !is_local {
-        return Err("Не указан API-ключ для текстовой модели".to_string());
+        return Err("[text:missing_key] Не указан API-ключ для текстовой модели".into());
     }
-
-    logger::log_info(
-        "LLM",
-        &format!(
-            "process_text -> {} (model={}, local={}, chars={})",
-            url,
-            model,
-            is_local,
-            text.len()
-        ),
-    );
-
     let payload = chat_completion_payload(&ChatCompletionRequest {
-        model: &model,
+        model,
         prompt,
         user_text: text,
         temperature: req.temperature.unwrap_or(0.3),
         max_tokens: req.max_tokens,
         is_local,
-        thinking: chat_thinking_mode(&url, &model),
+        thinking: chat_thinking_mode(url, model),
     });
-
-    let client = if is_local {
-        local_long_http_client()
-    } else {
-        http_client()
-    };
-    let mut request = client.post(&url).json(&payload);
+    let mut request = text_http_client(is_local).post(url).json(&payload);
     if let Some(key) = api_key {
         request = request.bearer_auth(key);
     }
-
+    let started = std::time::Instant::now();
     let operation = async {
-        let response = request
-            .send()
-            .await
-            .map_err(|err| format!("Запрос к текстовой модели не удался: {}", err))?;
+        let response = request.send().await.map_err(|err| {
+            if err.is_timeout() {
+                "[text:timeout] Таймаут текстовой модели".to_string()
+            } else if err.is_connect() {
+                "[text:connect] Не удалось подключиться к текстовой модели".to_string()
+            } else {
+                "[text:transport] Ошибка соединения с текстовой моделью".to_string()
+            }
+        })?;
         let status = response.status();
-        let body = response
+        let provider_id = ["x-request-id", "request-id", "x-ds-request-id"]
+            .iter()
+            .find_map(|name| response.headers().get(*name).and_then(|v| v.to_str().ok()))
+            .map(logger::safe_field)
+            .unwrap_or_else(|| "unavailable".into());
+        logger::log_info(
+            "LLM",
+            &format!(
+                "event=headers request_id={} status={} headers_ms={} provider_request_id={}",
+                request_id,
+                status.as_u16(),
+                started.elapsed().as_millis(),
+                provider_id
+            ),
+        );
+        // Never retain or echo an HTTP error body: providers can reflect secrets/input.
+        if !status.is_success() {
+            return Err(format!(
+                "[text:http_{}] Ошибка текстовой модели (HTTP {})",
+                status.as_u16(),
+                status.as_u16()
+            ));
+        }
+        response
             .text()
             .await
-            .map_err(|err| format!("Не удалось прочитать ответ модели: {}", err))?;
-        Ok::<_, String>((status, body))
+            .map_err(|_| "[text:read] Не удалось прочитать ответ модели".to_string())
     };
-    let (status, body) = if let Some(deadline) = req.deadline_ms {
+    let body = if let Some(deadline) = req.deadline_ms {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|err| err.to_string())?
+            .map_err(|_| "[text:clock] Не удалось проверить время запроса".to_string())?
             .as_millis() as u64;
-        tokio::time::timeout(
-            Duration::from_millis(deadline.saturating_sub(now)),
-            operation,
-        )
-        .await
-        .map_err(|_| "Таймаут очистки текста".to_string())??
+        if deadline <= now {
+            return Err("[text:timeout] Таймаут очистки текста".into());
+        }
+        tokio::time::timeout(Duration::from_millis(deadline - now), operation)
+            .await
+            .map_err(|_| "[text:timeout] Таймаут очистки текста".to_string())??
     } else {
         operation.await?
     };
-
-    if !status.is_success() {
-        let snippet: String = body.chars().take(500).collect();
-        return Err(format!("Ошибка модели ({}): {}", status, snippet));
+    let parsed: TextModelResponse = serde_json::from_str(&body)
+        .map_err(|_| "[text:parse] Модель вернула некорректный ответ".to_string())?;
+    let usage = text_usage_fields(parsed.usage.as_ref());
+    let choice = parsed.choices.and_then(|v| v.into_iter().next());
+    let finish_reason = choice.as_ref().and_then(|v| v.finish_reason.as_deref());
+    logger::log_info(
+        "LLM",
+        &format!(
+            "event=response request_id={} finish_reason={} {}",
+            request_id,
+            logger::safe_field(finish_reason.unwrap_or("unavailable")),
+            usage
+        ),
+    );
+    if req.operation.as_deref() == Some("cleanup") && finish_reason == Some("length") {
+        return Err("[text:truncated] Модель обрезала результат очистки".into());
     }
-
-    #[derive(Deserialize)]
-    struct ChatMessage {
-        content: Option<String>,
-    }
-    #[derive(Deserialize)]
-    struct ChatChoice {
-        message: Option<ChatMessage>,
-    }
-    #[derive(Deserialize)]
-    struct ChatResponse {
-        choices: Option<Vec<ChatChoice>>,
-    }
-
-    let parsed = serde_json::from_str::<ChatResponse>(&body)
-        .map_err(|err| format!("Модель вернула некорректный ответ: {}", err))?;
-    let result = parsed
-        .choices
-        .and_then(|mut choices| {
-            if choices.is_empty() {
-                None
-            } else {
-                Some(choices.remove(0))
-            }
-        })
-        .and_then(|choice| choice.message)
-        .and_then(|message| message.content)
+    let result = choice
+        .and_then(|v| v.message)
+        .and_then(|v| v.content)
         .unwrap_or_default();
-
     if result.trim().is_empty() {
-        return Err("Модель вернула пустой ответ".to_string());
+        return Err("[text:empty_response] Модель вернула пустой ответ".into());
     }
-
     Ok(ProcessTextResponse { result })
 }
 
@@ -3034,6 +3154,267 @@ pub async fn delete_stt_model(
 #[cfg(test)]
 mod tests {
     #[test]
+    fn streaming_parse_error_never_echoes_transcript_or_response_body() {
+        let error = super::parse_local_streaming_event("{PRIVATE_TRANSCRIPT_BODY")
+            .err()
+            .unwrap()
+            .into_message();
+        assert!(error.contains("parse error"));
+        assert!(!error.contains("PRIVATE_TRANSCRIPT_BODY"));
+    }
+    async fn read_text_request(socket: &mut tokio::net::TcpStream) -> serde_json::Value {
+        use tokio::io::AsyncReadExt;
+        let mut header = Vec::new();
+        while !header.ends_with(b"\r\n\r\n") {
+            header.push(socket.read_u8().await.unwrap());
+        }
+        let header = String::from_utf8(header).unwrap();
+        let length: usize = header
+            .lines()
+            .find_map(|line| {
+                line.to_lowercase()
+                    .strip_prefix("content-length:")
+                    .map(|v| v.trim().parse().unwrap())
+            })
+            .unwrap();
+        let mut body = vec![0; length];
+        socket.read_exact(&mut body).await.unwrap();
+        serde_json::from_slice(&body).unwrap()
+    }
+
+    fn text_request(endpoint: String) -> ProcessTextRequest {
+        ProcessTextRequest {
+            text: "Hello".into(),
+            prompt: "Clean".into(),
+            endpoint: Some(endpoint),
+            model: Some("test".into()),
+            api_key: None,
+            deadline_ms: None,
+            temperature: None,
+            max_tokens: None,
+            operation: None,
+            request_id: None,
+            entry_id: None,
+        }
+    }
+
+    async fn text_mock_response(
+        status: u16,
+        body: &str,
+        operation: Option<&str>,
+    ) -> Result<ProcessTextResponse, String> {
+        use tokio::io::AsyncWriteExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/v1", listener.local_addr().unwrap());
+        let response = format!(
+            "HTTP/1.1 {} Mock\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            status,
+            body.len(),
+            body
+        );
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            read_text_request(&mut socket).await;
+            socket.write_all(response.as_bytes()).await.unwrap();
+        });
+        let mut req = text_request(endpoint);
+        req.operation = operation.map(str::to_owned);
+        let result = process_text(req).await;
+        server.await.unwrap();
+        result
+    }
+
+    #[tokio::test]
+    async fn only_cleanup_rejects_truncated_text_and_legacy_responses_work() {
+        let truncated =
+            r#"{"choices":[{"message":{"content":"Partial"},"finish_reason":"length"}]}"#;
+        assert!(text_mock_response(200, truncated, Some("cleanup"))
+            .await
+            .err()
+            .unwrap()
+            .contains("truncated"));
+        assert_eq!(
+            text_mock_response(200, truncated, None)
+                .await
+                .unwrap()
+                .result,
+            "Partial"
+        );
+        let legacy = r#"{"choices":[{"message":{"content":"Hello."}}]}"#;
+        assert_eq!(
+            text_mock_response(200, legacy, Some("cleanup"))
+                .await
+                .unwrap()
+                .result,
+            "Hello."
+        );
+        assert!(
+            text_mock_response(200, r#"{"choices":[]}"#, Some("cleanup"))
+                .await
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn text_diagnostics_record_status_errors_and_usage_without_payloads() {
+        for (status, body, code) in [
+            (401, "sk-SECRET BODY_INPUT", Some("http_401")),
+            (429, "sk-SECRET BODY_INPUT", Some("http_429")),
+            (500, "sk-SECRET BODY_INPUT", Some("http_500")),
+            (200, "malformed BODY_INPUT", Some("parse")),
+            (200, r#"{"choices":[]}"#, Some("empty_response")),
+            (
+                200,
+                r#"{"choices":[{"message":{"content":"PRIVATE_OUTPUT"}}]}"#,
+                None,
+            ),
+            (
+                200,
+                r#"{"choices":[{"message":{"content":"PRIVATE_OUTPUT"},"finish_reason":"stop"}],"usage":{"prompt_tokens":12,"completion_tokens":3,"total_tokens":15,"prompt_cache_hit_tokens":8}}"#,
+                None,
+            ),
+        ] {
+            logger::take_test_logs();
+            let result = text_mock_response(status, body, Some("cleanup")).await;
+            if let Some(code) = code {
+                assert_eq!(text_error_code(&result.err().unwrap()), code);
+            } else {
+                assert!(result.is_ok());
+            }
+            let lines = logger::take_test_logs();
+            assert_eq!(
+                lines.iter().filter(|v| v.contains("event=start")).count(),
+                1
+            );
+            assert_eq!(lines.iter().filter(|v| v.contains("event=end")).count(), 1);
+            let text = lines.join("\n");
+            assert!(text.contains(&format!("status={}", status)));
+            assert!(text.contains("headers_ms="));
+            assert!(text.contains("total_ms="));
+            for secret in [
+                "sk-SECRET",
+                "BODY_INPUT",
+                "PRIVATE_OUTPUT",
+                "Hello",
+                "Clean",
+            ] {
+                assert!(!text.contains(secret));
+            }
+            if body.contains("prompt_tokens") {
+                assert!(text.contains("prompt_tokens=12 completion_tokens=3 total_tokens=15 prompt_cache_hit_tokens=8"));
+            } else if code.is_none() {
+                assert!(text.contains("usage=unavailable"));
+            }
+        }
+        assert_eq!(
+            logger::safe_url("https://user:sk-SECRET@api.example.com/v1?token=SECRET#SECRET"),
+            "https://api.example.com/v1"
+        );
+        assert_eq!(text_usage_fields(None), "usage=unavailable");
+    }
+
+    #[tokio::test]
+    async fn text_connection_failure_has_no_post_retry_and_next_call_recovers() {
+        use tokio::io::AsyncWriteExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/v1", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            for attempt in 0..3 {
+                let (mut socket, _) =
+                    tokio::time::timeout(Duration::from_secs(3), listener.accept())
+                        .await
+                        .unwrap()
+                        .unwrap();
+                read_text_request(&mut socket).await;
+                if attempt != 1 {
+                    let body = r#"{"choices":[{"message":{"content":"Hello."}}]}"#;
+                    socket.write_all(format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", body.len(), body).as_bytes()).await.unwrap();
+                }
+                // On attempt 1, closing without headers simulates a transport failure.
+            }
+            assert!(
+                tokio::time::timeout(Duration::from_millis(100), listener.accept())
+                    .await
+                    .is_err()
+            );
+        });
+        assert!(process_text(text_request(endpoint.clone())).await.is_ok());
+        logger::take_test_logs();
+        let err = process_text(text_request(endpoint.clone()))
+            .await
+            .err()
+            .unwrap();
+        assert_eq!(text_error_code(&err), "transport");
+        let logs = logger::take_test_logs().join(" ");
+        assert!(logs.contains("outcome=error error_code=transport"));
+        assert!(process_text(text_request(endpoint)).await.is_ok());
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn expired_cleanup_deadline_does_not_send_a_request() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut req = text_request(format!("http://{}/v1", listener.local_addr().unwrap()));
+        req.deadline_ms = Some(1);
+        logger::take_test_logs();
+        assert_eq!(
+            text_error_code(&process_text(req).await.err().unwrap()),
+            "timeout"
+        );
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), listener.accept())
+                .await
+                .is_err()
+        );
+        let logs = logger::take_test_logs();
+        assert_eq!(logs.iter().filter(|v| v.contains("event=end")).count(), 1);
+        assert!(logs.last().unwrap().contains("error_code=timeout"));
+    }
+
+    #[tokio::test]
+    async fn text_requests_reuse_one_connection_without_extra_posts() {
+        use tokio::io::AsyncWriteExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/v1", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            for _ in 0..2 {
+                let payload = read_text_request(&mut socket).await;
+                assert_eq!(payload["messages"][1]["content"], "Hello");
+                let body =
+                    r#"{"choices":[{"message":{"content":"Hello."},"finish_reason":"stop"}]}"#;
+                socket
+                    .write_all(
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+                            body.len(),
+                            body
+                        )
+                        .as_bytes(),
+                    )
+                    .await
+                    .unwrap();
+            }
+            assert!(
+                tokio::time::timeout(Duration::from_millis(100), listener.accept())
+                    .await
+                    .is_err()
+            );
+        });
+        for _ in 0..2 {
+            let result = tokio::time::timeout(
+                Duration::from_secs(3),
+                process_text(text_request(endpoint.clone())),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+            assert_eq!(result.result, "Hello.");
+        }
+        server.await.unwrap();
+    }
+
+    #[test]
     fn file_progress_does_not_complete_a_started_chunk() {
         let payload = super::FileTranscriptionProgressPayload {
             request_id: "file-1".to_string(),
@@ -3447,6 +3828,9 @@ mod cleanup_deadline_tests {
             .as_millis() as u64
             + 200;
         let result = process_text(ProcessTextRequest {
+            request_id: None,
+            entry_id: None,
+            operation: Some("cleanup".into()),
             text: "Hello".into(),
             prompt: "Clean".into(),
             deadline_ms: Some(deadline),

@@ -215,3 +215,112 @@ it("aborted text runners never start requests or local warm-up", async () => {
     ).rejects.toThrow();
   }
 });
+
+it("shared text runner forwards cleanup operation and correlation to native command", async () => {
+  const previous = globalThis.window;
+  const calls: { command: string; req: Record<string, unknown> }[] = [];
+  globalThis.window = {
+    __TAURI_INTERNALS__: {
+      invoke: async (command: string, args: { req: Record<string, unknown> }) => {
+        calls.push({ command, req: args.req });
+        return { result: "Hello." };
+      },
+    },
+  } as unknown as Window & typeof globalThis;
+  try {
+    const backend = resolveSummaryBackend(
+      settings({ llmEndpoint: "https://example.test/v1", llmModel: "test", llmApiKey: "SECRET" }),
+    );
+    expect(
+      await backend?.run({
+        text: "Hello",
+        prompt: "Clean",
+        operation: "cleanup",
+        requestId: "attempt-2",
+        entryId: "entry-1",
+        deadlineMs: 123,
+      }),
+    ).toBe("Hello.");
+    expect(calls[0].command).toBe("process_text");
+    expect(calls[0].req).toMatchObject({
+      operation: "cleanup",
+      request_id: "attempt-2",
+      entry_id: "entry-1",
+      deadline_ms: 123,
+    });
+    await backend?.run({ text: "Hello", prompt: "Summarize" });
+    expect(calls[1].req.operation).toBeNull();
+    expect(calls[1].req.request_id).toBeNull();
+  } finally {
+    globalThis.window = previous;
+  }
+});
+
+it("local cleanup failure is not replayed, while the next take can recover", async () => {
+  const previous = globalThis.window;
+  const commands: string[] = [];
+  let requests = 0;
+  globalThis.window = {
+    __TAURI_INTERNALS__: {
+      invoke: async (command: string) => {
+        commands.push(command);
+        if (command === "start_local_llm") return "http://127.0.0.1:8011/v1";
+        if (command === "process_text") {
+          if (++requests === 1) throw new Error("[text:transport] Ошибка соединения");
+          return { result: "Hello." };
+        }
+        throw new Error(`Unexpected command: ${command}`);
+      },
+    },
+  } as unknown as Window & typeof globalThis;
+  try {
+    const backend = resolveSummaryBackend(
+      settings({
+        llmEndpoint: "http://127.0.0.1:8011/v1",
+        llmLocalModelId: "qwen3-1.7b-instruct-q4",
+      }),
+    );
+    const params = { text: "Hello", prompt: "Clean", operation: "cleanup" as const };
+    await expect(backend?.run(params)).rejects.toThrow("transport");
+    expect(commands).toEqual(["start_local_llm", "process_text"]);
+    expect(await backend?.run(params)).toBe("Hello.");
+    expect(commands).toEqual(["start_local_llm", "process_text", "process_text"]);
+  } finally {
+    globalThis.window = previous;
+  }
+});
+
+it("local summaries retain runtime recovery for safe native transport errors", async () => {
+  const previous = globalThis.window;
+  const commands: string[] = [];
+  let requests = 0;
+  globalThis.window = {
+    __TAURI_INTERNALS__: {
+      invoke: async (command: string) => {
+        commands.push(command);
+        if (command === "start_local_llm") return "http://127.0.0.1:8011/v1";
+        if (command === "stop_local_llm") return;
+        if (++requests === 1) throw new Error("[text:transport] Ошибка соединения");
+        return { result: "Summary" };
+      },
+    },
+  } as unknown as Window & typeof globalThis;
+  try {
+    const backend = resolveSummaryBackend(
+      settings({
+        llmEndpoint: "http://127.0.0.1:8011/v1",
+        llmLocalModelId: "qwen3-1.7b-instruct-q4",
+      }),
+    );
+    expect(await backend?.run({ text: "Hello", prompt: "Summarize" })).toBe("Summary");
+    expect(commands).toEqual([
+      "start_local_llm",
+      "process_text",
+      "stop_local_llm",
+      "start_local_llm",
+      "process_text",
+    ]);
+  } finally {
+    globalThis.window = previous;
+  }
+});

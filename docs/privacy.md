@@ -114,3 +114,20 @@ enters or measures is a local setting, and the saving estimate is derived from i
 memory. Source and model breakdowns start at the update that introduced them: older
 recordings are counted only in the totals and are not re-analysed from stored
 history.
+
+### Local diagnostic logs
+
+Application diagnostics stay on this computer in `~/.talkee/talkee.log` and up to
+three rotated archives (5 MiB each, 20 MiB total with a single app writer). They
+contain operation/entry identifiers, trigger and configuration choices, model
+and prompt identifiers, sanitized endpoint host/path, durations, HTTP statuses,
+error categories, text lengths and token usage when supplied by the provider.
+They do not contain API keys, Authorization values, request/response bodies,
+full transcripts or system prompts. Endpoint userinfo, query and fragment are
+removed; control characters cannot create fake log records.
+
+Older application versions may have logged transcript content; updating does
+not retroactively redact the retained old tail. The user can clear active and
+all archives through the existing application action, or run `bun run logs:clear`
+while the application is stopped. Transcript history is separate from diagnostic
+logs and retains its existing access/deletion rules. No logs are uploaded.

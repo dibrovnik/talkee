@@ -8,7 +8,7 @@ import {
   HISTORY_DELETED_EVENT,
 } from "../../../lib/hotkeyEvents";
 import { tn } from "../../../lib/i18n";
-import { logError, logInfo } from "../../../lib/logger";
+import { diagnosticId, logError, logInfo, processingErrorCode } from "../../../lib/logger";
 import { beginProcessing, finishProcessing, isAbortError } from "../../../lib/processingControl";
 import { withStatsCompletionMetadata } from "../../../lib/stats";
 import {
@@ -20,7 +20,7 @@ import {
   saveHistoryAudio,
 } from "../../../lib/store";
 import { resolveSummaryBackend } from "../../../lib/summarize";
-import { cleanupDictation } from "../../../lib/textCleanup";
+import { cleanupDictation, type DictationCleanupContext } from "../../../lib/textCleanup";
 import { formatErrorMessage } from "../../../lib/utils";
 import type { LiveTranscriptionResult } from "./dictationStreamOverlay";
 import {
@@ -47,6 +47,7 @@ export interface ProcessRecordingBlobParams {
   liveTranscription?: LiveTranscriptionResult | null;
   dictationStream?: DictationStreamOverlaySession | null;
   audioStats?: AudioSignalStats | null;
+  cleanupContext?: DictationCleanupContext;
 }
 
 export interface ProcessRecordingBlobResult {
@@ -121,7 +122,7 @@ async function saveCompletedRecordingAudio({
       audioFileName: saved.fileName || audioFileName,
     };
   } catch (error) {
-    logError("HISTORY", `Failed to save recording audio: ${formatErrorMessage(error)}`);
+    logError("HISTORY", `Failed to save recording audio: ${processingErrorCode(error)}`);
     return {
       audioPath: undefined,
       audioMimeType: undefined,
@@ -210,7 +211,7 @@ export async function startDictationStreamOverlaySession(
         }).catch((error) => {
           logError(
             "DICTATION_STREAM",
-            `Failed to update text overlay: ${formatErrorMessage(error)}`,
+            `Failed to update text overlay: ${processingErrorCode(error)}`,
           );
         });
       },
@@ -250,6 +251,7 @@ export async function startDictationStreamOverlaySession(
       await invoke("hide_widget_text_overlay");
     },
     dispose: () => {
+      if (disposed) return;
       disposed = true;
       unlisten();
     },
@@ -483,23 +485,24 @@ async function resolveFinalTranscription({
   } catch (error) {
     logError(
       "DICTATION_STREAM",
-      `Batch reconciliation failed, keeping ${reconciliationMode} realtime text: ${formatErrorMessage(error)}`,
+      `Batch reconciliation failed, keeping ${reconciliationMode} realtime text: ${processingErrorCode(error)}`,
     );
     return liveResult;
   }
 }
 
-async function applyDictationCleanup(
+export async function applyDictationCleanup(
   result: TranscriptionResult,
   settings: AppSettings,
+  context: DictationCleanupContext,
+  notice: typeof showCleanupNotice = showCleanupNotice,
 ): Promise<TranscriptionResult> {
-  const outcome = await cleanupDictation(result.raw, settings);
-  logInfo(
-    "CLEANUP",
-    `cleanup_ms=${outcome.durationMs} cleanup_applied=${outcome.applied} cleanup_reason=${outcome.reason ?? "success"}`,
-  );
+  const outcome = await cleanupDictation(result.raw, settings, { context });
+  if (outcome.reason === "no-backend") {
+    void notice(tn("cleanup.noModel"), tn("cleanup.chooseModel"));
+  }
   if (outcome.reason === "timeout" || outcome.reason === "error" || outcome.reason === "rejected") {
-    void showCleanupNotice(tn("cleanup.failed"));
+    void notice(tn("cleanup.failed"));
   }
   return { ...result, cleaned: outcome.text };
 }
@@ -560,13 +563,79 @@ async function applyDictationTranslation(
   };
 }
 
-async function pasteCleanedText(text: string): Promise<void> {
-  logInfo("PASTE", "Sending cleaned text to paste_text");
-  await invoke("paste_text", { text });
+export async function runDictationStage<T>(
+  context: DictationCleanupContext,
+  stage: "stt" | "paste",
+  work: () => Promise<T>,
+  log: (message: string) => void = (message) => {
+    void logInfo(stage.toUpperCase(), message);
+  },
+): Promise<T> {
+  const started = Date.now();
+  const ids = `request_id=${diagnosticId(context.requestId)} entry_id=${diagnosticId(context.entryId ?? context.requestId)}`;
+  log(`event=start ${ids} stage=${stage}`);
+  let outcome = "success";
+  let errorCode = "none";
+  try {
+    return await work();
+  } catch (error) {
+    outcome = "error";
+    errorCode = processingErrorCode(error);
+    throw error;
+  } finally {
+    log(
+      `event=end ${ids} stage=${stage} outcome=${outcome} error_code=${errorCode} ${stage}_ms=${Date.now() - started}`,
+    );
+  }
+}
+
+async function pasteCleanedText(text: string, context: DictationCleanupContext): Promise<void> {
+  await runDictationStage(context, "paste", () => invoke<void>("paste_text", { text }));
   logInfo(
     "PASTE",
-    "paste_text command finished; target app insertion cannot be confirmed reliably",
+    `request_id=${diagnosticId(context.requestId)} command_completed=true target_insertion=unverified`,
   );
+}
+
+/** Final text must survive a successful paste even without a live STT session. */
+export async function pasteWithDictationOverlay(
+  text: string,
+  context: DictationCleanupContext,
+  ticker: boolean,
+  stream: DictationStreamOverlaySession | null,
+  paste: () => Promise<void>,
+  show: typeof showWidgetTextOverlay = showWidgetTextOverlay,
+): Promise<boolean> {
+  const requestId = stream?.requestId ?? context.requestId;
+  const safeOverlay = async (work: () => Promise<void>): Promise<void> => {
+    await work().catch((error) => {
+      logError(
+        "DICTATION_STREAM",
+        `Failed to update result overlay: ${processingErrorCode(error)}`,
+      );
+    });
+  };
+  // Late interim events must not overwrite the final result or its dismiss timer.
+  stream?.dispose();
+  if (ticker) {
+    // Opening status admits a batch request when native state still holds an older one.
+    await safeOverlay(() => show({ requestId, status: "dictating", text }));
+    await safeOverlay(() => show({ requestId, status: "inserting", text }));
+  } else if (stream) {
+    await safeOverlay(() => stream.showInserting(text));
+  }
+  try {
+    await paste();
+    if (ticker) await safeOverlay(() => show({ requestId, status: "done", text }));
+    else if (stream) await safeOverlay(() => stream.hide());
+    return false;
+  } catch (error) {
+    logError("PASTE", `Paste failed after successful transcription: ${processingErrorCode(error)}`);
+    const message = `Не удалось вставить текст автоматически: ${formatErrorMessage(error)}`;
+    if (ticker) await safeOverlay(() => show({ requestId, status: "error", text, message }));
+    else if (stream) await safeOverlay(() => stream.showError(text, message));
+    return true;
+  }
 }
 
 export async function processRecordingBlob({
@@ -576,7 +645,15 @@ export async function processRecordingBlob({
   liveTranscription = null,
   dictationStream = null,
   audioStats = null,
+  cleanupContext,
 }: ProcessRecordingBlobParams): Promise<ProcessRecordingBlobResult> {
+  const context: DictationCleanupContext = cleanupContext ?? {
+    requestId: crypto.randomUUID(),
+    trigger: "pipeline",
+    globalEnabled: settings.cleanupEnabled,
+    override: null,
+  };
+  const pipelineStarted = Date.now();
   const durationSeconds = Math.floor((Date.now() - recordingStartTimestamp) / 1000);
   if (isClearlySilentAudio(audioStats)) {
     const peak = audioStats?.peak ?? 0;
@@ -598,7 +675,7 @@ export async function processRecordingBlob({
   // Persist a lightweight "processing" entry up front so the recording shows as
   // a live row without keeping the audio payload in history/UI memory.
   const baseEntry: HistoryEntry = {
-    id: crypto.randomUUID(),
+    id: context.requestId,
     timestamp: new Date().toISOString(),
     duration: durationSeconds,
     raw: "",
@@ -629,15 +706,16 @@ export async function processRecordingBlob({
 
   try {
     const apiStart = Date.now();
-    const transcriptionCandidate = await resolveFinalTranscription({
-      liveTranscription,
-      audioBase64: base64Audio,
-      audioMimeType,
-      audioFileName,
-      settings,
-      signal: handle.signal,
-    });
-
+    const transcriptionCandidate = await runDictationStage(context, "stt", () =>
+      resolveFinalTranscription({
+        liveTranscription,
+        audioBase64: base64Audio,
+        audioMimeType,
+        audioFileName,
+        settings,
+        signal: handle.signal,
+      }),
+    );
     if (handle.isCancelled()) {
       await dictationStream?.hide().catch(() => {});
       await finishProcessing(buildInterruptedEntry(entryWithSavedAudio));
@@ -664,7 +742,7 @@ export async function processRecordingBlob({
         await deleteHistoryAudio(savedAudio.audioPath).catch((error) => {
           logError(
             "HISTORY",
-            `Failed to delete unused recording audio: ${formatErrorMessage(error)}`,
+            `Failed to delete unused recording audio: ${processingErrorCode(error)}`,
           );
         });
       }
@@ -680,7 +758,7 @@ export async function processRecordingBlob({
     }
 
     const result = await applyDictationTranslation(
-      await applyDictationCleanup(transcription, settings),
+      await applyDictationCleanup(transcription, settings, context),
       settings,
     );
     const processingTime = Date.now() - apiStart;
@@ -691,7 +769,10 @@ export async function processRecordingBlob({
       return { durationSeconds, hasTranscription: false };
     }
 
-    logInfo("API", `Transcription complete in ${processingTime}ms: "${result.cleaned}"`);
+    logInfo(
+      "API",
+      `Transcription complete request_id=${context.requestId} processing_ms=${processingTime} chars=${result.cleaned.length}`,
+    );
     await finishProcessing(
       withStatsCompletionMetadata(
         {
@@ -707,39 +788,13 @@ export async function processRecordingBlob({
       ),
     );
 
-    let pasteFailed = false;
-    try {
-      await dictationStream?.showInserting(result.cleaned).catch((error) => {
-        logError(
-          "DICTATION_STREAM",
-          `Failed to show inserting overlay: ${formatErrorMessage(error)}`,
-        );
-      });
-      await pasteCleanedText(result.cleaned);
-      await dictationStream?.hide().catch((error) => {
-        logError(
-          "DICTATION_STREAM",
-          `Failed to hide overlay after paste: ${formatErrorMessage(error)}`,
-        );
-      });
-    } catch (pasteError) {
-      pasteFailed = true;
-      logError(
-        "PASTE",
-        `Paste failed after successful transcription: ${formatErrorMessage(pasteError)}`,
-      );
-      await dictationStream
-        ?.showError(
-          result.cleaned,
-          `Не удалось вставить текст автоматически: ${formatErrorMessage(pasteError)}`,
-        )
-        .catch((error) => {
-          logError(
-            "DICTATION_STREAM",
-            `Failed to keep paste error overlay: ${formatErrorMessage(error)}`,
-          );
-        });
-    }
+    const pasteFailed = await pasteWithDictationOverlay(
+      result.cleaned,
+      context,
+      settings.textDisplay === "ticker",
+      dictationStream,
+      () => pasteCleanedText(result.cleaned, context),
+    );
 
     logInfo(
       "PASTE",
@@ -756,11 +811,10 @@ export async function processRecordingBlob({
       return { durationSeconds, hasTranscription: false };
     }
 
-    const rawErrorMessage =
-      error instanceof Error
-        ? `${error.name}: ${error.message}${error.stack ? `\n${error.stack}` : ""}`
-        : String(error);
-    logError("API", `Pipeline raw error: ${rawErrorMessage}`);
+    logError(
+      "API",
+      `event=error request_id=${context.requestId} error_code=${processingErrorCode(error)}`,
+    );
 
     const userFacingErrorMessage = toUserFacingErrorMessage(error, settings);
     await dictationStream
@@ -768,7 +822,7 @@ export async function processRecordingBlob({
       .catch((overlayError) => {
         logError(
           "DICTATION_STREAM",
-          `Failed to show stream error overlay: ${formatErrorMessage(overlayError)}`,
+          `Failed to show stream error overlay: ${processingErrorCode(overlayError)}`,
         );
       });
     await finishProcessing({
@@ -778,6 +832,10 @@ export async function processRecordingBlob({
     });
     throw new Error(userFacingErrorMessage);
   } finally {
+    logInfo(
+      "API",
+      `event=end request_id=${context.requestId} pipeline_total_ms=${Date.now() - pipelineStarted}`,
+    );
     dictationStream?.dispose();
     handle.finish();
   }
@@ -809,16 +867,24 @@ export async function retryHistoryEntry(
   // cancellable from the table.
   const handle = await beginProcessing(entry, "update");
   const retryStarted = Date.now();
+  const context: DictationCleanupContext = {
+    requestId: crypto.randomUUID(),
+    entryId: entry.id,
+    trigger: "retry",
+    globalEnabled: retrySettings.cleanupEnabled,
+    override: null,
+  };
 
   try {
-    const transcriptionCandidate = await transcribeAudio({
-      audioBase64: audioSource.audioBase64,
-      audioMimeType: audioSource.audioMimeType,
-      audioFileName: audioSource.audioFileName,
-      settings: retrySettings,
-      signal: handle.signal,
-    });
-
+    const transcriptionCandidate = await runDictationStage(context, "stt", () =>
+      transcribeAudio({
+        audioBase64: audioSource.audioBase64,
+        audioMimeType: audioSource.audioMimeType,
+        audioFileName: audioSource.audioFileName,
+        settings: retrySettings,
+        signal: handle.signal,
+      }),
+    );
     if (handle.isCancelled()) {
       const interrupted = buildInterruptedEntry(entry);
       await finishProcessing(interrupted);
@@ -845,7 +911,7 @@ export async function retryHistoryEntry(
     }
 
     const result = await applyDictationTranslation(
-      await applyDictationCleanup(transcription, retrySettings),
+      await applyDictationCleanup(transcription, retrySettings, context),
       retrySettings,
     );
     const processingTime = Date.now() - retryStarted;
@@ -890,16 +956,16 @@ export async function retryHistoryEntry(
       await deleteHistoryAudio(entry.audioPath).catch((error) => {
         logError(
           "HISTORY",
-          `Failed to delete disabled recording audio: ${formatErrorMessage(error)}`,
+          `Failed to delete disabled recording audio: ${processingErrorCode(error)}`,
         );
       });
     }
 
     if (shouldPaste) {
       try {
-        await pasteCleanedText(result.cleaned);
+        await pasteCleanedText(result.cleaned, context);
       } catch (pasteError) {
-        logError("PASTE", `Retry paste failed: ${formatErrorMessage(pasteError)}`);
+        logError("PASTE", `Retry paste failed: ${processingErrorCode(pasteError)}`);
       }
     }
 
@@ -924,6 +990,10 @@ export async function retryHistoryEntry(
     await finishProcessing(failedEntry);
     throw new Error(userFacingErrorMessage);
   } finally {
+    logInfo(
+      "API",
+      `event=end request_id=${context.requestId} entry_id=${entry.id} pipeline_total_ms=${Date.now() - retryStarted}`,
+    );
     handle.finish();
   }
 }

@@ -4,10 +4,12 @@ import { useCallback, useEffect, useRef } from "react";
 import {
   applyDictationCleanupChoice,
   takePendingDictationCleanup,
+  takePendingDictationTrigger,
 } from "../../../lib/dictationCleanup";
 import { useI18n } from "../../../lib/i18n";
-import { logError, logInfo } from "../../../lib/logger";
+import { logError, logInfo, processingErrorCode } from "../../../lib/logger";
 import { type AppSettings, getSettings } from "../../../lib/store";
+import type { DictationCleanupContext } from "../../../lib/textCleanup";
 import { formatErrorMessage } from "../../../lib/utils";
 import {
   createNativeLiveDictationOptions,
@@ -51,6 +53,7 @@ interface UseWidgetRecordingParams {
   stopAndProcessRef: MutableRefObject<() => Promise<void>>;
   onRecordingProcessing?: () => void;
   onRecordingStart?: () => void;
+  onCleanupChoice?: (enabled: boolean) => void;
   onRecordingStartFailed?: () => void;
 }
 
@@ -103,12 +106,14 @@ export function useWidgetRecording({
   stopAndProcessRef,
   onRecordingProcessing,
   onRecordingStart,
+  onCleanupChoice,
   onRecordingStartFailed,
 }: UseWidgetRecordingParams): UseWidgetRecordingResult {
   const { t } = useI18n();
   const runtimeRef = useRef(createRecordingRuntimeController());
   const lowMicMonitorCleanupRef = useRef<(() => void) | null>(null);
   const recordingLimitTimerRef = useRef<number | null>(null);
+  const cleanupContextRef = useRef<DictationCleanupContext | null>(null);
   const recordingSettingsRef = useRef<AppSettings | null>(null);
 
   const resizeForSettings = useCallback(
@@ -154,7 +159,7 @@ export function useWidgetRecording({
       await session.hide().catch((error) => {
         logError(
           "DICTATION_STREAM",
-          `Failed to hide live dictation overlay: ${formatErrorMessage(error)}`,
+          `Failed to hide live dictation overlay: ${processingErrorCode(error)}`,
         );
       });
     }
@@ -235,7 +240,7 @@ export function useWidgetRecording({
           void audioContext.close();
         };
       } catch (error) {
-        logError("RECORDING", `Low mic monitor failed: ${formatErrorMessage(error)}`);
+        logError("RECORDING", `Low mic monitor failed: ${processingErrorCode(error)}`);
       }
     },
     [showNotice, stopLowMicMonitor, t],
@@ -244,6 +249,8 @@ export function useWidgetRecording({
   // ── Start recording ─────────────────────────────────────────────────────
   const startRecording = useCallback(async () => {
     const forceCleanup = takePendingDictationCleanup();
+    const trigger = takePendingDictationTrigger();
+    const requestId = crypto.randomUUID();
     const startRequestedAt = Date.now();
     logInfo("RECORDING", "startRecording called");
     hideNotice();
@@ -251,7 +258,7 @@ export function useWidgetRecording({
       await invoke("hide_widget_text_overlay").catch((error) => {
         logError(
           "DICTATION_STREAM",
-          `Failed to clear text overlay before recording: ${formatErrorMessage(error)}`,
+          `Failed to clear text overlay before recording: ${processingErrorCode(error)}`,
         );
       });
       await clearDictationStreamSession(true);
@@ -263,7 +270,7 @@ export function useWidgetRecording({
     } catch (error) {
       logError(
         "SETTINGS",
-        `Failed to refresh settings before recording: ${formatErrorMessage(error)}`,
+        `Failed to refresh settings before recording: ${processingErrorCode(error)}`,
       );
     }
 
@@ -292,7 +299,7 @@ export function useWidgetRecording({
 
     try {
       await invoke("begin_work_activity").catch((error) => {
-        logError("APP_NAP", `Failed to begin work activity: ${formatErrorMessage(error)}`);
+        logError("APP_NAP", `Failed to begin work activity: ${processingErrorCode(error)}`);
       });
       onRecordingStart?.();
       // Update widget state to recording (via dispatch)
@@ -300,6 +307,17 @@ export function useWidgetRecording({
       void resizeForSettings(activeSettings);
 
       recordingSettingsRef.current = applyDictationCleanupChoice(activeSettings, forceCleanup);
+      onCleanupChoice?.(recordingSettingsRef.current.cleanupEnabled);
+      cleanupContextRef.current = {
+        requestId,
+        trigger: forceCleanup === true ? "cleanup-hotkey" : trigger,
+        globalEnabled: activeSettings.cleanupEnabled,
+        override: forceCleanup,
+      };
+      void logInfo(
+        "RECORDING",
+        `event=choice request_id=${requestId} trigger=${cleanupContextRef.current.trigger} global_enabled=${activeSettings.cleanupEnabled} effective_enabled=${recordingSettingsRef.current.cleanupEnabled} override=${forceCleanup ?? "global"}`,
+      );
       await clearTextOverlayPromise;
 
       const liveStreamingEnabled = isSttStreamingEnabled(activeSettings);
@@ -318,7 +336,7 @@ export function useWidgetRecording({
           .catch((error) => {
             logError(
               "DICTATION_STREAM",
-              `Failed to start live dictation overlay session: ${formatErrorMessage(error)}`,
+              `Failed to start live dictation overlay session: ${processingErrorCode(error)}`,
             );
             return null;
           });
@@ -334,7 +352,7 @@ export function useWidgetRecording({
           .catch((warmUpError) => {
             logError(
               "DICTATION_STREAM",
-              `Local STT runtime warm-up failed, using post-stop transcription fallback: ${formatErrorMessage(warmUpError)}`,
+              `Local STT runtime warm-up failed, using post-stop transcription fallback: ${processingErrorCode(warmUpError)}`,
             );
             return false;
           });
@@ -497,7 +515,7 @@ export function useWidgetRecording({
       recordingSettingsRef.current = null;
       setStream(null);
       await invoke("end_work_activity").catch(() => {});
-      logError("RECORDING", `Start error: ${error instanceof Error ? error.message : "unknown"}`);
+      logError("RECORDING", `Start error: ${processingErrorCode(error)}`);
       showError(
         t("widget.recording.startError", {
           error: error instanceof Error ? error.message : t("widget.recording.unknownError"),
@@ -511,6 +529,7 @@ export function useWidgetRecording({
     hideNotice,
     machineRef,
     onRecordingStart,
+    onCleanupChoice,
     onRecordingStartFailed,
     resizeForSettings,
     scheduleRecordingLimitTimer,
@@ -592,6 +611,7 @@ export function useWidgetRecording({
       const pipelineResult = await processRecordingBlob({
         blob,
         settings: activeSettings,
+        cleanupContext: cleanupContextRef.current ?? undefined,
         recordingStartTimestamp: machine.recordingStartTimestamp,
         liveTranscription,
         dictationStream,
@@ -613,7 +633,7 @@ export function useWidgetRecording({
       await resizeForSettings(activeSettings);
     } catch (error) {
       const errorMessage = formatErrorMessage(error);
-      logError("API", `Processing error: ${errorMessage}`);
+      logError("API", `Processing error: code=${processingErrorCode(error)}`);
 
       const message =
         errorMessage && errorMessage !== "{}"
@@ -626,7 +646,7 @@ export function useWidgetRecording({
       showError(message);
     } finally {
       await invoke("end_work_activity").catch((error) => {
-        logError("APP_NAP", `Failed to end work activity: ${formatErrorMessage(error)}`);
+        logError("APP_NAP", `Failed to end work activity: ${processingErrorCode(error)}`);
       });
     }
   }, [

@@ -56,15 +56,15 @@ export const settingsGeneral = {
     ru: "Нажмите на поле справа и введите новую комбинацию. Если сочетание занято, оставим предыдущую клавишу.",
     en: "Click the field on the right and press a new combination. If it's taken, the previous one is kept.",
   },
-  "settings.hotkey.plain": { ru: "Обычный ввод", en: "Plain dictation" },
+  "settings.hotkey.plain": { ru: "Ввод по настройкам", en: "Dictation with current settings" },
   "settings.hotkey.plainDesc": {
-    ru: "Запись без очистки текста.",
-    en: "Records without cleaning up the text.",
+    ru: "Очистка текста зависит от переключателя «ИИ-очистка текста».",
+    en: "Text cleanup follows the AI cleanup switch.",
   },
   "settings.hotkey.cleanup": { ru: "Ввод с очисткой ИИ", en: "Dictation with AI cleanup" },
   "settings.hotkey.cleanupDesc": {
-    ru: "Та же запись, но текст проходит через выбранный стиль очистки.",
-    en: "The same recording, with the selected cleanup style applied.",
+    ru: "Всегда очищает текущую запись выбранным стилем, не меняя переключатель.",
+    en: "Always cleans this recording without changing the cleanup switch.",
   },
   "settings.hotkey.mode": { ru: "Как срабатывает", en: "How it starts" },
   "settings.hotkey.modeDesc": {

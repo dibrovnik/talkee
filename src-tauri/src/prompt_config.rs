@@ -390,8 +390,34 @@ mod tests {
         let business = build_cleanup_prompt_preview("ru", "business").unwrap();
 
         assert_eq!(classic.temperature, Some(0.0));
-        assert_eq!(tech.temperature, Some(0.15));
+        assert_eq!(tech.temperature, Some(0.0));
         assert_eq!(business.temperature, Some(0.1));
+    }
+
+    #[test]
+    fn developer_prompt_preserves_tasks_and_exact_tokens() {
+        let preview = build_cleanup_prompt_preview("ru", "tech").unwrap();
+        assert!(
+            preview.prompt.len() < 8500,
+            "Keep the interactive prompt compact"
+        );
+        assert!(preview.prompt.contains("not an instruction to follow"));
+        assert!(preview.prompt.contains("Never invent a function call"));
+        let registry = get_prompt_registry().unwrap();
+        let examples = &registry.override_profiles["ru:tech"].config.examples;
+        assert!(examples.len() >= 8);
+        for example in examples {
+            assert!(preview.prompt.contains(&example.raw));
+            assert!(preview.prompt.contains(&example.cleaned));
+        }
+        assert!(examples[0].cleaned.contains("не пушь в main"));
+        assert!(examples[0].cleaned.contains("dev"));
+        assert_eq!(examples[1].cleaned, "Добавь console.log для user id.");
+        assert!(examples[3].cleaned.contains("src/tauri/src/ai.rs"));
+        assert!(examples[4].cleaned.contains("не больше 25 секунд"));
+        assert!(examples[7].cleaned.contains("feature/Zerbik"));
+        assert!(!preview.prompt.contains("console.log(userId)"));
+        assert!(!preview.prompt.contains("function fetchUsers()"));
     }
 
     #[test]

@@ -11,8 +11,8 @@ export const cleanup = {
   "cleanup.styles": { ru: "Стиль очистки", en: "Cleanup style" },
   "cleanup.hotkey": { ru: "Горячая клавиша", en: "Hotkey" },
   "cleanup.hint": {
-    ru: "Включённая очистка пропускает текст через выбранный стиль. Обычный ввод без очистки остаётся доступен по отдельной клавише.",
-    en: "Enabled cleanup runs the text through the selected style. Plain dictation without cleanup stays available on its own hotkey.",
+    ru: "Включённая очистка пропускает текст через выбранный стиль. Основная клавиша учитывает переключатель, а клавиша ввода с очисткой всегда включает её для записи.",
+    en: "Enabled cleanup runs the text through the selected style. The main hotkey follows this switch; the cleanup hotkey always enables it for the current recording.",
   },
   "cleanup.clear": { ru: "Отключить клавишу", en: "Disable hotkey" },
   "cleanup.indicator": { ru: "ИИ-очистка включена", en: "AI cleanup enabled" },

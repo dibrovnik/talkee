@@ -17,11 +17,11 @@
 
 ## 3. Нормализатор и безопасные снимки
 
-- [ ] 3.1 Реализовать в `src/lib/vocabularyNormalization.ts` compiled index активных global/выбранной области правил, case/language/context фильтры и immutable snapshot. Проверка: изменение store после capture не меняет результат текущего снимка.
-- [ ] 3.2 Добавить protected spans, Unicode whole-word/phrase matching, longest-leftmost и single-pass сборку в том же модуле. Проверка: fixtures «пи ай эм», «прод/продажа/продукт», emoji/диакритика, overlap, code/URL/email/path/PIMService не меняют незатронутый текст.
-- [ ] 3.3 Добавить text/match/time аварийные пределы и безопасный результат до нормализации в `vocabularyNormalization.ts`; вернуть counts/rule IDs/status без слов в логах. Проверка: injected clock/large input вызывает целый fallback, без частичных замен.
-- [ ] 3.4 Добавить meaningful table tests и benchmark mode в `src/lib/vocabularyNormalization.test.ts`; документировать порядок и scope в `docs/audio-pipeline-principles.md`. Проверка: идемпотентность, контекст в одном предложении, отсутствие каскада и выключенный словарь.
-- [ ] 3.5 Выполнить `bun test src/lib/vocabularyNormalization.test.ts` и `bunx tsc --noEmit`; отдельный реальный p95 замер остаётся в группе 13.
+- [x] 3.1 Реализовать в `src/lib/vocabularyNormalization.ts` compiled index активных global/выбранной области правил, case/language/context фильтры и immutable snapshot. Проверка: изменение store после capture не меняет результат текущего снимка.
+- [x] 3.2 Добавить protected spans, Unicode whole-word/phrase matching, longest-leftmost и single-pass сборку в том же модуле. Проверка: fixtures «пи ай эм», «прод/продажа/продукт», emoji/диакритика, overlap, code/URL/email/path/PIMService не меняют незатронутый текст.
+- [x] 3.3 Добавить text/match/time аварийные пределы и безопасный результат до нормализации в `vocabularyNormalization.ts`; вернуть counts/rule IDs/status без слов в логах. Проверка: injected clock/large input вызывает целый fallback, без частичных замен.
+- [x] 3.4 Добавить meaningful table tests и benchmark mode в `src/lib/vocabularyNormalization.test.ts`; документировать порядок и scope в `docs/audio-pipeline-principles.md`. Проверка: идемпотентность, контекст в одном предложении, отсутствие каскада и выключенный словарь.
+- [x] 3.5 Выполнить `bun test src/lib/vocabularyNormalization.test.ts` и `bunx tsc --noEmit`; отдельный реальный p95 замер остаётся в группе 13.
 
 ## 4. Раздел словаря и ручное управление
 

@@ -158,6 +158,43 @@ Important implementation details:
 - The native recorder owner thread is process-long and reused across recording
   sessions. Do not replace it with one short-lived OS thread per recording.
 
+## Personal Vocabulary Normalization
+
+Approved personal vocabulary rules run as one deterministic pass over the final
+text of ordinary voice dictation, implemented in
+`src/lib/vocabularyNormalization.ts`:
+
+```text
+record start → immutable vocabulary snapshot
+  → STT (+ supported hints) → existing result checks
+  → optional AI cleanup
+  → one pass of exact vocabulary replacements
+  → optional translation → history / final overlay / paste
+```
+
+Rules:
+
+- The snapshot is compiled at record start from enabled terms of the global
+  scope plus the single active domain, filtered by the dictation language (`auto`
+  keeps every language). Later store edits never change a captured snapshot; a
+  retry compiles a new one.
+- Only approved variants match, as whole words (Unicode letters, marks, digits,
+  underscore) with per-variant case policy. Words of a multi-word variant may be
+  separated only by horizontal whitespace, not line or sentence breaks.
+- Context words, when present, must occur within 5 words of the match in the same
+  sentence.
+- Longest-leftmost wins; replacements use original offsets and the output is
+  assembled once, so a replacement is never re-scanned (no cascades).
+- Fenced and inline code, URLs, email addresses, slash or backslash paths and
+  compound identifiers are protected; any overlap blocks a replacement. A term
+  without variants, or a canonical spelling alone, never rewrites ASCII `dev`/`prod`.
+- Safety limits: more than 50 000 characters, more than 1000 replacements, or a
+  50 ms budget checked inside the loop return the whole pre-normalization text
+  with an error status. There are no partial replacements.
+- Results carry counts and rule/term ids only; diagnostics never log terms or text.
+- File transcription, call capture, live translation and translated output are
+  out of scope.
+
 ## Dictation Translation
 
 Translation is an optional post-processing step for ordinary voice dictation

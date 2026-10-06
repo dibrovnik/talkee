@@ -245,6 +245,8 @@ export interface AppSettings {
   cleanupToggleHotkey: string;
   /** Records and always runs AI cleanup. Empty disables the shortcut. */
   cleanupRecordingHotkey: string;
+  /** Captures a corrected selection for the personal vocabulary. Empty by default. */
+  vocabularyCorrectionHotkey: string;
   /** Hold to talk, or press once to start and again to stop. */
   recordingHotkeyMode: RecordingHotkeyMode;
   /** Floating widget visual scale. 1 = 100%. */
@@ -778,6 +780,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   cleanupEnabled: false,
   cleanupToggleHotkey: "Control+Shift+C",
   cleanupRecordingHotkey: DEFAULT_CLEANUP_RECORDING_HOTKEY,
+  vocabularyCorrectionHotkey: "",
   recordingHotkeyMode: "hold",
   widgetScale: DEFAULT_WIDGET_SCALE,
   widgetPresentation: "pill",
@@ -1265,6 +1268,10 @@ export function normalizeSavedSettings(saved: unknown): Partial<AppSettings> {
               ? raw.cleanupRecordingHotkey
               : DEFAULT_CLEANUP_RECORDING_HOTKEY,
           ).normalized ?? ""),
+    vocabularyCorrectionHotkey:
+      typeof raw.vocabularyCorrectionHotkey === "string" && raw.vocabularyCorrectionHotkey
+        ? (normalizeHotkey(raw.vocabularyCorrectionHotkey).normalized ?? "")
+        : undefined,
     recordingHotkeyMode: parseRecordingHotkeyMode(raw.recordingHotkeyMode),
     widgetScale: raw.widgetScale === undefined ? undefined : normalizeWidgetScale(raw.widgetScale),
     widgetPresentation: parseWidgetPresentation(raw.widgetPresentation) ?? "pill",

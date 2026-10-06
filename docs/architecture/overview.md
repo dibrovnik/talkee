@@ -40,6 +40,9 @@ Talkee — macOS-приложение (Apple Silicon): Rust-бэкенд Tauri v
 | `hotkey_capture.rs` | Нативный захват аккорда горячей клавиши. | `start_native_hotkey_capture`, `stop_native_hotkey_capture` |
 | `prompt_config.rs` | Конфигурация промптов и стилей транскрибации. | загрузка промптов |
 | `logger.rs` | Файловое логирование (`~/.talkee/talkee.log`). | `log_event`, `get_log_path_cmd`, `clear_logs` |
+| `vocabulary/mod.rs` | Единственный владелец ключа `personalVocabularyV1`: managed state, адаптер store, событие `vocabulary:updated`. | `vocabulary_get_state`, `vocabulary_save_term`, `vocabulary_delete_term`, `vocabulary_update_config` |
+| `vocabulary/model.rs` | Договор словаря v1, Unicode-ключи, лимиты, проверка конфликтов и каскадов. | `VocabularyState`, `validate_state` |
+| `vocabulary/store.rs` | Чтение без перезаписи повреждённых данных, CAS-мутации с откатом при ошибке сохранения. | `VocabularyStore`, `upsert_term` |
 | `download_cancel.rs` | Отмена активных загрузок моделей. | `cancel_local_model_download` |
 | `legacy_migration.rs` | Одноразовая миграция данных из прежней идентичности приложения. | `migrate_app_data_layout` |
 | `shutdown.rs` | Корректное завершение управляемых sidecar-процессов. | завершение runtime |
@@ -69,6 +72,7 @@ Talkee — macOS-приложение (Apple Silicon): Rust-бэкенд Tauri v
 | `stats.ts` / `statsCore.ts` | Локальная статистика: v3-агрегаты день × источник × модель, единственный сериализованный writer с receipt, селекторы для графиков. |
 | `typingSpeed.ts` | Валидация скорости печати и оценка сэкономленного времени по полным voice-данным. |
 | `summarize.ts` | Саммари и map-reduce обработка длинных текстов. |
+| `vocabulary.ts` | Зеркало договора словаря v1, типизированный IPC и прогретый кэш снимка на окно. |
 | `fileTranscription.ts` | Native path client; повтор файлов отправляется владельцу задач. |
 | `fileTranscriptionJobs.ts` | Единственный widget-owned runner: очередь, дедупликация jobId, snapshots, история до inference, терминальные состояния. |
 | `fileTranscriptionJobClient.ts` | Подписка settings на versioned snapshots, запросы start/cancel без ключей API. |
@@ -105,6 +109,23 @@ Talkee — macOS-приложение (Apple Silicon): Rust-бэкенд Tauri v
 | Модели и разрешения | `LocalLlmModels`, `LocalSttModelCard`, `ModelCardDisclosureButton`, `PermissionScreen`. |
 | История, запись и статистика | `HistoryAudioTrack`, `Waveform`, `SpeakerNameInput`, `TranscriptionStatsPanel`, `TypingSpeedTest`. |
 | Онбординг | `onboarding/OnboardingFlow`, `OnboardingShell`, `OnboardingModelStep`, `OnboardingTestStep`, `OnboardingConfetti`. |
+
+## Персональный словарь: владение данными
+
+- Ключ `personalVocabularyV1` в `talkee.json` пишет только Rust (`vocabulary/`); WebView
+  читает снимок и отправляет команды с `expectedRevision`. Несвязанные ключи (`settings`,
+  `history`, `stats`) не перезаписываются; единственная словарная настройка в
+  `settings` — пустой по умолчанию `vocabularyCorrectionHotkey`.
+- `revision` растёт при каждой сохранённой мутации и служит CAS-токеном: устаревший
+  запрос получает `[vocabulary:conflict]`, форма предлагает обновить данные.
+  `lexiconRevision` растёт только при изменении применяемых терминов, области или
+  включения; `dataEpoch` — при сбросе обучения и инвалидирует поздние результаты анализа.
+- Мутация собирает кандидат целиком, проверяет `validate_state`, лимиты и размер
+  (≤5 МиБ), затем сохраняет файл. Ошибка сохранения возвращает прежнее значение в
+  памяти store, событие `vocabulary:updated` отправляется только после успешной записи.
+- Отсутствующий ключ — пустой словарь без записи. Повреждённый ключ или версия схемы
+  новее 1 сохраняются как есть; словарь и анализ отключены, диктовка работает. Сброс —
+  только явным действием пользователя.
 
 ## Related documents
 

@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "revision": 7,
+  "lexiconRevision": 3,
+  "dataEpoch": 1,
+  "config": {
+    "enabled": false,
+    "activeDomain": "Разработка",
+    "analysisSchedule": "off",
+    "lastScheduledAttemptAt": null,
+    "learningClearedAt": null,
+    "manualApiConsent": {
+      "fingerprint": "sha256:1f2e",
+      "endpointLabel": "https://api.example.com/v1/chat/completions",
+      "model": "deepseek-chat",
+      "grantedAt": 1790000000000
+    },
+    "periodicApiConsent": null
+  },
+  "terms": [
+    {
+      "id": "term-pim",
+      "canonical": "PIM",
+      "language": "any",
+      "category": "service",
+      "scope": { "domain": "Разработка" },
+      "enabled": true,
+      "useAsHint": true,
+      "provenance": "starter",
+      "variants": [
+        {
+          "id": "variant-pi-ai-em",
+          "source": "пи ай эм",
+          "enabled": true,
+          "caseSensitive": false,
+          "contextWords": [],
+          "provenance": "starter"
+        },
+        {
+          "id": "variant-pim-case",
+          "source": "pim",
+          "enabled": false,
+          "caseSensitive": true,
+          "contextWords": [],
+          "provenance": "manual"
+        }
+      ],
+      "createdAt": 1790000000000,
+      "updatedAt": 1790000000500
+    },
+    {
+      "id": "term-prod",
+      "canonical": "Prod",
+      "language": "ru",
+      "category": "environment",
+      "scope": { "global": true },
+      "enabled": true,
+      "useAsHint": false,
+      "provenance": "human-correction",
+      "variants": [
+        {
+          "id": "variant-prod",
+          "source": "прод",
+          "enabled": true,
+          "caseSensitive": false,
+          "contextWords": ["деплой", "окружение"],
+          "provenance": "human-correction"
+        }
+      ],
+      "createdAt": 1790000001000,
+      "updatedAt": 1790000001000
+    }
+  ],
+  "suggestions": [
+    {
+      "id": "suggestion-dev",
+      "canonical": "Dev",
+      "language": "any",
+      "category": "environment",
+      "scope": { "domain": "Разработка" },
+      "variants": [
+        {
+          "source": "дев",
+          "caseSensitive": false,
+          "contextWords": ["среда"],
+          "selected": false
+        }
+      ],
+      "status": "collecting",
+      "origin": "stt-hypothesis",
+      "sourceCount": 1,
+      "createdAt": 1790000002000,
+      "updatedAt": 1790000002000
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence-1",
+      "suggestionId": "suggestion-dev",
+      "origin": "stt-hypothesis",
+      "sourceId": "history-42",
+      "sourceFingerprint": "sha256:aa01",
+      "quote": "выкатить в дев среду",
+      "sourceVariant": "дев",
+      "rangeStart": 10,
+      "rangeEnd": 30,
+      "createdAt": 1790000002000
+    }
+  ],
+  "dismissals": [{ "key": "ним|any|разработка|pim", "createdAt": 1790000003000 }],
+  "coverage": [{ "sourceId": "history-42", "fingerprint": "sha256:aa01", "ranges": [[0, 120]] }],
+  "lastJob": {
+    "mode": "full",
+    "status": "paused",
+    "backendFingerprint": "sha256:1f2e",
+    "requests": 3,
+    "processedSources": 12,
+    "remainingSources": 40,
+    "startedAt": 1790000004000,
+    "finishedAt": 1790000005000,
+    "reason": "budget_exhausted"
+  }
+}

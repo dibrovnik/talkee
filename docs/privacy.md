@@ -115,6 +115,23 @@ memory. Source and model breakdowns start at the update that introduced them: ol
 recordings are counted only in the totals and are not re-analysed from stored
 history.
 
+### Personal vocabulary
+
+The personal vocabulary lives only on this computer, under its own
+`personalVocabularyV1` key in the shared `talkee.json` store, separate from
+`settings`, `history` and `stats`. It holds approved spellings, replacement
+rules, domains, the analysis schedule and consent records, and later derived
+suggestions with short source quotes. Consent records keep a local hash of the
+backend kind, endpoint and model plus a sanitized endpoint label; API keys are
+never stored there. Application and schedule are off on a clean install and
+after an update; opening the vocabulary section performs no network request.
+
+If the key cannot be read (damaged file, unknown or newer version), the app keeps
+the original data untouched, disables vocabulary application and analysis, and
+ordinary dictation continues without it. Nothing is deleted to recover; a reset
+happens only through an explicit user action. Diagnostic logs record mutation
+names, revisions, counts and error codes, never terms, aliases or quotes.
+
 ### Local diagnostic logs
 
 Application diagnostics stay on this computer in `~/.talkee/talkee.log` and up to

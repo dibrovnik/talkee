@@ -26,6 +26,7 @@ pub mod realtime;
 mod settings_store;
 mod shutdown;
 mod tray;
+mod vocabulary;
 
 use commands::{accessibility, dock, runtime_info, settings_window, widget};
 use tauri::{Manager, RunEvent};
@@ -111,6 +112,9 @@ pub fn run() {
             // Must run before the settings store, history and windows are used,
             // so the new app-data directory already contains the migrated data.
             let _ = legacy_migration::run_startup_migration(app.handle());
+            if let Err(err) = vocabulary::VocabularyManager::init(app.handle()) {
+                logger::log_error("VOCABULARY", &format!("event=init_failed error={err}"));
+            }
 
             if let Err(err) = native_voice_recorder::init() {
                 logger::log_error(
@@ -270,6 +274,10 @@ pub fn run() {
             hotkey_manager::unregister_handy_hotkey,
             app_nap::begin_work_activity,
             app_nap::end_work_activity,
+            vocabulary::vocabulary_get_state,
+            vocabulary::vocabulary_save_term,
+            vocabulary::vocabulary_delete_term,
+            vocabulary::vocabulary_update_config,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Talkee")

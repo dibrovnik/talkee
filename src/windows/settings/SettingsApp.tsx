@@ -15,6 +15,7 @@ import { type MsgKey, useI18n } from "../../lib/i18n";
 import {
   type Icon,
   IconAdjustmentsHorizontal,
+  IconBook,
   IconChartBar,
   IconCpu,
   IconDeviceDesktopCog,
@@ -49,6 +50,7 @@ import { SettingsTab } from "./tabs/SettingsTab";
 import { SettingsTabs } from "./tabs/SettingsTabs";
 import { StatsTab } from "./tabs/StatsTab";
 import { TranslationTab } from "./tabs/TranslationTab";
+import { VocabularyTab } from "./tabs/vocabulary/VocabularyTab";
 import {
   CONTENT_DRAG_REGION_HEIGHT,
   readViewportWidth,
@@ -120,6 +122,11 @@ const SIDEBAR_GROUPS: SidebarTab[][] = [
       id: "style",
       labelKey: "settingsApp.tab.style",
       icon: IconSparkles,
+    },
+    {
+      id: "vocabulary",
+      labelKey: "settingsApp.tab.vocabulary",
+      icon: IconBook,
     },
     {
       id: "interpreter",
@@ -475,6 +482,7 @@ export function SettingsApp() {
                   </div>
                   {activeTab === "model" && <SettingsTabs type="model" />}
                   {activeTab === "style" && <SettingsTabs type="style" />}
+                  {activeTab === "vocabulary" && <VocabularyTab />}
                   {activeTab === "stats" && <StatsTab />}
                   {activeTab === "interpreter" && <TranslationTab />}
                   {import.meta.env.DEV && activeTab === "ui" && <Gallery />}

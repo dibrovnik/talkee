@@ -57,7 +57,16 @@ export interface HandyHotkeyEventPayload {
 }
 
 export interface SettingsNavigatePayload {
-  tab: "main" | "stats" | "file" | "interpreter" | "chat" | "settings" | "model" | "style";
+  tab:
+    | "main"
+    | "stats"
+    | "file"
+    | "interpreter"
+    | "chat"
+    | "settings"
+    | "model"
+    | "style"
+    | "vocabulary";
   resultId?: string | null;
 }
 

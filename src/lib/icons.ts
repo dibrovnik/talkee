@@ -2,6 +2,7 @@ import { ArrowClockwiseIcon as RawIconRefresh } from "@phosphor-icons/react/Arro
 import { ArrowSquareOutIcon as RawIconExternalLink } from "@phosphor-icons/react/ArrowSquareOut";
 import { ArrowsClockwiseIcon as RawIconRotate2 } from "@phosphor-icons/react/ArrowsClockwise";
 import { ArrowUpIcon as RawIconArrowUp } from "@phosphor-icons/react/ArrowUp";
+import { BookOpenTextIcon as RawIconBook } from "@phosphor-icons/react/BookOpenText";
 import { BriefcaseIcon as RawIconBriefcase } from "@phosphor-icons/react/Briefcase";
 import { BroadcastIcon as RawIconBroadcast } from "@phosphor-icons/react/Broadcast";
 import { CaretDownIcon as RawIconChevronDown } from "@phosphor-icons/react/CaretDown";
@@ -77,6 +78,7 @@ const IconAlertCircle = RawIconAlertCircle as Icon;
 const IconAlertTriangle = RawIconAlertTriangle as Icon;
 const IconArrowUp = RawIconArrowUp as Icon;
 const IconBolt = RawIconBolt as Icon;
+const IconBook = RawIconBook as Icon;
 const IconBriefcase = RawIconBriefcase as Icon;
 const IconBroadcast = RawIconBroadcast as Icon;
 const IconChartBar = RawIconChartBar as Icon;
@@ -135,6 +137,7 @@ export {
   IconAlertTriangle,
   IconArrowUp,
   IconBolt,
+  IconBook,
   IconBriefcase,
   IconBroadcast,
   IconChartBar,

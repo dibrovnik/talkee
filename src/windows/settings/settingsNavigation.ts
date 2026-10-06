@@ -7,6 +7,7 @@ export type SettingsTab =
   | "settings"
   | "model"
   | "style"
+  | "vocabulary"
   | "ui";
 
 const SETTINGS_TABS = new Set<SettingsTab>([
@@ -18,6 +19,7 @@ const SETTINGS_TABS = new Set<SettingsTab>([
   "settings",
   "model",
   "style",
+  "vocabulary",
   "ui",
 ]);
 

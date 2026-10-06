@@ -12,6 +12,7 @@ import { settingsModels } from "./dict/settingsModels";
 import { settingsRest } from "./dict/settingsRest";
 import { settingsTabsMisc } from "./dict/settingsTabsMisc";
 import { summary } from "./dict/summary";
+import { vocabulary } from "./dict/vocabulary";
 import { widget } from "./dict/widget";
 
 export const MESSAGES = {
@@ -26,6 +27,7 @@ export const MESSAGES = {
   ...libMessages,
   ...summary,
   ...onboarding,
+  ...vocabulary,
 } as const;
 
 export type MsgKey = keyof typeof MESSAGES;

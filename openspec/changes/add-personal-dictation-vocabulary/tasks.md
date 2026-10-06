@@ -25,10 +25,10 @@
 
 ## 4. Раздел словаря и ручное управление
 
-- [ ] 4.1 Добавить вкладку `vocabulary` в `src/windows/settings/settingsNavigation.ts`, `SettingsApp.tsx`, `src/lib/hotkeyEvents.ts`, `src-tauri/src/commands/settings_window.rs`; русские строки — `src/lib/i18n/dict/vocabulary.ts`, `settingsRest.ts`, `messages.ts`. Проверка: opening-by-tab не возвращает main, production build содержит раздел.
-- [ ] 4.2 Создать `src/windows/settings/tabs/vocabulary/VocabularyTab.tsx`: empty state, три представления, application toggle, active domain, поиск/категории и состояние capability. Проверка: открытие раздела не пишет starter и не запускает LLM/network.
-- [ ] 4.3 Создать `VocabularyEditor.tsx` с CRUD canonical и раздельным утверждением variants/context/case, deactivate/delete; переиспользовать `src/ui`. Проверка: term-only PIM не заменяет «пин», form error сохраняет введённое, deletion не переписывает историю.
-- [ ] 4.4 Подключить cross-window updates/CAS errors к этим компонентам и `src/lib/vocabulary.ts`. Проверка: параллельное редактирование не перезаписывает свежие правила, устаревший preview требует нового подтверждения.
+- [x] 4.1 Добавить вкладку `vocabulary` в `src/windows/settings/settingsNavigation.ts`, `SettingsApp.tsx`, `src/lib/hotkeyEvents.ts`, `src-tauri/src/commands/settings_window.rs`; русские строки — `src/lib/i18n/dict/vocabulary.ts`, `settingsRest.ts`, `messages.ts`. Проверка: opening-by-tab не возвращает main, production build содержит раздел.
+- [x] 4.2 Создать `src/windows/settings/tabs/vocabulary/VocabularyTab.tsx`: empty state, три представления, application toggle, active domain, поиск/категории и состояние capability. Проверка: открытие раздела не пишет starter и не запускает LLM/network.
+- [x] 4.3 Создать `VocabularyEditor.tsx` с CRUD canonical и раздельным утверждением variants/context/case, deactivate/delete; переиспользовать `src/ui`. Проверка: term-only PIM не заменяет «пин», form error сохраняет введённое, deletion не переписывает историю.
+- [x] 4.4 Подключить cross-window updates/CAS errors к этим компонентам и `src/lib/vocabulary.ts`. Проверка: параллельное редактирование не перезаписывает свежие правила, устаревший preview требует нового подтверждения.
 - [ ] 4.5 В `docs/testing/manual-style-test-plan.md` добавить ручные сценарии empty/manual/edit/off/domain, keyboard/VoiceOver/light/dark/возврат фокуса. Проверка: выполнить их в macOS-приложении; сохранить только результаты без пользовательского текста.
 - [ ] 4.6 Выполнить `bun test src/lib/vocabulary.test.ts`, `bunx tsc --noEmit`, `bun run build`; проверить production-вкладку через `bun run tauri dev` и встроенный браузер/нативное окно.
 

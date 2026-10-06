@@ -13,6 +13,11 @@ describe("settings navigation", () => {
     expect(resolveInitialSettingsTab("?tab=stats")).toBe("stats");
   });
 
+  it("opens the vocabulary tab by deep link instead of falling back to main", () => {
+    expect(isSettingsTab("vocabulary")).toBe(true);
+    expect(resolveInitialSettingsTab("?tab=vocabulary")).toBe("vocabulary");
+  });
+
   it("falls back to the main tab for unknown destinations", () => {
     expect(isSettingsTab("developer-tools")).toBe(false);
     expect(resolveInitialSettingsTab("?tab=developer-tools")).toBe("main");

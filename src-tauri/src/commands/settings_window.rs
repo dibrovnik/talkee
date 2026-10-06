@@ -13,7 +13,7 @@ const DEV_ONBOARDING_REQUEST_EVENT: &str = "dev-onboarding-request";
 ///
 /// Kept in sync with `src/windows/settings/settingsNavigation.ts`; an unknown
 /// value falls back to the history tab instead of opening a blank page.
-const SETTINGS_TABS: [&str; 8] = [
+const SETTINGS_TABS: [&str; 9] = [
     "main",
     "stats",
     "file",
@@ -22,6 +22,7 @@ const SETTINGS_TABS: [&str; 8] = [
     "settings",
     "model",
     "style",
+    "vocabulary",
 ];
 
 fn resolve_settings_tab(tab: &str) -> &str {
@@ -152,6 +153,7 @@ mod tests {
         assert_eq!(resolve_settings_tab("stats"), "stats");
         assert_eq!(resolve_settings_tab("main"), "main");
         assert_eq!(resolve_settings_tab("file"), "file");
+        assert_eq!(resolve_settings_tab("vocabulary"), "vocabulary");
         assert_eq!(resolve_settings_tab("ui"), "main");
         assert_eq!(resolve_settings_tab(""), "main");
         assert_eq!(resolve_settings_tab("../escape"), "main");

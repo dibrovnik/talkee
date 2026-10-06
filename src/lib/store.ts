@@ -20,6 +20,19 @@ export interface SummaryEntry {
   text: string;
 }
 
+/** How the personal vocabulary took part in one dictation; never a human correction. */
+export interface DictationPersonalization {
+  lexiconRevision: number;
+  activeDomain: string | null;
+  /** Whether recognition received vocabulary hints or only local replacements ran. */
+  hintMode: "none" | "prompt";
+  hintTermIds: string[];
+  ruleIds: string[];
+  termIds: string[];
+  replacements: number;
+  status: "applied" | "unchanged" | "error";
+}
+
 export interface HistoryEntry {
   id: string;
   timestamp: string;
@@ -52,6 +65,11 @@ export interface HistoryEntry {
   speakers?: Speaker[];
   segments?: SpeakerTranscriptSegment[];
   dictationTranslation?: DictationTranslationMetadata;
+  /** Text right before vocabulary normalization, kept only when it differs from raw and result. */
+  preVocabularyText?: string;
+  /** True only when AI cleanup actually changed the text; absent on legacy entries. */
+  cleanupApplied?: boolean;
+  personalization?: DictationPersonalization;
   liveTranslation?: {
     targetLanguage: string;
     adapterId: string;
@@ -1472,12 +1490,31 @@ export function compactHistoryEntryForStorage(entry: HistoryEntry): HistoryEntry
   return next;
 }
 
-export function normalizeHistoryEntryFromStorage(entry: HistoryEntry): HistoryEntry {
-  if (!entry.raw && entry.cleaned) {
-    return { ...entry, raw: entry.cleaned };
-  }
+function isPersonalization(value: unknown): value is DictationPersonalization {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.lexiconRevision === "number" &&
+    typeof record.replacements === "number" &&
+    Array.isArray(record.ruleIds) &&
+    (record.status === "applied" || record.status === "unchanged" || record.status === "error")
+  );
+}
 
-  return entry;
+export function normalizeHistoryEntryFromStorage(entry: HistoryEntry): HistoryEntry {
+  let next = entry;
+  if (!next.raw && next.cleaned) {
+    next = { ...next, raw: next.cleaned };
+  }
+  if (next.personalization !== undefined && !isPersonalization(next.personalization)) {
+    const { personalization: _dropped, ...rest } = next;
+    next = rest;
+  }
+  if (next.preVocabularyText !== undefined && typeof next.preVocabularyText !== "string") {
+    const { preVocabularyText: _dropped, ...rest } = next;
+    next = rest;
+  }
+  return next;
 }
 
 function normalizeHistoryFromStorage(history: HistoryEntry[]): HistoryEntry[] {

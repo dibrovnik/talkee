@@ -17,6 +17,10 @@ import {
   isSttStreamingEnabled,
   warmUpLiveDictationRuntime,
 } from "../services/dictationStreamOverlay";
+import {
+  captureDictationVocabulary,
+  type DictationVocabularyCapture,
+} from "../services/dictationVocabulary";
 import { getVoiceAudioConstraints, resolveSelectedMicLabel } from "../services/recordingDevice";
 import { createRecordingRuntimeController } from "../services/recordingRuntime";
 import { waitForRuntimeWarmUpWithinBudget } from "../services/runtimeWarmup";
@@ -114,6 +118,7 @@ export function useWidgetRecording({
   const lowMicMonitorCleanupRef = useRef<(() => void) | null>(null);
   const recordingLimitTimerRef = useRef<number | null>(null);
   const cleanupContextRef = useRef<DictationCleanupContext | null>(null);
+  const vocabularyCaptureRef = useRef<Promise<DictationVocabularyCapture> | null>(null);
   const recordingSettingsRef = useRef<AppSettings | null>(null);
 
   const resizeForSettings = useCallback(
@@ -306,6 +311,8 @@ export function useWidgetRecording({
       machineRef.current = { ...machineRef.current, widgetState: "recording" };
       void resizeForSettings(activeSettings);
 
+      // Captured before STT starts so every result path of this attempt sees one version.
+      vocabularyCaptureRef.current = captureDictationVocabulary(activeSettings.language);
       recordingSettingsRef.current = applyDictationCleanupChoice(activeSettings, forceCleanup);
       onCleanupChoice?.(recordingSettingsRef.current.cleanupEnabled);
       cleanupContextRef.current = {
@@ -612,6 +619,7 @@ export function useWidgetRecording({
         blob,
         settings: activeSettings,
         cleanupContext: cleanupContextRef.current ?? undefined,
+        vocabulary: vocabularyCaptureRef.current ?? undefined,
         recordingStartTimestamp: machine.recordingStartTimestamp,
         liveTranscription,
         dictationStream,

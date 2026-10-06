@@ -9,6 +9,7 @@ import {
   type VocabularyState,
   type VocabularyView,
 } from "../../../../lib/vocabulary";
+import { HistoryTextVariantControl } from "../HistoryTextVariantControl";
 import { VocabularyEditor } from "./VocabularyEditor";
 import { VocabularyImportReview } from "./VocabularyImportReview";
 import { VocabularyTab } from "./VocabularyTab";
@@ -164,5 +165,70 @@ describe("starter review", () => {
     }
     expect(html).toContain('value="деплой, окружение, среда"');
     expect(html).toContain("Сохранить выбранное (0)");
+  });
+});
+
+describe("history provenance control", () => {
+  const personalization = {
+    lexiconRevision: 1,
+    activeDomain: null,
+    hintMode: "none" as const,
+    hintTermIds: [],
+    ruleIds: ["rule"],
+    termIds: ["term"],
+    replacements: 1,
+    status: "applied" as const,
+  };
+  const entry = {
+    id: "e",
+    timestamp: "2026-10-06T10:00:00.000Z",
+    duration: 1,
+    source: "voice" as const,
+  };
+
+  test("a vocabulary-only change is labelled as the vocabulary, not AI cleanup", () => {
+    const html = renderToStaticMarkup(
+      <HistoryTextVariantControl
+        entry={{ ...entry, raw: "пим", cleaned: "PIM", cleanupApplied: false, personalization }}
+        value="cleaned"
+        onChange={() => {}}
+      />,
+    );
+    expect(html).toContain("Изменено словарём: замен 1");
+    expect(html).toContain(">Итог<");
+    expect(html).toContain(">Исходный<");
+    expect(html).not.toContain("ИИ-очисткой");
+  });
+
+  test("cleanup with vocabulary offers the text before the vocabulary", () => {
+    const html = renderToStaticMarkup(
+      <HistoryTextVariantControl
+        entry={{
+          ...entry,
+          raw: "пим",
+          cleaned: "PIM.",
+          preVocabularyText: "Пим.",
+          cleanupApplied: true,
+          personalization,
+        }}
+        value="cleaned"
+        onChange={() => {}}
+      />,
+    );
+    expect(html).toContain(">До словаря<");
+    expect(html).toContain("Изменено ИИ-очисткой и словарём: замен 1");
+  });
+
+  test("legacy cleanup entries keep the existing labels", () => {
+    const html = renderToStaticMarkup(
+      <HistoryTextVariantControl
+        entry={{ ...entry, raw: "raw", cleaned: "Raw." }}
+        value="cleaned"
+        onChange={() => {}}
+      />,
+    );
+    expect(html).toContain("ИИ-очистка текста");
+    expect(html).toContain(">Очищенный<");
+    expect(html).toContain("Изменено ИИ-очисткой");
   });
 });

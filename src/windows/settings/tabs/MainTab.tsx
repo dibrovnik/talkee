@@ -14,7 +14,11 @@ import { type RowActionItem, RowActionsMenu } from "../../../components/RowActio
 import { SpeakerNameInput } from "../../../components/SpeakerNameInput";
 import { TranscriptionStatsPanel } from "../../../components/TranscriptionStatsPanel";
 import { retryCallCaptureHistoryEntry } from "../../../lib/callCapture";
-import { cleanupHistoryText, hasOriginalCleanupText } from "../../../lib/cleanupHistory";
+import {
+  type HistoryTextVariant,
+  historyTextVariants,
+  historyVariantText,
+} from "../../../lib/cleanupHistory";
 import { retryFileHistoryEntry } from "../../../lib/fileTranscription";
 import {
   HISTORY_CLEARED_EVENT,
@@ -61,6 +65,7 @@ import { Button } from "../../../ui/Button";
 import { SegmentedControl } from "../../../ui/SegmentedControl";
 import { Spinner } from "../../../ui/Spinner";
 import { retryHistoryEntry } from "../../widget/services/transcriptionPipeline";
+import { HistoryTextVariantControl } from "./HistoryTextVariantControl";
 
 const LazySummaryModal = lazy(() =>
   import("../../../components/SummaryModal").then((module) => ({
@@ -287,7 +292,9 @@ export function MainTab({
   const [history, setHistory] = useState<HistoryListEntry[]>(() =>
     initialHistory.map(toInitialHistoryListEntry),
   );
-  const [originalIds, setOriginalIds] = useState<Set<string>>(() => new Set());
+  const [textVariants, setTextVariants] = useState<Map<string, HistoryTextVariant>>(
+    () => new Map(),
+  );
   const [copied, setCopied] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [retrySucceededId, setRetrySucceededId] = useState<string | null>(null);
@@ -554,7 +561,7 @@ export function MainTab({
 
   const copyEntryText = async (id: string): Promise<void> => {
     const entry = await loadFullEntry(id);
-    const text = entry ? cleanupHistoryText(entry, originalIds.has(id)) : "";
+    const text = entry ? historyVariantText(entry, textVariants.get(id) ?? "cleaned") : "";
     if (!text) return;
     await copyText(id, text);
   };
@@ -990,13 +997,14 @@ export function MainTab({
                         const fullEntry = fullEntryCache.get(item.id);
                         const isExpanded = expandedIds.has(item.id);
                         const isLoadingFullEntry = loadingFullEntryIds.has(item.id);
+                        const textVariant = textVariants.get(item.id) ?? "cleaned";
                         const displayText =
                           isExpanded && fullEntry
-                            ? cleanupHistoryText(fullEntry, originalIds.has(item.id))
+                            ? historyVariantText(fullEntry, textVariant)
                             : item.textPreview;
                         const displayTextLength =
                           isExpanded && fullEntry
-                            ? cleanupHistoryText(fullEntry, originalIds.has(item.id)).length
+                            ? historyVariantText(fullEntry, textVariant).length
                             : item.textLength;
 
                         return (
@@ -1100,28 +1108,16 @@ export function MainTab({
                                   {isExpanded &&
                                     fullEntry &&
                                     source === "voice" &&
-                                    hasOriginalCleanupText(fullEntry) && (
-                                      <div className="ui-history__variant">
-                                        <span className="ui-history__variant-label">
-                                          {t("cleanup.title")}
-                                        </span>
-                                        <SegmentedControl
-                                          value={originalIds.has(item.id) ? "raw" : "cleaned"}
-                                          options={[
-                                            { value: "cleaned", label: t("cleanup.cleaned") },
-                                            { value: "raw", label: t("cleanup.raw") },
-                                          ]}
-                                          ariaLabel={t("cleanup.title")}
-                                          onChange={(value) =>
-                                            setOriginalIds((current) => {
-                                              const next = new Set(current);
-                                              if (value === "raw") next.add(item.id);
-                                              else next.delete(item.id);
-                                              return next;
-                                            })
-                                          }
-                                        />
-                                      </div>
+                                    historyTextVariants(fullEntry).length > 0 && (
+                                      <HistoryTextVariantControl
+                                        entry={fullEntry}
+                                        value={textVariant}
+                                        onChange={(value) =>
+                                          setTextVariants((current) =>
+                                            new Map(current).set(item.id, value),
+                                          )
+                                        }
+                                      />
                                     )}
                                   {item.hasAudio || item.hasCallTracks ? (
                                     <div className="ui-history__audio">

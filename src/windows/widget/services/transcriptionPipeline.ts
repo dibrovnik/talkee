@@ -30,6 +30,12 @@ import {
   shouldApplyDictationStreamUpdate,
 } from "./dictationStreamOverlay";
 import {
+  applyVocabularyStage,
+  captureDictationVocabulary,
+  type DictationVocabularyCapture,
+  NO_VOCABULARY,
+} from "./dictationVocabulary";
+import {
   type AudioSignalStats,
   guardTranscriptionResult,
   isClearlySilentAudio,
@@ -48,6 +54,8 @@ export interface ProcessRecordingBlobParams {
   dictationStream?: DictationStreamOverlaySession | null;
   audioStats?: AudioSignalStats | null;
   cleanupContext?: DictationCleanupContext;
+  /** Captured at record start; batch, streaming final and reconciliation all use it. */
+  vocabulary?: Promise<DictationVocabularyCapture> | DictationVocabularyCapture;
 }
 
 export interface ProcessRecordingBlobResult {
@@ -67,6 +75,10 @@ interface RecordingAudioSource {
 }
 
 type TranscriptionResult = Pick<HistoryEntry, "raw" | "cleaned" | "dictationTranslation">;
+
+/** Final dictation text plus how cleanup and the vocabulary produced it. */
+export type DictationTextResult = TranscriptionResult &
+  Pick<HistoryEntry, "cleanupApplied" | "preVocabularyText" | "personalization">;
 
 export interface DictationStreamOverlaySession {
   requestId: string;
@@ -491,26 +503,45 @@ async function resolveFinalTranscription({
   }
 }
 
-export async function applyDictationCleanup(
+/** Optional cleanup, then exactly one vocabulary pass; notices reflect both outcomes. */
+export async function processDictationText(
   result: TranscriptionResult,
   settings: AppSettings,
   context: DictationCleanupContext,
   notice: typeof showCleanupNotice = showCleanupNotice,
-): Promise<TranscriptionResult> {
-  const outcome = await cleanupDictation(result.raw, settings, { context });
+  vocabulary: DictationVocabularyCapture = NO_VOCABULARY,
+  clean: typeof cleanupDictation = cleanupDictation,
+): Promise<DictationTextResult> {
+  const outcome = await clean(result.raw, settings, { context });
+  const cleanupApplied = outcome.applied && outcome.text !== result.raw;
+  const stage = applyVocabularyStage(outcome.text, vocabulary);
+  logInfo(
+    "VOCABULARY",
+    `event=normalize request_id=${diagnosticId(context.requestId)} status=${stage.personalization?.status ?? "disabled"} replacements=${stage.replacements} lexicon_revision=${vocabulary.snapshot.lexiconRevision} reason=${stage.failure ?? "none"}`,
+  );
   if (outcome.reason === "no-backend") {
     void notice(tn("cleanup.noModel"), tn("cleanup.chooseModel"));
   }
   if (outcome.reason === "timeout" || outcome.reason === "error" || outcome.reason === "rejected") {
-    void notice(tn("cleanup.failed"));
+    void notice(tn(stage.replacements > 0 ? "cleanup.failedVocabulary" : "cleanup.failed"));
   }
-  return { ...result, cleaned: outcome.text };
+  const preVocabularyText =
+    outcome.text !== result.raw && outcome.text !== stage.text ? outcome.text : undefined;
+  return {
+    ...result,
+    cleaned: stage.text,
+    cleanupApplied,
+    preVocabularyText,
+    personalization: stage.personalization,
+  };
 }
 
-async function applyDictationTranslation(
-  result: TranscriptionResult,
+/** Translates the already-normalized source; vocabulary rules never touch the translation. */
+export async function applyDictationTranslation(
+  result: DictationTextResult,
   settings: AppSettings,
-): Promise<TranscriptionResult> {
+  resolveBackend: typeof resolveSummaryBackend = resolveSummaryBackend,
+): Promise<DictationTextResult> {
   if (!settings.translation.active) {
     return result;
   }
@@ -520,7 +551,7 @@ async function applyDictationTranslation(
     return result;
   }
 
-  const backend = resolveSummaryBackend(settings);
+  const backend = resolveBackend(settings);
   if (!backend) {
     throw new Error("translation text model unavailable");
   }
@@ -551,7 +582,7 @@ async function applyDictationTranslation(
   }
 
   return {
-    raw: result.raw,
+    ...result,
     cleaned: translatedText,
     dictationTranslation: {
       provider: backend.kind,
@@ -646,6 +677,7 @@ export async function processRecordingBlob({
   dictationStream = null,
   audioStats = null,
   cleanupContext,
+  vocabulary = NO_VOCABULARY,
 }: ProcessRecordingBlobParams): Promise<ProcessRecordingBlobResult> {
   const context: DictationCleanupContext = cleanupContext ?? {
     requestId: crypto.randomUUID(),
@@ -758,7 +790,13 @@ export async function processRecordingBlob({
     }
 
     const result = await applyDictationTranslation(
-      await applyDictationCleanup(transcription, settings, context),
+      await processDictationText(
+        transcription,
+        settings,
+        context,
+        showCleanupNotice,
+        await vocabulary,
+      ),
       settings,
     );
     const processingTime = Date.now() - apiStart;
@@ -780,6 +818,9 @@ export async function processRecordingBlob({
           raw: result.raw,
           cleaned: result.cleaned,
           dictationTranslation: result.dictationTranslation,
+          cleanupApplied: result.cleanupApplied,
+          preVocabularyText: result.preVocabularyText,
+          personalization: result.personalization,
           status: "completed",
           errorMessage: undefined,
           processingTime,
@@ -867,6 +908,8 @@ export async function retryHistoryEntry(
   // cancellable from the table.
   const handle = await beginProcessing(entry, "update");
   const retryStarted = Date.now();
+  // A retry is a new attempt and applies the vocabulary as it is now.
+  const vocabulary = captureDictationVocabulary(retrySettings.language);
   const context: DictationCleanupContext = {
     requestId: crypto.randomUUID(),
     entryId: entry.id,
@@ -911,7 +954,13 @@ export async function retryHistoryEntry(
     }
 
     const result = await applyDictationTranslation(
-      await applyDictationCleanup(transcription, retrySettings, context),
+      await processDictationText(
+        transcription,
+        retrySettings,
+        context,
+        showCleanupNotice,
+        await vocabulary,
+      ),
       retrySettings,
     );
     const processingTime = Date.now() - retryStarted;
@@ -941,6 +990,9 @@ export async function retryHistoryEntry(
         raw: result.raw,
         cleaned: result.cleaned,
         dictationTranslation: result.dictationTranslation,
+        cleanupApplied: result.cleanupApplied,
+        preVocabularyText: result.preVocabularyText,
+        personalization: result.personalization,
         status: "completed",
         errorMessage: undefined,
         audioPath: savedAudio.audioPath,

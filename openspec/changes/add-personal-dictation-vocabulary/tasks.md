@@ -42,11 +42,11 @@
 
 ## 6. Общий pipeline и история происхождения
 
-- [ ] 6.1 Передать capture snapshot через `src/windows/widget/hooks/useWidgetRecording.ts`, `services/recordingRuntime.ts`, `dictationStreamOverlay.ts` и параметры `transcriptionPipeline.ts`. Проверка: record-start snapshot используется batch/stream/reconciliation, retry захватывает новую версию.
-- [ ] 6.2 В `transcriptionPipeline.ts` добавить один final normalization после cleanup перед translation/history/paste, включая fallback/retry и final overlay. Проверка: одинаковый raw+snapshot даёт одинаковый итог во всех путях, cleanup off не вызывает LLM.
-- [ ] 6.3 Добавить optional personalization/preVocabularyText/cleanupApplied к `src/lib/store.ts`, сохранить normalize/compact backward compatibility. Проверка: raw остаётся настоящим исходником после словарной замены, старые compacted записи открываются.
-- [ ] 6.4 В `src/windows/settings/tabs/MainTab.tsx` показать исходник/итог/происхождение и текст до словаря по необходимости; fallback notices собрать в общем pipeline. Проверка: различаются cleanup fail без замен и fail с PIM-заменой, copy-original не копирует нормализованный итог.
-- [ ] 6.5 Расширить `src/windows/widget/services/transcriptionPipeline.test.ts`, добавить `src/lib/store.vocabularyHistory.test.ts` и обновить `docs/audio-pipeline-principles.md`. Проверка: snapshot race, streaming-final, batch fallback, retry, translation-source и изоляция file/call/liveTranslation покрыты, auto-loop evidence отсутствует.
+- [x] 6.1 Передать capture snapshot через `src/windows/widget/hooks/useWidgetRecording.ts`, `services/recordingRuntime.ts`, `dictationStreamOverlay.ts` и параметры `transcriptionPipeline.ts`. Проверка: record-start snapshot используется batch/stream/reconciliation, retry захватывает новую версию.
+- [x] 6.2 В `transcriptionPipeline.ts` добавить один final normalization после cleanup перед translation/history/paste, включая fallback/retry и final overlay. Проверка: одинаковый raw+snapshot даёт одинаковый итог во всех путях, cleanup off не вызывает LLM.
+- [x] 6.3 Добавить optional personalization/preVocabularyText/cleanupApplied к `src/lib/store.ts`, сохранить normalize/compact backward compatibility. Проверка: raw остаётся настоящим исходником после словарной замены, старые compacted записи открываются.
+- [x] 6.4 В `src/windows/settings/tabs/MainTab.tsx` показать исходник/итог/происхождение и текст до словаря по необходимости; fallback notices собрать в общем pipeline. Проверка: различаются cleanup fail без замен и fail с PIM-заменой, copy-original не копирует нормализованный итог.
+- [x] 6.5 Расширить `src/windows/widget/services/transcriptionPipeline.test.ts`, добавить `src/lib/store.vocabularyHistory.test.ts` и обновить `docs/audio-pipeline-principles.md`. Проверка: snapshot race, streaming-final, batch fallback, retry, translation-source и изоляция file/call/liveTranslation покрыты, auto-loop evidence отсутствует.
 - [ ] 6.6 Выполнить `bun test src/windows/widget/services/transcriptionPipeline.test.ts src/lib/store.vocabularyHistory.test.ts`, `bunx tsc --noEmit`; вручную проверить dictation cleanup off/on и перевод до/после нормализованного источника.
 
 ## 7. STT-подсказки и один существующий запрос очистки

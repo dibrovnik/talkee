@@ -195,6 +195,29 @@ Rules:
 - File transcription, call capture, live translation and translated output are
   out of scope.
 
+Pipeline integration (`src/windows/widget/services/dictationVocabulary.ts` and
+`processDictationText` in `transcriptionPipeline.ts`):
+
+- `useWidgetRecording` starts `captureDictationVocabulary` when recording starts,
+  before STT, and passes the pending capture to `processRecordingBlob`. Batch STT,
+  the accepted streaming final and realtime reconciliation all end in the same
+  single pass, so the same raw text and snapshot give the same result on every
+  path. `retryHistoryEntry` captures a new snapshot for its attempt.
+- The pass runs on the cleanup output, or on raw when cleanup is off, failed or has
+  no backend; turning cleanup off never triggers an LLM call for the vocabulary.
+  Translation receives the normalized source, and the translated text is never
+  normalized. Overlay, history and paste all use the final text.
+- A corrupt or unreadable vocabulary, or a normalizer limit, keeps the
+  pre-normalization text and logs a safe code; it never fails the dictation.
+- A cleanup failure shows «Очистка не удалась — применён словарь» only when
+  replacements actually happened, otherwise the existing «вставлен исходный текст».
+- History keeps `raw` as the real STT and adds optional `cleanupApplied`,
+  `personalization` (lexicon revision, domain, hint mode, rule/term ids,
+  replacement count, status) and `preVocabularyText`, stored only when it differs
+  from both raw and result. Compaction and legacy entries are unchanged, and the
+  record never claims a human correction, so applied rules cannot become their
+  own learning evidence.
+
 ## Dictation Translation
 
 Translation is an optional post-processing step for ordinary voice dictation

@@ -607,7 +607,7 @@ pub fn validate_rule_conflicts(terms: &[Term]) -> Result<(), String> {
     Ok(())
 }
 
-fn validate_terms(terms: &[Term]) -> Result<(), String> {
+pub(crate) fn validate_terms(terms: &[Term]) -> Result<(), String> {
     if terms.len() > MAX_TERMS {
         return Err(invalid(format!(
             "Достигнут предел {MAX_TERMS} терминов: удалите или экспортируйте лишние"

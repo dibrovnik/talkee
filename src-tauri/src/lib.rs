@@ -278,6 +278,10 @@ pub fn run() {
             vocabulary::vocabulary_save_term,
             vocabulary::vocabulary_delete_term,
             vocabulary::vocabulary_update_config,
+            vocabulary::vocabulary_preview_import,
+            vocabulary::vocabulary_preview_import_file,
+            vocabulary::vocabulary_apply_import,
+            vocabulary::vocabulary_export_file,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Talkee")

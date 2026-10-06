@@ -2,12 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import fixture from "../../../../../src-tauri/src/vocabulary/fixtures/state-v1.json";
 import {
+  createDevelopmentStarter,
   createEmptyVocabularyState,
   createVocabularyClient,
+  type ImportPreview,
   type VocabularyState,
   type VocabularyView,
 } from "../../../../lib/vocabulary";
 import { VocabularyEditor } from "./VocabularyEditor";
+import { VocabularyImportReview } from "./VocabularyImportReview";
 import { VocabularyTab } from "./VocabularyTab";
 
 function recordingClient(): { calls: string[]; client: ReturnType<typeof createVocabularyClient> } {
@@ -33,6 +36,8 @@ describe("vocabulary tab", () => {
     expect(html).toContain("Словарь пока пуст");
     expect(html).toContain("Добавить термин…");
     expect(html).toContain("Проанализировать историю…");
+    expect(html).toContain("Начать с примеров…");
+    expect(html).toContain("Импортировать…");
     expect(html).toContain("Словарь выключен");
     expect(html).toContain("Только общий словарь");
     expect(html).toContain("Только замены после распознавания");
@@ -111,5 +116,53 @@ describe("vocabulary editor", () => {
       />,
     );
     expect(html).toContain("удалён в другом окне");
+  });
+});
+
+describe("starter review", () => {
+  test("nothing is preselected, application stays off and rendering writes nothing", () => {
+    const starter = createDevelopmentStarter();
+    const preview: ImportPreview = {
+      revision: 0,
+      terms: starter.terms.map((term, index) => ({
+        index,
+        canonical: term.canonical,
+        language: term.language,
+        category: term.category,
+        scope: term.scope,
+        status: "new",
+        variants: term.variants.map((variant, variantIndex) => ({
+          ...variant,
+          index: variantIndex,
+          status: "new",
+        })),
+      })),
+    };
+    const { calls, client } = recordingClient();
+    const html = renderToStaticMarkup(
+      <VocabularyImportReview
+        client={client}
+        source="starter"
+        text={JSON.stringify(starter)}
+        preview={preview}
+        onDone={() => {}}
+      />,
+    );
+    expect(calls).toEqual([]);
+    for (const label of [
+      "Добавить термин «PIM»",
+      "Разрешить замену «пи ай эм» → «PIM»",
+      "Разрешить замену «пим» → «PIM»",
+      "Разрешить замену «дев» → «Dev»",
+      "Разрешить замену «прод» → «Prod»",
+      "Включить применение словаря после сохранения",
+    ]) {
+      const start = html.indexOf(`aria-label="${label}"`);
+      expect(start).toBeGreaterThan(-1);
+      const tag = html.slice(html.lastIndexOf("<button", start), html.indexOf(">", start));
+      expect(tag).toContain('aria-checked="false"');
+    }
+    expect(html).toContain('value="деплой, окружение, среда"');
+    expect(html).toContain("Сохранить выбранное (0)");
   });
 });

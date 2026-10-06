@@ -1,9 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import starterFixture from "../../src-tauri/src/vocabulary/fixtures/starter-development.json";
 import fixture from "../../src-tauri/src/vocabulary/fixtures/state-v1.json";
 import { needsHotkeySettingsMigration, normalizeSavedSettings } from "./store";
 import {
+  buildImportSelection,
+  createDevelopmentStarter,
   createEmptyVocabularyState,
   createVocabularyClient,
+  type ImportChoice,
+  type ImportPreview,
   parseVocabularyError,
   parseVocabularyView,
   VOCABULARY_UPDATED_EVENT,
@@ -149,5 +154,159 @@ describe("vocabulary client cache", () => {
     h.setRemote(stateAt(4));
     const view = await h.client.getView({ refresh: true });
     expect(view.status === "ready" && view.state.revision).toBe(6);
+  });
+});
+
+describe("starter and portable import", () => {
+  test("the starter matches the fixture Rust validates", () => {
+    expect(createDevelopmentStarter()).toEqual(starterFixture as never);
+  });
+
+  test("starter and portable documents carry no evidence, consent, history or key fields", () => {
+    const allowed = new Set([
+      "format",
+      "version",
+      "terms",
+      "canonical",
+      "language",
+      "category",
+      "scope",
+      "domain",
+      "global",
+      "enabled",
+      "useAsHint",
+      "variants",
+      "source",
+      "caseSensitive",
+      "contextWords",
+    ]);
+    const keys = new Set<string>();
+    const walk = (value: unknown): void => {
+      if (Array.isArray(value)) value.forEach(walk);
+      else if (value && typeof value === "object") {
+        for (const [key, inner] of Object.entries(value)) {
+          keys.add(key);
+          walk(inner);
+        }
+      }
+    };
+    walk(createDevelopmentStarter());
+    expect([...keys].filter((key) => !allowed.has(key))).toEqual([]);
+  });
+
+  test("dev and prod rules are limited to environment context, never bare ASCII", () => {
+    const starter = createDevelopmentStarter();
+    const rules = starter.terms.flatMap((term) =>
+      term.variants.map((variant) => [term.canonical, variant.source, variant.contextWords]),
+    );
+    expect(rules).toContainEqual(["Dev", "дев", ["деплой", "окружение", "среда"]]);
+    expect(rules).toContainEqual(["Prod", "прод", ["деплой", "окружение", "среда"]]);
+    expect(rules.some(([, source]) => /^[a-z]+$/i.test(String(source)))).toBe(false);
+  });
+
+  const preview: ImportPreview = {
+    revision: 7,
+    terms: [
+      {
+        index: 0,
+        canonical: "PIM",
+        language: "any",
+        category: "service",
+        scope: { domain: "Разработка" },
+        existingTermId: "term-pim",
+        status: "same",
+        variants: [
+          {
+            index: 0,
+            source: "пим",
+            caseSensitive: false,
+            contextWords: [],
+            enabled: true,
+            status: "same",
+          },
+          {
+            index: 1,
+            source: "пи ай эм",
+            caseSensitive: false,
+            contextWords: [],
+            enabled: true,
+            status: "new",
+          },
+        ],
+      },
+      {
+        index: 1,
+        canonical: "Dev",
+        language: "any",
+        category: "environment",
+        scope: { domain: "Разработка" },
+        status: "new",
+        variants: [
+          {
+            index: 0,
+            source: "дев",
+            caseSensitive: false,
+            contextWords: [],
+            enabled: true,
+            status: "new",
+          },
+          {
+            index: 1,
+            source: "девка",
+            caseSensitive: false,
+            contextWords: [],
+            enabled: true,
+            status: "conflict",
+            conflict: "Конфликт",
+          },
+        ],
+      },
+    ],
+  };
+  const choose = (entries: Array<[number, ImportChoice]>) => new Map(entries);
+
+  test("nothing is imported unless explicitly chosen", () => {
+    expect(buildImportSelection(preview, choose([]))).toEqual([]);
+  });
+
+  test("selection drops no-op and conflicting rows and needs the new term itself", () => {
+    const selection = buildImportSelection(
+      preview,
+      choose([
+        [0, { includeTerm: true, variants: new Set([0, 1]) }],
+        [1, { includeTerm: false, variants: new Set([0]) }],
+      ]),
+    );
+    expect(selection).toEqual([{ termIndex: 0, includeTerm: false, variantIndexes: [1] }]);
+    const withTerm = buildImportSelection(
+      preview,
+      choose([[1, { includeTerm: true, variants: new Set([0, 1]) }]]),
+    );
+    expect(withTerm).toEqual([{ termIndex: 1, includeTerm: true, variantIndexes: [0] }]);
+  });
+
+  test("previews never touch the cache; apply sends the reviewed text and publishes", async () => {
+    const calls: Array<[string, Record<string, unknown> | undefined]> = [];
+    const client = createVocabularyClient({
+      invoke: async <T>(command: string, args?: Record<string, unknown>): Promise<T> => {
+        calls.push([command, args]);
+        if (command === "vocabulary_preview_import") return preview as T;
+        return readyView(stateAt(8)) as T;
+      },
+      listen: async () => () => {},
+    });
+    const seen: number[] = [];
+    client.subscribe((view) => {
+      if (view.status === "ready") seen.push(view.state.revision);
+    });
+    await client.previewImport("{}");
+    expect(seen).toEqual([]);
+    const selection = [{ termIndex: 1, includeTerm: true, variantIndexes: [0] }];
+    await client.applyImport(7, "{}", selection, "starter", false);
+    expect(calls[1]).toEqual([
+      "vocabulary_apply_import",
+      { expectedRevision: 7, text: "{}", selection, source: "starter", enableApplication: false },
+    ]);
+    expect(seen).toEqual([8]);
   });
 });

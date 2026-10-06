@@ -1,8 +1,12 @@
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../../../lib/i18n";
 import { IconBook, IconPencil, IconPlus, IconTrash } from "../../../../lib/icons";
 import { logError } from "../../../../lib/logger";
 import {
+  createDevelopmentStarter,
+  type ImportPreview,
+  type ImportSource,
   parseVocabularyError,
   type TermCategory,
   type TermInput,
@@ -22,6 +26,7 @@ import { SelectMenu } from "../../../../ui/SelectMenu";
 import { TextField } from "../../../../ui/TextField";
 import { Toggle } from "../../../../ui/Toggle";
 import { VocabularyEditor } from "./VocabularyEditor";
+import { VocabularyImportReview } from "./VocabularyImportReview";
 import {
   activeRuleCount,
   filterTerms,
@@ -31,6 +36,14 @@ import {
 } from "./vocabularyView";
 
 type VocabularyPane = "terms" | "suggestions" | "analysis";
+
+interface ReviewTarget {
+  source: ImportSource;
+  text: string;
+  preview: ImportPreview;
+}
+
+const JSON_FILTER = [{ name: "JSON", extensions: ["json"] }];
 
 interface EditorTarget {
   termId: string | null;
@@ -56,6 +69,8 @@ export function VocabularyTab({
   const [category, setCategory] = useState<TermCategory | "all">("all");
   const [editor, setEditor] = useState<EditorTarget | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [review, setReview] = useState<ReviewTarget | null>(null);
+  const [notice, setNotice] = useState("");
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -121,19 +136,82 @@ export function VocabularyTab({
     }
   };
 
-  const openEditor = (term: VocabularyTerm | null): void => {
+  const reportPreviewError = (error: unknown, operation: string): void => {
+    const parsed = parseVocabularyError(error);
+    logError("VOCABULARY", `${operation} failed: ${parsed.code}`);
+    setActionError(t("vocabulary.import.rejected", { error: parsed.message }));
+  };
+
+  const beginOverlay = (): void => {
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     setPendingDelete(null);
     setActionError("");
+    setNotice("");
+  };
+
+  const restoreFocus = (): void => {
+    const target = returnFocusRef.current;
+    requestAnimationFrame(() => {
+      if (target?.isConnected) target.focus();
+    });
+  };
+
+  const openEditor = (term: VocabularyTerm | null): void => {
+    beginOverlay();
     setEditor({ termId: term?.id ?? null, initial: term });
   };
 
   const closeEditor = (): void => {
     setEditor(null);
-    const target = returnFocusRef.current;
-    requestAnimationFrame(() => {
-      if (target?.isConnected) target.focus();
-    });
+    restoreFocus();
+  };
+
+  const openStarter = async (): Promise<void> => {
+    beginOverlay();
+    const text = JSON.stringify(createDevelopmentStarter());
+    try {
+      setReview({ source: "starter", text, preview: await client.previewImport(text) });
+    } catch (error) {
+      reportPreviewError(error, "preview starter");
+    }
+  };
+
+  const openImport = async (): Promise<void> => {
+    beginOverlay();
+    try {
+      const path = await open({ multiple: false, filters: JSON_FILTER });
+      if (typeof path !== "string") return;
+      const { text, preview } = await client.previewImportFile(path);
+      setReview({ source: "import", text, preview });
+    } catch (error) {
+      reportPreviewError(error, "preview import");
+    }
+  };
+
+  const exportVocabulary = async (): Promise<void> => {
+    setActionError("");
+    setNotice("");
+    try {
+      const path = await save({
+        defaultPath: t("vocabulary.export.fileName"),
+        filters: JSON_FILTER,
+      });
+      if (!path) return;
+      const count = await client.exportFile(path);
+      setNotice(t("vocabulary.export.done", { count }));
+    } catch (error) {
+      await reportAction(error, "export");
+    }
+  };
+
+  const closeReview = (next: VocabularyView | null): void => {
+    const source = review?.source;
+    setReview(null);
+    if (next) {
+      setView(next);
+      if (source === "import") setNotice(t("vocabulary.import.saved"));
+    }
+    restoreFocus();
   };
 
   const saveTerm = async (expectedRevision: number, input: TermInput): Promise<void> => {
@@ -249,9 +327,23 @@ export function VocabularyTab({
               {actionError}
             </div>
           )}
+          {notice && (
+            <div className="ui-callout" role="status">
+              {notice}
+            </div>
+          )}
 
           {pane === "terms" &&
-            (editor ? (
+            (review ? (
+              <VocabularyImportReview
+                key={`${review.source}-${review.preview.revision}`}
+                client={client}
+                source={review.source}
+                text={review.text}
+                preview={review.preview}
+                onDone={closeReview}
+              />
+            ) : editor ? (
               <VocabularyEditor
                 key={editor.termId ?? "new"}
                 term={editor.initial}
@@ -274,6 +366,10 @@ export function VocabularyTab({
                   <Button variant="primary" onClick={() => openEditor(null)}>
                     {t("vocabulary.action.add")}
                   </Button>
+                  <Button onClick={() => void openStarter()}>
+                    {t("vocabulary.action.starter")}
+                  </Button>
+                  <Button onClick={() => void openImport()}>{t("vocabulary.action.import")}</Button>
                   <Button onClick={() => setPane("analysis")}>
                     {t("vocabulary.action.analyze")}
                   </Button>
@@ -309,6 +405,15 @@ export function VocabularyTab({
                     ]}
                     onChange={(value) => setCategory(value as TermCategory | "all")}
                   />
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingBottom: 8 }}>
+                  <Button onClick={() => void openStarter()}>
+                    {t("vocabulary.action.starter")}
+                  </Button>
+                  <Button onClick={() => void openImport()}>{t("vocabulary.action.import")}</Button>
+                  <Button onClick={() => void exportVocabulary()}>
+                    {t("vocabulary.action.export")}
+                  </Button>
                 </div>
                 {visibleTerms.length === 0 ? (
                   <p style={{ color: "var(--text-mid)" }}>{t("vocabulary.list.noMatches")}</p>

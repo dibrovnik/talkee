@@ -1,0 +1,74 @@
+{
+  "format": "talkee-personal-vocabulary",
+  "version": 1,
+  "terms": [
+    {
+      "canonical": "PIM",
+      "language": "any",
+      "category": "service",
+      "scope": {
+        "domain": "Разработка"
+      },
+      "enabled": true,
+      "useAsHint": true,
+      "variants": [
+        {
+          "source": "пи ай эм",
+          "caseSensitive": false,
+          "contextWords": [],
+          "enabled": true
+        },
+        {
+          "source": "пим",
+          "caseSensitive": false,
+          "contextWords": [],
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "canonical": "Dev",
+      "language": "any",
+      "category": "environment",
+      "scope": {
+        "domain": "Разработка"
+      },
+      "enabled": true,
+      "useAsHint": true,
+      "variants": [
+        {
+          "source": "дев",
+          "caseSensitive": false,
+          "contextWords": [
+            "деплой",
+            "окружение",
+            "среда"
+          ],
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "canonical": "Prod",
+      "language": "any",
+      "category": "environment",
+      "scope": {
+        "domain": "Разработка"
+      },
+      "enabled": true,
+      "useAsHint": true,
+      "variants": [
+        {
+          "source": "прод",
+          "caseSensitive": false,
+          "contextWords": [
+            "деплой",
+            "окружение",
+            "среда"
+          ],
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

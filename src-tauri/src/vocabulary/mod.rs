@@ -2,11 +2,13 @@
 //! `personalVocabularyV1` key; WebViews read snapshots and send typed commands.
 
 pub mod model;
+pub mod portable;
 pub mod store;
 
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 use tauri_plugin_store::StoreExt;
@@ -221,6 +223,106 @@ pub fn vocabulary_update_config(
     })
 }
 
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ImportSource {
+    Import,
+    Starter,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportFilePreview {
+    /// The exact file text; sent back on apply and parsed again there.
+    pub text: String,
+    pub preview: portable::ImportPreview,
+}
+
+fn read_portable_file(path: &Path) -> Result<String, VocabularyError> {
+    let size = std::fs::metadata(path)
+        .map_err(|_| VocabularyError::Validation("Не удалось открыть файл".to_owned()))?
+        .len();
+    if size > portable::MAX_PORTABLE_BYTES as u64 {
+        return Err(VocabularyError::Validation(
+            "Файл словаря больше 1 МиБ".to_owned(),
+        ));
+    }
+    let bytes = std::fs::read(path)
+        .map_err(|_| VocabularyError::Validation("Не удалось прочитать файл".to_owned()))?;
+    String::from_utf8(bytes)
+        .map_err(|_| VocabularyError::Validation("Файл не в кодировке UTF-8".to_owned()))
+}
+
+fn preview_text(
+    store: &mut VocabularyStore<AppPersistence>,
+    text: &str,
+) -> Result<portable::ImportPreview, VocabularyError> {
+    let document = portable::parse_portable(text)?;
+    Ok(portable::preview_import(store.ready_state()?, &document))
+}
+
+#[tauri::command]
+pub fn vocabulary_preview_import(
+    manager: State<'_, VocabularyManager>,
+    text: String,
+) -> Result<portable::ImportPreview, String> {
+    manager.with_store(|store| preview_text(store, &text))
+}
+
+#[tauri::command]
+pub fn vocabulary_preview_import_file(
+    manager: State<'_, VocabularyManager>,
+    path: String,
+) -> Result<ImportFilePreview, String> {
+    manager.with_store(|store| {
+        let text = read_portable_file(Path::new(&path))?;
+        let preview = preview_text(store, &text)?;
+        Ok(ImportFilePreview { text, preview })
+    })
+}
+
+#[tauri::command]
+pub fn vocabulary_apply_import(
+    manager: State<'_, VocabularyManager>,
+    expected_revision: u64,
+    text: String,
+    selection: Vec<portable::ImportSelection>,
+    source: ImportSource,
+    enable_application: bool,
+) -> Result<VocabularyView, String> {
+    let document = portable::parse_portable(&text).map_err(|error| error.to_string())?;
+    let provenance = match source {
+        ImportSource::Import => model::Provenance::Import,
+        ImportSource::Starter => model::Provenance::Starter,
+    };
+    manager.mutate("apply_import", expected_revision, |state| {
+        portable::apply_import(state, &document, &selection, provenance)?;
+        if enable_application {
+            state.config.enabled = true;
+        }
+        Ok(())
+    })
+}
+
+#[tauri::command]
+pub fn vocabulary_export_file(
+    manager: State<'_, VocabularyManager>,
+    path: String,
+) -> Result<usize, String> {
+    manager.with_store(|store| {
+        let document = portable::export_portable(store.ready_state()?);
+        let json = serde_json::to_string_pretty(&document)
+            .map_err(|e| VocabularyError::SaveFailed(e.to_string()))?;
+        std::fs::write(&path, json)
+            .map_err(|_| VocabularyError::SaveFailed("Не удалось записать файл".to_owned()))?;
+        logger::log_info(
+            "VOCABULARY",
+            &format!("event=export terms={}", document.terms.len()),
+        );
+        Ok(document.terms.len())
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -352,5 +454,27 @@ mod tests {
         assert!(VocabularyError::Corrupt("x".into())
             .to_string()
             .starts_with("[vocabulary:corrupt]"));
+    }
+
+    #[test]
+    fn import_file_is_size_checked_and_must_be_utf8() {
+        let dir = std::env::temp_dir().join(format!("talkee-vocab-file-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let big = dir.join("big.json");
+        std::fs::write(&big, vec![b' '; portable::MAX_PORTABLE_BYTES + 1]).unwrap();
+        assert!(read_portable_file(&big)
+            .unwrap_err()
+            .to_string()
+            .contains("1 МиБ"));
+        let binary = dir.join("binary.json");
+        std::fs::write(&binary, [0xff, 0xfe, 0x00]).unwrap();
+        assert!(read_portable_file(&binary)
+            .unwrap_err()
+            .to_string()
+            .contains("UTF-8"));
+        let ok = dir.join("ok.json");
+        std::fs::write(&ok, include_str!("fixtures/starter-development.json")).unwrap();
+        assert!(portable::parse_portable(&read_portable_file(&ok).unwrap()).is_ok());
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

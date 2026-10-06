@@ -132,6 +132,17 @@ ordinary dictation continues without it. Nothing is deleted to recover; a reset
 happens only through an explicit user action. Diagnostic logs record mutation
 names, revisions, counts and error codes, never terms, aliases or quotes.
 
+Export writes a local JSON file (`talkee-personal-vocabulary`, version 1) chosen
+in the system save dialog. It contains only spellings, language, category,
+domain, the hint setting and replacement rules with their context words and
+approval flag. It never contains history, audio, correction examples,
+suggestions, dismissals, the schedule, the backend, API keys, consent records,
+internal IDs or provenance. Import reads one file of at most 1 MiB chosen in the
+system open dialog, validates it completely and shows a preview before anything
+is saved. Only rows the user selects are added, existing terms and rules are not
+overwritten, and import never turns on application, the schedule, an API consent
+or the correction hotkey. Neither action makes a network request.
+
 ### Local diagnostic logs
 
 Application diagnostics stay on this computer in `~/.talkee/talkee.log` and up to

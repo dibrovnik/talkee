@@ -203,6 +203,129 @@ export interface VocabularyConfigPatch {
   analysisSchedule?: AnalysisSchedule;
 }
 
+export const VOCABULARY_PORTABLE_FORMAT = "talkee-personal-vocabulary";
+
+/** Evidence-free exchange format; `target` is always the term's canonical. */
+export interface PortableVariant {
+  source: string;
+  caseSensitive: boolean;
+  contextWords: string[];
+  enabled: boolean;
+}
+
+export interface PortableTerm {
+  canonical: string;
+  language: string;
+  category: TermCategory;
+  scope: TermScope;
+  enabled: boolean;
+  useAsHint: boolean;
+  variants: PortableVariant[];
+}
+
+export interface PortableDocument {
+  format: typeof VOCABULARY_PORTABLE_FORMAT;
+  version: 1;
+  terms: PortableTerm[];
+}
+
+export type ImportItemStatus = "new" | "same" | "conflict";
+
+export interface ImportPreviewVariant extends PortableVariant {
+  index: number;
+  status: ImportItemStatus;
+  conflict?: string;
+}
+
+export interface ImportPreviewTerm {
+  index: number;
+  canonical: string;
+  language: string;
+  category: TermCategory;
+  scope: TermScope;
+  existingTermId?: string;
+  status: ImportItemStatus;
+  conflict?: string;
+  variants: ImportPreviewVariant[];
+}
+
+export interface ImportPreview {
+  revision: number;
+  terms: ImportPreviewTerm[];
+}
+
+export interface ImportSelection {
+  termIndex: number;
+  includeTerm: boolean;
+  variantIndexes: number[];
+}
+
+export type ImportSource = "import" | "starter";
+
+const DEVELOPMENT_DOMAIN = "Разработка";
+const ENVIRONMENT_CONTEXT = ["деплой", "окружение", "среда"];
+
+/** Opt-in starter set; nothing from it is selected or saved until reviewed. */
+export function createDevelopmentStarter(): PortableDocument {
+  const rule = (source: string, contextWords: string[] = []): PortableVariant => ({
+    source,
+    caseSensitive: false,
+    contextWords: [...contextWords],
+    enabled: true,
+  });
+  const term = (
+    canonical: string,
+    category: TermCategory,
+    variants: PortableVariant[],
+  ): PortableTerm => ({
+    canonical,
+    language: "any",
+    category,
+    scope: { domain: DEVELOPMENT_DOMAIN },
+    enabled: true,
+    useAsHint: true,
+    variants,
+  });
+  return {
+    format: VOCABULARY_PORTABLE_FORMAT,
+    version: 1,
+    terms: [
+      term("PIM", "service", [rule("пи ай эм"), rule("пим")]),
+      term("Dev", "environment", [rule("дев", ENVIRONMENT_CONTEXT)]),
+      term("Prod", "environment", [rule("прод", ENVIRONMENT_CONTEXT)]),
+    ],
+  };
+}
+
+export interface ImportChoice {
+  includeTerm: boolean;
+  variants: Set<number>;
+}
+
+/** Only `new` rows can be chosen; `same` is a no-op and `conflict` is refused. */
+export function isSelectable(status: ImportItemStatus): boolean {
+  return status === "new";
+}
+
+export function buildImportSelection(
+  preview: ImportPreview,
+  choices: ReadonlyMap<number, ImportChoice>,
+): ImportSelection[] {
+  const selection: ImportSelection[] = [];
+  for (const row of preview.terms) {
+    const choice = choices.get(row.index);
+    if (!choice) continue;
+    const includeTerm = choice.includeTerm && row.status === "new";
+    const variantIndexes = row.variants
+      .filter((variant) => choice.variants.has(variant.index) && isSelectable(variant.status))
+      .map((variant) => variant.index);
+    if (row.status === "new" && !includeTerm) continue;
+    if (!includeTerm && variantIndexes.length === 0) continue;
+    selection.push({ termIndex: row.index, includeTerm, variantIndexes });
+  }
+  return selection;
+}
+
 export const DEFAULT_VOCABULARY_CONFIG: VocabularyConfig = {
   enabled: false,
   activeDomain: null,
@@ -293,6 +416,16 @@ export interface VocabularyClient {
   saveTerm(expectedRevision: number, term: TermInput): Promise<VocabularyView>;
   deleteTerm(expectedRevision: number, termId: string): Promise<VocabularyView>;
   updateConfig(expectedRevision: number, patch: VocabularyConfigPatch): Promise<VocabularyView>;
+  previewImport(text: string): Promise<ImportPreview>;
+  previewImportFile(path: string): Promise<{ text: string; preview: ImportPreview }>;
+  applyImport(
+    expectedRevision: number,
+    text: string,
+    selection: ImportSelection[],
+    source: ImportSource,
+    enableApplication: boolean,
+  ): Promise<VocabularyView>;
+  exportFile(path: string): Promise<number>;
   subscribe(listener: (view: VocabularyView) => void): () => void;
 }
 
@@ -359,6 +492,17 @@ export function createVocabularyClient(deps: VocabularyClientDeps): VocabularyCl
       mutate("vocabulary_delete_term", { expectedRevision, termId }),
     updateConfig: (expectedRevision, patch) =>
       mutate("vocabulary_update_config", { expectedRevision, patch }),
+    previewImport: (text) => deps.invoke<ImportPreview>("vocabulary_preview_import", { text }),
+    previewImportFile: (path) => deps.invoke("vocabulary_preview_import_file", { path }),
+    applyImport: (expectedRevision, text, selection, source, enableApplication) =>
+      mutate("vocabulary_apply_import", {
+        expectedRevision,
+        text,
+        selection,
+        source,
+        enableApplication,
+      }),
+    exportFile: (path) => deps.invoke<number>("vocabulary_export_file", { path }),
     subscribe(listener) {
       ensureListening();
       listeners.add(listener);

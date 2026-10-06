@@ -40,8 +40,9 @@ Talkee — macOS-приложение (Apple Silicon): Rust-бэкенд Tauri v
 | `hotkey_capture.rs` | Нативный захват аккорда горячей клавиши. | `start_native_hotkey_capture`, `stop_native_hotkey_capture` |
 | `prompt_config.rs` | Конфигурация промптов и стилей транскрибации. | загрузка промптов |
 | `logger.rs` | Файловое логирование (`~/.talkee/talkee.log`). | `log_event`, `get_log_path_cmd`, `clear_logs` |
-| `vocabulary/mod.rs` | Единственный владелец ключа `personalVocabularyV1`: managed state, адаптер store, событие `vocabulary:updated`. | `vocabulary_get_state`, `vocabulary_save_term`, `vocabulary_delete_term`, `vocabulary_update_config` |
+| `vocabulary/mod.rs` | Единственный владелец ключа `personalVocabularyV1`: managed state, адаптер store, событие `vocabulary:updated`. | `vocabulary_get_state`, `vocabulary_save_term`, `vocabulary_delete_term`, `vocabulary_update_config`, `vocabulary_preview_import(_file)`, `vocabulary_apply_import`, `vocabulary_export_file` |
 | `vocabulary/model.rs` | Договор словаря v1, Unicode-ключи, лимиты, проверка конфликтов и каскадов. | `VocabularyState`, `validate_state` |
+| `vocabulary/portable.rs` | Переносимый JSON без evidence: строгий разбор (≤1 МиБ, версия, лишние поля), экспорт, preview слияния и атомарный выбранный импорт без перезаписи. | `parse_portable`, `preview_import`, `apply_import` |
 | `vocabulary/store.rs` | Чтение без перезаписи повреждённых данных, CAS-мутации с откатом при ошибке сохранения. | `VocabularyStore`, `upsert_term` |
 | `download_cancel.rs` | Отмена активных загрузок моделей. | `cancel_local_model_download` |
 | `legacy_migration.rs` | Одноразовая миграция данных из прежней идентичности приложения. | `migrate_app_data_layout` |

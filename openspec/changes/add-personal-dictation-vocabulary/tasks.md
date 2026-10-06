@@ -34,10 +34,10 @@
 
 ## 5. Starter, импорт и экспорт
 
-- [ ] 5.1 Добавить opt-in starter данные/preview в `src/lib/vocabulary.ts`, `VocabularyTab.tsx`, `VocabularyEditor.tsx`: PIM/Dev/Prod, отдельные aliases и контексты. Проверка: открытие/отмена не меняют store, repeated starter не перезаписывает ручной PIM, enabled не предвыбран.
-- [ ] 5.2 Реализовать переносимый формат/validation/merge preview в `src/lib/vocabulary.ts` и `src-tauri/src/vocabulary/model.rs`; файловые действия через существующий dialog и reviewed save в `store.rs`. Проверка: version/unknown fields/1 МиБ/конфликты отвергаются до мутации.
-- [ ] 5.3 Подключить выбор строк и atomic import к `VocabularyTab.tsx`, `store.rs`; экспортировать только portable terms/rules. Проверка: selected import, idempotent reimport и export→empty-install import дают эквивалентные правила без включения расписания/API/application.
-- [ ] 5.4 Добавить import/export privacy/round-trip tests в `src/lib/vocabulary.test.ts` и Rust vocabulary tests; описать формат и первый запуск в `docs/testing/manual-style-test-plan.md`, переносимость — в `docs/privacy.md`. Проверка: экспорт не содержит ни одной evidence/consent/history/key field.
+- [x] 5.1 Добавить opt-in starter данные/preview в `src/lib/vocabulary.ts`, `VocabularyTab.tsx`, `VocabularyEditor.tsx`: PIM/Dev/Prod, отдельные aliases и контексты. Проверка: открытие/отмена не меняют store, repeated starter не перезаписывает ручной PIM, enabled не предвыбран.
+- [x] 5.2 Реализовать переносимый формат/validation/merge preview в `src/lib/vocabulary.ts` и `src-tauri/src/vocabulary/model.rs`; файловые действия через существующий dialog и reviewed save в `store.rs`. Проверка: version/unknown fields/1 МиБ/конфликты отвергаются до мутации.
+- [x] 5.3 Подключить выбор строк и atomic import к `VocabularyTab.tsx`, `store.rs`; экспортировать только portable terms/rules. Проверка: selected import, idempotent reimport и export→empty-install import дают эквивалентные правила без включения расписания/API/application.
+- [x] 5.4 Добавить import/export privacy/round-trip tests в `src/lib/vocabulary.test.ts` и Rust vocabulary tests; описать формат и первый запуск в `docs/testing/manual-style-test-plan.md`, переносимость — в `docs/privacy.md`. Проверка: экспорт не содержит ни одной evidence/consent/history/key field.
 - [ ] 5.5 Выполнить `bun test src/lib/vocabulary.test.ts`, `cargo test --manifest-path src-tauri/Cargo.toml -p talkee --lib vocabulary`, `bunx tsc --noEmit`; вручную выбрать, импортировать и экспортировать локальный файл.
 
 ## 6. Общий pipeline и история происхождения

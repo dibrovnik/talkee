@@ -168,6 +168,47 @@ export const vocabulary = {
   "vocabulary.saveError": { ru: "Не сохранено: {error}", en: "Not saved: {error}" },
   "vocabulary.saved": { ru: "Сохранено", en: "Saved" },
 
+  "vocabulary.starter.title": { ru: "Примеры: Разработка", en: "Examples: Development" },
+  "vocabulary.starter.desc": {
+    ru: "Ничего не выбрано заранее. Отметьте нужные термины и каждую замену отдельно; написание и слова контекста можно поправить до сохранения.",
+    en: "Nothing is preselected. Choose terms and each replacement separately; spellings and context words can be edited before saving.",
+  },
+  "vocabulary.starter.enable": {
+    ru: "Включить применение словаря после сохранения",
+    en: "Turn on the vocabulary after saving",
+  },
+  "vocabulary.import.title": { ru: "Импорт словаря", en: "Import vocabulary" },
+  "vocabulary.import.desc": {
+    ru: "Сохранятся только выбранные строки. Существующие термины и правила не перезаписываются; применение словаря, расписание и согласия не меняются.",
+    en: "Only selected rows are saved. Existing terms and rules are never overwritten; application, schedule and consents stay unchanged.",
+  },
+  "vocabulary.import.status.new": { ru: "Новое", en: "New" },
+  "vocabulary.import.status.same": { ru: "Уже есть", en: "Already present" },
+  "vocabulary.import.status.conflict": { ru: "Конфликт", en: "Conflict" },
+  "vocabulary.import.addTerm": { ru: "Добавить термин «{term}»", en: "Add term “{term}”" },
+  "vocabulary.import.apply": { ru: "Сохранить выбранное ({count})", en: "Save selected ({count})" },
+  "vocabulary.import.refreshed": {
+    ru: "Список обновлён по вашим правкам — проверьте и подтвердите ещё раз.",
+    en: "The list was updated for your edits — review and confirm again.",
+  },
+  "vocabulary.import.changedElsewhere": {
+    ru: "Словарь изменился в другом окне. Список пересчитан — проверьте и подтвердите ещё раз.",
+    en: "The vocabulary changed in another window. The list was recalculated — review and confirm again.",
+  },
+  "vocabulary.import.rejected": {
+    ru: "Импорт отклонён, словарь не изменён: {error}",
+    en: "Import rejected, the vocabulary is unchanged: {error}",
+  },
+  "vocabulary.import.saved": {
+    ru: "Импорт сохранён. Применение словаря не менялось.",
+    en: "Import saved. Vocabulary application was not changed.",
+  },
+  "vocabulary.export.done": {
+    ru: "Экспортировано терминов: {count}. Файл не содержит истории, примеров и согласий.",
+    en: "Exported terms: {count}. The file has no history, examples or consents.",
+  },
+  "vocabulary.export.fileName": { ru: "talkee-словарь.json", en: "talkee-vocabulary.json" },
+
   "vocabulary.suggestions.empty": {
     ru: "Предложений пока нет. Они появятся после «Запомнить исправление» или анализа истории.",
     en: "No suggestions yet. They appear after “Remember correction” or history analysis.",

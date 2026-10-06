@@ -876,7 +876,7 @@ pub(crate) mod tests {
     #[test]
     fn rejects_url_path_and_code_aliases() {
         for source in [
-            "https://pim.dev",
+            "https://localhost/pim",
             "src/pim",
             "pim_service",
             "`pim`",

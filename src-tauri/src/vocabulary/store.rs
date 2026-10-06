@@ -568,7 +568,7 @@ pub(crate) mod tests {
         let persistence = MemoryPersistence::default();
         let mut store = VocabularyStore::new(persistence.clone());
         let mut bad = pim_input();
-        bad.variants[0].source = "https://pim".to_owned();
+        bad.variants[0].source = "https://localhost/pim".to_owned();
         let error = store
             .mutate(0, |state| upsert_term(state, bad).map(|_| ()))
             .unwrap_err();

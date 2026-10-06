@@ -2,7 +2,8 @@ import type { MsgKey } from "../../../lib/i18n";
 import { DEFAULT_LOCAL_STT_ENDPOINT, DEFAULT_LOCAL_STT_MODEL } from "../../../lib/modelMode";
 
 type LocalRuntimeKind = "whisper" | "diarization";
-type LocalModelKind = "transcription" | "text" | "other";
+/** Sub-sections inside the recognition section (API and local branches). */
+type RecognitionSectionKind = "transcription" | "translation";
 
 const LOCAL_RUNTIME_ENDPOINTS: Record<LocalRuntimeKind, string> = {
   whisper: DEFAULT_LOCAL_STT_ENDPOINT,
@@ -77,6 +78,8 @@ interface ApiAdapterOption {
   initials: string;
   accent: string;
   testable: boolean;
+  /** Kept for compatibility: no longer offered as a new suggestion. */
+  legacy?: boolean;
 }
 
 interface ApiAdapterModelOption {
@@ -85,9 +88,42 @@ interface ApiAdapterModelOption {
 }
 
 const CUSTOM_API_MODEL_VALUE = "__custom_model__";
-const TEXT_MODEL_OPTIONS = ["gpt-4o-mini", "gpt-4.1-mini", "gpt-4.1"];
 
-const API_ADAPTERS: ApiAdapterOption[] = [
+interface TextModelPreset {
+  id: string;
+  label: string;
+  endpoint: string;
+  model: string;
+  /** Cleanup must run without a reasoning trace (DeepSeek enables it by default). */
+  nonThinking: boolean;
+  recommended?: boolean;
+}
+
+const CUSTOM_TEXT_PRESET_VALUE = "__custom_text_preset__";
+
+// The main text-processing suggestion: DeepSeek's [OI]-compatible endpoint with
+// thinking explicitly disabled. Choosing a preset only prefills the user's own
+// endpoint/model fields — the API key and any custom values stay untouched, and
+// no request is sent until the user asks for a connection check.
+const TEXT_MODEL_PRESETS: TextModelPreset[] = [
+  {
+    id: "deepseek",
+    label: "DeepSeek",
+    endpoint: "https://api.deepseek.com",
+    model: "deepseek-flash",
+    nonThinking: true,
+    recommended: true,
+  },
+];
+
+const TEXT_MODEL_OPTIONS = [
+  ...TEXT_MODEL_PRESETS.map((preset) => preset.model),
+  "gpt-4o-mini",
+  "gpt-4.1-mini",
+  "gpt-4.1",
+];
+
+const API_ADAPTER_CATALOG: ApiAdapterOption[] = [
   {
     id: "openai",
     name: "OpenAI API",
@@ -219,6 +255,44 @@ const API_ADAPTERS: ApiAdapterOption[] = [
   },
 ];
 
+// The visible API suggestions are deliberately short: the two Russian-capable
+// adapters plus a manual endpoint/model field on every card. The rest of the
+// catalog stays compiled in so a previously configured adapter can still be
+// shown, verified and kept instead of silently falling back to another one.
+const CURATED_API_ADAPTER_IDS: ApiAdapterId[] = ["openai", "groq"];
+
+const API_ADAPTERS: ApiAdapterOption[] = API_ADAPTER_CATALOG.filter((adapter) =>
+  CURATED_API_ADAPTER_IDS.includes(adapter.id),
+);
+
+const LEGACY_API_ADAPTERS: ApiAdapterOption[] = API_ADAPTER_CATALOG.filter(
+  (adapter) => !CURATED_API_ADAPTER_IDS.includes(adapter.id),
+).map((adapter) => ({ ...adapter, legacy: true }));
+
+/** Resolve any known adapter id (curated or previously configured). */
+function apiAdapterById(id?: string | null): ApiAdapterOption | undefined {
+  const normalized = (id || "").trim().toLowerCase();
+  if (!normalized) return undefined;
+  return (
+    API_ADAPTERS.find((adapter) => adapter.id === normalized) ||
+    LEGACY_API_ADAPTERS.find((adapter) => adapter.id === normalized)
+  );
+}
+
+/**
+ * Curated adapters for the recognition section. When the saved settings point at
+ * an adapter that is no longer suggested, it is appended as a legacy card so the
+ * user keeps seeing (and can keep using or re-configuring) the active choice.
+ */
+function apiAdaptersForDisplay(selectedAdapterId?: string | null): ApiAdapterOption[] {
+  const selectedId = (selectedAdapterId || "").trim();
+  if (!selectedId || API_ADAPTERS.some((adapter) => adapter.id === selectedId)) {
+    return [...API_ADAPTERS];
+  }
+  const legacy = LEGACY_API_ADAPTERS.find((adapter) => adapter.id === selectedId);
+  return legacy ? [...API_ADAPTERS, legacy] : [...API_ADAPTERS];
+}
+
 interface LocalModelOption {
   id: string;
   name: string;
@@ -239,6 +313,8 @@ interface LocalModelOption {
   downloadBytes?: number;
   purpose?: "stt" | "diarization";
   supportsStreaming?: boolean;
+  /** Kept for compatibility: installed/selected earlier, no longer suggested. */
+  legacy?: boolean;
 }
 
 interface LocalOtherComponent {
@@ -258,7 +334,7 @@ interface LocalOtherComponent {
   downloadBytes?: number;
 }
 
-const LOCAL_MODEL_OPTIONS: LocalModelOption[] = [
+const LOCAL_MODEL_CATALOG: LocalModelOption[] = [
   {
     id: "nemotron-35-asr-streaming-06b",
     name: "NVIDIA Nemotron 3.5 ASR Streaming 0.6B",
@@ -513,6 +589,88 @@ const LOCAL_MODEL_OPTIONS: LocalModelOption[] = [
   },
 ];
 
+// Visible local recognition suggestions: exactly the three Russian/capable
+// models. Every other model the runtime already supports stays in the catalog
+// for compatibility (old `whisperModel` values, installed GGUF files, aliases)
+// and is shown only when it is installed or currently selected.
+const CURATED_LOCAL_MODEL_IDS = [
+  "nemotron-35-asr-streaming-06b",
+  "gigaam-v3-e2e-rnnt",
+  "whisper-large-v3-turbo",
+];
+
+const LOCAL_MODEL_OPTIONS: LocalModelOption[] = CURATED_LOCAL_MODEL_IDS.map((id) =>
+  LOCAL_MODEL_CATALOG.find((model) => model.id === id),
+).filter((model): model is LocalModelOption => Boolean(model));
+
+const LEGACY_LOCAL_MODEL_OPTIONS: LocalModelOption[] = LOCAL_MODEL_CATALOG.filter(
+  (model) => !CURATED_LOCAL_MODEL_IDS.includes(model.id),
+).map((model) => ({ ...model, legacy: true }));
+
+/** Every local model the runtime supports: curated suggestions plus kept ones. */
+const KNOWN_LOCAL_MODEL_OPTIONS: LocalModelOption[] = [
+  ...LOCAL_MODEL_OPTIONS,
+  ...LEGACY_LOCAL_MODEL_OPTIONS,
+];
+
+/** Resolve any known local model by its catalog id (curated or legacy). */
+function localModelOptionById(id: string): LocalModelOption | undefined {
+  const normalized = id.trim().toLowerCase();
+  if (!normalized) return undefined;
+  return (
+    LOCAL_MODEL_OPTIONS.find((model) => model.id.toLowerCase() === normalized) ||
+    LEGACY_LOCAL_MODEL_OPTIONS.find((model) => model.id.toLowerCase() === normalized)
+  );
+}
+
+/**
+ * Resolve a saved backend model value (a catalog id or a runtime id such as
+ * `whisper-small`) back to its card, so a value chosen before the catalog was
+ * shortened is not lost. Runtime-only aliases (GGUF file names, Hugging Face
+ * ids) are resolved by the Rust catalog, not here.
+ */
+function localModelOptionForModel(model?: string | null): LocalModelOption | undefined {
+  const normalized = (model || "").trim().toLowerCase();
+  if (!normalized) return undefined;
+  const options = [...LOCAL_MODEL_OPTIONS, ...LEGACY_LOCAL_MODEL_OPTIONS];
+  return (
+    options.find((option) => option.model.toLowerCase() === normalized) ||
+    options.find((option) => option.id.toLowerCase() === normalized)
+  );
+}
+
+interface LocalSttDisplaySelection {
+  installedModelIds?: readonly string[];
+  downloadedModelIds?: readonly string[];
+  selectedModel?: string | null;
+}
+
+/**
+ * Cards to render in the recognition section: the curated three, plus every
+ * earlier installation/selection so nothing the user already has disappears.
+ */
+function localSttOptionsForDisplay({
+  installedModelIds = [],
+  downloadedModelIds = [],
+  selectedModel = "",
+}: LocalSttDisplaySelection = {}): LocalModelOption[] {
+  const normalize = (value: string) => value.trim().toLowerCase();
+  const installed = new Set(installedModelIds.map(normalize));
+  const downloaded = new Set(downloadedModelIds.map(normalize));
+  const selected = normalize(selectedModel || "");
+
+  const legacy = LEGACY_LOCAL_MODEL_OPTIONS.filter((option) => {
+    const keys = [option.id.toLowerCase(), option.model.toLowerCase()];
+    return (
+      keys.some((key) => installed.has(key)) ||
+      keys.some((key) => downloaded.has(key)) ||
+      (selected.length > 0 && keys.includes(selected))
+    );
+  });
+
+  return [...LOCAL_MODEL_OPTIONS, ...legacy];
+}
+
 const LOCAL_OTHER_COMPONENTS: LocalOtherComponent[] = [
   {
     id: "nllb-200",
@@ -604,8 +762,14 @@ export {
   type ApiAdapterId,
   type ApiAdapterModelOption,
   type ApiAdapterOption,
+  apiAdapterById,
+  apiAdaptersForDisplay,
   CUSTOM_API_MODEL_VALUE,
+  CUSTOM_TEXT_PRESET_VALUE,
   isLocalSttEndpoint,
+  KNOWN_LOCAL_MODEL_OPTIONS,
+  LEGACY_API_ADAPTERS,
+  LEGACY_LOCAL_MODEL_OPTIONS,
   LOCAL_MODEL_DESCRIPTION_KEYS,
   LOCAL_MODEL_OPTIONS,
   LOCAL_OTHER_COMPONENTS,
@@ -615,13 +779,18 @@ export {
   LOCAL_STT_PRESET_MODEL,
   type LocalModelActionState,
   type LocalModelDownloadProgressEvent,
-  type LocalModelKind,
   type LocalModelOption,
   type LocalOtherComponent,
   type LocalRuntimeKind,
   type LocalTranslatorInfo,
+  localModelOptionById,
+  localModelOptionForModel,
+  localSttOptionsForDisplay,
   type ModelMode,
   type PromptPreview,
+  type RecognitionSectionKind,
   type SettingsTabsProps,
   TEXT_MODEL_OPTIONS,
+  TEXT_MODEL_PRESETS,
+  type TextModelPreset,
 };

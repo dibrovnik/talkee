@@ -1,10 +1,15 @@
 import type { AppSettings } from "./store";
 
+let pendingTrigger: "main-hotkey" | "widget" = "main-hotkey";
 let pendingForceCleanup: boolean | null = null;
 
 /** Remember whether the hotkey that started this take forces cleanup on or off. */
-export function setPendingDictationCleanup(forceCleanup: boolean | null): void {
+export function setPendingDictationCleanup(
+  forceCleanup: boolean | null,
+  trigger: "main-hotkey" | "widget" = "main-hotkey",
+): void {
   pendingForceCleanup = forceCleanup;
+  pendingTrigger = trigger;
 }
 
 /** Read and clear the override captured when recording started. */
@@ -26,4 +31,10 @@ export function applyDictationCleanupChoice(
     return settings;
   }
   return { ...settings, cleanupEnabled: forceCleanup };
+}
+
+export function takePendingDictationTrigger(): "main-hotkey" | "widget" {
+  const trigger = pendingTrigger;
+  pendingTrigger = "main-hotkey";
+  return trigger;
 }

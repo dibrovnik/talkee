@@ -248,7 +248,7 @@ function ExpandableHistoryText({
       ) : (
         <span>{visibleText}</span>
       )}
-      {loading && <Spinner size={13} label={t("mainTab.processing")} />}
+      {loading && <Spinner size={16} label={t("mainTab.processing")} />}
       {shouldCollapse && (
         <button type="button" className="ui-disclosure-link" onClick={onToggle}>
           {expanded ? t("mainTab.collapse") : t("mainTab.expand")}
@@ -898,6 +898,13 @@ export function MainTab({
 
   return (
     <div className="ui-tab">
+      <div className="ui-page-header">
+        <div className="ui-page-header__title">{t("mainTab.page.title")}</div>
+        <div className="ui-page-header__desc">
+          {t("mainTab.page.desc", { hotkey: hotkeyLabel })}
+        </div>
+      </div>
+
       <TranscriptionStatsPanel footer={heroHintFooter} />
 
       <section className="ui-history">
@@ -1094,22 +1101,27 @@ export function MainTab({
                                     fullEntry &&
                                     source === "voice" &&
                                     hasOriginalCleanupText(fullEntry) && (
-                                      <SegmentedControl
-                                        value={originalIds.has(item.id) ? "raw" : "cleaned"}
-                                        options={[
-                                          { value: "cleaned", label: t("cleanup.cleaned") },
-                                          { value: "raw", label: t("cleanup.raw") },
-                                        ]}
-                                        ariaLabel={t("cleanup.title")}
-                                        onChange={(value) =>
-                                          setOriginalIds((current) => {
-                                            const next = new Set(current);
-                                            if (value === "raw") next.add(item.id);
-                                            else next.delete(item.id);
-                                            return next;
-                                          })
-                                        }
-                                      />
+                                      <div className="ui-history__variant">
+                                        <span className="ui-history__variant-label">
+                                          {t("cleanup.title")}
+                                        </span>
+                                        <SegmentedControl
+                                          value={originalIds.has(item.id) ? "raw" : "cleaned"}
+                                          options={[
+                                            { value: "cleaned", label: t("cleanup.cleaned") },
+                                            { value: "raw", label: t("cleanup.raw") },
+                                          ]}
+                                          ariaLabel={t("cleanup.title")}
+                                          onChange={(value) =>
+                                            setOriginalIds((current) => {
+                                              const next = new Set(current);
+                                              if (value === "raw") next.add(item.id);
+                                              else next.delete(item.id);
+                                              return next;
+                                            })
+                                          }
+                                        />
+                                      </div>
                                     )}
                                   {item.hasAudio || item.hasCallTracks ? (
                                     <div className="ui-history__audio">
@@ -1132,30 +1144,34 @@ export function MainTab({
                                 </div>
                                 <div className="ui-history__actions">
                                   {item.status === "recording" ? (
-                                    <span aria-hidden="true" style={{ width: 24, height: 24 }} />
+                                    <span aria-hidden="true" style={{ width: 32, height: 32 }} />
                                   ) : item.status === "processing" ? (
                                     <Button
                                       variant="destructive"
+                                      className="ui-icon-button"
                                       title={t("mainTab.stopProcessing")}
+                                      aria-label={t("mainTab.stopProcessing")}
                                       onClick={() => cancelEntry(item.id)}
                                     >
-                                      <IconSquare size={11} stroke={2} fill="currentColor" />
+                                      <IconSquare size={12} stroke={2} fill="currentColor" />
                                     </Button>
                                   ) : (item.status === "failed" || item.status === "interrupted") &&
                                     ((source === "voice" && item.hasAudio) ||
                                       (source === "call" && item.hasCallTracks) ||
                                       (source === "file" && item.hasFilePath)) ? (
                                     <Button
+                                      className="ui-icon-button"
                                       disabled={retryingId === item.id}
                                       title={t("mainTab.retryProcess")}
+                                      aria-label={t("mainTab.retryProcess")}
                                       onClick={() => {
                                         void retryEntry(item.id);
                                       }}
                                     >
                                       {retryingId === item.id ? (
-                                        <Spinner size={12} label={t("mainTab.retryProcess")} />
+                                        <Spinner size={14} label={t("mainTab.retryProcess")} />
                                       ) : (
-                                        <IconRotate2 size={12} stroke={2} />
+                                        <IconRotate2 size={14} stroke={2} />
                                       )}
                                     </Button>
                                   ) : (
@@ -1208,10 +1224,12 @@ export function MainTab({
                                   {item.status !== "processing" && item.status !== "recording" && (
                                     <Button
                                       variant="destructive"
+                                      className="ui-icon-button"
                                       title={t("mainTab.delete")}
+                                      aria-label={t("mainTab.delete")}
                                       onClick={() => deleteEntry(item.id)}
                                     >
-                                      <IconTrash size={12} stroke={2} />
+                                      <IconTrash size={14} stroke={2} />
                                     </Button>
                                   )}
                                 </div>

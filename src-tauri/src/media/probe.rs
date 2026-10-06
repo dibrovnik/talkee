@@ -62,3 +62,30 @@ mod tests {
         assert!(!is_local_stt_ready_wav(b"not a wav"));
     }
 }
+
+/// FFmpeg's segment CSV reports packet boundaries, including a short final chunk.
+pub(super) fn segment_durations(csv: &str) -> std::collections::HashMap<String, f64> {
+    csv.lines()
+        .filter_map(|line| {
+            let mut fields = line.rsplitn(3, ',');
+            let end = fields.next()?.parse::<f64>().ok()?;
+            let start = fields.next()?.parse::<f64>().ok()?;
+            let name = fields.next()?.trim_matches('"');
+            let name = std::path::Path::new(name).file_name()?.to_str()?;
+            let duration = end - start;
+            (start.is_finite() && end.is_finite() && start >= 0.0 && duration > 0.0)
+                .then(|| (name.to_string(), duration))
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod segment_tests {
+    #[test]
+    fn measures_short_final_segment_and_rejects_invalid_data() {
+        let durations = super::segment_durations("chunk-00000.mp3,0,600\n\"/tmp/a,b/chunk-00001.mp3\",600,612.5\nbad,0,NaN\nnegative,10,1");
+        assert_eq!(durations.get("chunk-00000.mp3"), Some(&600.0));
+        assert_eq!(durations.get("chunk-00001.mp3"), Some(&12.5));
+        assert_eq!(durations.len(), 2);
+    }
+}

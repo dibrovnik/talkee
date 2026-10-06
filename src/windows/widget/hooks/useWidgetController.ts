@@ -75,12 +75,21 @@ interface WidgetControllerState {
   toggleManualRecording: () => void;
 }
 
+export function resolveCleanupIndicator(
+  state: WidgetState,
+  global: boolean,
+  effective: boolean,
+): boolean {
+  return state === "idle" ? global : effective;
+}
+
 export function useWidgetController({
   onVoiceRecordingProcessing,
   onVoiceRecordingStart,
   onVoiceRecordingStartFailed,
 }: WidgetControllerOptions = {}): WidgetControllerState {
-  const widgetWindow = getCurrentWindow();
+  // Tauri returns a new Window each call; keep effect dependencies stable.
+  const [widgetWindow] = useState(getCurrentWindow);
 
   // ── Centralized machine state ───────────────────────────────────────────
   const machineRef = useRef<WidgetMachineState>(initialWidgetMachineState);
@@ -89,6 +98,7 @@ export function useWidgetController({
   const [widgetState, setWidgetState] = useState<WidgetState>("idle");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [lockedRecording, setLockedRecording] = useState(false);
+  const [recordingCleanupEnabled, setRecordingCleanupEnabled] = useState(false);
   const [widgetScale, setWidgetScale] = useState(DEFAULT_WIDGET_SCALE);
 
   // Settings
@@ -97,6 +107,7 @@ export function useWidgetController({
   const settingsRef = useRef<AppSettings | null>(null);
 
   // Imperative refs (truly need ref semantics)
+  const pendingRecordingTriggerRef = useRef<"main-hotkey" | "widget">("main-hotkey");
   const registeredHotkeyRef = useRef<string | null>(null);
   const releaseStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const moveSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -134,7 +145,9 @@ export function useWidgetController({
   const executeEffect = useCallback((effect: WidgetEffect) => {
     switch (effect.type) {
       case "start_recording":
-        setPendingDictationCleanup(effect.cleanup);
+        setRecordingCleanupEnabled(effect.cleanup ?? settingsRef.current?.cleanupEnabled ?? false);
+        setPendingDictationCleanup(effect.cleanup, pendingRecordingTriggerRef.current);
+        pendingRecordingTriggerRef.current = "main-hotkey";
         void startRecordingRef.current();
         break;
       case "stop_and_process":
@@ -624,6 +637,7 @@ export function useWidgetController({
     stopAndProcessRef,
     onRecordingProcessing: onVoiceRecordingProcessing,
     onRecordingStart: onVoiceRecordingStart,
+    onCleanupChoice: setRecordingCleanupEnabled,
     onRecordingStartFailed: onVoiceRecordingStartFailed,
   });
 
@@ -678,6 +692,7 @@ export function useWidgetController({
     const currentState = machineRef.current.widgetState;
 
     if (currentState === "idle") {
+      pendingRecordingTriggerRef.current = "widget";
       dispatch({ type: "MANUAL_RECORDING_START" });
       return;
     }
@@ -697,7 +712,11 @@ export function useWidgetController({
   }, [clearMoveSaveTimer, clearReleaseStopTimer]);
 
   return {
-    cleanupEnabled: settings?.cleanupEnabled ?? false,
+    cleanupEnabled: resolveCleanupIndicator(
+      widgetState,
+      settings?.cleanupEnabled ?? false,
+      recordingCleanupEnabled,
+    ),
     state: widgetState,
     stream,
     notice: null,

@@ -12,7 +12,8 @@ export type TranscriptionRejectionReason =
   | "empty"
   | "known-silence-hallucination"
   | "unexpected-short-script"
-  | "excessive-cleanup-length";
+  | "excessive-cleanup-length"
+  | "instruction-echo";
 
 export interface GuardedTranscription<T extends TranscriptionText> {
   transcription: T | null;
@@ -56,6 +57,27 @@ function isKnownSilenceHallucination(normalized: string): boolean {
   );
 }
 
+/**
+ * A small local model can answer with the instruction instead of the text (for
+ * example echoing "Верни только исправленный текст без пояснений."). Pasting
+ * that into the user's document is worse than pasting the raw dictation, so the
+ * cleanup result is rejected and the unchanged raw text is used instead.
+ *
+ * Only instruction-shaped one-liners match: a real dictation that happens to
+ * contain these words is longer and is not rejected.
+ */
+const INSTRUCTION_ECHO_PATTERNS: RegExp[] = [
+  /^верни только (?:исправленный|очищенный|готовый)? ?текст(?: без пояснений)?$/u,
+  /^верни (?:только )?текст$/u,
+  /^без пояснений$/u,
+  /^return only the (?:corrected|cleaned)? ?text(?: without explanations)?$/u,
+  /^return only text$/u,
+];
+
+function isInstructionEcho(normalized: string): boolean {
+  return INSTRUCTION_ECHO_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
 function isUnexpectedShortHangul(normalized: string, language: string): boolean {
   const selectedLanguage = language.trim().toLowerCase();
   if (selectedLanguage === "auto" || selectedLanguage === "ko") {
@@ -84,6 +106,9 @@ function rejectionReasonForText(
   }
   if (isUnexpectedShortHangul(normalized, language)) {
     return "unexpected-short-script";
+  }
+  if (isInstructionEcho(normalized)) {
+    return "instruction-echo";
   }
   return null;
 }

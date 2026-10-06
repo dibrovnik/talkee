@@ -15,6 +15,7 @@ import { type MsgKey, useI18n } from "../../lib/i18n";
 import {
   type Icon,
   IconAdjustmentsHorizontal,
+  IconChartBar,
   IconCpu,
   IconDeviceDesktopCog,
   IconFileMusic,
@@ -46,20 +47,45 @@ import { FileTranscriptionTab } from "./tabs/FileTranscriptionTab";
 import { MainTab } from "./tabs/MainTab";
 import { SettingsTab } from "./tabs/SettingsTab";
 import { SettingsTabs } from "./tabs/SettingsTabs";
+import { StatsTab } from "./tabs/StatsTab";
 import { TranslationTab } from "./tabs/TranslationTab";
+import {
+  CONTENT_DRAG_REGION_HEIGHT,
+  readViewportWidth,
+  SIDEBAR_TRAFFIC_LIGHT_CLEARANCE,
+  sidebarWidth,
+  workspaceBottomGutter,
+  workspaceGutter,
+} from "./workspaceLayout";
 
 function resolveInitialTab(): Tab {
   return resolveInitialSettingsTab(window.location.search);
+}
+
+/**
+ * Tracks the live window width so the shell can trade padding for room instead
+ * of shrinking fonts or hit targets (design decision 1).
+ */
+function useViewportWidth(): number {
+  const [width, setWidth] = useState<number>(readViewportWidth);
+
+  useEffect(() => {
+    const handleResize = (): void => setWidth(readViewportWidth());
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return width;
 }
 
 interface SidebarTab {
   id: Tab;
   labelKey: MsgKey;
   icon: Icon;
-  note: string;
 }
 
-// Sidebar groups mirror the "System Settings" grouping: content pages first,
+// Group the reading workspace first, then processing configuration,
 // then configuration pages, then the app-level settings page.
 const SIDEBAR_GROUPS: SidebarTab[][] = [
   [
@@ -67,19 +93,21 @@ const SIDEBAR_GROUPS: SidebarTab[][] = [
       id: "main",
       labelKey: "settingsApp.tab.main",
       icon: IconHome,
-      note: "История записей",
     },
     {
       id: "file",
       labelKey: "settingsApp.tab.file",
       icon: IconFileMusic,
-      note: "Транскрибация",
     },
     {
       id: "chat",
       labelKey: "settingsApp.tab.chat",
       icon: IconMessage,
-      note: "Чат с записями и текстом",
+    },
+    {
+      id: "stats",
+      labelKey: "settingsApp.tab.stats",
+      icon: IconChartBar,
     },
   ],
   [
@@ -87,19 +115,16 @@ const SIDEBAR_GROUPS: SidebarTab[][] = [
       id: "model",
       labelKey: "settingsApp.tab.model",
       icon: IconCpu,
-      note: "Ключи и подключение модели",
     },
     {
       id: "style",
       labelKey: "settingsApp.tab.style",
       icon: IconSparkles,
-      note: "Стиль обработки и Промпты для саммари",
     },
     {
       id: "interpreter",
       labelKey: "settingsApp.tab.interpreter",
       icon: IconLanguage,
-      note: "Перевод диктовки, выделения и живой речи",
     },
   ],
   [
@@ -107,7 +132,6 @@ const SIDEBAR_GROUPS: SidebarTab[][] = [
       id: "settings",
       labelKey: "settingsApp.tab.settings",
       icon: IconAdjustmentsHorizontal,
-      note: "Язык, микрофон и горячая клавиша",
     },
     ...(import.meta.env.DEV
       ? [
@@ -115,7 +139,6 @@ const SIDEBAR_GROUPS: SidebarTab[][] = [
             id: "ui" as Tab,
             labelKey: "settingsApp.tab.ui" as MsgKey,
             icon: IconDeviceDesktopCog,
-            note: "Витрина примитивов",
           },
         ]
       : []),
@@ -279,6 +302,9 @@ export function SettingsApp() {
     setActiveTab("main");
   };
 
+  // Tracked unconditionally: the shell renders before permissions resolve too.
+  const viewportWidth = useViewportWidth();
+
   if (showPermissions === null) {
     return (
       <div
@@ -289,7 +315,10 @@ export function SettingsApp() {
           justifyContent: "center",
         }}
       >
-        <div className="card" style={{ width: 420, textAlign: "center" }}>
+        <div
+          className="card"
+          style={{ width: "min(420px, calc(100vw - var(--space-8)))", textAlign: "center" }}
+        >
           <div style={{ fontSize: 14, color: "var(--text-mid)" }}>{t("settingsApp.loading")}</div>
         </div>
       </div>
@@ -297,6 +326,7 @@ export function SettingsApp() {
   }
 
   const isChatActive = activeTab === "chat";
+  const mainGutter = workspaceGutter(viewportWidth);
 
   return (
     <div className="app-root">
@@ -316,13 +346,13 @@ export function SettingsApp() {
           <aside
             className="app-sidebar"
             style={{
-              width: 220,
+              width: sidebarWidth(viewportWidth),
               // Leave room for the native macOS traffic lights, which float over
               // the overlay title bar at the top-left of the window.
-              padding: "52px 10px 14px",
+              padding: `${SIDEBAR_TRAFFIC_LIGHT_CLEARANCE}px var(--space-3) var(--space-6)`,
               display: "flex",
               flexDirection: "column",
-              gap: 10,
+              gap: "var(--space-4)",
               overflowY: "auto",
               flexShrink: 0,
             }}
@@ -334,7 +364,7 @@ export function SettingsApp() {
                   display: "flex",
                   flexDirection: "column",
                   gap: 2,
-                  paddingTop: groupIndex === 0 ? 0 : 8,
+                  paddingTop: groupIndex === 0 ? 0 : "var(--space-2)",
                   marginTop: groupIndex === 0 ? 0 : 2,
                   borderTop: groupIndex === 0 ? "none" : "1px solid var(--separator)",
                 }}
@@ -364,11 +394,16 @@ export function SettingsApp() {
           >
             {/* The overlay title bar has no visible chrome in the content area,
                 so the top strip is an explicit window drag region. */}
-            <div data-tauri-drag-region style={{ height: 52, flexShrink: 0 }} />
+            <div
+              data-tauri-drag-region
+              style={{ height: CONTENT_DRAG_REGION_HEIGHT, flexShrink: 0 }}
+            />
             <main
               style={{
                 flex: 1,
-                padding: "0 24px 24px",
+                // Narrow windows trade padding for room; fonts and hit targets
+                // keep their size.
+                padding: `0 ${mainGutter}px ${workspaceBottomGutter(viewportWidth)}px`,
                 minHeight: 0,
                 overflowY: isChatActive ? "hidden" : "auto",
                 overflowX: "hidden",
@@ -377,7 +412,7 @@ export function SettingsApp() {
             >
               <div
                 style={{
-                  maxWidth: isChatActive ? "none" : 920,
+                  maxWidth: "var(--workspace-width)",
                   margin: "0 auto",
                   minWidth: 0,
                   minHeight: 0,
@@ -440,6 +475,7 @@ export function SettingsApp() {
                   </div>
                   {activeTab === "model" && <SettingsTabs type="model" />}
                   {activeTab === "style" && <SettingsTabs type="style" />}
+                  {activeTab === "stats" && <StatsTab />}
                   {activeTab === "interpreter" && <TranslationTab />}
                   {import.meta.env.DEV && activeTab === "ui" && <Gallery />}
                 </div>

@@ -118,6 +118,9 @@ type RunOnce = (params: {
   maxTokens?: number;
   signal?: AbortSignal;
   deadlineMs?: number;
+  operation?: "cleanup";
+  requestId?: string;
+  entryId?: string;
 }) => Promise<string>;
 
 export interface ResolvedSummaryBackend {
@@ -131,7 +134,17 @@ interface ProcessTextResponse {
 }
 
 function llmRunner(endpoint: string, model: string, apiKey: string): RunOnce {
-  return async ({ text, prompt, temperature, maxTokens, signal, deadlineMs }) => {
+  return async ({
+    text,
+    prompt,
+    temperature,
+    maxTokens,
+    signal,
+    deadlineMs,
+    operation,
+    requestId,
+    entryId,
+  }) => {
     signal?.throwIfAborted();
     const response = await invoke<ProcessTextResponse>("process_text", {
       req: {
@@ -140,6 +153,9 @@ function llmRunner(endpoint: string, model: string, apiKey: string): RunOnce {
         temperature: temperature ?? null,
         max_tokens: maxTokens ?? null,
         deadline_ms: deadlineMs ?? null,
+        operation: operation ?? null,
+        request_id: requestId ?? null,
+        entry_id: entryId ?? null,
         endpoint: endpoint || null,
         model: model || null,
         api_key: apiKey || null,
@@ -151,8 +167,11 @@ function llmRunner(endpoint: string, model: string, apiKey: string): RunOnce {
 
 function isRestartableLocalLlmError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /sending request|connect|connection|refused|closed|terminated|reset|timed out|timeout/i.test(
-    message,
+  return (
+    /^\[text:(?:connect|transport|timeout)\]/.test(message) ||
+    /sending request|connect|connection|refused|closed|terminated|reset|timed out|timeout/i.test(
+      message,
+    )
   );
 }
 
@@ -170,7 +189,17 @@ function localLlmRunner(
   apiKey: string,
 ): RunOnce {
   let baseUrl: string | null = null;
-  return async ({ text, prompt, temperature, maxTokens, signal, deadlineMs }) => {
+  return async ({
+    text,
+    prompt,
+    temperature,
+    maxTokens,
+    signal,
+    deadlineMs,
+    operation,
+    requestId,
+    entryId,
+  }) => {
     signal?.throwIfAborted();
     let lastRestartableError: unknown = null;
 
@@ -193,6 +222,9 @@ function localLlmRunner(
             temperature: temperature ?? null,
             max_tokens: maxTokens ?? null,
             deadline_ms: deadlineMs ?? null,
+            operation: operation ?? null,
+            request_id: requestId ?? null,
+            entry_id: entryId ?? null,
             endpoint: baseUrl || fallbackEndpoint || null,
             model: model || null,
             api_key: apiKey || null,
@@ -201,6 +233,7 @@ function localLlmRunner(
         return response.result;
       } catch (error) {
         signal?.throwIfAborted();
+        if (operation === "cleanup") throw error;
         if (deadlineMs !== undefined && Date.now() >= deadlineMs) throw error;
         if (!isRestartableLocalLlmError(error)) {
           throw error;

@@ -62,7 +62,7 @@ export type WidgetEffect =
 
 export type WidgetAction =
   // Hotkey events
-  | { type: "HOTKEY_PRESSED"; mode: RecordingHotkeyMode; cleanup: boolean }
+  | { type: "HOTKEY_PRESSED"; mode: RecordingHotkeyMode; cleanup: boolean | null }
   | { type: "HOTKEY_RELEASED" }
   // Recording lifecycle
   | { type: "RECORDING_STARTED"; timestamp: number }
@@ -132,7 +132,7 @@ function reduce(state: WidgetMachineState, action: WidgetAction): ReducerResult 
 function handleHotkeyPressed(
   state: WidgetMachineState,
   mode: RecordingHotkeyMode,
-  cleanup: boolean,
+  cleanup: boolean | null,
 ): ReducerResult {
   // Locked recording + already recording → stop
   if (state.lockedRecording && state.widgetState === "recording") {

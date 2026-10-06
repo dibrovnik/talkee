@@ -1,45 +1,41 @@
 {
   "rules": [
-    "Expect Russian developer speech with English technical terms embedded into Russian grammar, for example: 'сдеплоить', 'запушить', 'заасайнить'.",
-    "In code, path, import, command, URL, package, or file-name context, convert spoken symbols into literal symbols when appropriate: 'слеш' -> '/', 'обратный слеш' -> '\\', 'точка' -> '.', 'двоеточие' -> ':', 'запятая' -> ',', 'дефис' or 'минус' -> '-', 'нижнее подчеркивание' -> '_', 'открывающая скобка' -> '(', 'закрывающая скобка' -> ')'.",
-    "In explicit code or command dictation, map spoken Russian names of developer constructs to their canonical English tokens when the intent is clear: 'консоль лог' -> 'console.log', 'импорт' -> 'import', 'экспорт' -> 'export', 'функция' -> 'function', 'конст' or 'константа' -> 'const', 'лет' -> 'let', 'ретерн' or 'верни' -> 'return'.",
-    "In JavaScript or TypeScript context, normalize common spoken API and platform names to their standard code spelling: 'джейсон парс' -> 'JSON.parse', 'документ квери селектор' -> 'document.querySelector', 'юз эффект' -> 'useEffect', 'юз стейт' -> 'useState'.",
-    "In terminal or git context, normalize common spoken commands to literal shell commands: 'гит пуш' -> 'git push', 'гит пул' -> 'git pull', 'гит статус' -> 'git status', 'эн пи эм инсталл' -> 'npm install', 'бан ран дев' -> 'bun run dev', 'карго чек' -> 'cargo check'.",
-    "In path, import, or file-name context, normalize common spoken developer aliases to their canonical token form: 'сурс' -> 'src', 'эй пи ай' -> 'api', 'джей эс' -> 'js', 'ти эс' -> 'ts', 'ти эс икс' -> 'tsx', 'джи эс икс' -> 'jsx', 'реакт' -> 'React', 'нода модьюлс' -> 'node_modules'.",
-    "If the user is clearly dictating code punctuation, also map spoken syntax phrases to literal tokens when appropriate: 'открывающая фигурная скобка' -> '{', 'закрывающая фигурная скобка' -> '}', 'стрелка' or 'равно больше' -> '=>', 'двойная кавычка' -> '\"', 'single quote' or 'одинарная кавычка' -> apostrophe ('), 'бэктик' -> '`'.",
-    "Treat words such as 'src', 'api', 'tauri', 'import', 'const', 'function', 'cargo', 'bun', 'npm', 'git', package names, and file extensions as strong evidence of technical context.",
-    "Never replace one spoken symbol with another in technical context. If the speaker said 'слеш', do not turn it into a dot.",
-    "When Russian prose explicitly introduces a code example, command, path, or identifier, it is allowed to switch that fragment into canonical English code even though the surrounding sentence stays Russian.",
-    "In Russian tech mode, preserve expressive leading stutter forms unless smoothing them is necessary to correctly reconstruct a code token or file name."
+    "Russian developer prose may contain English tokens and colloquial verbs such as запушить and сдеплоить. Keep natural Russian prose; preserve exact names, constraints and branch casing.",
+    "For an explicitly dictated path/command/code fragment, map only spoken symbols: слеш or slash -> /, обратный слеш -> \\, точка or dot -> ., дефис -> -, нижнее подчеркивание -> _. Never replace a slash with a hyphen or invent brackets.",
+    "Keep instructions such as добавь логирование as tasks. Mentioning console.log or a function does not dictate its arguments or a declaration."
   ],
   "examples": [
     {
-      "raw": "сделал cleanup заметно бережнее в src slash tauri slash src slash ai dot rs",
-      "cleaned": "Сделал cleanup заметно бережнее в src-tauri/src/ai.rs."
+      "raw": "ну проверь API и не пушь в main сначала тесты потом пуш в dev",
+      "cleaned": "Проверь API и не пушь в main. Сначала тесты, потом push в dev."
     },
     {
-      "raw": "добавь консоль лог для юзер айди",
-      "cleaned": "Добавь console.log(userId)."
-    },
-    {
-      "raw": "напиши импорт реакт фром реакт",
-      "cleaned": "Напиши import React from \"react\"."
+      "raw": "добавь консоль лог для user id",
+      "cleaned": "Добавь console.log для user id."
     },
     {
       "raw": "создай функцию fetch users",
-      "cleaned": "Создай function fetchUsers()."
+      "cleaned": "Создай функцию fetch users."
     },
     {
-      "raw": "запусти гит статус потом гит пуш origin main",
-      "cleaned": "Запусти git status, потом git push origin main."
+      "raw": "открой src слеш tauri слеш src слеш ai точка rs",
+      "cleaned": "Открой src/tauri/src/ai.rs."
     },
     {
-      "raw": "открой src слеш components слеш app точка tsx",
-      "cleaned": "Открой src/components/App.tsx."
+      "raw": "сначала проверь бэкенд потом фронтенд лимит не больше 25 секунд",
+      "cleaned": "Сначала проверь backend, потом frontend. Лимит не больше 25 секунд."
     },
     {
-      "raw": "напиши конст юзер айди равно джейсон точка парс открывающая скобка response точка data закрывающая скобка",
-      "cleaned": "Напиши const userId = JSON.parse(response.data)."
+      "raw": "перенеси в колонку бэкенд в работе и не закрывай задачу",
+      "cleaned": "Перенеси в колонку «бэкенд в работе» и не закрывай задачу."
+    },
+    {
+      "raw": "проверь дипсик API и PIM MCP без изменения настроек",
+      "cleaned": "Проверь DeepSeek API и PIM MCP без изменения настроек."
+    },
+    {
+      "raw": "ветка feature/Zerbik не меняй название Zerbik",
+      "cleaned": "Ветка feature/Zerbik. Не меняй название Zerbik."
     }
   ]
 }

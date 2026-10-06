@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
+import { resolveBatchTranscriptionModel } from "../windows/widget/services/transcriptionModel";
 import {
   type FileTranscriptionProgress,
   type FileTranscriptionResult,
@@ -12,6 +13,7 @@ import { HISTORY_UPDATED_EVENT } from "./hotkeyEvents";
 import { tn } from "./i18n";
 import { logError, logInfo } from "./logger";
 import { beginProcessing, finishProcessing } from "./processingControl";
+import { withStatsCompletionMetadata } from "./stats";
 import {
   type AppSettings,
   addHistoryEntry,
@@ -628,34 +630,40 @@ async function buildCallCaptureHistoryEntry(
     );
   }
 
-  const entry: HistoryEntry = {
-    id: overrides?.id ?? crypto.randomUUID(),
-    timestamp: overrides?.timestamp ?? new Date().toISOString(),
-    duration: overrides?.duration ?? 0,
-    raw: text,
-    cleaned: text,
-    source: "call",
-    fileName: tn("callCapture.fileName"),
-    status: "completed",
-    processingTime: startedAt ? Date.now() - startedAt : undefined,
-    mode,
-    speakers:
-      speakersById.size > 0
-        ? Array.from(speakersById.values()).sort((left, right) => {
-            const youLabel = tn("callCapture.speakerYou");
-            if (left.label === youLabel) return -1;
-            if (right.label === youLabel) return 1;
-            return 0;
-          })
-        : undefined,
-    segments: speakerSegments.length > 0 ? speakerSegments : undefined,
-    callSessionId: session.id,
-    callTracks: session.tracks.map((track) => ({
-      kind: track.kind,
-      label: track.label,
-      path: track.path,
-    })),
-  };
+  const entry: HistoryEntry = withStatsCompletionMetadata(
+    {
+      id: overrides?.id ?? crypto.randomUUID(),
+      timestamp: overrides?.timestamp ?? new Date().toISOString(),
+      duration: overrides?.duration ?? 0,
+      raw: text,
+      cleaned: text,
+      source: "call",
+      fileName: tn("callCapture.fileName"),
+      status: "completed",
+      processingTime: startedAt ? Date.now() - startedAt : undefined,
+      mode,
+      speakers:
+        speakersById.size > 0
+          ? Array.from(speakersById.values()).sort((left, right) => {
+              const youLabel = tn("callCapture.speakerYou");
+              if (left.label === youLabel) return -1;
+              if (right.label === youLabel) return 1;
+              return 0;
+            })
+          : undefined,
+      segments: speakerSegments.length > 0 ? speakerSegments : undefined,
+      callSessionId: session.id,
+      callTracks: session.tracks.map((track) => ({
+        kind: track.kind,
+        label: track.label,
+        path: track.path,
+      })),
+    },
+    {
+      sttModel: resolveBatchTranscriptionModel(settings),
+      processingTime: startedAt ? Date.now() - startedAt : undefined,
+    },
+  );
 
   return entry;
 }

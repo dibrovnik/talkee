@@ -134,4 +134,45 @@ export const components = {
   "stats.wordsToday": { ru: "Слов за сегодня", en: "Words today" },
   "stats.wordsThisMonth": { ru: "Слов за месяц", en: "Words this month" },
   "stats.wordsPerMinute": { ru: "Слов в минуту", en: "Words per minute" },
+  // A recording made before the model was captured at completion time.
+  "stats.model.unknown": { ru: "Неизвестно", en: "Unknown" },
+
+  // ── TypingSpeedTest ───────────────────────────────────────
+  "stats.typing.title": { ru: "Тест скорости печати", en: "Typing speed test" },
+  "stats.typing.description": {
+    ru: "Наберите текст ниже в течение {seconds} секунд. Считаются только правильно набранные слова, вставка из буфера не учитывается.",
+    en: "Type the text below for {seconds} seconds. Only correctly typed words count and pasted text is ignored.",
+  },
+  "stats.typing.start": { ru: "Начать тест", en: "Start test" },
+  "stats.typing.manualHint": {
+    ru: "Ориентир: {wpm} слов/мин, значение можно задать вручную.",
+    en: "Reference: {wpm} wpm — the value can also be set manually.",
+  },
+  "stats.typing.retry": { ru: "Пройти заново", en: "Try again" },
+  "stats.typing.timeLeft": { ru: "Осталось: {seconds} с", en: "Time left: {seconds} s" },
+  "stats.typing.timeUp": { ru: "Время вышло", en: "Time is up" },
+  "stats.typing.placeholder": { ru: "Начните печатать здесь…", en: "Start typing here…" },
+  "stats.typing.pasteBlocked": {
+    ru: "Вставка из буфера не считается за печать",
+    en: "Pasted text does not count as typing",
+  },
+  "stats.typing.correct": { ru: "Верно: {count}", en: "Correct: {count}" },
+  "stats.typing.mistakes": { ru: "Ошибок: {count}", en: "Mistakes: {count}" },
+  "stats.typing.wordsTyped": { ru: "Набрано слов: {count}", en: "Words typed: {count}" },
+  "stats.typing.result": { ru: "Ваша скорость: {wpm} слов/мин", en: "Your speed: {wpm} wpm" },
+  "stats.typing.resultHint": {
+    ru: "Проверьте результат и подтвердите сохранение. Если закрыть тест, скорость не сохранится.",
+    en: "Check the result and confirm the save. Closing the test saves nothing.",
+  },
+  "stats.typing.tooFewWords": {
+    ru: "Слишком мало набранного текста для честного измерения. Попробуйте ещё раз.",
+    en: "Not enough typed text for an honest measurement. Please try again.",
+  },
+  "stats.typing.save": { ru: "Сохранить", en: "Save" },
+  "stats.typing.cancel": { ru: "Отмена", en: "Cancel" },
+  "stats.typing.saved": { ru: "Сохранено: {wpm} слов/мин", en: "Saved: {wpm} wpm" },
+  "stats.typing.saveFailed": {
+    ru: "Не удалось сохранить скорость печати",
+    en: "Could not save the typing speed",
+  },
 } as const;

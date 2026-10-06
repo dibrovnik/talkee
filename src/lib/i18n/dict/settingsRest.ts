@@ -108,7 +108,13 @@ export const settingsRest = {
   "mainTab.delete": { ru: "Удалить", en: "Delete" },
 
   // ===== SettingsApp (windows/settings/SettingsApp.tsx) =====
+  "mainTab.page.title": { ru: "Главная", en: "Home" },
+  "mainTab.page.desc": {
+    ru: "Статистика диктовки и история записей. Запись начинается сочетанием {hotkey}.",
+    en: "Dictation stats and recording history. Start recording with {hotkey}.",
+  },
   "settingsApp.tab.main": { ru: "Главная", en: "Home" },
+  "settingsApp.tab.stats": { ru: "Статистика", en: "Statistics" },
   "settingsApp.tab.file": { ru: "Транскрибация", en: "Transcription" },
   "settingsApp.tab.interpreter": { ru: "Переводчик", en: "Translator" },
   "settingsApp.tab.chat": { ru: "Чат", en: "Chat" },

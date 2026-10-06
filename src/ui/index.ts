@@ -1,5 +1,6 @@
 export { Badge, type BadgeProps } from "./Badge";
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from "./Button";
+export { Dialog, type DialogProps } from "./Dialog";
 export { FormRow, type FormRowProps } from "./FormRow";
 export { FormSection, type FormSectionProps } from "./FormSection";
 export {
@@ -22,3 +23,4 @@ export { Slider, type SliderProps } from "./Slider";
 export { Spinner, type SpinnerProps } from "./Spinner";
 export { TextField, type TextFieldProps } from "./TextField";
 export { Toggle, type ToggleProps, type ToggleSize } from "./Toggle";
+export { Tooltip, type TooltipProps } from "./Tooltip";

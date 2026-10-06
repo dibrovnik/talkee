@@ -46,7 +46,7 @@ static LLM_CATALOG: &[LlmModelInfo] = &[
         file_name: "Qwen3-1.7B-Q4_K_M.gguf",
         url: "https://huggingface.co/lm-kit/qwen-3-1.7b-instruct-gguf/resolve/main/Qwen3-1.7B-Q4_K_M.gguf",
         label: "Qwen3 1.7B Instruct",
-        description: "Быстрая модель для коротких саммари и правки текста. Рекомендуется по умолчанию.",
+        description: "Быстрая модель для чистки диктовки и коротких саммари, рекомендуется по умолчанию. На 20 русских примерах не меняла смысл и укладывалась в ~1–2 секунды, но пунктуацию и заглавные буквы исправляет не всегда.",
         size_label: "1.2 ГБ",
         min_ram_gb: 8,
         profile_label: "Быстрая",
@@ -158,7 +158,7 @@ static LLM_CATALOG: &[LlmModelInfo] = &[
         file_name: "Qwen2.5-3B-Instruct-Q4_K_M.gguf",
         url: "https://huggingface.co/bartowski/Qwen2.5-3B-Instruct-GGUF/resolve/main/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
         label: "Qwen2.5 3B Instruct",
-        description: "Совместимая модель прошлого каталога. Оставлена для уже скачанных установок.",
+        description: "Совместимая модель прошлого каталога, оставлена для уже скачанных установок. На этой машине не установлена и в оценке 01.10.2026 не измерялась.",
         size_label: "2.0 ГБ",
         min_ram_gb: 8,
         profile_label: "Legacy",
@@ -689,10 +689,23 @@ pub struct LocalLlmModel {
     downloaded: bool,
 }
 
+const DAILY_CLEANUP_MODEL_IDS: [&str; 2] = ["qwen3-1.7b-instruct-q4", "qwen2.5-3b-instruct-q4"];
+
+fn visible_cleanup_model(id: &str, downloaded: bool) -> bool {
+    DAILY_CLEANUP_MODEL_IDS.contains(&id) || downloaded
+}
+
 #[tauri::command]
-pub fn list_local_llm_models(app: AppHandle) -> Vec<LocalLlmModel> {
-    LLM_CATALOG
+pub fn list_local_llm_models(
+    app: AppHandle,
+    selected_model_id: Option<String>,
+) -> Vec<LocalLlmModel> {
+    let mut models = LLM_CATALOG
         .iter()
+        .filter(|model| {
+            visible_cleanup_model(model.id, is_downloaded(&app, model))
+                || selected_model_id.as_deref() == Some(model.id)
+        })
         .map(|model| LocalLlmModel {
             id: model.id.to_string(),
             label: model.label.to_string(),
@@ -709,11 +722,31 @@ pub fn list_local_llm_models(app: AppHandle) -> Vec<LocalLlmModel> {
             recommended: model.recommended,
             downloaded: is_downloaded(&app, model),
         })
-        .collect()
+        .collect::<Vec<_>>();
+    models.sort_by_key(|model| {
+        DAILY_CLEANUP_MODEL_IDS
+            .iter()
+            .position(|id| *id == model.id)
+            .unwrap_or(2)
+    });
+    models
 }
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn new_installations_offer_only_two_small_russian_cleanup_models() {
+        let visible: Vec<&str> = LLM_CATALOG
+            .iter()
+            .filter(|model| visible_cleanup_model(model.id, false))
+            .map(|model| model.id)
+            .collect();
+        assert_eq!(visible, DAILY_CLEANUP_MODEL_IDS);
+        assert!(!visible_cleanup_model("qwen3-8b-instruct-q4", false));
+        assert!(visible_cleanup_model("qwen3-8b-instruct-q4", true));
+        assert!(model_info("qwen3-8b-instruct-q4").is_some());
+    }
+
     use super::*;
 
     #[test]

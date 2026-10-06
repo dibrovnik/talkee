@@ -5,22 +5,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SETTINGS_UPDATED_EVENT } from "../../../lib/hotkeyEvents";
 import { useI18n } from "../../../lib/i18n";
 import { logInfo } from "../../../lib/logger";
-import { resolveProcessingMode } from "../../../lib/modelMode";
+import { resolveProcessingMode, resolveTextProcessingMode } from "../../../lib/modelMode";
 import { type AppSettings, getSettings, saveSettings } from "../../../lib/store";
 import {
   type AdapterTestStatus,
   type ApiAdapterId,
   isLocalSttEndpoint,
-  LOCAL_MODEL_OPTIONS,
+  KNOWN_LOCAL_MODEL_OPTIONS,
   LOCAL_STT_MODEL_DOWNLOAD_PROGRESS_EVENT,
   LOCAL_STT_PRESET_ENDPOINT,
   type LocalModelActionState,
   type LocalModelDownloadProgressEvent,
-  type LocalModelKind,
   type LocalModelOption,
   type LocalTranslatorInfo,
   type ModelMode,
   type PromptPreview,
+  type RecognitionSectionKind,
 } from "./settingsTabsTypes";
 
 const IS_DEV = import.meta.env.DEV;
@@ -32,12 +32,13 @@ export function useSettingsTabsState(type: "model" | "style") {
   const [promptPreviewError, setPromptPreviewError] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [testMessage, setTestMessage] = useState<string | null>(null);
-  const [modelModeView, setModelModeView] = useState<ModelMode | null>(null);
+  const [sttModeView, setSttModeView] = useState<ModelMode | null>(null);
+  const [textModeView, setTextModeView] = useState<ModelMode | null>(null);
   const [styleTabView, setStyleTabView] = useState<"style" | "prompts">("style");
-  const [localModelKind, setLocalModelKind] = useState<LocalModelKind>("transcription");
-  const [apiModelKind, setApiModelKind] = useState<"transcription" | "text" | "translation">(
-    "transcription",
-  );
+  const [localRecognitionKind, setLocalRecognitionKind] =
+    useState<RecognitionSectionKind>("transcription");
+  const [apiRecognitionKind, setApiRecognitionKind] =
+    useState<RecognitionSectionKind>("transcription");
   const [expandedApiAdapter, setExpandedApiAdapter] = useState<ApiAdapterId | null>(null);
   const [expandedLocalModel, setExpandedLocalModel] = useState<string | null>(null);
   const [expandedLocalOtherComponent, setExpandedLocalOtherComponent] = useState<string | null>(
@@ -94,14 +95,14 @@ export function useSettingsTabsState(type: "model" | "style") {
       setLocalInstalledModels(installedModels);
 
       const installedModelSet = new Set(installedModels);
-      const installedLocalOptions = LOCAL_MODEL_OPTIONS.filter((model) =>
+      const installedLocalOptions = KNOWN_LOCAL_MODEL_OPTIONS.filter((model) =>
         installedModelSet.has(model.model),
       );
       const now = new Date().toISOString();
       const nextLocalModels = { ...(settings.localModels || {}) };
       let changed = false;
 
-      for (const model of LOCAL_MODEL_OPTIONS) {
+      for (const model of KNOWN_LOCAL_MODEL_OPTIONS) {
         const current = nextLocalModels[model.id];
         if (current?.status === "downloaded" && !installedModelSet.has(model.model)) {
           delete nextLocalModels[model.id];
@@ -230,20 +231,23 @@ export function useSettingsTabsState(type: "model" | "style") {
     if (!settings) return;
 
     if (type !== "model") {
-      setModelModeView(null);
+      setSttModeView(null);
+      setTextModeView(null);
       return;
     }
 
-    const currentMode: ModelMode = resolveProcessingMode(settings);
+    const currentSttMode: ModelMode = resolveProcessingMode(settings);
+    const currentTextMode: ModelMode = resolveTextProcessingMode(settings);
 
-    setModelModeView((current) => current ?? currentMode);
-  }, [settings?.whisperEndpoint, type]);
+    setSttModeView((current) => current ?? currentSttMode);
+    setTextModeView((current) => current ?? currentTextMode);
+  }, [settings?.whisperEndpoint, settings?.llmEndpoint, type]);
 
   useEffect(() => {
     const unlistenPromise = listen<LocalModelDownloadProgressEvent>(
       LOCAL_STT_MODEL_DOWNLOAD_PROGRESS_EVENT,
       (event) => {
-        const modelOptions = LOCAL_MODEL_OPTIONS.filter(
+        const modelOptions = KNOWN_LOCAL_MODEL_OPTIONS.filter(
           (model) => model.model === event.payload.model,
         );
         if (modelOptions.length === 0) return;
@@ -315,14 +319,16 @@ export function useSettingsTabsState(type: "model" | "style") {
     setTestStatus,
     testMessage,
     setTestMessage,
-    modelModeView,
-    setModelModeView,
+    sttModeView,
+    setSttModeView,
+    textModeView,
+    setTextModeView,
     styleTabView,
     setStyleTabView,
-    localModelKind,
-    setLocalModelKind,
-    apiModelKind,
-    setApiModelKind,
+    localRecognitionKind,
+    setLocalRecognitionKind,
+    apiRecognitionKind,
+    setApiRecognitionKind,
     expandedApiAdapter,
     setExpandedApiAdapter,
     expandedLocalModel,

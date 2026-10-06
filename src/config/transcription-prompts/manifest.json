@@ -1,13 +1,19 @@
 {
-  "version": 3,
+  "version": 4,
   "defaultLanguage": "default",
   "defaultStyle": "classic",
   "baseFile": "base/common.json",
   "styleOrder": ["classic", "business", "tech"],
   "languages": {
-    "default": { "file": "languages/default.json" },
-    "ru": { "file": "languages/ru.json" },
-    "en": { "file": "languages/en.json" }
+    "default": {
+      "file": "languages/default.json"
+    },
+    "ru": {
+      "file": "languages/ru.json"
+    },
+    "en": {
+      "file": "languages/en.json"
+    }
   },
   "styles": {
     "classic": {
@@ -23,7 +29,7 @@
     "tech": {
       "file": "styles/tech.json",
       "uiTitle": "Разработка",
-      "uiDescription": "Особый упор на терминологию, code-aware обработку и developer dictation. Команды, пути, API и фразы вроде 'консоль лог' стараются превращаться в канонический код."
+      "uiDescription": "Бережная очистка разработческих задач: сохраняет требования, отрицания, ветки, пути и API. Не превращает описание задачи в выдуманный код."
     }
   },
   "overrides": {

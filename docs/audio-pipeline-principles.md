@@ -29,7 +29,9 @@ Widget hotkey/button
 File transcription:
 
 ```text
-Files tab / widget file drop
+Files tab / history retry / widget file drop
+-> path/options event to Widget-owned fileTranscriptionJobs queue
+-> history processing entry (source path retained)
 -> src/lib/fileTranscription.ts
 -> ai::transcribe_file_path()
 -> media.rs preparation/chunking
@@ -421,3 +423,141 @@ Manual checks when behavior changes:
 
 `cpal` pulls the macOS Core Audio backend. If changing `cpal` features or
 replacing the recorder backend, re-check the macOS build configuration.
+
+## Tray call controls
+
+The native tray sends explicit start/stop actions to the existing widget-owned
+call pipeline. The native action is consumed once and disabled until the owner
+publishes its next phase; synchronous widget phase refs additionally reject
+repeated requests before React renders. Starting/finishing phases and conflicting
+voice, file or live-translation activity disable start. Stop remains available
+while a call is recording. Permission and disk failures use existing call notices.
+
+`saveRecordingAudio` controls ordinary dictation only. Call mic/system tracks are
+written independently and preserved after STT failure for playback/retry. This does
+not override explicit history deletion, the 200-call/50 MB history limits, or the
+separate live-translation retention policy.
+
+## File Job Ownership
+
+The Widget owns the single serial file queue. Settings only sends native paths and
+options, subscribes before requesting a snapshot, and merges updates by job revision.
+Closing/hiding settings or changing tabs does not cancel a job. This is not restart
+recovery: exiting the application ends its runtime. History is persisted before
+inference, retains `filePath`, and retry uses the same owner. Video data never goes
+through `File.arrayBuffer()` in the settings workflow. Speaker setup remains an
+explicit prerequisite; ordinary files do not trigger model installation.
+
+Cancellation immediately marks the job interrupted and suppresses late progress
+and success, but keeps the serial slot until the native request settles. A queued job
+waits for dictation/call/live translation to become idle, without a polling loop.
+
+### Cooperative cancellation
+
+`ai::file_jobs` keeps one cancel flag per native `request_id`. `transcribe_file_path`
+registers the flag and checks it before preparation, after each preparation step,
+before every chunk, after diarization assembly and before returning the result. A
+cancelled request removes its temporary chunk/diarization directories and fails with
+the cancellation message, which the widget maps to the localized "stopped, you can
+retry" wording. `cancel_file_job` only sets that flag: it never stops the shared
+local runtime, and returning `false` for an unknown id is normal (the request may have
+finished between the click and the command). The guard unregisters itself on drop, so
+a settled request cannot be cancelled by a stale click and a later job with the same
+id starts clean. Late success after cancellation is never written to history.
+
+### Progress, durations and ETA
+
+Progress is measured, not assumed. Native progress reports the chunk that *started*
+and, separately, the chunks and audio seconds that *completed*, plus the monotonic
+elapsed transcription time. Durations come from the FFmpeg segment CSV (including a
+short last segment) or ready-WAV metadata. `getFileTranscriptionPercent` therefore
+stays below 100 until the result exists, and the last started chunk never reads as
+finished.
+
+`estimateFileTranscription` extrapolates only measured transcription work: it needs
+at least two completed chunks with a positive completed duration, the total audio
+seconds and a positive elapsed time. Cold start, preparation, diarization and assembly
+have no measurement, so they report "Оцениваем время" instead of a fabricated timer.
+The wording stays explicitly approximate, and a completed job reports zero remaining.
+
+### Streaming draft
+
+When the managed Nemotron runtime streams, chunk partial text is forwarded on the
+existing `dictation-stream:update` channel using the same request id as the file job.
+The settings tab shows it as a clearly labelled draft and it is cleared as soon as an
+authoritative progress event or the finished chunk text arrives, so completed text is
+never duplicated. No timer fabricates partial text, the model and endpoint are
+unchanged, and diarization keeps using its own verified non-streaming path. This is a
+within-session draft only: it is never treated as a finished transcription, and it is
+not part of restart recovery.
+
+The streaming path is used only when all three hold: the endpoint is local, the request
+is not diarized, and the selected model is a streaming one. A fourth condition is the
+language: the managed runtime only starts a stream for a concrete language, and answers
+`unsupported language` for `auto` or an empty selection. `file_streaming_supported`
+therefore disables both the `streaming` flag and the streaming request id for `auto`,
+so that case takes the ordinary JSON path and still succeeds instead of failing.
+
+## Dictation cleanup hotkeys
+
+The main hotkey and widget click follow the saved `cleanupEnabled` switch. The
+dedicated cleanup hotkey forces cleanup on for that take only; it does not write
+the global setting. Both hold and toggle recording modes use this same contract.
+The pill/island indicator shows the saved setting while idle and the captured
+effective choice during recording/processing.
+
+## Cleanup latency and diagnostic evidence
+
+Text processing alone uses a small persistent HTTP pool (one idle connection per
+host, 30-second idle TTL). STT/file/download clients retain their existing policy.
+Remote clients retain system-proxy support; local clients bypass it. DeepSeek
+receives `thinking.type=disabled`. Cleanup has an absolute 8-second API / 12-second
+local deadline, does not replay failed POSTs or issue paid background warm-ups,
+and never accepts a response marked `finish_reason=length`. Long summary/chat
+operations keep their existing budgets and output handling. Built-in cleanup
+prompts are cached by language and selected preset id; custom prompts stay live.
+
+Each dictation/attempt has a `request_id`; retries have a fresh id and retain the
+history `entry_id`. Correlate `RECORDING`, `STT`, `CLEANUP`, `LLM`, `PASTE` and
+`API` records. These are diagnostic measurements, not a guarantee of immediate
+provider response or successful insertion into another application's editor.
+
+| Event | Safe evidence |
+| --- | --- |
+| recording choice / cleanup decision | trigger, global/effective flag, override, backend, model, preset, input size |
+| cleanup request/end | prompt version, budget, prep/cleanup milliseconds, applied/reason/error code, output size |
+| LLM start/headers/response/end | request/entry id, operation, host/path, model, status, headers/total milliseconds, safe error code |
+| provider metadata | request id, finish reason, supplied token/cache/reasoning counts; absent usage is unavailable, not zero |
+| STT/paste stage | request/entry id, start/end, outcome, stage milliseconds |
+| pipeline end | request id and pipeline_total_ms |
+
+Error categories include missing configuration, `connect`, `transport`, `read`,
+`timeout`, `http_NNN`, `parse`, `empty_response`, `truncated` and frontend
+quality rejection. Raw provider error bodies and request payloads are not logged.
+
+## Rotating local logs
+
+The active log is `~/.talkee/talkee.log`; the three newest archives are `.1`, `.2`,
+`.3` (newest first). Each is limited to 5 MiB, so the set is at most 20 MiB for a
+single app writer. Oversized legacy logs retain only a bounded tail of complete
+records on the next write. Entries are single-line, UTF-8-safe and bounded to
+16 KiB; known key/Auth fields and endpoint credentials/query are redacted.
+Newly opened log files use owner-only 0600 permissions. Disk/rotation failures
+report a safe stderr category and do not interrupt dictation or append without
+limits. Keep only one running app instance writing this path; the lock is
+process-local.
+
+- `bun run logs` follows replacement files through rotation (`tail -F`).
+- The application's clear command serializes deletion of active + archives with
+  writes. `bun run logs:clear` deletes the same four exact names; use this CLI
+  command only while the app is stopped. Neighboring files are untouched.
+- For a diagnostic audit read existing archives `.3`, `.2`, `.1`, then the active
+  file, and filter by date/time and `request_id`/`entry_id`. For example:
+  `grep 'request_id=YOUR_ID' ~/.talkee/talkee.log*`. Missing archives are normal.
+- Unit tests capture native diagnostic records in memory and use temporary files
+  for rotation tests, not the user's real app log.
+
+No live hardware/VPN or external LLM latency/quality benchmark was performed in
+this change: the user requested automated verification instead. Mock-server
+tests exercise pooling, connection failure/recovery, statuses, deadlines and
+metadata; prompt fixtures do not prove model inference quality.

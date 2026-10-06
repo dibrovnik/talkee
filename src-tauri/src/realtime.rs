@@ -1059,14 +1059,13 @@ where
                 );
                 socket
             }
-            Err(error) if reconnect_index < RECONNECT_DELAYS.len() => {
+            Err(_) if reconnect_index < RECONNECT_DELAYS.len() => {
                 logger::log_error(
                     "REALTIME_STT",
                     &format!(
-                        "Realtime connection failed: provider={}, attempt={}, error={}",
+                        "Realtime connection failed: provider={}, attempt={}, stage=connect",
                         req.provider,
-                        reconnect_index + 1,
-                        error
+                        reconnect_index + 1
                     ),
                 );
                 tokio::time::sleep(RECONNECT_DELAYS[reconnect_index]).await;
@@ -1261,14 +1260,13 @@ where
     loop {
         let mut socket = match connect_realtime_socket(&req).await {
             Ok(socket) => socket,
-            Err(error) if reconnect_index < RECONNECT_DELAYS.len() => {
+            Err(_) if reconnect_index < RECONNECT_DELAYS.len() => {
                 logger::log_error(
                     "LIVE_TRANSLATION",
                     &format!(
-                        "provider={} stage=connect attempt={} error={}",
+                        "provider={} stage=connect attempt={}",
                         req.provider,
-                        reconnect_index + 1,
-                        error
+                        reconnect_index + 1
                     ),
                 );
                 tokio::time::sleep(RECONNECT_DELAYS[reconnect_index]).await;
@@ -1421,14 +1419,13 @@ where
                 let _ = socket.close(None).await;
                 return Ok(());
             }
-            Err(error) if !finishing && reconnect_index < RECONNECT_DELAYS.len() => {
+            Err(_) if !finishing && reconnect_index < RECONNECT_DELAYS.len() => {
                 logger::log_error(
                     "LIVE_TRANSLATION",
                     &format!(
-                        "provider={} stage=stream_reconnect attempt={} error={}",
+                        "provider={} stage=stream_reconnect attempt={}",
                         req.provider,
-                        reconnect_index + 1,
-                        error
+                        reconnect_index + 1
                     ),
                 );
                 tokio::time::sleep(RECONNECT_DELAYS[reconnect_index]).await;

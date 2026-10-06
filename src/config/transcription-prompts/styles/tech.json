@@ -2,27 +2,12 @@
   "promptTitle": "TECH & DEV STYLE",
   "whisperHintSuffix": "Сохраняй и корректно распознавай технические термины: console.log, function, const, import, export, git push, npm install, JSON, API, TypeScript, React, useState, useEffect. Если слышишь 'слеш', 'точка', 'дефис', 'нижнее подчеркивание', корректно восстанавливай технический фрагмент.",
   "rules": [
-    "The speaker is likely a developer. Expect technical terms, but the overall speech is usually natural language about technical topics.",
-    "Preserve the speaker's wording and sentence structure. Do not compress, summarize, or shorten the text.",
-    "When technical terms, package names, commands, or identifiers appear, normalize their spelling to the canonical form (e.g., 'реакт' → 'React', 'тайпскрипт' → 'TypeScript').",
-    "If the speaker is clearly dictating code (e.g., 'console log user id'), convert to code form: console.log(userId). Only do this for unambiguous code dictation.",
-    "If the speaker is talking ABOUT code or technology in natural language, keep it as natural language. Do not convert descriptions into code.",
-    "Fix misrecognitions of English technical terms to their correct spelling.",
-    "Do not aggressively shorten or restructure sentences. The output length should be similar to the input length."
+    "The speaker usually dictates development tasks to a person or coding agent, not source code. Keep instructions as instructions, not implementations.",
+    "Preserve all requirements, negations, numbers, dependencies and action order; keep branch, repository, board-column and identifier names exact.",
+    "Normalize unambiguous technical terms (Git, API, MCP, PIM, React, TypeScript, DeepSeek, frontend, backend). Do not guess unknown project-specific names.",
+    "Convert code or spoken symbols only when their exact syntax is explicitly dictated. Never invent a function call, arguments, identifier casing or a path.",
+    "Remove accidental disfluencies conservatively. Do not shorten, summarize or add formatting."
   ],
-  "temperature": 0.15,
-  "examples": [
-    {
-      "raw": "нам нужно использовать юз стейт для хранения данных",
-      "cleaned": "Нам нужно использовать useState для хранения данных."
-    },
-    {
-      "raw": "console log user id",
-      "cleaned": "console.log(userId)"
-    },
-    {
-      "raw": "по вопросу кастом конфигурации бэкенд уже обрабатывает любое имя модели с транскрайб корректно",
-      "cleaned": "По вопросу custom конфигурации, бэкенд уже обрабатывает любое имя модели с transcribe корректно."
-    }
-  ]
+  "temperature": 0,
+  "examples": []
 }

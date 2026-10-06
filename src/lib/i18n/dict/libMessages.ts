@@ -106,6 +106,10 @@ export const libMessages = {
   },
 
   // ── callCapture.ts ────────────────────────────────────────────────────────
+  "callCapture.busy": {
+    ru: "Talkee занят другой записью или обработкой. Завершите её перед началом созвона.",
+    en: "Talkee is busy recording or processing. Finish that task before starting a call.",
+  },
   "callCapture.interrupted": {
     ru: "Обработка остановлена. Можно запустить повторно.",
     en: "Processing stopped. You can run it again.",

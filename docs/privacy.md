@@ -83,3 +83,51 @@ bun run check:network
 5. Запустите `bun run check:network` и убедитесь, что проверка проходит.
 
 Если хост добавляется временно (например, до удаления связанной возможности), добавляйте его в `pendingRemoval` с пометкой изменения, которое его уберёт.
+
+### Call recording retention
+
+The tray's call action starts the same local capture as the widget; it does not
+silently start a recording at launch. Microphone and system-audio permissions
+remain required. Call tracks are saved locally even when dictation audio saving
+is off, including after transcription failures. Explicit deletion and existing
+history limits still apply; this is not indefinite storage. Live translation has
+its own unchanged retention policy.
+
+### Usage statistics
+
+The statistics tab is computed entirely on the machine from local aggregates in the
+shared store file under the `stats` key, kept separate from the `history` key and
+from transcript text. Nothing in the statistics pipeline performs a network request:
+there is no analytics endpoint, no account and no telemetry, so
+`bun run check:network` stays green with its audit unchanged.
+
+Statistics record only word counts, the number of successful recordings, audio
+seconds, measured processing seconds, the source (dictation, file, call, live
+translation) and the recognition model id captured when that recording completed.
+They never contain transcript text, prompts, API keys, endpoints, file paths or
+application names. A recording without a model lands in the "Неизвестно" bucket, and
+a measurement that was never taken stays missing instead of being written as zero.
+
+Clearing the history removes transcripts and audio files but does not delete the
+aggregates, so the statistics remain comparable over time. The typing speed the user
+enters or measures is a local setting, and the saving estimate is derived from it in
+memory. Source and model breakdowns start at the update that introduced them: older
+recordings are counted only in the totals and are not re-analysed from stored
+history.
+
+### Local diagnostic logs
+
+Application diagnostics stay on this computer in `~/.talkee/talkee.log` and up to
+three rotated archives (5 MiB each, 20 MiB total with a single app writer). They
+contain operation/entry identifiers, trigger and configuration choices, model
+and prompt identifiers, sanitized endpoint host/path, durations, HTTP statuses,
+error categories, text lengths and token usage when supplied by the provider.
+They do not contain API keys, Authorization values, request/response bodies,
+full transcripts or system prompts. Endpoint userinfo, query and fragment are
+removed; control characters cannot create fake log records.
+
+Older application versions may have logged transcript content; updating does
+not retroactively redact the retained old tail. The user can clear active and
+all archives through the existing application action, or run `bun run logs:clear`
+while the application is stopped. Transcript history is separate from diagnostic
+logs and retains its existing access/deletion rules. No logs are uploaded.

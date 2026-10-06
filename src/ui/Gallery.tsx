@@ -4,6 +4,7 @@ import { IconCloud, IconCpu, IconMicrophone, IconServer } from "../lib/icons";
 import {
   Badge,
   Button,
+  Dialog,
   FormRow,
   FormSection,
   PopUpButton,
@@ -16,6 +17,7 @@ import {
   Spinner,
   TextField,
   Toggle,
+  Tooltip,
 } from "./index";
 
 const SEGMENTS = [
@@ -41,7 +43,7 @@ export function Gallery(): ReactElement {
   const [slider, setSlider] = useState(60);
 
   return (
-    <div style={{ maxWidth: 640 }}>
+    <div style={{ maxWidth: "var(--workspace-width)", margin: "0 auto" }}>
       <h1 className="section-title-ui" style={{ marginBottom: 20 }}>
         Примитивы интерфейса
       </h1>
@@ -64,11 +66,20 @@ export function Gallery(): ReactElement {
       <FormSection title="Переключатели и сегменты">
         <FormRow
           label="Toggle"
-          control={<Toggle checked={toggle} onChange={setToggle} ariaLabel="Пример" />}
+          control={
+            <Toggle checked={toggle} onChange={setToggle} ariaLabel="Обычный переключатель" />
+          }
         />
         <FormRow
           label="Toggle (large)"
-          control={<Toggle size="large" checked={toggle} onChange={setToggle} ariaLabel="Пример" />}
+          control={
+            <Toggle
+              size="large"
+              checked={toggle}
+              onChange={setToggle}
+              ariaLabel="Крупный переключатель"
+            />
+          }
         />
         <FormRow
           label="SegmentedControl"
@@ -76,9 +87,36 @@ export function Gallery(): ReactElement {
             <SegmentedControl
               value={segment}
               options={[...SEGMENTS]}
-              onChange={setSegment}
+              onChange={(value) => {
+                setSegment(value);
+                document.documentElement.style.colorScheme =
+                  value === "system" ? "light dark" : value;
+              }}
               ariaLabel="Тема"
             />
+          }
+        />
+      </FormSection>
+
+      <FormSection title="Диалоги и подсказки">
+        <FormRow
+          label="Dialog"
+          control={
+            <Dialog
+              trigger={<Button>Открыть пример диалога</Button>}
+              title="Пример диалога"
+              description="Tab остаётся внутри; Esc закрывает и возвращает фокус."
+            >
+              <TextField aria-label="Поле диалога" placeholder="Введите текст" />
+            </Dialog>
+          }
+        />
+        <FormRow
+          label="Tooltip"
+          control={
+            <Tooltip content="Доступная подсказка">
+              <Button>Показать подсказку</Button>
+            </Tooltip>
           }
         />
       </FormSection>

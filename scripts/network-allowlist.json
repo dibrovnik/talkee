@@ -29,6 +29,10 @@
       "reason": "xAI provider preset; reachable only with a user-configured key"
     },
     {
+      "host": "api.deepseek.com",
+      "reason": "DeepSeek text-processing preset (the main cleanup recommendation); reachable only with a user-configured key"
+    },
+    {
       "host": "huggingface.co",
       "reason": "User-initiated local model downloads (Whisper/Parakeet/Moonshine/LLM GGUF files)"
     },

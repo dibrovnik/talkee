@@ -68,7 +68,9 @@ export function LocalLlmModels({
 
   const refresh = async (): Promise<void> => {
     try {
-      const list = await invoke<LocalLlmModel[]>("list_local_llm_models");
+      const list = await invoke<LocalLlmModel[]>("list_local_llm_models", {
+        selectedModelId: selectedLocalLlmModelId(settings) || null,
+      });
       setModels(list);
     } catch {
       /* keep last known state */

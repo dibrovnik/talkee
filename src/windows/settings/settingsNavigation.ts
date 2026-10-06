@@ -1,5 +1,6 @@
 export type SettingsTab =
   | "main"
+  | "stats"
   | "file"
   | "interpreter"
   | "chat"
@@ -10,6 +11,7 @@ export type SettingsTab =
 
 const SETTINGS_TABS = new Set<SettingsTab>([
   "main",
+  "stats",
   "file",
   "interpreter",
   "chat",

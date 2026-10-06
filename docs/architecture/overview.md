@@ -66,9 +66,12 @@ Talkee — macOS-приложение (Apple Silicon): Rust-бэкенд Tauri v
 | `modelMode.ts` | Определение активного режима обработки (API / Локально). |
 | `processingControl.ts` | Реестр отмены активных задач транскрибации. |
 | `serialTaskQueue.ts` | Последовательная очередь задач. |
-| `stats.ts` / `statsCore.ts` | Статистика слов: события обновления и чистая логика подсчёта. |
+| `stats.ts` / `statsCore.ts` | Локальная статистика: v3-агрегаты день × источник × модель, единственный сериализованный writer с receipt, селекторы для графиков. |
+| `typingSpeed.ts` | Валидация скорости печати и оценка сэкономленного времени по полным voice-данным. |
 | `summarize.ts` | Саммари и map-reduce обработка длинных текстов. |
-| `fileTranscription.ts` | Сценарий транскрибации файлов и повтор прерванных записей. |
+| `fileTranscription.ts` | Native path client; повтор файлов отправляется владельцу задач. |
+| `fileTranscriptionJobs.ts` | Единственный widget-owned runner: очередь, дедупликация jobId, snapshots, история до inference, терминальные состояния. |
+| `fileTranscriptionJobClient.ts` | Подписка settings на versioned snapshots, запросы start/cancel без ключей API. |
 | `callCapture.ts` | Клиент захвата созвонов и сборка транскрипта. |
 | `realtimeModels.ts` | Каталог realtime-адаптеров и проверка capability. |
 | `localLlmSelection.ts` | Выбор и отключение локальной текстовой модели. |
@@ -91,7 +94,7 @@ Talkee — macOS-приложение (Apple Silicon): Rust-бэкенд Tauri v
 | Каталог | Ответственность |
 | --- | --- |
 | `widget/` | UI индикатора записи. Два представления одного окна `widget`: плавающая пилюля (`pill/`) и остров у выреза (`island/`). Режим `widgetPresentation` и запасной вариант без выреза `islandFallback` живут в настройках. Хуки `useWidgetController`, `useWidgetHotkey`, `useWidgetRecording`, `useWidgetNotice`, сервисы `recordingRuntime`, `transcriptionPipeline`, `hotkeyFsm`/`hotkeyTransaction`, `liveTranslation`, `callMicrophone`, `selectionTranslation`, `widgetConstants`. |
-| `settings/` | Окно настроек: `SettingsApp.tsx`, навигация, захват горячих клавиш и вкладки `tabs/` (Main, FileTranscription, Translation, RealtimeTranslationModels, DevChat). |
+| `settings/` | Окно настроек: `SettingsApp.tsx`, навигация, захват горячих клавиш и вкладки `tabs/` (Main, FileTranscription, Translation, RealtimeTranslationModels, DevChat, Stats). |
 
 ### `src/components`
 
@@ -100,7 +103,7 @@ Talkee — macOS-приложение (Apple Silicon): Rust-бэкенд Tauri v
 | Общие контролы и модалки | `SlideOverModal`, `RowActionsMenu`, `SummaryModal`. Примитивы (`Button`, `PopUpButton`, `FormSection` и др.) — в `src/ui/`. |
 | Горячие клавиши | `DictationHotkeyControl`, `HotkeyKeycaps`, `useLiveHotkeyPreview`. |
 | Модели и разрешения | `LocalLlmModels`, `LocalSttModelCard`, `ModelCardDisclosureButton`, `PermissionScreen`. |
-| История, запись и статистика | `HistoryAudioTrack`, `Waveform`, `SpeakerNameInput`, `TranscriptionStatsPanel`. |
+| История, запись и статистика | `HistoryAudioTrack`, `Waveform`, `SpeakerNameInput`, `TranscriptionStatsPanel`, `TypingSpeedTest`. |
 | Онбординг | `onboarding/OnboardingFlow`, `OnboardingShell`, `OnboardingModelStep`, `OnboardingTestStep`, `OnboardingConfetti`. |
 
 ## Related documents

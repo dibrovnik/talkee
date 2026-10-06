@@ -42,3 +42,24 @@ export async function clearLogs(): Promise<void> {
     // ignore
   }
 }
+
+/** Only known error categories enter diagnostic logs, never provider bodies. */
+export function processingErrorCode(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  const code = message.match(/^\[text:([a-z_]+|http_\d{3})\]/)?.[1];
+  if (code) return code;
+  if (/abort/i.test(message)) return "cancelled";
+  if (/timeout|timed out|таймаут/i.test(message)) return "timeout";
+  return "unknown";
+}
+export function safeEndpoint(value: string): string {
+  try {
+    const url = new URL(value);
+    return `${url.protocol}//${url.host}${url.pathname}`;
+  } catch {
+    return "invalid-endpoint";
+  }
+}
+export function diagnosticId(value: string): string {
+  return value.slice(0, 96).replace(/[^a-z0-9_.:/-]/gi, "_");
+}

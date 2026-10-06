@@ -56,15 +56,15 @@ export const settingsGeneral = {
     ru: "Нажмите на поле справа и введите новую комбинацию. Если сочетание занято, оставим предыдущую клавишу.",
     en: "Click the field on the right and press a new combination. If it's taken, the previous one is kept.",
   },
-  "settings.hotkey.plain": { ru: "Обычный ввод", en: "Plain dictation" },
+  "settings.hotkey.plain": { ru: "Ввод по настройкам", en: "Dictation with current settings" },
   "settings.hotkey.plainDesc": {
-    ru: "Запись без очистки текста.",
-    en: "Records without cleaning up the text.",
+    ru: "Очистка текста зависит от переключателя «ИИ-очистка текста».",
+    en: "Text cleanup follows the AI cleanup switch.",
   },
   "settings.hotkey.cleanup": { ru: "Ввод с очисткой ИИ", en: "Dictation with AI cleanup" },
   "settings.hotkey.cleanupDesc": {
-    ru: "Та же запись, но текст проходит через выбранный стиль очистки.",
-    en: "The same recording, with the selected cleanup style applied.",
+    ru: "Всегда очищает текущую запись выбранным стилем, не меняя переключатель.",
+    en: "Always cleans this recording without changing the cleanup switch.",
   },
   "settings.hotkey.mode": { ru: "Как срабатывает", en: "How it starts" },
   "settings.hotkey.modeDesc": {
@@ -195,14 +195,14 @@ export const settingsGeneral = {
 
   // Recording audio
   "settings.recordingAudio.title": {
-    ru: "Сохранять аудио записей",
-    en: "Save recording audio",
+    ru: "Сохранять аудио диктовки",
+    en: "Save dictation audio",
   },
   "settings.recordingAudio.on": { ru: "Включено", en: "On" },
   "settings.recordingAudio.off": { ru: "Выключено", en: "Off" },
   "settings.recordingAudio.desc": {
-    ru: "Аудио диктовки хранится локально отдельными файлами только для последних 100 записей.",
-    en: "Dictation audio is stored locally as separate files for the latest 100 recordings only.",
+    ru: "Аудио диктовки хранится локально отдельными файлами только для последних 100 записей. Аудио созвонов сохраняется независимо от этого переключателя.",
+    en: "Dictation audio is stored locally as separate files for the latest 100 recordings only. Call audio is saved independently of this switch.",
   },
 
   // Support
@@ -217,5 +217,19 @@ export const settingsGeneral = {
   "settings.support.desc": {
     ru: "Откроется почтовый клиент с письмом на {email}. Опишите проблему или вопрос – мы поможем.",
     en: "Your email client will open a message to {email}. Describe the problem or question – we'll help.",
+  },
+
+  // Page header (windows/settings/tabs/SettingsTab.tsx)
+  "settingsGeneralExtra.page.title": {
+    ru: "Основные настройки",
+    en: "General settings",
+  },
+  "settingsGeneralExtra.page.desc": {
+    ru: "Язык, микрофон, горячие клавиши, индикатор записи и запуск приложения.",
+    en: "Language, microphone, hotkeys, recording indicator and app startup.",
+  },
+  "settingsGeneralExtra.mic.status": {
+    ru: "Микрофон для записи голоса.",
+    en: "Microphone used to record your voice.",
   },
 } as const;

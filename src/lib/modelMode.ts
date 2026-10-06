@@ -23,11 +23,25 @@ interface ProcessingModeSettings {
   whisperEndpoint?: string | null;
 }
 
-/** Resolve the active processing mode: local sidecar endpoints (localhost /
- *  127.0.0.1) mean "Локально", everything else (including empty) means "API". */
+/** Loopback endpoints (localhost / 127.0.0.1) mean "Локально". */
+function isLocalEndpoint(endpoint?: string | null): boolean {
+  return /127\.0\.0\.1|localhost/i.test(endpoint || "");
+}
+
+/** Resolve the recognition mode: only the STT endpoint decides, so it stays
+ *  independent of the text (LLM) endpoint. */
 export function resolveProcessingMode(settings: ProcessingModeSettings): ProcessingMode {
-  const endpoint = settings.whisperEndpoint || "";
-  return /127\.0\.0\.1|localhost/i.test(endpoint) ? "local" : "api";
+  return isLocalEndpoint(settings.whisperEndpoint) ? "local" : "api";
+}
+
+interface TextEndpointSettings {
+  llmEndpoint?: string | null;
+}
+
+/** Resolve the text-processing mode: only the text (LLM) endpoint decides, so a
+ *  local STT model can run together with a remote text API and vice versa. */
+export function resolveTextProcessingMode(settings: TextEndpointSettings): ProcessingMode {
+  return isLocalEndpoint(settings.llmEndpoint) ? "local" : "api";
 }
 
 export function apiModelModeSettingsPatch(
@@ -55,5 +69,32 @@ export function localModelModeSettingsPatch(
     whisperApiKey: "",
     whisperEndpoint: selection.endpoint?.trim() || DEFAULT_LOCAL_STT_ENDPOINT,
     whisperModel: selection.model?.trim() || DEFAULT_LOCAL_STT_MODEL,
+  };
+}
+
+export const DEFAULT_API_TEXT_MODEL = "gpt-4o-mini";
+
+interface ApiTextModelSelection {
+  endpoint?: string;
+  model?: string;
+}
+
+/**
+ * Commit the API text-processing configuration without touching the recognition
+ * settings. A leftover local endpoint/model is dropped together with the
+ * bundled-runtime marker (so cleanup cannot warm the local sidecar), while the
+ * user's own API endpoint, model and key are preserved.
+ */
+export function apiTextModelSettingsPatch(
+  selection: ApiTextModelSelection = {},
+): ModelModeSettingsPatch {
+  const endpoint = (selection.endpoint || "").trim();
+  const model = (selection.model || "").trim();
+  const localLeftover = isLocalEndpoint(endpoint);
+  return {
+    llmEndpoint: localLeftover ? "" : endpoint,
+    llmModel:
+      localLeftover || !model || model.toLowerCase() === "none" ? DEFAULT_API_TEXT_MODEL : model,
+    llmLocalModelId: "",
   };
 }

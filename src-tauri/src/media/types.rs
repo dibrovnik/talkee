@@ -21,6 +21,7 @@ pub struct PreparedMediaChunk {
     pub mime_type: String,
     pub size_bytes: u64,
     pub start_offset_seconds: f64,
+    pub duration_seconds: Option<f64>,
 }
 
 pub struct PreparedMediaChunks {

@@ -15,10 +15,13 @@ import {
   IconTrash,
   IconX,
 } from "../../../../lib/icons";
+import { selectedLocalLlmModelId } from "../../../../lib/localLlmSelection";
 import {
   apiModelModeSettingsPatch,
+  apiTextModelSettingsPatch,
   localModelModeSettingsPatch,
   resolveProcessingMode,
+  resolveTextProcessingMode,
 } from "../../../../lib/modelMode";
 import {
   hasVerifiedRealtimeCapability,
@@ -37,17 +40,19 @@ import { RealtimeTranslationModels } from "../RealtimeTranslationModels";
 import {
   type AdapterTestStatus,
   API_ADAPTER_DESCRIPTION_KEYS,
-  API_ADAPTERS,
   type ApiAdapterId,
   type ApiAdapterOption,
+  apiAdapterById,
+  apiAdaptersForDisplay,
   CUSTOM_API_MODEL_VALUE,
   LOCAL_MODEL_DESCRIPTION_KEYS,
-  LOCAL_MODEL_OPTIONS,
   LOCAL_OTHER_COMPONENTS,
   LOCAL_RUNTIME_ENDPOINTS,
   LOCAL_STT_PRESET_MODEL,
   type LocalModelOption,
   type LocalOtherComponent,
+  localModelOptionForModel,
+  localSttOptionsForDisplay,
   type ModelMode,
 } from "../settingsTabsTypes";
 import { useSettingsTabsState } from "../useSettingsTabsState";
@@ -64,12 +69,14 @@ export function ModelsTab(): ReactElement | null {
     t,
     settings,
     update,
-    modelModeView,
-    setModelModeView,
-    localModelKind,
-    setLocalModelKind,
-    apiModelKind,
-    setApiModelKind,
+    sttModeView,
+    setSttModeView,
+    textModeView,
+    setTextModeView,
+    localRecognitionKind,
+    setLocalRecognitionKind,
+    apiRecognitionKind,
+    setApiRecognitionKind,
     expandedApiAdapter,
     setExpandedApiAdapter,
     expandedLocalModel,
@@ -99,11 +106,18 @@ export function ModelsTab(): ReactElement | null {
 
   if (!settings) return null;
 
-  const activeModelMode: ModelMode = resolveProcessingMode(settings);
-  const visibleModelMode = modelModeView ?? activeModelMode;
-  const isApiMode = visibleModelMode === "api";
-  const isLocalMode = visibleModelMode === "local";
+  // Recognition follows the STT endpoint, text processing follows the text
+  // endpoint. Both are switched independently and viewing a category never
+  // rewrites the active configuration.
+  const activeSttMode: ModelMode = resolveProcessingMode(settings);
+  const visibleSttMode = sttModeView ?? activeSttMode;
+  const isSttApiMode = visibleSttMode === "api";
+  const isSttLocalMode = visibleSttMode === "local";
+  const activeTextMode: ModelMode = resolveTextProcessingMode(settings);
+  const visibleTextMode = textModeView ?? activeTextMode;
+  const isTextApiMode = visibleTextMode === "api";
   const selectedApiAdapterId = (settings.selectedApiAdapter || "openai") as ApiAdapterId;
+  const visibleApiAdapters = apiAdaptersForDisplay(selectedApiAdapterId);
   // In Local mode a local text (LLM) model is "selected" once llmEndpoint points
   // at a local runtime. Without it, transcription works but summarization can't.
   const localTextModelSelected = /127\.0\.0\.1|localhost/i.test(settings.llmEndpoint || "");
@@ -115,7 +129,27 @@ export function ModelsTab(): ReactElement | null {
   const localSttTargetModel =
     (settings.whisperModel || LOCAL_STT_PRESET_MODEL).trim() || LOCAL_STT_PRESET_MODEL;
   const localInstalledModelSet = new Set(localInstalledModels);
+  const localDownloadedModelIds = Object.entries(settings.localModels || {})
+    .filter(([, state]) => state?.status === "downloaded")
+    .map(([modelId]) => modelId);
+  // Curated suggestions plus anything installed or selected earlier, so a model
+  // that left the recommendation list does not disappear from the interface.
+  const visibleLocalModels = localSttOptionsForDisplay({
+    installedModelIds: localInstalledModels,
+    downloadedModelIds: localDownloadedModelIds,
+    selectedModel: localSttTargetModel,
+  });
   const localModelsDir = (settings.localModelsDir || "").trim();
+  const activeSttModelLabel =
+    activeSttMode === "local"
+      ? localModelOptionForModel(settings.whisperModel)?.name || localSttTargetModel
+      : apiAdapterById(settings.selectedApiAdapter)?.name ||
+        (settings.whisperModel || "").trim() ||
+        "API";
+  const activeTextModelLabel =
+    activeTextMode === "local"
+      ? selectedLocalLlmModelId(settings) || (settings.llmModel || "").trim()
+      : (settings.llmModel || "").trim() || "API";
   const modeOptions: Array<{
     id: ModelMode;
     label: string;
@@ -128,6 +162,14 @@ export function ModelsTab(): ReactElement | null {
       id: "local",
       label: t("models.mode.local"),
     },
+  ];
+  const textModeOptions: Array<{
+    id: ModelMode;
+    label: string;
+    needsAttention?: boolean;
+  }> = [
+    { id: "api", label: "API", needsAttention: !apiTextModelConfigured },
+    { id: "local", label: t("models.mode.local"), needsAttention: !localTextModelSelected },
   ];
 
   const resetTestState = () => {
@@ -171,7 +213,7 @@ export function ModelsTab(): ReactElement | null {
   };
 
   const isApiAdapterSelected = (adapter: ApiAdapterOption) =>
-    activeModelMode === "api" && selectedApiAdapterId === adapter.id;
+    activeSttMode === "api" && selectedApiAdapterId === adapter.id;
 
   const getApiAdapterValues = (adapter: ApiAdapterOption) => {
     if (isApiAdapterSelected(adapter)) {
@@ -512,7 +554,7 @@ export function ModelsTab(): ReactElement | null {
   };
 
   const buildActiveApiAdapterSnapshot = (): Partial<AppSettings> => {
-    if (activeModelMode !== "api") {
+    if (activeSttMode !== "api") {
       return {};
     }
 
@@ -559,9 +601,6 @@ export function ModelsTab(): ReactElement | null {
       whisperApiKey: "",
       whisperEndpoint: endpoint,
       whisperModel: model,
-      llmApiKey: "",
-      llmEndpoint: "",
-      llmModel: "none",
       apiAdapters: {
         ...(settings.apiAdapters || {}),
         [adapter.id]: {
@@ -578,26 +617,34 @@ export function ModelsTab(): ReactElement | null {
         },
       },
     });
-    setModelModeView("api");
+    setSttModeView("api");
     resetInstallState();
   };
 
-  const handleModeChange = (mode: ModelMode) => {
-    if (mode === visibleModelMode) {
+  // Only the recognition view changes here: the text (LLM) endpoint, model and
+  // key are owned by the text-processing section and are never touched.
+  const handleSttModeChange = (mode: ModelMode) => {
+    if (mode === visibleSttMode) {
       return;
     }
 
-    setModelModeView(mode);
+    setSttModeView(mode);
     resetTestState();
     resetInstallState();
   };
 
+  const handleTextModeChange = (mode: ModelMode) => {
+    if (mode === visibleTextMode) {
+      return;
+    }
+
+    setTextModeView(mode);
+  };
+
   // Explicit "use this mode" commit for the API / Local segments. The recognition
-  // and text model share the same backend flag, so committing the mode here is the
-  // single source of truth; the specific adapter / model is still picked below.
+  // and text model are independent, so committing one never rewrites the other.
   const handleSelectApiMode = () => {
-    const adapter =
-      API_ADAPTERS.find((candidate) => candidate.id === selectedApiAdapterId) || API_ADAPTERS[0];
+    const adapter = apiAdapterById(selectedApiAdapterId) || visibleApiAdapters[0];
     const values = getApiAdapterValues(adapter);
     update(
       apiModelModeSettingsPatch({
@@ -607,23 +654,34 @@ export function ModelsTab(): ReactElement | null {
         model: values.model,
       }),
     );
-    setModelModeView("api");
+    setSttModeView("api");
     resetTestState();
     resetInstallState();
   };
 
+  /** Commit the API text-processing configuration (text fields only). */
+  const handleSelectTextApiMode = () => {
+    update(
+      apiTextModelSettingsPatch({
+        endpoint: settings.llmEndpoint,
+        model: settings.llmModel,
+      }),
+    );
+    setTextModeView("api");
+  };
+
   const handleSelectLocalMode = () => {
     const preferredModel =
-      LOCAL_MODEL_OPTIONS.find(
+      visibleLocalModels.find(
         (model) => model.purpose !== "diarization" && localInstalledModelSet.has(model.model),
       ) ||
-      LOCAL_MODEL_OPTIONS.find(
+      visibleLocalModels.find(
         (model) =>
           model.purpose !== "diarization" &&
           settings.localModels?.[model.id]?.status === "downloaded",
       ) ||
-      LOCAL_MODEL_OPTIONS.find((model) => model.model === LOCAL_STT_PRESET_MODEL) ||
-      LOCAL_MODEL_OPTIONS[0];
+      visibleLocalModels.find((model) => model.model === LOCAL_STT_PRESET_MODEL) ||
+      visibleLocalModels[0];
 
     update(
       localModelModeSettingsPatch(
@@ -634,13 +692,18 @@ export function ModelsTab(): ReactElement | null {
         buildActiveApiAdapterSnapshot(),
       ),
     );
-    setModelModeView("local");
+    setSttModeView("local");
     resetTestState();
     resetInstallState();
   };
 
-  const renderModeCommitRow = (mode: "api" | "local") => {
-    const isActive = activeModelMode === mode;
+  const renderModeCommitRow = (
+    mode: ModelMode,
+    activeMode: ModelMode,
+    activeLabel: string,
+    onSelect?: () => void,
+  ) => {
+    const isActive = activeMode === mode;
     const modeLabel = mode === "api" ? "API" : t("models.mode.local");
     return (
       <div className="ui-model-card__notice ui-model-card__actions">
@@ -651,18 +714,18 @@ export function ModelsTab(): ReactElement | null {
           {isActive && <IconCheck size={14} stroke={2.5} />}
           <span>
             {isActive
-              ? t("models.modeCommit.active")
+              ? t("models.modeCommit.activeModel", { model: activeLabel })
               : t("models.modeCommit.label", { mode: modeLabel })}
           </span>
         </div>
-        {!isActive && (
-          <Button
-            variant="primary"
-            onClick={mode === "api" ? handleSelectApiMode : handleSelectLocalMode}
-          >
-            {t("models.modeCommit.select")}
-          </Button>
-        )}
+        {!isActive &&
+          (onSelect ? (
+            <Button variant="primary" onClick={onSelect}>
+              {t("models.modeCommit.select")}
+            </Button>
+          ) : (
+            <div className="ui-model-card__hint">{t("models.modeCommit.selectLocalHint")}</div>
+          ))}
       </div>
     );
   };
@@ -697,7 +760,7 @@ export function ModelsTab(): ReactElement | null {
     const isRuntimeReady = model.runtimeReady === true;
     const isInstalled = isRuntimeReady && localInstalledModelSet.has(model.model);
     const isSelected =
-      activeModelMode === "local" && localSttTargetModel === model.model && isInstalled;
+      activeSttMode === "local" && localSttTargetModel === model.model && isInstalled;
 
     if (!isRuntimeReady) {
       const runtimeName = model.runtimeKind === "diarization" ? "Diarization" : "transcribe.cpp";
@@ -1010,7 +1073,7 @@ export function ModelsTab(): ReactElement | null {
       whisperEndpoint: endpointOverride || getLocalModelEndpoint(model),
       whisperModel: model.model,
     });
-    setModelModeView("local");
+    setSttModeView("local");
     resetTestState();
     resetInstallState();
 
@@ -1279,6 +1342,7 @@ export function ModelsTab(): ReactElement | null {
 
   return (
     <div className="ui-tab">
+      {/* ── Recognition (STT) ── independently switchable ── */}
       <div>
         <div className="ui-page-header">
           <div className="ui-page-header__title">{t("models.modeSection.title")}</div>
@@ -1286,40 +1350,38 @@ export function ModelsTab(): ReactElement | null {
         </div>
 
         <SegmentedControl
-          value={visibleModelMode}
+          value={visibleSttMode}
           options={modeOptions.map(({ id, label }) => ({ value: id, label }))}
-          onChange={handleModeChange}
+          onChange={handleSttModeChange}
           ariaLabel={t("models.modeSection.title")}
         />
+        <div className="ui-model-card__hint">
+          {t("models.modeSection.active", { model: activeSttModelLabel })}
+        </div>
       </div>
 
-      {isApiMode && (
+      {isSttApiMode && (
         <div className="ui-tab">
           <SegmentedControl
-            value={apiModelKind}
+            value={apiRecognitionKind}
             options={[
               { value: "transcription", label: t("models.local.tabTranscription") },
-              {
-                value: "text",
-                label: t("models.local.tabText"),
-                needsAttention: !apiTextModelConfigured,
-              },
               { value: "translation", label: t("models.local.tabTranslation") },
             ]}
-            onChange={setApiModelKind}
+            onChange={setApiRecognitionKind}
             ariaLabel={t("models.apiSection.title")}
           />
 
-          {renderModeCommitRow("api")}
+          {renderModeCommitRow("api", activeSttMode, activeSttModelLabel, handleSelectApiMode)}
 
-          {apiModelKind === "transcription" && (
+          {apiRecognitionKind === "transcription" && (
             <>
               <div className="ui-page-header">
                 <div className="ui-page-header__title">{t("models.apiSection.title")}</div>
                 <div className="ui-page-header__desc">{t("models.apiSection.desc")}</div>
               </div>
               <div className="ui-tab">
-                {API_ADAPTERS.map((adapter) => {
+                {visibleApiAdapters.map((adapter) => {
                   const isExpanded = expandedApiAdapter === adapter.id;
                   const adapterValues = getApiAdapterValues(adapter);
                   const adapterStatus = getAdapterStatus(
@@ -1377,6 +1439,11 @@ export function ModelsTab(): ReactElement | null {
                                 model: adapter.recommendedModel,
                               })}
                             </div>
+                            {adapter.legacy && (
+                              <div className="ui-model-card__hint">
+                                {t("models.adapter.legacyHint")}
+                              </div>
+                            )}
                             {streamingVerified &&
                               (selectedModelOption?.supportsStreaming || !selectedModelOption) && (
                                 <div className="ui-model-stats">
@@ -1553,33 +1620,27 @@ export function ModelsTab(): ReactElement | null {
             </>
           )}
 
-          {apiModelKind === "text" && <TextModelCard settings={settings} update={update} />}
-          {apiModelKind === "translation" && (
+          {apiRecognitionKind === "translation" && (
             <RealtimeTranslationModels settings={settings} update={update} />
           )}
         </div>
       )}
 
-      {isLocalMode && (
+      {isSttLocalMode && (
         <div className="ui-tab">
           <SegmentedControl
-            value={localModelKind}
+            value={localRecognitionKind}
             options={[
               { value: "transcription", label: t("models.local.tabTranscription") },
-              {
-                value: "text",
-                label: t("models.local.tabText"),
-                needsAttention: !localTextModelSelected,
-              },
-              { value: "other", label: t("models.local.tabOther") },
+              { value: "translation", label: t("models.local.tabOther") },
             ]}
-            onChange={setLocalModelKind}
+            onChange={setLocalRecognitionKind}
             ariaLabel={t("models.local.sectionTitle")}
           />
 
-          {renderModeCommitRow("local")}
+          {renderModeCommitRow("local", activeSttMode, activeSttModelLabel, handleSelectLocalMode)}
 
-          {localModelKind === "transcription" && (
+          {localRecognitionKind === "transcription" && (
             <>
               <div className="ui-page-header">
                 <div className="ui-page-header__title">{t("models.local.sectionTitle")}</div>
@@ -1587,7 +1648,7 @@ export function ModelsTab(): ReactElement | null {
               </div>
 
               <div className="ui-tab">
-                {LOCAL_MODEL_OPTIONS.map((model) => {
+                {visibleLocalModels.map((model) => {
                   const isExpanded = expandedLocalModel === model.id;
                   const modelStatus = getLocalModelStatus(model);
                   const modelActionState = localModelActionStates[model.id];
@@ -1642,15 +1703,20 @@ export function ModelsTab(): ReactElement | null {
                           : undefined,
                       }}
                       notice={
-                        modelStatus.message &&
-                        modelStatus.status !== "installing" &&
-                        modelStatus.status !== "installed" &&
-                        modelStatus.status !== "selected"
+                        model.legacy && modelStatus.status !== "error"
                           ? {
-                              message: modelStatus.message,
-                              tone: modelStatus.status === "error" ? "error" : "neutral",
+                              message: t("models.local.legacyHint"),
+                              tone: "neutral",
                             }
-                          : undefined
+                          : modelStatus.message &&
+                              modelStatus.status !== "installing" &&
+                              modelStatus.status !== "installed" &&
+                              modelStatus.status !== "selected"
+                            ? {
+                                message: modelStatus.message,
+                                tone: modelStatus.status === "error" ? "error" : "neutral",
+                              }
+                            : undefined
                       }
                       progress={
                         modelStatus.status === "installing"
@@ -1764,19 +1830,7 @@ export function ModelsTab(): ReactElement | null {
             </>
           )}
 
-          {localModelKind === "text" && (
-            <Suspense
-              fallback={
-                <div className="ui-model-card__notice ui-form-feedback">
-                  {t("models.download.loading")}
-                </div>
-              }
-            >
-              <LocalLlmModels settings={settings} update={update} />
-            </Suspense>
-          )}
-
-          {localModelKind === "other" && (
+          {localRecognitionKind === "translation" && (
             <div className="ui-tab">
               <div className="ui-page-header">
                 <div className="ui-page-header__title">{t("models.localOther.sectionTitle")}</div>
@@ -1907,6 +1961,49 @@ export function ModelsTab(): ReactElement | null {
             </div>
           )}
         </div>
+      )}
+
+      {/* ── Text processing (LLM) ── switched independently of recognition ── */}
+      <div>
+        <div className="ui-page-header">
+          <div className="ui-page-header__title">{t("models.textSection.title")}</div>
+          <div className="ui-page-header__desc">{t("models.textSection.desc")}</div>
+        </div>
+
+        <SegmentedControl
+          value={visibleTextMode}
+          options={textModeOptions.map(({ id, label, needsAttention }) => ({
+            value: id,
+            label,
+            needsAttention,
+          }))}
+          onChange={handleTextModeChange}
+          ariaLabel={t("models.textSection.title")}
+        />
+        <div className="ui-model-card__hint">
+          {t("models.modeSection.active", { model: activeTextModelLabel })}
+        </div>
+      </div>
+
+      {renderModeCommitRow(
+        visibleTextMode,
+        activeTextMode,
+        activeTextModelLabel,
+        visibleTextMode === "api" ? handleSelectTextApiMode : undefined,
+      )}
+
+      {isTextApiMode && <TextModelCard settings={settings} update={update} />}
+
+      {!isTextApiMode && (
+        <Suspense
+          fallback={
+            <div className="ui-model-card__notice ui-form-feedback">
+              {t("models.download.loading")}
+            </div>
+          }
+        >
+          <LocalLlmModels settings={settings} update={update} />
+        </Suspense>
       )}
     </div>
   );

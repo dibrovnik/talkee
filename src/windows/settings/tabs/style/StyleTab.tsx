@@ -57,6 +57,7 @@ export function StyleTab(): ReactElement | null {
       <FormSection footer={t("cleanup.localHint")}>
         <FormRow
           label={t("cleanup.title")}
+          description={t("cleanup.hint")}
           control={
             <Toggle
               checked={settings.cleanupEnabled}
@@ -85,15 +86,18 @@ export function StyleTab(): ReactElement | null {
           </div>
         )}
       </FormSection>
-      <SegmentedControl
-        value={styleTabView}
-        options={[
-          { value: "style", label: t("models.styleTab.style") },
-          { value: "prompts", label: t("models.styleTab.prompts") },
-        ]}
-        onChange={setStyleTabView}
-        ariaLabel={t("models.textProcessing.title")}
-      />
+
+      <div className="ui-view-switch">
+        <SegmentedControl
+          value={styleTabView}
+          options={[
+            { value: "style", label: t("models.styleTab.style") },
+            { value: "prompts", label: t("models.styleTab.prompts") },
+          ]}
+          onChange={setStyleTabView}
+          ariaLabel={t("models.textProcessing.title")}
+        />
+      </div>
 
       {styleTabView === "style" && (
         <OptionList ariaLabel={t("models.styleTab.style")}>

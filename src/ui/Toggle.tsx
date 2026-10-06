@@ -1,3 +1,4 @@
+import * as Switch from "@radix-ui/react-switch";
 import type { ReactElement } from "react";
 
 export type ToggleSize = "regular" | "large";
@@ -31,14 +32,12 @@ export function Toggle({
     .join(" ");
 
   return (
-    <button
+    <Switch.Root
       id={id}
-      type="button"
-      role="switch"
-      aria-checked={checked}
+      checked={checked}
+      onCheckedChange={onChange}
       aria-label={ariaLabel}
       disabled={disabled}
-      onClick={() => onChange(!checked)}
       className={classes}
     />
   );

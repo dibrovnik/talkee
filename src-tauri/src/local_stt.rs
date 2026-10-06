@@ -1427,4 +1427,59 @@ mod tests {
         );
         assert_eq!(model_download_retry_delay(3), None);
     }
+
+    // The settings catalog now offers only the three Russian suggestions, but a
+    // value saved earlier (runtime id, GGUF alias or Hugging Face id) must keep
+    // resolving so the already installed file and the user's choice survive.
+    #[test]
+    fn ids_dropped_from_the_visible_catalog_still_resolve() {
+        let cases = [
+            ("whisper-small", "whisper-small"),
+            ("whisper-small-q4_k.gguf", "whisper-small"),
+            ("whisper-large-v3", "whisper-large-v3"),
+            ("whisper-medium", "whisper-medium"),
+            ("whisper-base", "whisper-base"),
+            ("whisper-tiny", "whisper-tiny"),
+            ("parakeet-tdt-06b-v3", "nvidia/parakeet-tdt-0.6b-v3"),
+            ("nvidia/parakeet-tdt-0.6b-v2", "nvidia/parakeet-tdt-0.6b-v2"),
+            (
+                "nemotron-speech-streaming-en-06b",
+                "nvidia/nemotron-speech-streaming-en-0.6b",
+            ),
+            ("moonshine-streaming-tiny", "moonshine-streaming-tiny"),
+            ("moonshine-streaming-small", "moonshine-streaming-small"),
+            ("Qwen/Qwen3-ASR-0.6B", "Qwen/Qwen3-ASR-0.6B"),
+        ];
+
+        for (requested, expected_id) in cases {
+            let model = local_model_info(requested)
+                .unwrap_or_else(|| panic!("{requested} must stay supported by the runtime"));
+            assert_eq!(
+                model.id, expected_id,
+                "wrong model resolved for {requested}"
+            );
+        }
+    }
+
+    #[test]
+    fn curated_catalog_ids_and_aliases_still_resolve() {
+        let cases = [
+            (
+                "nemotron-35-asr-streaming-06b",
+                "nvidia/nemotron-3.5-asr-streaming-0.6b",
+            ),
+            ("gigaam-v3-e2e-rnnt", "ai-sage/GigaAM-v3"),
+            ("gigaam-v3-e2e-rnnt-Q4_K_M.gguf", "ai-sage/GigaAM-v3"),
+            ("whisper-large-v3-turbo", "whisper-large-v3-turbo"),
+        ];
+
+        for (requested, expected_id) in cases {
+            let model = local_model_info(requested)
+                .unwrap_or_else(|| panic!("{requested} must stay supported by the runtime"));
+            assert_eq!(
+                model.id, expected_id,
+                "wrong model resolved for {requested}"
+            );
+        }
+    }
 }

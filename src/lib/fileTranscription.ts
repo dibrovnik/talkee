@@ -1,12 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { DICTATION_STREAM_UPDATE_EVENT, type DictationStreamUpdatePayload } from "./hotkeyEvents";
 import { tn } from "./i18n";
 import { logError, logInfo } from "./logger";
-import { beginProcessing, finishProcessing } from "./processingControl";
+import { createDraftThrottleState, planDraftUpdate } from "./partialDraftThrottle";
 import type { AppSettings, HistoryEntry } from "./store";
 import { formatErrorMessage } from "./utils";
-
-const fileInterruptedMessage = (): string => tn("fileTranscription.interrupted");
 
 const TRANSCRIPTION_MAX_BYTES = 25 * 1024 * 1024;
 const INPUT_MAX_BYTES = 200 * 1024 * 1024;
@@ -65,6 +64,16 @@ export interface FileTranscriptionProgress {
   currentChunk: number;
   totalChunks: number;
   message: string;
+  completedChunks?: number;
+  completedAudioSeconds?: number;
+  totalAudioSeconds?: number;
+  transcriptionElapsedSeconds?: number;
+  /**
+   * Live draft of the chunk currently being recognised, only ever filled from
+   * real runtime streaming events. It is cleared when the chunk completes so
+   * the finished text is never shown twice.
+   */
+  partialText?: string;
 }
 
 export interface FileTranscriptionResult {
@@ -176,6 +185,10 @@ interface FileTranscriptionProgressPayload {
   current_chunk: number;
   total_chunks: number;
   message: string;
+  completed_chunks?: number;
+  completed_audio_seconds?: number;
+  total_audio_seconds?: number;
+  transcription_elapsed_seconds?: number;
 }
 
 interface FilePathRequestSettings {
@@ -323,8 +336,9 @@ export function getFileTranscriptionPercent(
   if (status === "assembling") return 96;
 
   if (status === "transcribing" && progress && progress.totalChunks > 0) {
-    const currentChunk = Math.max(0, Math.min(progress.currentChunk, progress.totalChunks));
-    const chunkProgress = currentChunk / progress.totalChunks;
+    const completedChunks = progress.completedChunks ?? Math.max(0, progress.currentChunk - 1);
+    const completed = Math.max(0, Math.min(completedChunks, progress.totalChunks));
+    const chunkProgress = completed / progress.totalChunks;
     return Math.max(58, Math.min(94, Math.round(58 + chunkProgress * 36)));
   }
 
@@ -349,6 +363,12 @@ export function toFileTranscriptionErrorMessage(
 
   if (normalized.includes("ffmpeg") || normalized.includes("медиаконвертер")) {
     return tn("fileTranscription.errMediaConverterUnavailable");
+  }
+
+  // Rust reports a cooperatively cancelled request with its own message; show
+  // the localized "stopped, you can retry" wording instead of the raw text.
+  if (normalized.includes("обработка прервана") || normalized.includes("processing interrupted")) {
+    return tn("fileTranscription.interrupted");
   }
 
   if (normalized.includes("больше 25") || normalized.includes("too large")) {
@@ -561,6 +581,7 @@ export async function transcribeFilePathOnly({
   onProgress,
   speakerDiarization = false,
   identifyFirstSpeakerAsUser = false,
+  requestId: requestedId,
 }: {
   filePath: string;
   settings: AppSettings;
@@ -568,9 +589,18 @@ export async function transcribeFilePathOnly({
   onProgress?: (progress: FileTranscriptionProgress) => void;
   speakerDiarization?: boolean;
   identifyFirstSpeakerAsUser?: boolean;
+  /** Owner-supplied id so the same request can be cancelled from Rust. */
+  requestId?: string;
 }): Promise<FileTranscriptionResult> {
-  const requestId = crypto.randomUUID();
+  const requestId = requestedId?.trim() || crypto.randomUUID();
   const fileName = fileNameFromPath(filePath);
+
+  let lastProgress: FileTranscriptionProgress = {
+    status: "preparing",
+    currentChunk: 0,
+    totalChunks: 0,
+    message: "",
+  };
 
   const unlisten = await listen<FileTranscriptionProgressPayload>(
     FILE_TRANSCRIPTION_PROGRESS_EVENT,
@@ -582,10 +612,69 @@ export async function transcribeFilePathOnly({
         currentChunk: event.payload.current_chunk || 0,
         totalChunks: event.payload.total_chunks || 0,
         message: event.payload.message || "",
+        completedChunks: event.payload.completed_chunks,
+        completedAudioSeconds: event.payload.completed_audio_seconds,
+        totalAudioSeconds: event.payload.total_audio_seconds,
+        transcriptionElapsedSeconds: event.payload.transcription_elapsed_seconds,
+        // A real progress event always replaces (and therefore clears) the draft.
+        partialText: undefined,
       };
 
+      lastProgress = progress;
       onStatus?.(progress.status);
       onProgress?.(progress);
+    },
+  );
+
+  // Nemotron's managed runtime streams while it recognises a chunk. The draft is
+  // shown only for real events addressed to this request, and it disappears as
+  // soon as the authoritative chunk result arrives, so finished text is never
+  // duplicated.
+  //
+  // The runtime emits partials per token; forwarding every one of them would
+  // flood the job snapshot and the settings webview, so UI updates are throttled
+  // by the shared pure rule (see partialDraftThrottle.ts).
+  const draftThrottle = createDraftThrottleState();
+  let pendingDraftText: string | undefined;
+  let pendingDraftTimer: number | null = null;
+  const clearPendingDraft = (): void => {
+    if (pendingDraftTimer !== null) {
+      window.clearTimeout(pendingDraftTimer);
+      pendingDraftTimer = null;
+    }
+    draftThrottle.pendingAt = null;
+  };
+  const emitDraft = (partialText: string | undefined): void => {
+    onProgress?.({ ...lastProgress, partialText });
+  };
+  const applyDraft = (partialText: string | undefined, now: number): void => {
+    const decision = planDraftUpdate(draftThrottle, now, partialText !== undefined);
+    if (decision.cancelPending) clearPendingDraft();
+    if (decision.scheduleAt !== null) {
+      draftThrottle.pendingAt = decision.scheduleAt;
+      pendingDraftTimer = window.setTimeout(
+        () => {
+          pendingDraftTimer = null;
+          draftThrottle.pendingAt = null;
+          draftThrottle.lastEmitAt = Date.now();
+          emitDraft(pendingDraftText);
+        },
+        Math.max(0, decision.scheduleAt - now),
+      );
+      return;
+    }
+    if (!decision.emitNow) return;
+    draftThrottle.lastEmitAt = now;
+    emitDraft(partialText);
+  };
+  const unlistenStream = await listen<DictationStreamUpdatePayload>(
+    DICTATION_STREAM_UPDATE_EVENT,
+    (event) => {
+      if (event.payload.requestId !== requestId || event.payload.status === "started") return;
+      const draft = event.payload.text.trim();
+      const next = event.payload.status === "partial" && draft ? draft : undefined;
+      pendingDraftText = next;
+      applyDraft(next, Date.now());
     },
   );
 
@@ -643,7 +732,9 @@ export async function transcribeFilePathOnly({
     );
     throw error;
   } finally {
+    clearPendingDraft();
     unlisten();
+    unlistenStream();
   }
 }
 
@@ -656,64 +747,34 @@ export async function retryFileHistoryEntry(
   entry: HistoryEntry,
   settings: AppSettings,
 ): Promise<HistoryEntry> {
-  if (!entry.filePath) {
-    throw new Error(tn("fileTranscription.errNoSavedFile"));
-  }
-
-  const startedAt = Date.now();
-  const handle = await beginProcessing(entry, "update");
-
+  if (!entry.filePath) throw new Error(tn("fileTranscription.errNoSavedFile"));
+  const { subscribeFileJobs, startFileJob } = await import("./fileTranscriptionJobClient");
+  const { getHistoryEntry } = await import("./store");
+  const jobId = crypto.randomUUID();
+  let resolve!: () => void;
+  let reject!: (error: Error) => void;
+  const completed = new Promise<void>((done, fail) => {
+    resolve = done;
+    reject = fail;
+  });
+  const dispose = await subscribeFileJobs((jobs) => {
+    const job = jobs.find((item) => item.request.jobId === jobId);
+    if (!job) return;
+    if (job.state === "completed" || job.state === "interrupted") resolve();
+    else if (job.state === "failed")
+      reject(new Error(job.error || tn("fileTranscription.interrupted")));
+  });
   try {
-    const result = await transcribeFilePathOnly({
+    await startFileJob({
+      jobId,
       filePath: entry.filePath,
-      settings,
-      speakerDiarization: settings.fileSpeakerDiarization === true,
+      retryEntryId: entry.id,
+      mode: entry.mode === "speakers" || settings.fileSpeakerDiarization ? "speakers" : "plain",
       identifyFirstSpeakerAsUser: true,
     });
-
-    if (handle.isCancelled()) {
-      const interrupted: HistoryEntry = {
-        ...entry,
-        status: "interrupted",
-        errorMessage: fileInterruptedMessage(),
-      };
-      await finishProcessing(interrupted);
-      return interrupted;
-    }
-
-    const updated: HistoryEntry = {
-      ...entry,
-      raw: result.text,
-      cleaned: result.text,
-      status: "completed",
-      errorMessage: undefined,
-      processingTime: Date.now() - startedAt,
-      mode: result.mode,
-      speakers: result.speakers,
-      segments: result.segments,
-    };
-    await finishProcessing(updated);
-    return updated;
-  } catch (error) {
-    if (handle.isCancelled()) {
-      const interrupted: HistoryEntry = {
-        ...entry,
-        status: "interrupted",
-        errorMessage: fileInterruptedMessage(),
-      };
-      await finishProcessing(interrupted);
-      return interrupted;
-    }
-
-    const message = formatErrorMessage(error);
-    void logError("WIDGET_FILE", `File retry failed: ${message}`);
-    const userFacingMessage = toFileTranscriptionErrorMessage(error, { settings });
-    const failed: HistoryEntry = {
-      ...entry,
-      status: "failed",
-      errorMessage: userFacingMessage,
-    };
-    await finishProcessing(failed);
-    throw new Error(userFacingMessage);
+    await completed;
+    return (await getHistoryEntry(entry.id)) || entry;
+  } finally {
+    dispose();
   }
 }

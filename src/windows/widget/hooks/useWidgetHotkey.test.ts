@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import { resolveHandyHotkeyIntent, resolveSelectionHotkeyAction } from "./useWidgetHotkey";
+import {
+  resolveHandyHotkeyIntent,
+  resolveRecordingHotkeyCleanup,
+  resolveSelectionHotkeyAction,
+} from "./useWidgetHotkey";
 
 describe("resolveHandyHotkeyIntent", () => {
   test("voice hotkey wins when selection hotkey accidentally matches it", () => {
@@ -47,4 +51,19 @@ describe("resolveSelectionHotkeyAction", () => {
   test("release without prior press is consumed", () => {
     expect(resolveSelectionHotkeyAction("Released", false)).toBe("consume");
   });
+});
+
+test("ordinary hotkey follows the toggle; cleanup hotkey forces on", () => {
+  expect(resolveRecordingHotkeyCleanup("voice")).toBeNull();
+  expect(resolveRecordingHotkeyCleanup("voice-cleanup")).toBe(true);
+});
+
+test("cleanup indicator captures the per-take choice and returns to global on idle", async () => {
+  const { resolveCleanupIndicator } = await import("./useWidgetController");
+  for (const global of [true, false])
+    for (const effective of [true, false]) {
+      expect(resolveCleanupIndicator("idle", global, effective)).toBe(global);
+      expect(resolveCleanupIndicator("recording", global, effective)).toBe(effective);
+      expect(resolveCleanupIndicator("processing", global, effective)).toBe(effective);
+    }
 });

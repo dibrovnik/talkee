@@ -837,6 +837,7 @@ export function DevChatTab({
       <div className="ui-chat__header">
         <div className="ui-chat__header-main">
           <h2 className="ui-page-header__title">{t("devChat.title")}</h2>
+          <div className="ui-page-header__desc">{t("devChat.subtitle")}</div>
         </div>
         <Button
           onClick={clear}

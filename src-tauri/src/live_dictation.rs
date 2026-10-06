@@ -224,10 +224,10 @@ pub fn start_live_dictation_session(
             } else {
                 run_remote_live_dictation_client(app, thread_request_id, req, provider, rx)
             };
-            if let Err(message) = &result {
+            if result.is_err() {
                 logger::log_error(
                     "LIVE_DICTATION",
-                    &format!("Live dictation session ended with error: {}", message),
+                    "Live dictation session ended with error: stage=stream",
                 );
             }
             thread_closed.store(true, Ordering::Relaxed);

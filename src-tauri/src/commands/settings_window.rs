@@ -9,6 +9,29 @@ const SETTINGS_NAVIGATE_EVENT: &str = "settings-navigate";
 #[cfg(debug_assertions)]
 const DEV_ONBOARDING_REQUEST_EVENT: &str = "dev-onboarding-request";
 
+/// Settings destinations the native side is allowed to deep-link to.
+///
+/// Kept in sync with `src/windows/settings/settingsNavigation.ts`; an unknown
+/// value falls back to the history tab instead of opening a blank page.
+const SETTINGS_TABS: [&str; 8] = [
+    "main",
+    "stats",
+    "file",
+    "interpreter",
+    "chat",
+    "settings",
+    "model",
+    "style",
+];
+
+fn resolve_settings_tab(tab: &str) -> &str {
+    SETTINGS_TABS
+        .iter()
+        .copied()
+        .find(|known| *known == tab)
+        .unwrap_or("main")
+}
+
 fn show_and_focus_window(win: &tauri::WebviewWindow) {
     dock::prepare_settings_window(win.app_handle());
     if let Err(err) = win.show() {
@@ -82,6 +105,7 @@ pub async fn open_settings_tab(
     tab: String,
     result_id: Option<String>,
 ) -> Result<(), String> {
+    let tab = resolve_settings_tab(&tab).to_string();
     if let Some(win) = app.get_webview_window("settings") {
         show_and_focus_window(&win);
         app.emit_to(
@@ -117,4 +141,19 @@ pub async fn open_dev_onboarding(app: AppHandle) -> Result<(), String> {
 
     create_settings_window(&app, "index.html?window=settings&onboarding=1")?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_settings_tab;
+
+    #[test]
+    fn known_tabs_pass_through_and_unknown_ones_fall_back() {
+        assert_eq!(resolve_settings_tab("stats"), "stats");
+        assert_eq!(resolve_settings_tab("main"), "main");
+        assert_eq!(resolve_settings_tab("file"), "file");
+        assert_eq!(resolve_settings_tab("ui"), "main");
+        assert_eq!(resolve_settings_tab(""), "main");
+        assert_eq!(resolve_settings_tab("../escape"), "main");
+    }
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ModelCardDisclosureButton } from "../../../../components/ModelCardDisclosureButton";
 import { useI18n } from "../../../../lib/i18n";
 import { IconBolt } from "../../../../lib/icons";
+import { resolveTextProcessingMode } from "../../../../lib/modelMode";
 import type { AppSettings } from "../../../../lib/store";
 import { Badge } from "../../../../ui/Badge";
 import { Button } from "../../../../ui/Button";
@@ -14,7 +15,10 @@ import { TextField } from "../../../../ui/TextField";
 import {
   type AdapterTestStatus,
   CUSTOM_API_MODEL_VALUE,
+  CUSTOM_TEXT_PRESET_VALUE,
   TEXT_MODEL_OPTIONS,
+  TEXT_MODEL_PRESETS,
+  type TextModelPreset,
 } from "../settingsTabsTypes";
 
 function TextModelCard({
@@ -34,10 +38,17 @@ function TextModelCard({
   const model = (settings.llmModel || "").trim();
   const apiKey = (settings.llmApiKey || settings.apiKey || "").trim();
   const isLocalEndpoint = /127\.0\.0\.1|localhost/i.test(endpoint);
+  // The text-processing mode is decided by the text endpoint alone: this card is
+  // the API branch and never inherits the recognition mode.
+  const apiTextActive = resolveTextProcessingMode(settings) === "api";
   const hasSelectedModel = Boolean(model) && model.toLowerCase() !== "none";
   const configured = hasSelectedModel && (isLocalEndpoint || Boolean(apiKey));
   const isKnownModel = TEXT_MODEL_OPTIONS.includes(settings.llmModel);
   const modelSelectValue = isKnownModel ? settings.llmModel : CUSTOM_API_MODEL_VALUE;
+  const activePreset = TEXT_MODEL_PRESETS.find(
+    (preset) => preset.endpoint === endpoint && preset.model === model,
+  );
+  const presetSelectValue = activePreset?.id ?? CUSTOM_TEXT_PRESET_VALUE;
   const statusLabel =
     testState.status === "testing"
       ? t("models.textModel.statusTesting")
@@ -57,6 +68,11 @@ function TextModelCard({
   const editField = (patch: Partial<AppSettings>) => {
     setTestState({ status: "idle", message: "" });
     update({ ...patch, llmLocalModelId: "" });
+  };
+  // Prefills the endpoint/model of a preset. The user's API key and any custom
+  // model stay as they are, and no request is sent from here.
+  const applyTextPreset = (preset: TextModelPreset) => {
+    editField({ llmEndpoint: preset.endpoint, llmModel: preset.model });
   };
   const testTextModel = async (): Promise<void> => {
     if (!hasSelectedModel) {
@@ -113,6 +129,9 @@ function TextModelCard({
           </div>
           <div className="ui-model-card__body">
             <div className="ui-model-card__desc">{t("models.textModel.desc")}</div>
+            {!apiTextActive && (
+              <div className="ui-model-card__hint">{t("models.textSection.apiInactiveHint")}</div>
+            )}
           </div>
           <ModelCardDisclosureButton
             expanded={expanded}
@@ -124,6 +143,34 @@ function TextModelCard({
 
       {expanded && (
         <div className="ui-model-card__detail">
+          <div className="ui-model-card__field">
+            <div className="ui-model-card__field-label">{t("models.textModel.presetLabel")}</div>
+            <div className="ui-model-card__field-control">
+              <PopUpButton
+                value={presetSelectValue}
+                options={[
+                  ...TEXT_MODEL_PRESETS.map((preset) => ({
+                    value: preset.id,
+                    label: preset.recommended
+                      ? `${preset.label} · ${t("models.local.recommendedBadge")}`
+                      : preset.label,
+                  })),
+                  {
+                    value: CUSTOM_TEXT_PRESET_VALUE,
+                    label: t("models.textModel.customPreset"),
+                  },
+                ]}
+                onChange={(value) => {
+                  const preset = TEXT_MODEL_PRESETS.find((candidate) => candidate.id === value);
+                  if (preset) applyTextPreset(preset);
+                }}
+                ariaLabel={t("models.textModel.presetLabel")}
+              />
+              {activePreset?.nonThinking && (
+                <div className="ui-model-card__hint">{t("models.textModel.nonThinkingHint")}</div>
+              )}
+            </div>
+          </div>
           <div className="ui-model-card__field">
             <div className="ui-model-card__field-label">{t("models.field.apiKey")}</div>
             <SecureField

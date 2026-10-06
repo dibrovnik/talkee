@@ -1,4 +1,5 @@
 mod errors;
+pub mod file_jobs;
 mod routing;
 
 use self::routing::{
@@ -21,11 +22,18 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
+static TEXT_HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+static LOCAL_TEXT_HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 static LONG_HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 static LOCAL_HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 static LOCAL_LONG_HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 const DICTATION_STREAM_UPDATE_EVENT: &str = "dictation-stream:update";
+
+/// Bounded budget for short interactive STT (dictation) requests.
+const BOUNDED_HTTP_TIMEOUT_SECS: u64 = 120;
+/// Budget for long file chunks, diarization and local model downloads.
+const LONG_HTTP_TIMEOUT_SECS: u64 = 1800;
 
 fn http_client() -> &'static reqwest::Client {
     HTTP_CLIENT.get_or_init(|| {
@@ -34,7 +42,7 @@ fn http_client() -> &'static reqwest::Client {
             // immediately without requiring an app restart.
             .pool_max_idle_per_host(0)
             .connect_timeout(Duration::from_secs(15))
-            .timeout(Duration::from_secs(120))
+            .timeout(Duration::from_secs(BOUNDED_HTTP_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new())
     })
@@ -45,7 +53,7 @@ fn long_http_client() -> &'static reqwest::Client {
         reqwest::Client::builder()
             .pool_max_idle_per_host(0)
             .connect_timeout(Duration::from_secs(15))
-            .timeout(Duration::from_secs(1800))
+            .timeout(Duration::from_secs(LONG_HTTP_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new())
     })
@@ -58,7 +66,7 @@ fn local_http_client() -> &'static reqwest::Client {
             .no_proxy()
             .pool_max_idle_per_host(0)
             .connect_timeout(Duration::from_secs(15))
-            .timeout(Duration::from_secs(120))
+            .timeout(Duration::from_secs(BOUNDED_HTTP_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new())
     })
@@ -70,10 +78,81 @@ fn local_long_http_client() -> &'static reqwest::Client {
             .no_proxy()
             .pool_max_idle_per_host(0)
             .connect_timeout(Duration::from_secs(15))
-            .timeout(Duration::from_secs(1800))
+            .timeout(Duration::from_secs(LONG_HTTP_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| reqwest::Client::new())
     })
+}
+
+/// Only text processing reuses connections; audio clients retain their VPN policy.
+fn text_http_client(is_local: bool) -> &'static reqwest::Client {
+    let slot = if is_local {
+        &LOCAL_TEXT_HTTP_CLIENT
+    } else {
+        &TEXT_HTTP_CLIENT
+    };
+    slot.get_or_init(|| {
+        let mut builder = reqwest::Client::builder()
+            .pool_max_idle_per_host(1)
+            .pool_idle_timeout(Duration::from_secs(30))
+            .retry(reqwest::retry::never())
+            .connect_timeout(Duration::from_secs(15))
+            .timeout(Duration::from_secs(if is_local {
+                LONG_HTTP_TIMEOUT_SECS
+            } else {
+                BOUNDED_HTTP_TIMEOUT_SECS
+            }));
+        if is_local {
+            builder = builder.no_proxy();
+        }
+        builder
+            .build()
+            .expect("valid text HTTP client configuration")
+    })
+}
+
+/// Which HTTP client family an STT request may use.
+///
+/// Long file chunks need the 1800-second clients, while a short dictation keeps
+/// the bounded 120-second client so a hung endpoint still fails promptly. The
+/// long clients are never reused for dictation cleanup.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SttClientProfile {
+    /// Short interactive audio: the bounded client.
+    Bounded,
+    /// Long file chunks: the long client for the matching endpoint family.
+    Long,
+}
+
+/// Per-call STT options that differ between dictation and a file chunk.
+#[derive(Clone, Copy, Debug)]
+struct SttRequestOptions {
+    /// Speaker diarization needs timed segments from the runtime.
+    require_segments: bool,
+    /// Offset added to every returned segment inside a chunked file job.
+    segment_offset_seconds: f64,
+    /// Which HTTP client family may serve this request.
+    client_profile: SttClientProfile,
+}
+
+/// Dictation keeps the bounded budget; file chunks get the long one.
+pub fn stt_client_profile(is_file_chunk: bool) -> SttClientProfile {
+    if is_file_chunk {
+        SttClientProfile::Long
+    } else {
+        SttClientProfile::Bounded
+    }
+}
+
+impl SttClientProfile {
+    fn client(self, is_local_endpoint: bool) -> reqwest::Client {
+        match (self, is_local_endpoint) {
+            (SttClientProfile::Long, true) => (*local_long_http_client()).clone(),
+            (SttClientProfile::Long, false) => (*long_http_client()).clone(),
+            (SttClientProfile::Bounded, true) => (*local_http_client()).clone(),
+            (SttClientProfile::Bounded, false) => (*http_client()).clone(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -126,7 +205,7 @@ impl LocalStreamingTranscriptionError {
                 if matches!(status, 401 | 403) {
                     errors::local_stt_runtime_rejected_message(status, &body)
                 } else {
-                    format!("Whisper streaming API error ({}): {}", status, body)
+                    format!("Whisper streaming API error ({})", status)
                 }
             }
             LocalStreamingTranscriptionError::Request(message)
@@ -197,6 +276,16 @@ struct FileTranscriptionProgressPayload {
     current_chunk: usize,
     total_chunks: usize,
     message: String,
+    #[serde(flatten)]
+    work: Option<FileWorkProgress>,
+}
+
+#[derive(Serialize, Clone)]
+struct FileWorkProgress {
+    completed_chunks: usize,
+    completed_audio_seconds: Option<f64>,
+    total_audio_seconds: Option<f64>,
+    transcription_elapsed_seconds: f64,
 }
 
 const FILE_TRANSCRIPTION_PROGRESS_EVENT: &str = "file-transcription-progress";
@@ -482,11 +571,8 @@ fn drain_local_streaming_lines(
 fn parse_local_streaming_event(
     line: &str,
 ) -> Result<LocalStreamingTranscriptionEvent, LocalStreamingTranscriptionError> {
-    serde_json::from_str::<LocalStreamingTranscriptionEvent>(line).map_err(|e| {
-        LocalStreamingTranscriptionError::Parse(format!(
-            "Whisper streaming response parse error: {}; line={}",
-            e, line
-        ))
+    serde_json::from_str::<LocalStreamingTranscriptionEvent>(line).map_err(|_| {
+        LocalStreamingTranscriptionError::Parse("Whisper streaming response parse error".into())
     })
 }
 
@@ -752,9 +838,20 @@ async fn transcribe_audio_bytes(
     file_name: String,
     mime_type: String,
 ) -> Result<TranscribeResponse, String> {
-    let result =
-        transcribe_audio_bytes_internal(app, req, audio_bytes, file_name, mime_type, false, 0.0)
-            .await?;
+    let result = transcribe_audio_bytes_internal(
+        app,
+        req,
+        audio_bytes,
+        file_name,
+        mime_type,
+        SttRequestOptions {
+            require_segments: false,
+            segment_offset_seconds: 0.0,
+            // Dictation is short: never the long file budget.
+            client_profile: stt_client_profile(false),
+        },
+    )
+    .await?;
     Ok(plain_transcribe_response(result.raw, result.cleaned))
 }
 
@@ -764,10 +861,15 @@ async fn transcribe_audio_bytes_internal(
     audio_bytes: Vec<u8>,
     mut file_name: String,
     mut mime_type: String,
-    require_segments: bool,
-    segment_offset_seconds: f64,
+    options: SttRequestOptions,
 ) -> Result<AudioTranscriptionResult, String> {
-    let client = http_client();
+    let SttRequestOptions {
+        require_segments,
+        segment_offset_seconds,
+        client_profile,
+    } = options;
+    // Runtime startup talks to the local managed endpoint only.
+    let client = local_http_client();
 
     // ── Step 1: Whisper Speech-to-Text ──────────────────────────────────
     let mut whisper_url = req
@@ -874,11 +976,7 @@ async fn transcribe_audio_bytes_internal(
             .or_else(|| Some(req.api_key.trim()).filter(|s| !s.is_empty()))
     };
 
-    let stt_client = if is_local_endpoint {
-        (*local_long_http_client()).clone()
-    } else {
-        (*client).clone()
-    };
+    let stt_client = client_profile.client(is_local_endpoint);
 
     let mut streaming_body: Option<WhisperResp> = None;
     if let Some(request_id) = live_streaming_request_id {
@@ -911,19 +1009,16 @@ async fn transcribe_audio_bytes_internal(
                     segments: Vec::new(),
                 });
             }
-            Err(LocalStreamingTranscriptionError::Http { status: 404, body }) => {
+            Err(LocalStreamingTranscriptionError::Http { status: 404, .. }) => {
                 logger::log_info(
                     "WHISPER",
-                    &format!(
-                        "Streaming endpoint unavailable, falling back to JSON transcription: {}",
-                        body
-                    ),
+                    "Streaming endpoint unavailable, falling back to JSON transcription: status=404",
                 );
             }
             Err(err) => {
                 let message = err.into_message();
                 emit_dictation_stream_update(&app, request_id, "error", "", Some(&message));
-                logger::log_error("WHISPER", &message);
+                logger::log_error("WHISPER", "Streaming transcription failed");
                 return Err(message);
             }
         }
@@ -963,11 +1058,14 @@ async fn transcribe_audio_bytes_internal(
             let body = whisper_res.text().await.unwrap_or_default();
             if is_local_endpoint && matches!(status.as_u16(), 401 | 403) {
                 let err = errors::local_stt_runtime_rejected_message(status.as_u16(), &body);
-                logger::log_error("WHISPER", &err);
+                logger::log_error(
+                    "WHISPER",
+                    &format!("Local STT rejected request: status={}", status.as_u16()),
+                );
                 return Err(err);
             }
 
-            let err = format!("Whisper API error ({}): {}", status, body);
+            let err = format!("Whisper API error ({})", status);
             logger::log_error("WHISPER", &err);
             return Err(err);
         }
@@ -979,7 +1077,10 @@ async fn transcribe_audio_bytes_internal(
         })?
     };
     let raw = whisper_body.text.trim().to_string();
-    logger::log_info("WHISPER", &format!("Transcribed: \"{}\"", raw));
+    logger::log_info(
+        "WHISPER",
+        &format!("Transcribed: chars={}", raw.chars().count()),
+    );
 
     if raw.is_empty() {
         logger::log_info("WHISPER", "Empty transcription, returning empty response");
@@ -1006,8 +1107,8 @@ async fn transcribe_audio_bytes_internal(
         logger::log_info(
             "WHISPER",
             &format!(
-                "Detected likely repetitive silence hallucination, dropping transcription: \"{}\"",
-                raw
+                "Detected likely repetitive silence hallucination, dropping transcription: chars={}",
+                raw.chars().count()
             ),
         );
         return Ok(AudioTranscriptionResult {
@@ -1021,8 +1122,8 @@ async fn transcribe_audio_bytes_internal(
         logger::log_info(
             "WHISPER",
             &format!(
-                "Detected likely silence hallucination, dropping transcription: \"{}\"",
-                raw
+                "Detected likely silence hallucination, dropping transcription: chars={}",
+                raw.chars().count()
             ),
         );
         return Ok(AudioTranscriptionResult {
@@ -1043,8 +1144,8 @@ async fn transcribe_audio_bytes_internal(
         logger::log_info(
             "WHISPER",
             &format!(
-                "Detected likely short uncertain transcription, dropping result: \"{}\" duration={:?} segments={:?}",
-                raw, whisper_body.duration, whisper_body.segments
+                "Detected likely short uncertain transcription, dropping result: chars={} duration={:?} segments={}",
+                raw.chars().count(), whisper_body.duration, whisper_body.segments.len()
             ),
         );
         return Ok(AudioTranscriptionResult {
@@ -1142,6 +1243,28 @@ fn emit_file_progress(
             current_chunk,
             total_chunks,
             message: message.to_string(),
+            work: None,
+        },
+    );
+}
+
+fn emit_file_work_progress(
+    app: &AppHandle,
+    request_id: &str,
+    current_chunk: usize,
+    total_chunks: usize,
+    message: &str,
+    work: FileWorkProgress,
+) {
+    let _ = app.emit(
+        FILE_TRANSCRIPTION_PROGRESS_EVENT,
+        FileTranscriptionProgressPayload {
+            request_id: request_id.to_string(),
+            status: "transcribing".to_string(),
+            current_chunk,
+            total_chunks,
+            message: message.to_string(),
+            work: Some(work),
         },
     );
 }
@@ -1180,6 +1303,26 @@ fn local_model_prefers_streaming_transcription(model: Option<&str>) -> bool {
         .filter(|value| !value.is_empty())
         .map(|value| value.to_lowercase().contains("streaming"))
         .unwrap_or(false)
+}
+
+/// Whether the plain-file path may use the streaming protocol for this request.
+///
+/// The managed streaming runtime starts a stream only for a concrete language;
+/// with `auto` (or an empty selection) it answers `unsupported language`, so the
+/// request must take the ordinary JSON path instead of failing.
+fn file_streaming_supported(
+    is_local_stt_endpoint: bool,
+    speaker_diarization: bool,
+    model: Option<&str>,
+    language: &str,
+) -> bool {
+    if !is_local_stt_endpoint || speaker_diarization {
+        return false;
+    }
+    if !local_model_prefers_streaming_transcription(model) {
+        return false;
+    }
+    !matches!(language.trim().to_lowercase().as_str(), "" | "auto")
 }
 
 fn local_file_transcription_segment_seconds(model: Option<&str>) -> Option<u32> {
@@ -1492,12 +1635,21 @@ pub async fn transcribe_file_path(
         ensure_diarized_file_preconditions(&req)?;
     }
 
+    // Cooperative cancellation for this request only: it never stops the
+    // shared local runtime, so the next job still starts normally.
+    let job = file_jobs::begin(&req.request_id);
+    job.check()?;
+
     emit_file_progress(&app, &req.request_id, "preparing", 0, 0, "Готовим файл");
 
     let mut diarization_audio = None;
     let diarization_segments = if req.speaker_diarization {
         let prepared_diarization_audio =
             media::prepare_media_file_for_diarization(&app, &input_path).await?;
+        if job.is_cancelled() {
+            let _ = fs::remove_dir_all(&prepared_diarization_audio.temp_dir);
+            return Err(file_jobs::CANCELLED_MESSAGE.to_string());
+        }
         emit_file_progress(
             &app,
             &req.request_id,
@@ -1548,6 +1700,13 @@ pub async fn transcribe_file_path(
         }
     };
     let total_chunks = prepared.chunks.len();
+    if job.is_cancelled() {
+        let _ = fs::remove_dir_all(&prepared.temp_dir);
+        if let Some(audio) = &diarization_audio {
+            let _ = fs::remove_dir_all(&audio.temp_dir);
+        }
+        return Err(file_jobs::CANCELLED_MESSAGE.to_string());
+    }
     emit_file_progress(
         &app,
         &req.request_id,
@@ -1555,6 +1714,13 @@ pub async fn transcribe_file_path(
         0,
         total_chunks,
         "Распознаём фрагменты",
+    );
+
+    let file_streaming = file_streaming_supported(
+        is_local_stt_endpoint,
+        req.speaker_diarization,
+        req.whisper_model.as_deref(),
+        &req.language,
     );
 
     let base_req = TranscribeRequest {
@@ -1569,24 +1735,37 @@ pub async fn transcribe_file_path(
         file_name: None,
         mime_type: None,
         mode: Some("transcribe_only".to_string()),
-        streaming_enabled: Some(
-            is_local_stt_endpoint
-                && !req.speaker_diarization
-                && local_model_prefers_streaming_transcription(req.whisper_model.as_deref()),
-        ),
-        streaming_request_id: None,
+        streaming_enabled: Some(file_streaming),
+        streaming_request_id: file_streaming.then(|| req.request_id.clone()),
     };
 
+    let transcription_started = std::time::Instant::now();
+    let total_audio_seconds = prepared.chunks.iter().try_fold(0.0, |sum, chunk| {
+        chunk.duration_seconds.map(|duration| sum + duration)
+    });
+    let mut completed_audio_seconds = Some(0.0);
     let mut parts = Vec::with_capacity(total_chunks);
     let mut stt_segments = Vec::<SttTranscriptSegment>::new();
     for (index, chunk) in prepared.chunks.iter().enumerate() {
-        emit_file_progress(
+        if job.is_cancelled() {
+            let _ = fs::remove_dir_all(&prepared.temp_dir);
+            if let Some(audio) = &diarization_audio {
+                let _ = fs::remove_dir_all(&audio.temp_dir);
+            }
+            return Err(file_jobs::CANCELLED_MESSAGE.to_string());
+        }
+        emit_file_work_progress(
             &app,
             &req.request_id,
-            "transcribing",
             index + 1,
             total_chunks,
             &format!("Распознаём фрагмент {} из {}", index + 1, total_chunks),
+            FileWorkProgress {
+                completed_chunks: index,
+                completed_audio_seconds,
+                total_audio_seconds,
+                transcription_elapsed_seconds: transcription_started.elapsed().as_secs_f64(),
+            },
         );
         logger::log_info(
             "FILE_TRANSCRIPTION",
@@ -1606,8 +1785,12 @@ pub async fn transcribe_file_path(
                     bytes,
                     chunk.file_name.clone(),
                     chunk.mime_type.clone(),
-                    req.speaker_diarization,
-                    chunk.start_offset_seconds,
+                    SttRequestOptions {
+                        require_segments: req.speaker_diarization,
+                        segment_offset_seconds: chunk.start_offset_seconds,
+                        // File chunks are long: never the dictation budget.
+                        client_profile: stt_client_profile(true),
+                    },
                 )
                 .await
                 {
@@ -1643,6 +1826,22 @@ pub async fn transcribe_file_path(
         if !text.is_empty() {
             parts.push(text);
         }
+        completed_audio_seconds = completed_audio_seconds
+            .zip(chunk.duration_seconds)
+            .map(|(completed, duration)| completed + duration);
+        emit_file_work_progress(
+            &app,
+            &req.request_id,
+            index + 1,
+            total_chunks,
+            &format!("Завершён фрагмент {} из {}", index + 1, total_chunks),
+            FileWorkProgress {
+                completed_chunks: index + 1,
+                completed_audio_seconds,
+                total_audio_seconds,
+                transcription_elapsed_seconds: transcription_started.elapsed().as_secs_f64(),
+            },
+        );
     }
 
     let _ = fs::remove_dir_all(&prepared.temp_dir);
@@ -1651,6 +1850,7 @@ pub async fn transcribe_file_path(
     }
 
     if let Some(diarization_segments) = diarization_segments {
+        job.check()?;
         emit_file_progress(
             &app,
             &req.request_id,
@@ -1661,6 +1861,7 @@ pub async fn transcribe_file_path(
         );
         let (raw, speakers, segments) =
             assemble_speaker_transcript(stt_segments, diarization_segments)?;
+        job.check()?;
         emit_file_progress(
             &app,
             &req.request_id,
@@ -1679,6 +1880,7 @@ pub async fn transcribe_file_path(
         });
     }
 
+    job.check()?;
     emit_file_progress(
         &app,
         &req.request_id,
@@ -1689,6 +1891,7 @@ pub async fn transcribe_file_path(
     );
 
     let raw = parts.join("\n\n");
+    job.check()?;
     Ok(plain_transcribe_response(raw.clone(), raw))
 }
 
@@ -1728,6 +1931,12 @@ struct ModelListItem {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ProcessTextRequest {
+    #[serde(default)]
+    pub request_id: Option<String>,
+    #[serde(default)]
+    pub entry_id: Option<String>,
+    #[serde(default)]
+    pub operation: Option<String>,
     #[serde(default)]
     pub deadline_ms: Option<u64>,
     pub text: String,
@@ -1769,140 +1978,277 @@ pub struct EmbedTextResponse {
     pub embeddings: Vec<Vec<f32>>,
 }
 
-/// Run an explicit, user-initiated text-processing prompt (e.g. summary) against
-/// any OpenAI-compatible chat endpoint: a bundled local
-/// runtime (127.0.0.1), or a user-provided endpoint. This is a deliberate user
-/// action, including optional dictation cleanup.
+/// Provider-side "thinking" handling for a chat-completions request.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ThinkingMode {
+    /// Send nothing and let the provider default apply.
+    ProviderDefault,
+    /// DeepSeek enables thinking by default; a cleanup must not spend the 8/12 s
+    /// budget on a reasoning trace, so the toggle is sent explicitly.
+    Disabled,
+}
+
+/// DeepSeek enables thinking by default on its chat models. The toggle is only
+/// sent to DeepSeek endpoints or model ids: other [OI]-compatible servers reject
+/// unknown request fields, so they must keep the plain body.
+fn chat_thinking_mode(url: &str, model: &str) -> ThinkingMode {
+    let url = url.to_lowercase();
+    let model = model.to_lowercase();
+    if url.contains("deepseek") || model.starts_with("deepseek") {
+        ThinkingMode::Disabled
+    } else {
+        ThinkingMode::ProviderDefault
+    }
+}
+
+struct ChatCompletionRequest<'a> {
+    model: &'a str,
+    prompt: &'a str,
+    user_text: &'a str,
+    temperature: f64,
+    max_tokens: Option<i32>,
+    is_local: bool,
+    thinking: ThinkingMode,
+}
+
+/// Body of the [OI]-compatible chat-completions call. Pure so the serialization
+/// (including the provider-specific thinking toggle) is testable without a
+/// network request.
+fn chat_completion_payload(request: &ChatCompletionRequest<'_>) -> serde_json::Value {
+    let mut payload = serde_json::json!({
+        "model": request.model,
+        "messages": [
+            { "role": "system", "content": request.prompt },
+            { "role": "user", "content": request.user_text },
+        ],
+        "temperature": request.temperature,
+        "stream": false,
+    });
+    if request.is_local {
+        let max_tokens = request.max_tokens.unwrap_or(1024).clamp(64, 2048);
+        payload["max_tokens"] = serde_json::json!(max_tokens);
+    }
+    if request.thinking == ThinkingMode::Disabled {
+        payload["thinking"] = serde_json::json!({ "type": "disabled" });
+    }
+    payload
+}
+
+/// Each started operation has one terminal record; payloads never enter logs.
 #[tauri::command]
 pub async fn process_text(req: ProcessTextRequest) -> Result<ProcessTextResponse, String> {
+    static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let started = std::time::Instant::now();
+    let generated = format!(
+        "text-{}-{}",
+        std::process::id(),
+        SEQUENCE.fetch_add(1, Ordering::Relaxed)
+    );
+    let request_id = logger::safe_field(req.request_id.as_deref().unwrap_or(&generated));
+    let entry_id = logger::safe_field(req.entry_id.as_deref().unwrap_or("none"));
+    let operation = if req.operation.as_deref() == Some("cleanup") {
+        "cleanup"
+    } else {
+        "text"
+    };
+    let url = resolve_chat_completions_url(req.endpoint.as_deref());
+    logger::log_info("LLM", &format!(
+        "event=start request_id={} entry_id={} operation={} endpoint={} model={} local={} input_chars={} deadline_ms={}",
+        request_id, entry_id, operation, logger::safe_url(&url), logger::safe_field(req.model.as_deref().unwrap_or("gpt-4o-mini")),
+        is_likely_local_url(&url), req.text.chars().count(), req.deadline_ms.map(|v| v.to_string()).unwrap_or_else(|| "none".into())
+    ));
+    let result = process_text_inner(&req, &url, &request_id).await;
+    let (outcome, code, output_chars) = match &result {
+        Ok(response) => (
+            "success",
+            "none".to_string(),
+            response.result.chars().count(),
+        ),
+        Err(error) => ("error", text_error_code(error), 0),
+    };
+    logger::log_info("LLM", &format!(
+        "event=end request_id={} entry_id={} operation={} outcome={} error_code={} total_ms={} output_chars={}",
+        request_id, entry_id, operation, outcome, code, started.elapsed().as_millis(), output_chars
+    ));
+    result
+}
+
+fn text_error_code(error: &str) -> String {
+    error
+        .strip_prefix("[text:")
+        .and_then(|v| v.split_once(']').map(|v| v.0))
+        .map(logger::safe_field)
+        .unwrap_or_else(|| "unknown".into())
+}
+
+#[derive(Deserialize)]
+struct TextModelMessage {
+    content: Option<String>,
+}
+#[derive(Deserialize)]
+struct TextModelChoice {
+    message: Option<TextModelMessage>,
+    finish_reason: Option<String>,
+}
+#[derive(Deserialize)]
+struct TextModelResponse {
+    choices: Option<Vec<TextModelChoice>>,
+    usage: Option<serde_json::Value>,
+}
+
+fn text_usage_fields(usage: Option<&serde_json::Value>) -> String {
+    let Some(usage) = usage else {
+        return "usage=unavailable".into();
+    };
+    let fields = [
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens",
+        "prompt_cache_hit_tokens",
+        "prompt_cache_miss_tokens",
+    ]
+    .iter()
+    .filter_map(|key| {
+        usage
+            .get(*key)
+            .and_then(serde_json::Value::as_u64)
+            .map(|v| format!("{}={}", key, v))
+    })
+    .chain(
+        usage
+            .get("completion_tokens_details")
+            .and_then(|v| v.get("reasoning_tokens"))
+            .and_then(serde_json::Value::as_u64)
+            .map(|v| format!("reasoning_tokens={}", v)),
+    )
+    .collect::<Vec<_>>()
+    .join(" ");
+    if fields.is_empty() {
+        "usage=unavailable".into()
+    } else {
+        fields
+    }
+}
+
+async fn process_text_inner(
+    req: &ProcessTextRequest,
+    url: &str,
+    request_id: &str,
+) -> Result<ProcessTextResponse, String> {
     let text = req.text.trim();
     let prompt = req.prompt.trim();
-
     if text.is_empty() {
-        return Err("Нет текста для обработки".to_string());
+        return Err("[text:empty_input] Нет текста для обработки".into());
     }
     if prompt.is_empty() {
-        return Err("Промпт пустой".to_string());
+        return Err("[text:empty_prompt] Промпт пустой".into());
     }
-
-    let url = resolve_chat_completions_url(req.endpoint.as_deref());
-    let is_local = is_likely_local_url(&url);
+    let is_local = is_likely_local_url(url);
     let model = req
         .model
         .as_deref()
         .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .unwrap_or("gpt-4o-mini")
-        .to_string();
+        .filter(|v| !v.is_empty())
+        .unwrap_or("gpt-4o-mini");
     let api_key = req
         .api_key
         .as_deref()
         .map(str::trim)
-        .filter(|value| !value.is_empty());
-
+        .filter(|v| !v.is_empty());
     if api_key.is_none() && !is_local {
-        return Err("Не указан API-ключ для текстовой модели".to_string());
+        return Err("[text:missing_key] Не указан API-ключ для текстовой модели".into());
     }
-
-    logger::log_info(
-        "LLM",
-        &format!(
-            "process_text -> {} (model={}, local={}, chars={})",
-            url,
-            model,
-            is_local,
-            text.len()
-        ),
-    );
-
-    let mut payload = serde_json::json!({
-        "model": model,
-        "messages": [
-            { "role": "system", "content": prompt },
-            { "role": "user", "content": text },
-        ],
-        "temperature": req.temperature.unwrap_or(0.3),
-        "stream": false,
+    let payload = chat_completion_payload(&ChatCompletionRequest {
+        model,
+        prompt,
+        user_text: text,
+        temperature: req.temperature.unwrap_or(0.3),
+        max_tokens: req.max_tokens,
+        is_local,
+        thinking: chat_thinking_mode(url, model),
     });
-    if is_local {
-        let max_tokens = req.max_tokens.unwrap_or(1024).clamp(64, 2048);
-        payload["max_tokens"] = serde_json::json!(max_tokens);
-    }
-
-    let client = if is_local {
-        local_long_http_client()
-    } else {
-        http_client()
-    };
-    let mut request = client.post(&url).json(&payload);
+    let mut request = text_http_client(is_local).post(url).json(&payload);
     if let Some(key) = api_key {
         request = request.bearer_auth(key);
     }
-
+    let started = std::time::Instant::now();
     let operation = async {
-        let response = request
-            .send()
-            .await
-            .map_err(|err| format!("Запрос к текстовой модели не удался: {}", err))?;
+        let response = request.send().await.map_err(|err| {
+            if err.is_timeout() {
+                "[text:timeout] Таймаут текстовой модели".to_string()
+            } else if err.is_connect() {
+                "[text:connect] Не удалось подключиться к текстовой модели".to_string()
+            } else {
+                "[text:transport] Ошибка соединения с текстовой моделью".to_string()
+            }
+        })?;
         let status = response.status();
-        let body = response
+        let provider_id = ["x-request-id", "request-id", "x-ds-request-id"]
+            .iter()
+            .find_map(|name| response.headers().get(*name).and_then(|v| v.to_str().ok()))
+            .map(logger::safe_field)
+            .unwrap_or_else(|| "unavailable".into());
+        logger::log_info(
+            "LLM",
+            &format!(
+                "event=headers request_id={} status={} headers_ms={} provider_request_id={}",
+                request_id,
+                status.as_u16(),
+                started.elapsed().as_millis(),
+                provider_id
+            ),
+        );
+        // Never retain or echo an HTTP error body: providers can reflect secrets/input.
+        if !status.is_success() {
+            return Err(format!(
+                "[text:http_{}] Ошибка текстовой модели (HTTP {})",
+                status.as_u16(),
+                status.as_u16()
+            ));
+        }
+        response
             .text()
             .await
-            .map_err(|err| format!("Не удалось прочитать ответ модели: {}", err))?;
-        Ok::<_, String>((status, body))
+            .map_err(|_| "[text:read] Не удалось прочитать ответ модели".to_string())
     };
-    let (status, body) = if let Some(deadline) = req.deadline_ms {
+    let body = if let Some(deadline) = req.deadline_ms {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|err| err.to_string())?
+            .map_err(|_| "[text:clock] Не удалось проверить время запроса".to_string())?
             .as_millis() as u64;
-        tokio::time::timeout(
-            Duration::from_millis(deadline.saturating_sub(now)),
-            operation,
-        )
-        .await
-        .map_err(|_| "Таймаут очистки текста".to_string())??
+        if deadline <= now {
+            return Err("[text:timeout] Таймаут очистки текста".into());
+        }
+        tokio::time::timeout(Duration::from_millis(deadline - now), operation)
+            .await
+            .map_err(|_| "[text:timeout] Таймаут очистки текста".to_string())??
     } else {
         operation.await?
     };
-
-    if !status.is_success() {
-        let snippet: String = body.chars().take(500).collect();
-        return Err(format!("Ошибка модели ({}): {}", status, snippet));
+    let parsed: TextModelResponse = serde_json::from_str(&body)
+        .map_err(|_| "[text:parse] Модель вернула некорректный ответ".to_string())?;
+    let usage = text_usage_fields(parsed.usage.as_ref());
+    let choice = parsed.choices.and_then(|v| v.into_iter().next());
+    let finish_reason = choice.as_ref().and_then(|v| v.finish_reason.as_deref());
+    logger::log_info(
+        "LLM",
+        &format!(
+            "event=response request_id={} finish_reason={} {}",
+            request_id,
+            logger::safe_field(finish_reason.unwrap_or("unavailable")),
+            usage
+        ),
+    );
+    if req.operation.as_deref() == Some("cleanup") && finish_reason == Some("length") {
+        return Err("[text:truncated] Модель обрезала результат очистки".into());
     }
-
-    #[derive(Deserialize)]
-    struct ChatMessage {
-        content: Option<String>,
-    }
-    #[derive(Deserialize)]
-    struct ChatChoice {
-        message: Option<ChatMessage>,
-    }
-    #[derive(Deserialize)]
-    struct ChatResponse {
-        choices: Option<Vec<ChatChoice>>,
-    }
-
-    let parsed = serde_json::from_str::<ChatResponse>(&body)
-        .map_err(|err| format!("Модель вернула некорректный ответ: {}", err))?;
-    let result = parsed
-        .choices
-        .and_then(|mut choices| {
-            if choices.is_empty() {
-                None
-            } else {
-                Some(choices.remove(0))
-            }
-        })
-        .and_then(|choice| choice.message)
-        .and_then(|message| message.content)
+    let result = choice
+        .and_then(|v| v.message)
+        .and_then(|v| v.content)
         .unwrap_or_default();
-
     if result.trim().is_empty() {
-        return Err("Модель вернула пустой ответ".to_string());
+        return Err("[text:empty_response] Модель вернула пустой ответ".into());
     }
-
     Ok(ProcessTextResponse { result })
 }
 
@@ -2807,7 +3153,346 @@ pub async fn delete_stt_model(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn streaming_parse_error_never_echoes_transcript_or_response_body() {
+        let error = super::parse_local_streaming_event("{PRIVATE_TRANSCRIPT_BODY")
+            .err()
+            .unwrap()
+            .into_message();
+        assert!(error.contains("parse error"));
+        assert!(!error.contains("PRIVATE_TRANSCRIPT_BODY"));
+    }
+    async fn read_text_request(socket: &mut tokio::net::TcpStream) -> serde_json::Value {
+        use tokio::io::AsyncReadExt;
+        let mut header = Vec::new();
+        while !header.ends_with(b"\r\n\r\n") {
+            header.push(socket.read_u8().await.unwrap());
+        }
+        let header = String::from_utf8(header).unwrap();
+        let length: usize = header
+            .lines()
+            .find_map(|line| {
+                line.to_lowercase()
+                    .strip_prefix("content-length:")
+                    .map(|v| v.trim().parse().unwrap())
+            })
+            .unwrap();
+        let mut body = vec![0; length];
+        socket.read_exact(&mut body).await.unwrap();
+        serde_json::from_slice(&body).unwrap()
+    }
+
+    fn text_request(endpoint: String) -> ProcessTextRequest {
+        ProcessTextRequest {
+            text: "Hello".into(),
+            prompt: "Clean".into(),
+            endpoint: Some(endpoint),
+            model: Some("test".into()),
+            api_key: None,
+            deadline_ms: None,
+            temperature: None,
+            max_tokens: None,
+            operation: None,
+            request_id: None,
+            entry_id: None,
+        }
+    }
+
+    async fn text_mock_response(
+        status: u16,
+        body: &str,
+        operation: Option<&str>,
+    ) -> Result<ProcessTextResponse, String> {
+        use tokio::io::AsyncWriteExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/v1", listener.local_addr().unwrap());
+        let response = format!(
+            "HTTP/1.1 {} Mock\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            status,
+            body.len(),
+            body
+        );
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            read_text_request(&mut socket).await;
+            socket.write_all(response.as_bytes()).await.unwrap();
+        });
+        let mut req = text_request(endpoint);
+        req.operation = operation.map(str::to_owned);
+        let result = process_text(req).await;
+        server.await.unwrap();
+        result
+    }
+
+    #[tokio::test]
+    async fn only_cleanup_rejects_truncated_text_and_legacy_responses_work() {
+        let truncated =
+            r#"{"choices":[{"message":{"content":"Partial"},"finish_reason":"length"}]}"#;
+        assert!(text_mock_response(200, truncated, Some("cleanup"))
+            .await
+            .err()
+            .unwrap()
+            .contains("truncated"));
+        assert_eq!(
+            text_mock_response(200, truncated, None)
+                .await
+                .unwrap()
+                .result,
+            "Partial"
+        );
+        let legacy = r#"{"choices":[{"message":{"content":"Hello."}}]}"#;
+        assert_eq!(
+            text_mock_response(200, legacy, Some("cleanup"))
+                .await
+                .unwrap()
+                .result,
+            "Hello."
+        );
+        assert!(
+            text_mock_response(200, r#"{"choices":[]}"#, Some("cleanup"))
+                .await
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn text_diagnostics_record_status_errors_and_usage_without_payloads() {
+        for (status, body, code) in [
+            (401, "sk-SECRET BODY_INPUT", Some("http_401")),
+            (429, "sk-SECRET BODY_INPUT", Some("http_429")),
+            (500, "sk-SECRET BODY_INPUT", Some("http_500")),
+            (200, "malformed BODY_INPUT", Some("parse")),
+            (200, r#"{"choices":[]}"#, Some("empty_response")),
+            (
+                200,
+                r#"{"choices":[{"message":{"content":"PRIVATE_OUTPUT"}}]}"#,
+                None,
+            ),
+            (
+                200,
+                r#"{"choices":[{"message":{"content":"PRIVATE_OUTPUT"},"finish_reason":"stop"}],"usage":{"prompt_tokens":12,"completion_tokens":3,"total_tokens":15,"prompt_cache_hit_tokens":8}}"#,
+                None,
+            ),
+        ] {
+            logger::take_test_logs();
+            let result = text_mock_response(status, body, Some("cleanup")).await;
+            if let Some(code) = code {
+                assert_eq!(text_error_code(&result.err().unwrap()), code);
+            } else {
+                assert!(result.is_ok());
+            }
+            let lines = logger::take_test_logs();
+            assert_eq!(
+                lines.iter().filter(|v| v.contains("event=start")).count(),
+                1
+            );
+            assert_eq!(lines.iter().filter(|v| v.contains("event=end")).count(), 1);
+            let text = lines.join("\n");
+            assert!(text.contains(&format!("status={}", status)));
+            assert!(text.contains("headers_ms="));
+            assert!(text.contains("total_ms="));
+            for secret in [
+                "sk-SECRET",
+                "BODY_INPUT",
+                "PRIVATE_OUTPUT",
+                "Hello",
+                "Clean",
+            ] {
+                assert!(!text.contains(secret));
+            }
+            if body.contains("prompt_tokens") {
+                assert!(text.contains("prompt_tokens=12 completion_tokens=3 total_tokens=15 prompt_cache_hit_tokens=8"));
+            } else if code.is_none() {
+                assert!(text.contains("usage=unavailable"));
+            }
+        }
+        assert_eq!(
+            logger::safe_url("https://user:sk-SECRET@api.example.com/v1?token=SECRET#SECRET"),
+            "https://api.example.com/v1"
+        );
+        assert_eq!(text_usage_fields(None), "usage=unavailable");
+    }
+
+    #[tokio::test]
+    async fn text_connection_failure_has_no_post_retry_and_next_call_recovers() {
+        use tokio::io::AsyncWriteExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/v1", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            for attempt in 0..3 {
+                let (mut socket, _) =
+                    tokio::time::timeout(Duration::from_secs(3), listener.accept())
+                        .await
+                        .unwrap()
+                        .unwrap();
+                read_text_request(&mut socket).await;
+                if attempt != 1 {
+                    let body = r#"{"choices":[{"message":{"content":"Hello."}}]}"#;
+                    socket.write_all(format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", body.len(), body).as_bytes()).await.unwrap();
+                }
+                // On attempt 1, closing without headers simulates a transport failure.
+            }
+            assert!(
+                tokio::time::timeout(Duration::from_millis(100), listener.accept())
+                    .await
+                    .is_err()
+            );
+        });
+        assert!(process_text(text_request(endpoint.clone())).await.is_ok());
+        logger::take_test_logs();
+        let err = process_text(text_request(endpoint.clone()))
+            .await
+            .err()
+            .unwrap();
+        assert_eq!(text_error_code(&err), "transport");
+        let logs = logger::take_test_logs().join(" ");
+        assert!(logs.contains("outcome=error error_code=transport"));
+        assert!(process_text(text_request(endpoint)).await.is_ok());
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn expired_cleanup_deadline_does_not_send_a_request() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut req = text_request(format!("http://{}/v1", listener.local_addr().unwrap()));
+        req.deadline_ms = Some(1);
+        logger::take_test_logs();
+        assert_eq!(
+            text_error_code(&process_text(req).await.err().unwrap()),
+            "timeout"
+        );
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), listener.accept())
+                .await
+                .is_err()
+        );
+        let logs = logger::take_test_logs();
+        assert_eq!(logs.iter().filter(|v| v.contains("event=end")).count(), 1);
+        assert!(logs.last().unwrap().contains("error_code=timeout"));
+    }
+
+    #[tokio::test]
+    async fn text_requests_reuse_one_connection_without_extra_posts() {
+        use tokio::io::AsyncWriteExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/v1", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            for _ in 0..2 {
+                let payload = read_text_request(&mut socket).await;
+                assert_eq!(payload["messages"][1]["content"], "Hello");
+                let body =
+                    r#"{"choices":[{"message":{"content":"Hello."},"finish_reason":"stop"}]}"#;
+                socket
+                    .write_all(
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+                            body.len(),
+                            body
+                        )
+                        .as_bytes(),
+                    )
+                    .await
+                    .unwrap();
+            }
+            assert!(
+                tokio::time::timeout(Duration::from_millis(100), listener.accept())
+                    .await
+                    .is_err()
+            );
+        });
+        for _ in 0..2 {
+            let result = tokio::time::timeout(
+                Duration::from_secs(3),
+                process_text(text_request(endpoint.clone())),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+            assert_eq!(result.result, "Hello.");
+        }
+        server.await.unwrap();
+    }
+
+    #[test]
+    fn file_progress_does_not_complete_a_started_chunk() {
+        let payload = super::FileTranscriptionProgressPayload {
+            request_id: "file-1".to_string(),
+            status: "transcribing".to_string(),
+            current_chunk: 2,
+            total_chunks: 2,
+            message: String::new(),
+            work: Some(super::FileWorkProgress {
+                completed_chunks: 1,
+                completed_audio_seconds: Some(25.0),
+                total_audio_seconds: Some(40.0),
+                transcription_elapsed_seconds: 10.0,
+            }),
+        };
+        let json = serde_json::to_value(payload).unwrap();
+        assert_eq!(json["current_chunk"], 2);
+        assert_eq!(json["completed_chunks"], 1);
+        assert_eq!(json["completed_audio_seconds"], 25.0);
+        assert_eq!(json["request_id"], "file-1");
+    }
+
     use super::*;
+
+    #[test]
+    fn file_chunks_use_the_long_client_and_dictation_stays_bounded() {
+        assert_eq!(stt_client_profile(true), SttClientProfile::Long);
+        assert_eq!(stt_client_profile(false), SttClientProfile::Bounded);
+        // The long budget exists precisely because the bounded one is short, and
+        // the bounded one still covers the 8 s API / 12 s local cleanup budgets
+        // that live in the frontend.
+        const {
+            assert!(LONG_HTTP_TIMEOUT_SECS > BOUNDED_HTTP_TIMEOUT_SECS);
+            assert!(BOUNDED_HTTP_TIMEOUT_SECS >= 12);
+        }
+    }
+
+    #[test]
+    fn plain_file_streaming_needs_a_local_streaming_model_and_a_concrete_language() {
+        let nemotron = Some("nvidia/nemotron-3.5-asr-streaming-0.6b");
+
+        assert!(file_streaming_supported(true, false, nemotron, "ru"));
+        // Speaker separation still needs chunk segments: no streaming there.
+        assert!(!file_streaming_supported(true, true, nemotron, "ru"));
+        // Batch models and API endpoints keep their verified path.
+        assert!(!file_streaming_supported(
+            true,
+            false,
+            Some("whisper-large-v3-turbo"),
+            "ru"
+        ));
+        assert!(!file_streaming_supported(false, false, nemotron, "ru"));
+        // The managed runtime only starts a stream for a concrete language.
+        assert!(!file_streaming_supported(true, false, nemotron, "auto"));
+        assert!(!file_streaming_supported(true, false, nemotron, "AUTO"));
+        assert!(!file_streaming_supported(true, false, nemotron, ""));
+        assert!(!file_streaming_supported(true, false, nemotron, "   "));
+    }
+
+    #[test]
+    fn file_progress_payload_keeps_the_request_id_for_streaming_drafts() {
+        let payload = super::FileTranscriptionProgressPayload {
+            request_id: "job-42".to_string(),
+            status: "transcribing".to_string(),
+            current_chunk: 1,
+            total_chunks: 3,
+            message: String::new(),
+            work: Some(super::FileWorkProgress {
+                completed_chunks: 0,
+                completed_audio_seconds: Some(0.0),
+                total_audio_seconds: Some(75.0),
+                transcription_elapsed_seconds: 1.5,
+            }),
+        };
+        let json = serde_json::to_value(payload).unwrap();
+        // The streaming draft is addressed by exactly this id.
+        assert_eq!(json["request_id"], "job-42");
+        assert_eq!(json["completed_chunks"], 0);
+    }
 
     fn stt(start: f64, end: f64, text: &str) -> SttTranscriptSegment {
         SttTranscriptSegment {
@@ -2983,6 +3668,84 @@ mod tests {
         assert!(response.speakers.is_none());
         assert!(response.segments.is_none());
     }
+
+    #[test]
+    fn deepseek_text_requests_disable_thinking_explicitly() {
+        let endpoint = "https://api.deepseek.com/chat/completions";
+        let model = "deepseek-flash";
+        let payload = chat_completion_payload(&ChatCompletionRequest {
+            model,
+            prompt: "cleanup",
+            user_text: "исходный текст",
+            temperature: 0.2,
+            max_tokens: None,
+            is_local: false,
+            thinking: chat_thinking_mode(endpoint, model),
+        });
+
+        assert_eq!(chat_thinking_mode(endpoint, model), ThinkingMode::Disabled);
+        assert_eq!(
+            payload["thinking"],
+            serde_json::json!({ "type": "disabled" })
+        );
+        assert_eq!(payload["model"], model);
+        assert_eq!(payload["messages"][0]["content"], "cleanup");
+        assert_eq!(payload["messages"][1]["content"], "исходный текст");
+        assert_eq!(payload["temperature"], 0.2);
+        assert_eq!(payload["stream"], false);
+        // Remote cleanup requests keep no output cap.
+        assert!(payload.get("max_tokens").is_none());
+    }
+
+    #[test]
+    fn non_deepseek_text_requests_keep_the_plain_body() {
+        let payload = chat_completion_payload(&ChatCompletionRequest {
+            model: "gpt-4o-mini",
+            prompt: "cleanup",
+            user_text: "text",
+            temperature: 0.3,
+            max_tokens: Some(512),
+            is_local: false,
+            thinking: chat_thinking_mode(
+                "https://api.openai.com/v1/chat/completions",
+                "gpt-4o-mini",
+            ),
+        });
+
+        assert!(payload.get("thinking").is_none());
+        assert!(payload.get("max_tokens").is_none());
+        // A DeepSeek model id on a custom endpoint still opts out of thinking.
+        assert_eq!(
+            chat_thinking_mode("http://127.0.0.1:9000", "deepseek-chat"),
+            ThinkingMode::Disabled
+        );
+    }
+
+    #[test]
+    fn local_text_requests_keep_the_bounded_max_tokens_without_thinking() {
+        let endpoint = "http://127.0.0.1:8011/v1/chat/completions";
+        let model = "qwen3-1.7b-instruct-q4";
+        let local_payload = |max_tokens: Option<i32>| {
+            chat_completion_payload(&ChatCompletionRequest {
+                model,
+                prompt: "cleanup",
+                user_text: "text",
+                temperature: 0.3,
+                max_tokens,
+                is_local: true,
+                thinking: chat_thinking_mode(endpoint, model),
+            })
+        };
+
+        assert_eq!(
+            chat_thinking_mode(endpoint, model),
+            ThinkingMode::ProviderDefault
+        );
+        assert_eq!(local_payload(None)["max_tokens"], 1024);
+        assert_eq!(local_payload(Some(10_000))["max_tokens"], 2048);
+        assert_eq!(local_payload(Some(1))["max_tokens"], 64);
+        assert!(local_payload(None).get("thinking").is_none());
+    }
 }
 
 #[tauri::command]
@@ -3065,6 +3828,9 @@ mod cleanup_deadline_tests {
             .as_millis() as u64
             + 200;
         let result = process_text(ProcessTextRequest {
+            request_id: None,
+            entry_id: None,
+            operation: Some("cleanup".into()),
             text: "Hello".into(),
             prompt: "Clean".into(),
             deadline_ms: Some(deadline),

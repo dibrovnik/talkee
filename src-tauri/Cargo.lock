@@ -5369,7 +5369,7 @@ dependencies = [
 
 [[package]]
 name = "talkee"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "base64 0.22.1",
  "block2",
@@ -5411,7 +5411,7 @@ dependencies = [
 
 [[package]]
 name = "talkee-llm"
-version = "0.4.9"
+version = "0.4.10"
 dependencies = [
  "libc",
  "llama-cpp-2",

@@ -1755,6 +1755,7 @@ export function Widget(): ReactNode {
 
   useEffect(() => {
     let disposed = false;
+    let textRevision = 0;
     const syncDisplay = async (): Promise<void> => {
       try {
         const settings = await getSettings();
@@ -1762,24 +1763,38 @@ export function Widget(): ReactNode {
         const mode = settings.textDisplay === "ticker" ? "ticker" : "window";
         setTextDisplay(mode);
         await invoke("set_text_display", { mode });
-      } catch (error) {
-        logError(
-          "WIDGET",
-          `Failed to apply text display: ${error instanceof Error ? error.message : String(error)}`,
+        const revision = textRevision;
+        const cached = await invoke<WidgetTextOverlayState | null>(
+          "get_widget_text_overlay_payload",
         );
+        // A live event arriving during the read is newer than this snapshot.
+        if (!disposed && revision === textRevision)
+          setTickerPayload(cached?.status ? cached : null);
+      } catch (error) {
+        logError("WIDGET", `Failed to apply text display: ${String(error)}`);
       }
     };
-    void syncDisplay();
-    const unlistenSettings = listen(SETTINGS_UPDATED_EVENT, () => {
-      void syncDisplay();
-    });
     const unlistenText = listen<WidgetTextOverlayState | null>(TEXT_OVERLAY_EVENT, (event) => {
-      setTickerPayload(event.payload?.status ? event.payload : null);
+      textRevision += 1;
+      if (!disposed) setTickerPayload(event.payload?.status ? event.payload : null);
+    });
+    // Register before native replay, then restore the cached payload on startup.
+    void unlistenText
+      .then(() => {
+        if (!disposed) void syncDisplay();
+      })
+      .catch((error) => {
+        logError("WIDGET", `Failed to listen for ticker text: ${String(error)}`);
+      });
+    const unlistenSettings = listen(SETTINGS_UPDATED_EVENT, () => {
+      void unlistenText.then(() => {
+        if (!disposed) void syncDisplay();
+      });
     });
     return () => {
       disposed = true;
       void unlistenSettings.then((stop) => stop());
-      void unlistenText.then((stop) => stop());
+      void unlistenText.then((stop) => stop()).catch(() => {});
     };
   }, []);
 

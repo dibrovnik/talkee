@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { notifyForegroundActivity } from "./foregroundActivity";
 import { tn } from "./i18n";
 import type { AppSettings, HistoryEntry } from "./store";
 
@@ -118,7 +119,7 @@ type RunOnce = (params: {
   maxTokens?: number;
   signal?: AbortSignal;
   deadlineMs?: number;
-  operation?: "cleanup";
+  operation?: "cleanup" | "vocabulary-analysis";
   requestId?: string;
   entryId?: string;
 }) => Promise<string>;
@@ -131,6 +132,31 @@ export interface ResolvedSummaryBackend {
 
 interface ProcessTextResponse {
   result: string;
+}
+
+async function invokeCancellableText(
+  req: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<ProcessTextResponse> {
+  signal?.throwIfAborted();
+  const analysis = req.operation === "vocabulary-analysis";
+  const id = analysis ? String(req.request_id || crypto.randomUUID()) : req.request_id;
+  const foregroundId = analysis ? null : crypto.randomUUID();
+  if (foregroundId) notifyForegroundActivity(foregroundId, true);
+  const cancel = (): void => {
+    if (analysis) void invoke("cancel_text_request", { requestId: id }).catch(() => {});
+  };
+  signal?.addEventListener("abort", cancel, { once: true });
+  try {
+    const result = await invoke<ProcessTextResponse>("process_text", {
+      req: { ...req, request_id: id },
+    });
+    signal?.throwIfAborted();
+    return result;
+  } finally {
+    signal?.removeEventListener("abort", cancel);
+    if (foregroundId) notifyForegroundActivity(foregroundId, false);
+  }
 }
 
 function llmRunner(endpoint: string, model: string, apiKey: string): RunOnce {
@@ -146,8 +172,8 @@ function llmRunner(endpoint: string, model: string, apiKey: string): RunOnce {
     entryId,
   }) => {
     signal?.throwIfAborted();
-    const response = await invoke<ProcessTextResponse>("process_text", {
-      req: {
+    const response = await invokeCancellableText(
+      {
         text,
         prompt,
         temperature: temperature ?? null,
@@ -160,7 +186,8 @@ function llmRunner(endpoint: string, model: string, apiKey: string): RunOnce {
         model: model || null,
         api_key: apiKey || null,
       },
-    });
+      signal,
+    );
     return response.result;
   };
 }
@@ -215,8 +242,9 @@ function localLlmRunner(
 
       signal?.throwIfAborted();
       try {
-        const response = await invoke<ProcessTextResponse>("process_text", {
-          req: {
+        const response = await invokeCancellableText(
+          {
+            managed_analysis: operation === "vocabulary-analysis",
             text,
             prompt,
             temperature: temperature ?? null,
@@ -229,11 +257,12 @@ function localLlmRunner(
             model: model || null,
             api_key: apiKey || null,
           },
-        });
+          signal,
+        );
         return response.result;
       } catch (error) {
         signal?.throwIfAborted();
-        if (operation === "cleanup") throw error;
+        if (operation === "cleanup" || operation === "vocabulary-analysis") throw error;
         if (deadlineMs !== undefined && Date.now() >= deadlineMs) throw error;
         if (!isRestartableLocalLlmError(error)) {
           throw error;

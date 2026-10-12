@@ -22,6 +22,7 @@ import {
 import { resolveSummaryBackend } from "../../../lib/summarize";
 import { cleanupDictation, type DictationCleanupContext } from "../../../lib/textCleanup";
 import { formatErrorMessage } from "../../../lib/utils";
+import { hintAdapterForBatch, selectVocabularyHints } from "../../../lib/vocabularyHints";
 import type { LiveTranscriptionResult } from "./dictationStreamOverlay";
 import {
   createDictationOverlayState,
@@ -30,6 +31,7 @@ import {
   shouldApplyDictationStreamUpdate,
 } from "./dictationStreamOverlay";
 import {
+  type AppliedHintPlan,
   applyVocabularyStage,
   captureDictationVocabulary,
   type DictationVocabularyCapture,
@@ -45,6 +47,7 @@ import {
   resolveLiveTranscriptionReconciliationMode,
   shouldAcceptLiveTranscription,
 } from "./transcriptionReconciliation";
+import { noteSuccessfulDictationPaste } from "./vocabularyCorrection";
 
 export interface ProcessRecordingBlobParams {
   blob: Blob;
@@ -366,18 +369,39 @@ function toUserFacingErrorMessage(error: unknown, settings: AppSettings): string
   return tn("widget.error.processingFailed");
 }
 
+interface DictationHintPlan extends AppliedHintPlan {
+  terms: string[];
+}
+
+function planDictationHints(
+  capture: DictationVocabularyCapture,
+  settings: AppSettings,
+): DictationHintPlan {
+  const selection = selectVocabularyHints(
+    capture.hintTerms,
+    hintAdapterForBatch(settings.whisperEndpoint || "", resolveBatchTranscriptionModel(settings)),
+  );
+  return {
+    mode: selection.terms.length > 0 ? "prompt" : "none",
+    termIds: selection.termIds,
+    terms: selection.terms,
+  };
+}
+
 async function transcribeViaBackend({
   audioBase64,
   audioMimeType,
   audioFileName,
   settings,
   streamingRequestId,
+  vocabularyHints,
 }: {
   audioBase64: string;
   audioMimeType: string;
   audioFileName: string;
   settings: AppSettings;
   streamingRequestId?: string | null;
+  vocabularyHints?: readonly string[];
 }): Promise<TranscriptionResult> {
   const whisperModel = resolveBatchTranscriptionModel(settings);
   logInfo("API", `Sending to backend, audio_size: ${audioBase64.length} chars`);
@@ -396,6 +420,9 @@ async function transcribeViaBackend({
       mime_type: audioMimeType,
       streaming_enabled: isSttStreamingEnabled(settings),
       streaming_request_id: streamingRequestId ?? null,
+      ...(vocabularyHints && vocabularyHints.length > 0
+        ? { vocabulary_hints: [...vocabularyHints] }
+        : {}),
     },
   });
 
@@ -408,6 +435,7 @@ async function transcribeAudio({
   audioFileName,
   settings,
   streamingRequestId,
+  vocabularyHints,
 }: {
   audioBase64: string;
   audioMimeType: string;
@@ -415,6 +443,7 @@ async function transcribeAudio({
   settings: AppSettings;
   signal?: AbortSignal;
   streamingRequestId?: string | null;
+  vocabularyHints?: readonly string[];
 }): Promise<TranscriptionResult> {
   return transcribeViaBackend({
     audioBase64,
@@ -422,6 +451,7 @@ async function transcribeAudio({
     audioFileName,
     settings,
     streamingRequestId,
+    vocabularyHints,
   });
 }
 
@@ -432,6 +462,7 @@ async function resolveFinalTranscription({
   audioFileName,
   settings,
   signal,
+  vocabularyHints,
 }: {
   liveTranscription: LiveTranscriptionResult | null;
   audioBase64: string;
@@ -439,6 +470,7 @@ async function resolveFinalTranscription({
   audioFileName: string;
   settings: AppSettings;
   signal: AbortSignal;
+  vocabularyHints?: readonly string[];
 }): Promise<TranscriptionResult> {
   const liveResult =
     liveTranscription && shouldAcceptLiveTranscription(settings, true)
@@ -458,6 +490,7 @@ async function resolveFinalTranscription({
         audioFileName,
         settings,
         signal,
+        vocabularyHints,
       })
     );
   }
@@ -474,6 +507,7 @@ async function resolveFinalTranscription({
       audioFileName,
       settings,
       signal,
+      vocabularyHints,
     });
     const guardedBatch = guardTranscriptionResult(batchResult, settings.language);
     if (!guardedBatch.transcription) {
@@ -511,10 +545,14 @@ export async function processDictationText(
   notice: typeof showCleanupNotice = showCleanupNotice,
   vocabulary: DictationVocabularyCapture = NO_VOCABULARY,
   clean: typeof cleanupDictation = cleanupDictation,
+  hintPlan: AppliedHintPlan = { mode: "none", termIds: [] },
 ): Promise<DictationTextResult> {
-  const outcome = await clean(result.raw, settings, { context });
+  const outcome = await clean(result.raw, settings, {
+    context,
+    vocabularyHints: vocabulary.hintTerms,
+  });
   const cleanupApplied = outcome.applied && outcome.text !== result.raw;
-  const stage = applyVocabularyStage(outcome.text, vocabulary);
+  const stage = applyVocabularyStage(outcome.text, vocabulary, {}, hintPlan);
   logInfo(
     "VOCABULARY",
     `event=normalize request_id=${diagnosticId(context.requestId)} status=${stage.personalization?.status ?? "disabled"} replacements=${stage.replacements} lexicon_revision=${vocabulary.snapshot.lexiconRevision} reason=${stage.failure ?? "none"}`,
@@ -622,6 +660,7 @@ export async function runDictationStage<T>(
 
 async function pasteCleanedText(text: string, context: DictationCleanupContext): Promise<void> {
   await runDictationStage(context, "paste", () => invoke<void>("paste_text", { text }));
+  noteSuccessfulDictationPaste(context.entryId ?? context.requestId);
   logInfo(
     "PASTE",
     `request_id=${diagnosticId(context.requestId)} command_completed=true target_insertion=unverified`,
@@ -738,6 +777,8 @@ export async function processRecordingBlob({
 
   try {
     const apiStart = Date.now();
+    const capturedVocabulary = await vocabulary;
+    const hintPlan = planDictationHints(capturedVocabulary, settings);
     const transcriptionCandidate = await runDictationStage(context, "stt", () =>
       resolveFinalTranscription({
         liveTranscription,
@@ -746,6 +787,7 @@ export async function processRecordingBlob({
         audioFileName,
         settings,
         signal: handle.signal,
+        vocabularyHints: hintPlan.terms,
       }),
     );
     if (handle.isCancelled()) {
@@ -795,7 +837,9 @@ export async function processRecordingBlob({
         settings,
         context,
         showCleanupNotice,
-        await vocabulary,
+        capturedVocabulary,
+        cleanupDictation,
+        hintPlan,
       ),
       settings,
     );
@@ -909,7 +953,8 @@ export async function retryHistoryEntry(
   const handle = await beginProcessing(entry, "update");
   const retryStarted = Date.now();
   // A retry is a new attempt and applies the vocabulary as it is now.
-  const vocabulary = captureDictationVocabulary(retrySettings.language);
+  const vocabulary = await captureDictationVocabulary(retrySettings.language);
+  const hintPlan = planDictationHints(vocabulary, retrySettings);
   const context: DictationCleanupContext = {
     requestId: crypto.randomUUID(),
     entryId: entry.id,
@@ -926,6 +971,7 @@ export async function retryHistoryEntry(
         audioFileName: audioSource.audioFileName,
         settings: retrySettings,
         signal: handle.signal,
+        vocabularyHints: hintPlan.terms,
       }),
     );
     if (handle.isCancelled()) {
@@ -959,7 +1005,9 @@ export async function retryHistoryEntry(
         retrySettings,
         context,
         showCleanupNotice,
-        await vocabulary,
+        vocabulary,
+        cleanupDictation,
+        hintPlan,
       ),
       retrySettings,
     );

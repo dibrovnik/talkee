@@ -30,7 +30,7 @@
 - [x] 4.3 Создать `VocabularyEditor.tsx` с CRUD canonical и раздельным утверждением variants/context/case, deactivate/delete; переиспользовать `src/ui`. Проверка: term-only PIM не заменяет «пин», form error сохраняет введённое, deletion не переписывает историю.
 - [x] 4.4 Подключить cross-window updates/CAS errors к этим компонентам и `src/lib/vocabulary.ts`. Проверка: параллельное редактирование не перезаписывает свежие правила, устаревший preview требует нового подтверждения.
 - [ ] 4.5 В `docs/testing/manual-style-test-plan.md` добавить ручные сценарии empty/manual/edit/off/domain, keyboard/VoiceOver/light/dark/возврат фокуса. Проверка: выполнить их в macOS-приложении; сохранить только результаты без пользовательского текста.
-- [ ] 4.6 Выполнить `bun test src/lib/vocabulary.test.ts`, `bunx tsc --noEmit`, `bun run build`; проверить production-вкладку через `bun run tauri dev` и встроенный браузер/нативное окно.
+- [x] 4.6 Выполнить `bun test src/lib/vocabulary.test.ts`, `bunx tsc --noEmit`, `bun run build`; проверить production-вкладку через `bun run tauri dev` и встроенный браузер/нативное окно.
 
 ## 5. Starter, импорт и экспорт
 
@@ -51,7 +51,7 @@
 
 ## 7. STT-подсказки и один существующий запрос очистки
 
-- [ ] 7.1 В `src/lib/vocabulary.ts`, `src-tauri/src/ai.rs` добавить capability whitelist и deterministic compact canonical hints с byte/count бюджетами; параметры — optional для backward compatibility. Проверка: inactive/неутверждённые слова не попадают в payload, неизвестный adapter и Nemotron/GigaAM не получают hints.
+- [x] 7.1 В `src/lib/vocabulary.ts`, `src-tauri/src/ai.rs` добавить capability whitelist и deterministic compact canonical hints с byte/count бюджетами; параметры — optional для backward compatibility. Проверка: inactive/неутверждённые слова не попадают в payload, неизвестный adapter и Nemotron/GigaAM не получают hints.
 - [ ] 7.2 В `src-tauri/src/bin/talkee-stt.rs` связать prompt с `WhisperRunOptions.initial_prompt`; no-speech/no-context guardrails сохранить. Проверка: run-options fixture содержит PIM в actual Whisper options, Nemotron options его не используют; тест тишины не начинает галлюцинировать.
 - [ ] 7.3 В `src-tauri/src/ai.rs` передавать словарь Groq/OpenAI batch через документированный `prompt`, исправить GPT-4o ветку `instructions`. Проверка: multipart fixture содержит верные поля/модель/язык/format, без слов в логах.
 - [ ] 7.4 Передать optional hints через `src-tauri/src/live_dictation.rs`, `realtime.rs`, `src/windows/widget/services/dictationStreamOverlay.ts`; применить только поддерживаемой OpenAI transcription session. Проверка: session payload/reconciliation используют один snapshot, realtime translation payload не меняется, нет полного STT ради словаря.

@@ -55,6 +55,7 @@ describe("check-naming", () => {
     const root = makeTree();
     write(root, "node_modules/pkg/index.js", "Talkis\n");
     write(root, "target/debug/x", "Talkis\n");
+    write(root, ".tmp-verify/check.py", "Talkis\n");
 
     expect(scanForLegacyName(root, new Set())).toHaveLength(0);
   });

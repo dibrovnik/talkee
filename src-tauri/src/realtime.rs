@@ -270,6 +270,8 @@ pub struct RealtimeConnectionRequest {
     pub voice_output: bool,
     pub voice: Option<String>,
     pub voice_speed: Option<f32>,
+    #[serde(default)]
+    pub vocabulary_hints: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -801,6 +803,19 @@ fn setup_message(req: &RealtimeConnectionRequest) -> Option<Value> {
             .filter(|language| !language.is_empty())
         {
             transcription["language"] = Value::String(language.to_string());
+        }
+        let plan = crate::stt_hints::plan_prompt(
+            None,
+            req.vocabulary_hints.as_deref(),
+            crate::stt_hints::realtime_adapter(
+                &req.provider,
+                &req.purpose,
+                resolved_openai_transcription_model(&req.model),
+            ),
+            false,
+        );
+        if let Some(prompt) = plan.prompt {
+            transcription["prompt"] = Value::String(prompt);
         }
         return Some(json!({
             "type": "session.update",
@@ -1565,6 +1580,31 @@ mod tests {
     }
 
     #[test]
+    fn vocabulary_prompt_is_transcription_only() {
+        let mut request = RealtimeConnectionRequest {
+            provider: "openai".into(),
+            api_key: "key".into(),
+            model: "gpt-4o-mini-transcribe".into(),
+            endpoint: "https://api.openai.com".into(),
+            target_language: None,
+            purpose: "stt".into(),
+            voice_output: false,
+            voice: None,
+            voice_speed: None,
+            vocabulary_hints: Some(vec!["PIM".into()]),
+        };
+        let payload = setup_message(&request).unwrap();
+        assert_eq!(
+            payload["session"]["audio"]["input"]["transcription"]["prompt"],
+            "PIM."
+        );
+        request.purpose = "translation".into();
+        let with = setup_message(&request).unwrap();
+        request.vocabulary_hints = None;
+        assert_eq!(with, setup_message(&request).unwrap());
+    }
+
+    #[test]
     fn parses_all_stt_provider_events() {
         let cases = [
             (
@@ -1746,6 +1786,7 @@ mod tests {
                 purpose: "stt".to_string(),
                 voice_output: false,
                 voice: None,
+                vocabulary_hints: None,
                 voice_speed: None,
             };
             assert_eq!(connection_url(&request).unwrap().scheme(), "wss");
@@ -1763,6 +1804,7 @@ mod tests {
             purpose: "translation".to_string(),
             voice_output: false,
             voice: None,
+            vocabulary_hints: None,
             voice_speed: None,
         };
 
@@ -1802,6 +1844,7 @@ mod tests {
         let audio_setup = setup_message(&RealtimeConnectionRequest {
             voice_output: true,
             voice: Some("cedar".to_string()),
+            vocabulary_hints: None,
             voice_speed: Some(1.1),
             ..request.clone()
         })
@@ -1840,6 +1883,7 @@ mod tests {
             purpose: "stt".to_string(),
             voice_output: false,
             voice: None,
+            vocabulary_hints: None,
             voice_speed: None,
         };
 
@@ -1980,6 +2024,7 @@ mod tests {
             purpose: "translation".to_string(),
             voice_output: false,
             voice: None,
+            vocabulary_hints: None,
             voice_speed: None,
         };
         let (sender, receiver) = tokio::sync::mpsc::channel(OPENAI_MAX_COMMIT_CHUNKS + 1);
@@ -2040,6 +2085,7 @@ mod tests {
             purpose: "stt".to_string(),
             voice_output: false,
             voice: None,
+            vocabulary_hints: None,
             voice_speed: None,
         };
         let (sender, receiver) = tokio::sync::mpsc::channel(2);
@@ -2113,6 +2159,7 @@ mod tests {
             purpose: "stt".to_string(),
             voice_output: false,
             voice: None,
+            vocabulary_hints: None,
             voice_speed: None,
         };
         let (sender, receiver) = tokio::sync::mpsc::channel(4);
@@ -2200,6 +2247,7 @@ mod tests {
             purpose: "stt".to_string(),
             voice_output: false,
             voice: None,
+            vocabulary_hints: None,
             voice_speed: None,
         };
         let (sender, receiver) = tokio::sync::mpsc::channel(OPENAI_MAX_COMMIT_CHUNKS + 1);
@@ -2311,6 +2359,7 @@ mod tests {
             purpose: "stt".to_string(),
             voice_output: false,
             voice: None,
+            vocabulary_hints: None,
             voice_speed: None,
         };
         let (sender, receiver) = tokio::sync::mpsc::channel(OPENAI_MAX_COMMIT_CHUNKS * 2 + 1);
@@ -2400,6 +2449,7 @@ mod tests {
             purpose: purpose.to_string(),
             voice_output: false,
             voice: None,
+            vocabulary_hints: None,
             voice_speed: None,
         })
         .await

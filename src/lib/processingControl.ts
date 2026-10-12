@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
+import { notifyForegroundActivity } from "./foregroundActivity";
 import { HISTORY_UPDATED_EVENT } from "./hotkeyEvents";
 import { tn } from "./i18n";
 import { logError, logInfo } from "./logger";
@@ -80,6 +81,7 @@ export async function beginProcessing(
     audioBase64: undefined,
   };
   active.set(entry.id, { cancelled: false, abort, entry: processingEntry });
+  notifyForegroundActivity(`entry-${entry.id}`, true);
   await persist(processingEntry, mode);
   logInfo("PROCESSING", `Started entry=${entry.id} source=${entry.source ?? "voice"}`);
 
@@ -89,6 +91,7 @@ export async function beginProcessing(
     isCancelled: () => active.get(entry.id)?.cancelled ?? false,
     finish: () => {
       active.delete(entry.id);
+      notifyForegroundActivity(`entry-${entry.id}`, false);
     },
   };
 }

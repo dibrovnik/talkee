@@ -11,8 +11,40 @@
 <p align="center">
   <a href="README.md">Read in English</a>
   ·
-  <a href="https://github.com/SerTimBerrners-Lee/talkee/releases/latest">Последний релиз</a>
+  <a href="https://github.com/dibrovnik/talkee/releases/latest">Последний релиз</a>
 </p>
+
+<p align="center">
+  <a href="https://github.com/dibrovnik/talkee/releases/latest"><img src="https://img.shields.io/github/v/release/dibrovnik/talkee?color=blue" alt="Latest release"></a>
+  <a href="https://github.com/dibrovnik/talkee/actions/workflows/check.yml"><img src="https://github.com/dibrovnik/talkee/actions/workflows/check.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License: AGPL-3.0-or-later"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B%20%C2%B7%20Apple%20Silicon-black" alt="macOS 14 or later, Apple Silicon">
+</p>
+
+<p align="center"><strong>Говорите. Talkee распознает, обработает и вставит текст.</strong><br>Диктовка · аудио и видео · созвоны · перевод · локальные модели</p>
+
+<p align="center">
+  <a href="https://github.com/dibrovnik/talkee/releases/latest/download/Talkee-macos.dmg"><strong>Скачать для macOS ↓</strong></a> ·
+  <a href="docs/privacy.md">Приватность</a> ·
+  <a href="CHANGELOG.md">Что нового</a> ·
+  <a href="https://github.com/dibrovnik/talkee/issues/new/choose">Сообщить о проблеме</a>
+</p>
+
+![Виджет Talkee в чёлке MacBook: диктовка, живой текст и вставка](docs/screenshots/notch-demo.gif)
+
+*Демонстрация компонента виджета Talkee с примером текста в мокапе MacBook.*
+
+**Остров в чёлке.** Talkee встраивает запись вокруг выреза камеры MacBook: таймер, уровень голоса, живой текст и завершение — прямо над рабочим приложением. Для любого экрана доступна плавающая пилюля.
+
+## Скриншоты
+
+| Обработка текста | Настройки и горячие клавиши |
+| --- | --- |
+| ![Стили очистки текста](docs/screenshots/text-cleanup.png) | ![Настройки Talkee](docs/screenshots/settings.png) |
+
+![Транскрибация аудио и видео](docs/screenshots/transcription.png)
+
+Настоящие скриншоты приложения на macOS. Интерфейс доступен на русском и английском.
 
 ## Что такое Talkee?
 
@@ -90,7 +122,7 @@ Talkee сделан для повседневной работы: IDE, чаты,
 
 Скачайте последнюю сборку из GitHub Releases:
 
-- [macOS DMG](https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/Talkee-macos.dmg)
+- [macOS DMG](https://github.com/dibrovnik/talkee/releases/latest/download/Talkee-macos.dmg)
 
 ### Если macOS блокирует первый запуск
 
@@ -186,6 +218,8 @@ Talkee использует встроенный ffmpeg sidecar для виде�
 
 Требования:
 
+- macOS 14+ на Apple Silicon (M1 и новее)
+
 - Bun `1.2.x`
 - Rust stable
 - системные зависимости Tauri v2
@@ -241,7 +275,7 @@ Issues и pull requests приветствуются. Перед изменен�
 
 Конвенции проекта:
 
-- Тексты интерфейса - на русском.
+- Интерфейс доступен на русском и английском.
 - Код и комментарии - на английском.
 - Package manager - Bun.
 - Настройки сохраняются сразу после изменения.

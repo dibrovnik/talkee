@@ -30,6 +30,7 @@
     "check:release": "bun run gate && bun run build",
     "postprocess:macos-release": "VERSION=$(python3 -c \"import json; print(json.load(open('package.json'))['version'])\") && BUILD_ROOT=src-tauri/target/release/bundle bash scripts/postprocess-macos-release.sh \"$VERSION\"",
     "build:release": "bun scripts/build-release.mjs",
+    "update:local": "bun scripts/update-local.mjs",
     "build:release:macos": "bun scripts/build-release.mjs macos",
     "preview": "bun scripts/run-vite.mjs preview",
     "tauri": "bun scripts/run-tauri.mjs",

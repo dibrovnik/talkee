@@ -20,7 +20,7 @@ concurrency:
 jobs:
   build:
     name: Preflight macos
-    runs-on: macos-latest
+    runs-on: macos-14
 
     env:
       MACOSX_DEPLOYMENT_TARGET: "14.0"
@@ -28,6 +28,7 @@ jobs:
       TALKEE_SKIP_BEFORE_BUILD: "1"
       TALKEE_TARGET_CPU: "apple-m1"
       RUSTFLAGS: "-C target-cpu=apple-m1"
+      TALKEE_DEV_SIGNING_IDENTITY: "-"
       RELEASE_LABEL: ${{ github.event.inputs.release_tag || github.ref_name }}
 
     steps:
@@ -41,6 +42,8 @@ jobs:
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Cache Bun dependencies
         uses: actions/cache@v4
@@ -68,10 +71,7 @@ jobs:
         run: bun run gate
 
       - name: Build bundles
-        run: bun run tauri build --bundles app
-
-      - name: Postprocess macOS release
-        run: bun run postprocess:macos-release
+        run: bun run build:release:macos
 
       - name: Archive macOS app bundle
         run: |

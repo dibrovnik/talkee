@@ -1,5 +1,9 @@
 // Personal vocabulary settings section.
 export const vocabulary = {
+  "vocabulary.capability.hintCount": {
+    ru: "Подсказки и замены · включено {count}, вне подсказки {omitted}",
+    en: "Hints and replacements · included {count}, omitted {omitted}",
+  },
   "settingsApp.tab.vocabulary": { ru: "Словарь", en: "Vocabulary" },
   "vocabulary.page.title": { ru: "Словарь", en: "Vocabulary" },
   "vocabulary.page.desc": {

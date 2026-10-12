@@ -1,8 +1,11 @@
+import { emit, listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SETTINGS_UPDATED_EVENT } from "../../../../lib/hotkeyEvents";
 import { useI18n } from "../../../../lib/i18n";
 import { IconBook, IconPencil, IconPlus, IconTrash } from "../../../../lib/icons";
 import { logError } from "../../../../lib/logger";
+import { type AppSettings, getSettings } from "../../../../lib/store";
 import {
   createDevelopmentStarter,
   type ImportPreview,
@@ -17,6 +20,11 @@ import {
   type VocabularyView,
   vocabularyClient,
 } from "../../../../lib/vocabulary";
+import {
+  collectHintTerms,
+  hintAdapterForBatch,
+  selectVocabularyHints,
+} from "../../../../lib/vocabularyHints";
 import { Badge } from "../../../../ui/Badge";
 import { Button } from "../../../../ui/Button";
 import { FormRow } from "../../../../ui/FormRow";
@@ -25,8 +33,19 @@ import { SegmentedControl } from "../../../../ui/SegmentedControl";
 import { SelectMenu } from "../../../../ui/SelectMenu";
 import { TextField } from "../../../../ui/TextField";
 import { Toggle } from "../../../../ui/Toggle";
+import { resolveBatchTranscriptionModel } from "../../../widget/services/transcriptionModel";
+import {
+  CORRECTION_CAPTURE_EVENT,
+  CORRECTION_DISMISS_EVENT,
+  CORRECTION_PENDING_REQUEST_EVENT,
+  type CorrectionCapture,
+} from "../../../widget/services/vocabularyCorrection";
+import { CorrectionDialog } from "./CorrectionDialog";
+import { VocabularyAnalysisPanel } from "./VocabularyAnalysisPanel";
+import { VocabularyCorrectionHotkey } from "./VocabularyCorrectionHotkey";
 import { VocabularyEditor } from "./VocabularyEditor";
 import { VocabularyImportReview } from "./VocabularyImportReview";
+import { VocabularySuggestions } from "./VocabularySuggestions";
 import {
   activeRuleCount,
   filterTerms,
@@ -54,27 +73,41 @@ interface EditorTarget {
 export interface VocabularyTabProps {
   client?: VocabularyClient;
   initialView?: VocabularyView | null;
+  correctionSourceId?: string | null;
+  onCorrectionClosed?: () => void;
 }
 
 export function VocabularyTab({
   client = vocabularyClient(),
   initialView = null,
+  correctionSourceId = null,
+  onCorrectionClosed,
 }: VocabularyTabProps): ReactElement {
   const { t } = useI18n();
   const [view, setView] = useState<VocabularyView | null>(initialView);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
   const [pane, setPane] = useState<VocabularyPane>("terms");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<TermCategory | "all">("all");
+  const [correction, setCorrection] = useState<CorrectionCapture | null>(null);
+  const correctionRef = useRef<CorrectionCapture | null>(null);
+  correctionRef.current = correction;
   const [editor, setEditor] = useState<EditorTarget | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [review, setReview] = useState<ReviewTarget | null>(null);
   const [notice, setNotice] = useState("");
-  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const returnFocusRef = useRef<string | null>(null);
 
   useEffect(() => {
     let alive = true;
+    void getSettings()
+      .then((next) => {
+        if (alive) setSettings(next);
+      })
+      .catch(() => {});
     client
       .getView()
       .then((next) => {
@@ -95,8 +128,47 @@ export function VocabularyTab({
     };
   }, [client]);
 
+  useEffect(() => {
+    if (correctionSourceId) {
+      setPane("terms");
+      setCorrection({ id: crypto.randomUUID(), text: "", sourceId: correctionSourceId });
+    }
+  }, [correctionSourceId]);
+  useEffect(() => {
+    let alive = true;
+    const watching = listen<CorrectionCapture>(CORRECTION_CAPTURE_EVENT, ({ payload }) => {
+      if (alive) {
+        setPane("terms");
+        setCorrection(payload);
+      }
+    });
+    void watching.then(() => emit(CORRECTION_PENDING_REQUEST_EVENT)).catch(() => {});
+    const settingsListener = listen(SETTINGS_UPDATED_EVENT, () => {
+      void getSettings({ reload: true }).then((next) => {
+        if (alive) setSettings(next);
+      });
+    });
+    return () => {
+      alive = false;
+      void watching.then((stop) => stop());
+      void settingsListener.then((stop) => stop());
+      void emit(CORRECTION_DISMISS_EVENT, { id: correctionRef.current?.id });
+    };
+  }, []);
+  const closeCorrection = (): void => {
+    if (correction) void emit(CORRECTION_DISMISS_EVENT, { id: correction.id });
+    setCorrection(null);
+    onCorrectionClosed?.();
+  };
+
   const state: VocabularyState | null = view?.status === "ready" ? view.state : null;
   const revision = state?.revision ?? 0;
+  const hintSelection = settings
+    ? selectVocabularyHints(
+        collectHintTerms(state, settings.language),
+        hintAdapterForBatch(settings.whisperEndpoint, resolveBatchTranscriptionModel(settings)),
+      )
+    : null;
   const pending = state ? readySuggestionCount(state) : 0;
   const domains = useMemo(
     () => (state ? listDomains(state.terms, [state.config.activeDomain]) : []),
@@ -142,8 +214,8 @@ export function VocabularyTab({
     setActionError(t("vocabulary.import.rejected", { error: parsed.message }));
   };
 
-  const beginOverlay = (): void => {
-    returnFocusRef.current = document.activeElement as HTMLElement | null;
+  const beginOverlay = (action: string): void => {
+    returnFocusRef.current = action;
     setPendingDelete(null);
     setActionError("");
     setNotice("");
@@ -152,12 +224,16 @@ export function VocabularyTab({
   const restoreFocus = (): void => {
     const target = returnFocusRef.current;
     requestAnimationFrame(() => {
-      if (target?.isConnected) target.focus();
+      if (target) {
+        rootRef.current
+          ?.querySelector<HTMLElement>(`[data-vocabulary-action="${CSS.escape(target)}"]`)
+          ?.focus();
+      }
     });
   };
 
   const openEditor = (term: VocabularyTerm | null): void => {
-    beginOverlay();
+    beginOverlay(term ? `edit-${term.id}` : "add");
     setEditor({ termId: term?.id ?? null, initial: term });
   };
 
@@ -167,7 +243,7 @@ export function VocabularyTab({
   };
 
   const openStarter = async (): Promise<void> => {
-    beginOverlay();
+    beginOverlay("starter");
     const text = JSON.stringify(createDevelopmentStarter());
     try {
       setReview({ source: "starter", text, preview: await client.previewImport(text) });
@@ -177,7 +253,7 @@ export function VocabularyTab({
   };
 
   const openImport = async (): Promise<void> => {
-    beginOverlay();
+    beginOverlay("import");
     try {
       const path = await open({ multiple: false, filters: JSON_FILTER });
       if (typeof path !== "string") return;
@@ -234,7 +310,7 @@ export function VocabularyTab({
   );
 
   return (
-    <div className="ui-tab">
+    <div className="ui-tab" ref={rootRef}>
       <div className="ui-page-header">
         <h2 className="ui-page-header__title">{t("vocabulary.page.title")}</h2>
         <div className="ui-page-header__desc">{t("vocabulary.page.desc")}</div>
@@ -274,6 +350,7 @@ export function VocabularyTab({
           />
 
           <FormSection title={t("vocabulary.apply.section")}>
+            {settings && <VocabularyCorrectionHotkey settings={settings} onApplied={setSettings} />}
             <FormRow
               label={t("vocabulary.apply.toggle")}
               description={t("vocabulary.apply.toggleDesc")}
@@ -312,7 +389,16 @@ export function VocabularyTab({
             <FormRow
               label={t("vocabulary.capability.label")}
               description={t("vocabulary.capability.desc")}
-              control={<Badge>{t("vocabulary.capability.replacementsOnly")}</Badge>}
+              control={
+                <Badge>
+                  {hintSelection?.adapter
+                    ? t("vocabulary.capability.hintCount", {
+                        count: hintSelection.terms.length,
+                        omitted: hintSelection.omitted,
+                      })
+                    : t("vocabulary.capability.replacementsOnly")}
+                </Badge>
+              }
             />
             {pending > 0 && (
               <FormRow
@@ -334,7 +420,14 @@ export function VocabularyTab({
           )}
 
           {pane === "terms" &&
-            (review ? (
+            (correction ? (
+              <CorrectionDialog
+                capture={correction}
+                client={client}
+                state={state}
+                close={closeCorrection}
+              />
+            ) : review ? (
               <VocabularyImportReview
                 key={`${review.source}-${review.preview.revision}`}
                 client={client}
@@ -363,13 +456,19 @@ export function VocabularyTab({
                 <div
                   style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
                 >
-                  <Button variant="primary" onClick={() => openEditor(null)}>
+                  <Button
+                    data-vocabulary-action="add"
+                    variant="primary"
+                    onClick={() => openEditor(null)}
+                  >
                     {t("vocabulary.action.add")}
                   </Button>
-                  <Button onClick={() => void openStarter()}>
+                  <Button data-vocabulary-action="starter" onClick={() => void openStarter()}>
                     {t("vocabulary.action.starter")}
                   </Button>
-                  <Button onClick={() => void openImport()}>{t("vocabulary.action.import")}</Button>
+                  <Button data-vocabulary-action="import" onClick={() => void openImport()}>
+                    {t("vocabulary.action.import")}
+                  </Button>
                   <Button onClick={() => setPane("analysis")}>
                     {t("vocabulary.action.analyze")}
                   </Button>
@@ -379,7 +478,7 @@ export function VocabularyTab({
               <FormSection
                 title={t("vocabulary.list.section")}
                 action={
-                  <Button onClick={() => openEditor(null)}>
+                  <Button data-vocabulary-action="add" onClick={() => openEditor(null)}>
                     <IconPlus size={14} aria-hidden="true" /> {t("vocabulary.action.add")}
                   </Button>
                 }
@@ -407,10 +506,12 @@ export function VocabularyTab({
                   />
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingBottom: 8 }}>
-                  <Button onClick={() => void openStarter()}>
+                  <Button data-vocabulary-action="starter" onClick={() => void openStarter()}>
                     {t("vocabulary.action.starter")}
                   </Button>
-                  <Button onClick={() => void openImport()}>{t("vocabulary.action.import")}</Button>
+                  <Button data-vocabulary-action="import" onClick={() => void openImport()}>
+                    {t("vocabulary.action.import")}
+                  </Button>
                   <Button onClick={() => void exportVocabulary()}>
                     {t("vocabulary.action.export")}
                   </Button>
@@ -438,16 +539,10 @@ export function VocabularyTab({
               </FormSection>
             ))}
 
-          {pane === "suggestions" && (
-            <div className="ui-empty-state ui-empty-state--compact">
-              <p className="ui-empty-state__hint">{t("vocabulary.suggestions.empty")}</p>
-            </div>
-          )}
+          {pane === "suggestions" && <VocabularySuggestions state={state} client={client} />}
 
           {pane === "analysis" && (
-            <div className="ui-empty-state ui-empty-state--compact">
-              <p className="ui-empty-state__hint">{t("vocabulary.analysis.unavailable")}</p>
-            </div>
+            <VocabularyAnalysisPanel state={state} client={client} settings={settings} />
           )}
         </>
       )}
@@ -497,7 +592,11 @@ function TermRow({
         </div>
         {!term.enabled && <Badge>{t("vocabulary.list.disabled")}</Badge>}
         {term.enabled && term.useAsHint && <Badge>{t("vocabulary.list.hint")}</Badge>}
-        <Button aria-label={`${t("vocabulary.action.edit")}: ${term.canonical}`} onClick={onEdit}>
+        <Button
+          data-vocabulary-action={`edit-${term.id}`}
+          aria-label={`${t("vocabulary.action.edit")}: ${term.canonical}`}
+          onClick={onEdit}
+        >
           <IconPencil size={14} aria-hidden="true" />
         </Button>
         <Button

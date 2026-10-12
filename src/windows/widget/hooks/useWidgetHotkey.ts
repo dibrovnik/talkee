@@ -26,6 +26,10 @@ import {
   saveSettings,
 } from "../../../lib/store";
 import { applyHotkeyTransaction } from "../services/hotkeyTransaction";
+import {
+  captureVocabularyCorrection,
+  installCorrectionCaptureBridge,
+} from "../services/vocabularyCorrection";
 import type { WidgetAction, WidgetMachineState } from "../services/widgetMachine";
 
 interface UseWidgetHotkeyParams {
@@ -124,6 +128,8 @@ export function useWidgetHotkey({
   const { t } = useI18n();
   const isHotkeyCaptureActiveRef = useRef(false);
   const activeCaptureRequestIdRef = useRef<string | null>(null);
+  const correctionRegisteredHotkeyRef = useRef<string | null>(null);
+  const correctionArmedRef = useRef(false);
   const cleanupRegisteredHotkeyRef = useRef<string | null>(null);
   const cleanupRecordingRegisteredHotkeyRef = useRef<string | null>(null);
   const cleanupHotkeyArmedRef = useRef(false);
@@ -133,6 +139,7 @@ export function useWidgetHotkey({
     selection: null,
     cleanup: null,
     dictationCleanup: null,
+    vocabularyCorrection: null,
   });
   const transactionQueueRef = useRef<Promise<void>>(Promise.resolve());
   const selectionHotkeyArmedRef = useRef(false);
@@ -162,6 +169,7 @@ export function useWidgetHotkey({
   const handleHotkeyPress = useCallback(
     (event: HandyHotkeyEventPayload) => {
       if (isHotkeyCaptureActiveRef.current) {
+        correctionArmedRef.current = false;
         cleanupHotkeyArmedRef.current = false;
         selectionHotkeyArmedRef.current = false;
         dispatch({ type: "RESET_HOTKEY_STATE" });
@@ -180,6 +188,18 @@ export function useWidgetHotkey({
         selectionHotkeyArmedRef.current = false;
         dispatch({ type: "RESET_HOTKEY_STATE" });
         logError("HOTKEY", `Ignored unsafe macOS system hotkey event: ${event.hotkey}`);
+        return;
+      }
+
+      if (eventHotkey && eventHotkey === correctionRegisteredHotkeyRef.current) {
+        const action = resolveSelectionHotkeyAction(event.state, correctionArmedRef.current);
+        correctionArmedRef.current = action === "arm";
+        if (action === "trigger")
+          void captureVocabularyCorrection().catch(() =>
+            showError(
+              "Не удалось прочитать выделение. Выделите исправленную фразу и проверьте разрешение управления компьютером.",
+            ),
+          );
         return;
       }
 
@@ -302,6 +322,7 @@ export function useWidgetHotkey({
             selectionRegisteredHotkeyRef,
             cleanupRegisteredHotkeyRef,
             cleanupRecordingRegisteredHotkeyRef,
+            correctionRegisteredHotkeyRef,
           ].some((ref) => ref !== activeHotkeyRef && ref.current === currentHotkey);
           if (!stillUsed) {
             await invoke("unregister_handy_hotkey", {
@@ -397,6 +418,38 @@ export function useWidgetHotkey({
     if (!result.success) showError(result.message || t("widget.hotkey.registerFailedGeneric"));
   }, [attemptHotkeyRegistration, settingsLoaded, settingsRef, showError, t, unregisterHotkeyRef]);
 
+  const registerCorrectionHotkey = useCallback(async () => {
+    const hotkey = settingsRef.current?.vocabularyCorrectionHotkey || "";
+    if (!hotkey) {
+      await unregisterHotkeyRef(correctionRegisteredHotkeyRef);
+      return;
+    }
+    const others = [
+      settingsRef.current?.hotkey,
+      settingsRef.current?.cleanupToggleHotkey,
+      settingsRef.current?.cleanupRecordingHotkey,
+      settingsRef.current?.translation.selectionHotkey,
+    ];
+    if (others.some((other) => hotkeyForComparison(other) === hotkeyForComparison(hotkey))) {
+      showError(t("widget.hotkey.conflict"));
+      return;
+    }
+    const result = await attemptHotkeyRegistration(hotkey, correctionRegisteredHotkeyRef);
+    if (!result.success) showError(result.message || t("widget.hotkey.registerFailedGeneric"));
+  }, [
+    settingsRef,
+    unregisterHotkeyRef,
+    hotkeyForComparison,
+    attemptHotkeyRegistration,
+    showError,
+    t,
+  ]);
+
+  useEffect(() => {
+    if (settingsLoaded) void registerCorrectionHotkey();
+  }, [registerCorrectionHotkey, settingsLoaded, settings?.vocabularyCorrectionHotkey]);
+  useEffect(() => installCorrectionCaptureBridge(), []);
+
   const registerCleanupHotkey = useCallback(async () => {
     if (!settingsLoaded) return;
     const hotkey = settingsRef.current?.cleanupToggleHotkey || "";
@@ -434,12 +487,14 @@ export function useWidgetHotkey({
       await registerSelectionHotkey();
       await registerCleanupHotkey();
       await registerCleanupRecordingHotkey();
+      await registerCorrectionHotkey();
     };
   }, [
     registerCurrentHotkey,
     registerSelectionHotkey,
     registerCleanupHotkey,
     registerCleanupRecordingHotkey,
+    registerCorrectionHotkey,
   ]);
 
   useEffect(() => {
@@ -498,6 +553,8 @@ export function useWidgetHotkey({
               unregisterHotkey: (hotkey) => invoke("unregister_handy_hotkey", { hotkey }),
               getActiveHotkey: (target) => {
                 switch (target) {
+                  case "vocabularyCorrection":
+                    return correctionRegisteredHotkeyRef.current;
                   case "dictation":
                     return registeredHotkeyRef.current;
                   case "cleanup":
@@ -510,6 +567,9 @@ export function useWidgetHotkey({
               },
               setActiveHotkey: (target, hotkey) => {
                 switch (target) {
+                  case "vocabularyCorrection":
+                    correctionRegisteredHotkeyRef.current = hotkey;
+                    break;
                   case "dictation":
                     registeredHotkeyRef.current = hotkey;
                     break;
@@ -552,13 +612,15 @@ export function useWidgetHotkey({
               success: false,
               requestedHotkey: payload.hotkey,
               activeHotkey:
-                (payload.target === "dictation"
-                  ? registeredHotkeyRef.current
-                  : payload.target === "cleanup"
-                    ? cleanupRegisteredHotkeyRef.current
-                    : payload.target === "dictationCleanup"
-                      ? cleanupRecordingRegisteredHotkeyRef.current
-                      : selectionRegisteredHotkeyRef.current) ?? payload.hotkey,
+                (payload.target === "vocabularyCorrection"
+                  ? correctionRegisteredHotkeyRef.current
+                  : payload.target === "dictation"
+                    ? registeredHotkeyRef.current
+                    : payload.target === "cleanup"
+                      ? cleanupRegisteredHotkeyRef.current
+                      : payload.target === "dictationCleanup"
+                        ? cleanupRecordingRegisteredHotkeyRef.current
+                        : selectionRegisteredHotkeyRef.current) ?? payload.hotkey,
               message: t("settingsGeneralExtra.hotkey.applyFailed"),
             };
           }

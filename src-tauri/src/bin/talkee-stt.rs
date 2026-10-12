@@ -1472,6 +1472,11 @@ fn run_options_from_fields_with_auto(
         language,
         family: supports_whisper_options.then(|| {
             RunExtension::Whisper(WhisperRunOptions {
+                initial_prompt: fields
+                    .get("prompt")
+                    .map(|prompt| prompt.trim())
+                    .filter(|prompt| !prompt.is_empty())
+                    .map(ToString::to_string),
                 condition_on_prev_tokens: Some(false),
                 temperature: Some(0.0),
                 temperature_inc: Some(0.0),
@@ -1924,6 +1929,27 @@ mod tests {
 
         assert_eq!(options.language, None);
         assert_eq!(options.timestamps, TimestampKind::Segment);
+    }
+
+    #[test]
+    fn prompt_reaches_whisper_inference_only_and_preserves_guardrails() {
+        let fields = HashMap::from([("prompt".into(), "PIM, Dev.".into())]);
+        let options = run_options_from_fields(&fields, TimestampKind::Segment, true);
+        match options.family.unwrap() {
+            RunExtension::Whisper(whisper) => {
+                assert_eq!(whisper.initial_prompt.as_deref(), Some("PIM, Dev."));
+                assert_eq!(whisper.condition_on_prev_tokens, Some(false));
+                assert_eq!(whisper.no_speech_thold, Some(0.6));
+                assert_eq!(whisper.max_prev_context_tokens, Some(0));
+            }
+            _ => panic!("Whisper options missing"),
+        }
+        assert!(
+            run_options_from_fields(&fields, TimestampKind::Segment, false)
+                .family
+                .is_none()
+        );
+        assert!(is_low_signal_audio(&vec![0.0; 16_000]));
     }
 
     #[test]

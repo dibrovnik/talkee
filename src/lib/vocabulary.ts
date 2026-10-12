@@ -203,6 +203,27 @@ export interface VocabularyConfigPatch {
   analysisSchedule?: AnalysisSchedule;
 }
 
+export interface CorrectionInput {
+  sourceId: string;
+  sourceFingerprint: string;
+  sourceVariant: string;
+  canonical: string;
+  language: string;
+  category: TermCategory;
+  scope: TermScope;
+  caseSensitive: boolean;
+  contextWords: string[];
+  addRule: boolean;
+}
+
+export async function vocabularySourceFingerprint(raw: string, before: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(JSON.stringify([raw, before])),
+  );
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export const VOCABULARY_PORTABLE_FORMAT = "talkee-personal-vocabulary";
 
 /** Evidence-free exchange format; `target` is always the term's canonical. */
@@ -411,9 +432,27 @@ export interface VocabularyClientDeps {
 }
 
 export interface VocabularyClient {
+  setConsent(
+    expectedRevision: number,
+    periodic: boolean,
+    consent: ApiConsent | null,
+  ): Promise<VocabularyView>;
+  clearLearning(expectedRevision: number, fullReset: boolean): Promise<VocabularyView>;
+  reviewSuggestion(
+    expectedRevision: number,
+    review: {
+      suggestionId: string;
+      action: "accept" | "reject" | "restore";
+      canonical: string;
+      scope: TermScope;
+      category: TermCategory;
+      variants: VariantInput[];
+    },
+  ): Promise<VocabularyView>;
   /** Warm cached snapshot; refreshed when another window reports a newer revision. */
   getView(options?: { refresh?: boolean }): Promise<VocabularyView>;
   saveTerm(expectedRevision: number, term: TermInput): Promise<VocabularyView>;
+  saveCorrection(expectedRevision: number, correction: CorrectionInput): Promise<VocabularyView>;
   deleteTerm(expectedRevision: number, termId: string): Promise<VocabularyView>;
   updateConfig(expectedRevision: number, patch: VocabularyConfigPatch): Promise<VocabularyView>;
   previewImport(text: string): Promise<ImportPreview>;
@@ -481,6 +520,12 @@ export function createVocabularyClient(deps: VocabularyClientDeps): VocabularyCl
   };
 
   return {
+    setConsent: (expectedRevision, periodic, consent) =>
+      mutate("vocabulary_set_consent", { expectedRevision, periodic, consent }),
+    clearLearning: (expectedRevision, fullReset) =>
+      mutate("vocabulary_clear_learning", { expectedRevision, fullReset }),
+    reviewSuggestion: (expectedRevision, review) =>
+      mutate("vocabulary_review_suggestion", { expectedRevision, review }),
     async getView(options = {}) {
       ensureListening();
       if (cached && !options.refresh) return cached;
@@ -488,6 +533,8 @@ export function createVocabularyClient(deps: VocabularyClientDeps): VocabularyCl
     },
     saveTerm: (expectedRevision, term) =>
       mutate("vocabulary_save_term", { expectedRevision, term }),
+    saveCorrection: (expectedRevision, correction) =>
+      mutate("vocabulary_save_correction", { expectedRevision, correction }),
     deleteTerm: (expectedRevision, termId) =>
       mutate("vocabulary_delete_term", { expectedRevision, termId }),
     updateConfig: (expectedRevision, patch) =>

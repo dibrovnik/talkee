@@ -42,6 +42,7 @@ function setup(
     selection: stored.translation.selectionHotkey,
     cleanup: stored.cleanupToggleHotkey || null,
     dictationCleanup: stored.cleanupRecordingHotkey || null,
+    vocabularyCorrection: stored.vocabularyCorrectionHotkey || null,
   };
   const registered: string[] = [];
   const unregistered: string[] = [];
@@ -249,4 +250,43 @@ test("dictation cannot steal the cleanup hotkey", async () => {
     (await applyHotkeyTransaction(request("dictation", "Control+Shift+C"), env.dependencies))
       .success,
   ).toBe(false);
+});
+
+test("correction conflicts with every existing target and can be cleared", async () => {
+  for (const key of ["Alt+Space", "Control+Shift+C", "Alt+Command+Space", "Control+Shift+Y"]) {
+    const env = setup();
+    expect(
+      (await applyHotkeyTransaction(request("vocabularyCorrection", key), env.dependencies))
+        .success,
+    ).toBe(false);
+    expect(env.registered).toEqual([]);
+  }
+  const env = setup();
+  expect(
+    (
+      await applyHotkeyTransaction(
+        request("vocabularyCorrection", "Control+Shift+P"),
+        env.dependencies,
+      )
+    ).success,
+  ).toBe(true);
+  expect(env.getStored().vocabularyCorrectionHotkey).toBe("Control+Shift+P");
+  expect(
+    (await applyHotkeyTransaction(request("vocabularyCorrection", ""), env.dependencies)).success,
+  ).toBe(true);
+  expect(env.active.vocabularyCorrection).toBeNull();
+});
+
+test("correction registration failure leaves the stored configuration unchanged", async () => {
+  const env = setup({ registerError: new Error("occupied") });
+  expect(
+    (
+      await applyHotkeyTransaction(
+        request("vocabularyCorrection", "Control+Shift+P"),
+        env.dependencies,
+      )
+    ).success,
+  ).toBe(false);
+  expect(env.active.vocabularyCorrection).toBeNull();
+  expect(env.getStored().vocabularyCorrectionHotkey).toBeUndefined();
 });

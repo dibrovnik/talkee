@@ -1,6 +1,8 @@
 //! Personal vocabulary: Rust owns every durable mutation of the
 //! `personalVocabularyV1` key; WebViews read snapshots and send typed commands.
 
+pub mod analysis_jobs;
+pub mod learning;
 pub mod model;
 pub mod portable;
 pub mod store;
@@ -114,6 +116,7 @@ impl VocabularyPersistence for AppPersistence {
 /// across LLM or IPC waits.
 pub struct VocabularyManager {
     inner: Mutex<VocabularyStore<AppPersistence>>,
+    lease: Mutex<Option<analysis_jobs::Lease>>,
 }
 
 impl VocabularyManager {
@@ -130,6 +133,7 @@ impl VocabularyManager {
         }));
         app.manage(Self {
             inner: Mutex::new(VocabularyStore::new(persistence)),
+            lease: Mutex::new(None),
         });
         Ok(())
     }
@@ -191,6 +195,25 @@ pub fn vocabulary_get_state(
 }
 
 #[tauri::command]
+pub async fn vocabulary_save_correction(
+    app: AppHandle,
+    manager: State<'_, VocabularyManager>,
+    expected_revision: u64,
+    correction: learning::CorrectionInput,
+) -> Result<VocabularyView, String> {
+    let entry = crate::history_storage::read_history_entry_file(
+        app,
+        String::new(),
+        correction.source_id.clone(),
+    )
+    .await?
+    .ok_or("[vocabulary:not_found] Исходная запись удалена")?;
+    manager.mutate("save_correction", expected_revision, |state| {
+        learning::save_correction(state, correction, &entry)
+    })
+}
+
+#[tauri::command]
 pub fn vocabulary_save_term(
     manager: State<'_, VocabularyManager>,
     expected_revision: u64,
@@ -209,6 +232,17 @@ pub fn vocabulary_delete_term(
 ) -> Result<VocabularyView, String> {
     manager.mutate("delete_term", expected_revision, |state| {
         store::delete_term(state, &term_id)
+    })
+}
+
+#[tauri::command]
+pub fn vocabulary_review_suggestion(
+    manager: State<'_, VocabularyManager>,
+    expected_revision: u64,
+    review: learning::ReviewInput,
+) -> Result<VocabularyView, String> {
+    manager.mutate("review", expected_revision, |state| {
+        learning::review(state, review)
     })
 }
 

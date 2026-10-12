@@ -498,6 +498,7 @@ async fn resolve_translation_connection(
         purpose: "translation".to_string(),
         voice_output: req.voice_enabled,
         voice: req.voice.clone(),
+        vocabulary_hints: None,
         voice_speed: req.voice_speed,
     })
 }

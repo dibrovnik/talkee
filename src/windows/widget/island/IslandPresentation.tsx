@@ -5,6 +5,7 @@ import { type ReactElement, useEffect, useRef, useState } from "react";
 import { NATIVE_VOICE_LEVEL_EVENT } from "../../../lib/hotkeyEvents";
 import { useI18n } from "../../../lib/i18n";
 import { IconCopy } from "../../../lib/icons";
+import { logError } from "../../../lib/logger";
 import { Button } from "../../../ui/Button";
 import { TextTicker } from "../ticker/TextTicker";
 import {
@@ -13,6 +14,7 @@ import {
   type IslandVisualState,
   islandTransition,
 } from "./islandLayout";
+import { islandBarScale, islandVoiceLevel } from "./islandLevel";
 import { type IslandNotice, islandNoticeIsInteractive, islandShowsCopyButton } from "./islandState";
 
 const LEVEL_FRAME_MS = 1000 / 30;
@@ -75,7 +77,13 @@ export function IslandPresentation({
       >
         <Shoulder side="left" />
         <Shoulder side="right" />
-        <Slot side="left" width={earWidth} height={tickerText ? anchor.notchHeight : undefined}>
+        <Slot
+          side="left"
+          width={earWidth}
+          height={tickerText ? anchor.notchHeight : undefined}
+          reduced={reduced}
+          contentKey={layout.leftSlot}
+        >
           {layout.leftSlot === "recording" && (
             <>
               <RecordingDot />
@@ -84,9 +92,15 @@ export function IslandPresentation({
           )}
           {layout.leftSlot === "cleanup" && <CleanupMark label={t("cleanup.indicator")} />}
         </Slot>
-        <Slot side="right" width={earWidth} height={tickerText ? anchor.notchHeight : undefined}>
+        <Slot
+          side="right"
+          width={earWidth}
+          height={tickerText ? anchor.notchHeight : undefined}
+          reduced={reduced}
+          contentKey={layout.rightSlot}
+        >
           {layout.rightSlot === "level" && <LevelBars active={state === "recording"} />}
-          {layout.rightSlot === "spinner" && <ProcessingSpinner />}
+          {layout.rightSlot === "spinner" && <ProcessingSpinner reduced={reduced} />}
           {layout.rightSlot === "check" &&
             (showCopy && copyText ? (
               <CopyButton
@@ -182,11 +196,15 @@ function Slot({
   side,
   width,
   height,
+  reduced,
+  contentKey,
   children,
 }: {
   side: "left" | "right";
   width: number;
   height?: number;
+  reduced: boolean;
+  contentKey: string;
   children: React.ReactNode;
 }): ReactElement {
   return (
@@ -200,11 +218,14 @@ function Slot({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: 6,
         color: "#fff",
+        overflow: "hidden",
+        transition: islandTransition(reduced),
       }}
     >
-      {children}
+      <div key={contentKey} className="island-slot-content">
+        {children}
+      </div>
     </div>
   );
 }
@@ -234,14 +255,14 @@ function LevelBars({ active }: { active: boolean }): ReactElement {
       style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 14 }}
     >
       {[0, 1, 2, 3, 4].map((index) => {
-        const threshold = (index + 1) / 5;
-        const height = 4 + Math.max(0, level - threshold + 0.2) * 18;
         return (
           <span
             key={index}
+            className="island-level-bar"
             style={{
               width: 2,
-              height: Math.min(14, height),
+              height: 14,
+              transform: `scaleY(${islandBarScale(level, index)})`,
               borderRadius: 1,
               background: "#fff",
             }}
@@ -252,7 +273,7 @@ function LevelBars({ active }: { active: boolean }): ReactElement {
   );
 }
 
-function ProcessingSpinner(): ReactElement {
+function ProcessingSpinner({ reduced }: { reduced: boolean }): ReactElement {
   return (
     <span
       aria-hidden="true"
@@ -262,7 +283,7 @@ function ProcessingSpinner(): ReactElement {
         borderRadius: "50%",
         border: "1.5px solid rgba(255,255,255,0.35)",
         borderTopColor: "#fff",
-        animation: "spin 0.8s linear infinite",
+        animation: reduced ? "none" : "spin 0.8s linear infinite",
       }}
     />
   );
@@ -345,17 +366,22 @@ function useVoiceLevel(active: boolean): number {
       }
       lastFrame.current = now;
       const { rms, peak } = event.payload;
-      const next = Math.min(1, Math.max(rms * 15, peak * 9));
+      const next = islandVoiceLevel(rms, peak);
       if (!disposed) {
         setLevel(next);
       }
-    }).then((stop) => {
-      if (disposed) {
-        stop();
-        return;
-      }
-      unlisten = stop;
-    });
+    })
+      .then((stop) => {
+        if (disposed) {
+          stop();
+          return;
+        }
+        unlisten = stop;
+      })
+      .catch((error) => {
+        if (!disposed)
+          void logError("ISLAND", `Failed to listen for voice levels: ${String(error)}`);
+      });
     return () => {
       disposed = true;
       unlisten?.();

@@ -391,7 +391,11 @@ export function useWidgetRecording({
 
       let dictationStream = dictationStreamPromise ? await dictationStreamPromise : null;
       let liveDictation = dictationStream
-        ? createNativeLiveDictationOptions(activeSettings, dictationStream.requestId)
+        ? createNativeLiveDictationOptions(
+            activeSettings,
+            dictationStream.requestId,
+            (await vocabularyCaptureRef.current) ?? undefined,
+          )
         : null;
 
       try {

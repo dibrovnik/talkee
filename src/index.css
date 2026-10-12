@@ -139,6 +139,20 @@
   }
 }
 
+/* Explicit app appearance must also drive status colors, not just the OS theme. */
+@supports (color: light-dark(white, black)) {
+  :root {
+    --danger: light-dark(#d70015, #ff453a);
+    --danger-soft: light-dark(rgba(215, 0, 21, 0.1), rgba(255, 69, 58, 0.14));
+    --danger-border: light-dark(rgba(215, 0, 21, 0.22), rgba(255, 69, 58, 0.28));
+    --success: light-dark(#248a3d, #30d158);
+    --success-soft: light-dark(rgba(36, 138, 61, 0.12), rgba(48, 209, 88, 0.14));
+    --success-border: light-dark(rgba(36, 138, 61, 0.24), rgba(48, 209, 88, 0.28));
+    --success-bright: var(--success);
+    --error-bright: var(--danger);
+  }
+}
+
 *,
 *::before,
 *::after {
@@ -449,37 +463,73 @@ select {
   line-height: 1.5;
 }
 
-.main-hero-slide {
-  animation: slide-down 0.22s var(--ease-standard);
-}
-
-/* Native grouped panel (kept under the original class name). */
-.stats-glass-card {
+/* One compact productivity summary, not separate dashboard cards. */
+.ui-stats-panel {
   position: relative;
+  display: grid;
+  gap: 16px;
+  padding: 20px;
   background: var(--control-bg);
   border: 1px solid var(--separator);
-  isolation: isolate;
+  border-radius: var(--radius-group);
+  overflow: hidden;
 }
 
-.stats-glass-metric {
+.ui-stats-panel__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ui-stats-metric {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 60px;
+  padding: 4px 12px;
 }
 
-.stats-glass-metric:not(:last-child)::after {
+.ui-stats-metric:not(:nth-child(3n))::after {
   content: "";
   position: absolute;
-  top: 14px;
+  top: 8px;
   right: 0;
-  bottom: 14px;
+  bottom: 8px;
   width: 1px;
   background: var(--separator);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .main-hero-slide {
-    animation: none;
-  }
+.ui-stats-metric__value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--label);
+}
 
+.ui-stats-metric__label {
+  font-size: var(--fs-callout);
+  color: var(--label-2);
+}
+
+.ui-stats-panel__footer {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--label-2);
+  font-size: var(--fs-callout);
+  line-height: 1.5;
+  border-top: 1px solid var(--separator);
+  padding-top: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
   .hotkey-keycap {
     transition: none;
   }
@@ -1096,63 +1146,6 @@ details summary:focus {
 }
 
 /* ── Stats hero carousel ─────────────────────────────── */
-
-.ui-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  touch-action: pan-y;
-}
-
-.ui-hero__slide {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.ui-hero__lead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1 1 220px;
-  min-width: 0;
-}
-
-.ui-hero__title {
-  font-size: var(--fs-subhead);
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--label-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ui-hero__meta {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-shrink: 0;
-}
-
-.ui-hero__hotkey {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  font-size: var(--fs-subhead);
-  font-weight: 600;
-  color: var(--label-2);
-}
-
-.ui-hero__hint {
-  font-size: var(--fs-body);
-  color: var(--label-2);
-  line-height: 1.6;
-}
 
 /* ── Bare icon / link buttons ────────────────────────── */
 
@@ -2992,7 +2985,7 @@ details summary:focus {
   }
 
   .ui-spinner {
-    animation-duration: 1.6s;
+    animation: none;
   }
 
   .widget-overlay-enter {
@@ -3120,12 +3113,15 @@ details summary:focus {
 html[data-window="settings"] {
   /* Canvas follows explicit color-scheme; native vibrancy can lag theme changes. */
   --window-bg: Canvas;
-  --sidebar-bg: color-mix(in srgb, Canvas 94%, transparent);
+  --sidebar-bg: color-mix(in srgb, color-mix(in srgb, CanvasText 3%, Canvas) 94%, transparent);
+  --control-bg: color-mix(in srgb, CanvasText 2%, Canvas);
+  --separator: color-mix(in srgb, CanvasText 10%, transparent);
   --fs-body: 14px;
   --fs-callout: 13px;
   --fs-subhead: 12px;
   --fs-caption: 12px;
-  --radius-control: 8px;
+  --radius-control: 9px;
+  --radius-group: 12px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -3139,13 +3135,50 @@ html[data-window="settings"] {
 /* The sidebar is one calm column of grouped destinations. */
 html[data-window="settings"] .app-sidebar {
   scrollbar-gutter: stable;
+  border-right: 1px solid var(--separator);
+}
+
+.ui-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding-inline: 12px;
+  color: var(--label);
+  font-family: var(--font-display);
+  font-size: var(--fs-title2);
+  font-weight: 600;
+  user-select: none;
+}
+
+html[data-window="settings"] .ui-sidebar-brand > svg {
+  pointer-events: none;
+}
+
+.ui-sidebar-group-label {
+  padding: 0 12px 4px;
+  color: var(--label-2);
+  font-size: var(--fs-caption);
+  line-height: 16px;
+}
+
+/* Keep every destination visible at the native 520 px minimum window height. */
+@media (max-height: 600px) {
+  html[data-window="settings"] .app-sidebar {
+    --space-4: 8px;
+  }
+
+  html[data-window="settings"] :is(.ui-sidebar-brand, .ui-sidebar-group-label) {
+    display: none;
+  }
 }
 
 html[data-window="settings"] body {
   font-size: var(--fs-body);
 }
 
-html[data-window="settings"] :is(.ui-button, .ui-select, .ui-textfield) {
+html[data-window="settings"]
+  :is(.ui-button, .ui-select, .ui-textfield, .btn, .input, .ui-input-hotkey) {
   height: 36px;
   min-height: 36px;
   padding-inline: 12px;
@@ -3166,6 +3199,9 @@ html[data-window="settings"] .ui-icon-button {
   width: 32px;
   min-width: 32px;
   height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: var(--radius-control);
 }
 
 html[data-window="settings"] .ui-toggle {
@@ -3212,6 +3248,8 @@ html[data-window="settings"] .ui-sidebar-item {
 
 html[data-window="settings"] .ui-sidebar-item--active {
   background: var(--control-muted-strong);
+  color: var(--label);
+  font-weight: 500;
 }
 
 html[data-window="settings"] .ui-form-row {
@@ -3226,6 +3264,14 @@ html[data-window="settings"] .ui-form-row__control {
 
 html[data-window="settings"] .ui-form-section {
   gap: 12px;
+}
+
+html[data-window="settings"] .ui-tab > .ui-form-section {
+  margin-bottom: 0;
+}
+
+html[data-window="settings"] .ui-input-hotkey__value {
+  font-weight: 500;
 }
 
 html[data-window="settings"] .ui-segmented {
@@ -3256,7 +3302,8 @@ html[data-window="settings"] .ui-history__content {
 }
 
 html[data-window="settings"] .ui-form-section__title {
-  font-size: 20px;
+  font-size: var(--fs-title3);
+  margin-inline: 4px;
 }
 
 html[data-window="settings"] .ui-history__title {
@@ -3265,16 +3312,24 @@ html[data-window="settings"] .ui-history__title {
 
 /* ── Settings workspace: one calm reading column ─────── */
 html[data-window="settings"] .ui-tab {
-  gap: var(--space-4);
+  gap: var(--space-6);
 }
 
 html[data-window="settings"] .ui-page-header {
-  gap: var(--space-1);
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 html[data-window="settings"] .ui-page-header__title {
-  font-size: 24px;
-  line-height: 1.25;
+  font-family: var(--font-display);
+  font-size: var(--fs-large-title);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+html[data-window="settings"] .ui-tab .ui-tab .ui-page-header__title {
+  font-size: var(--fs-title2);
+  letter-spacing: 0;
 }
 
 html[data-window="settings"] .ui-history {
@@ -3397,6 +3452,188 @@ html[data-window="settings"] .ui-chat__header-main {
   gap: var(--space-1);
 }
 
+html[data-window="settings"] .ui-chat__header .section-title-ui {
+  font-family: var(--font-display);
+  font-size: var(--fs-large-title);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
 html[data-window="settings"] .ui-chat__composer {
   gap: var(--space-3);
+  padding: 12px 12px 12px 16px;
+  border-radius: 20px;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+html[data-window="settings"] .ui-chat__composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, AccentColor 18%, transparent);
+}
+
+html[data-window="settings"] .ui-chat__send {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 999px;
+}
+
+html[data-window="settings"] .ui-chat__message--user .ui-chat__bubble {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 18px;
+}
+
+html[data-window="settings"] .ui-empty-state {
+  padding-block: 48px;
+  border: none;
+}
+
+html[data-window="settings"] .ui-empty-state__badge {
+  background: var(--control-muted);
+  color: var(--label-2);
+}
+
+html[data-window="settings"] .b-table {
+  font-size: var(--fs-body);
+}
+
+html[data-window="settings"] .b-table th {
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+html[data-window="settings"] .b-table td {
+  padding-block: 16px;
+  transition: background-color 160ms ease;
+}
+
+/* Shared feedback: no hover lift, and no extra animation runtime. */
+html[data-window="settings"] :is(.ui-button, .btn) {
+  font-weight: 500;
+  gap: 8px;
+}
+
+html[data-window="settings"] :is(.ui-sidebar-item, .ui-icon-button, .ui-segment, .ui-choice) {
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
+}
+
+html[data-window="settings"] .ui-icon-button:hover:not(:disabled) {
+  background: var(--control-muted);
+}
+
+html[data-window="settings"] .ui-history__actions .ui-icon-button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--label-2);
+}
+
+html[data-window="settings"] .ui-history__actions .ui-button--destructive:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+html[data-window="settings"] .ui-sidebar-item:active {
+  background: var(--control-muted-strong);
+}
+
+html[data-window="settings"] .ui-segment {
+  border-radius: calc(var(--radius-control) - 2px);
+}
+
+html[data-window="settings"] .ui-toggle::before {
+  transition: background-color 160ms ease;
+}
+
+html[data-window="settings"]
+  :is(.ui-icon-button, .ui-link-button, .ui-disclosure-link):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.ui-workspace-page {
+  animation: workspace-reveal 180ms var(--ease-standard);
+}
+
+html[data-window="settings"]
+  :is(
+    .ui-menu,
+    .ui-select-content,
+    .ui-tooltip,
+    .ui-dialog-overlay,
+    .ui-dialog-content,
+    .ui-modal-scrim
+  ) {
+  animation: surface-reveal 140ms ease-out;
+}
+
+@keyframes surface-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes workspace-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Interpolate the native 20 Hz levels on the compositor, not via a JS loop. */
+.island-level-bar {
+  transform-origin: bottom;
+  transition: transform 90ms ease-out;
+}
+
+.island-slot-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  animation: workspace-reveal 180ms var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-workspace-page,
+  .island-slot-content,
+  html[data-window="settings"]
+    :is(
+      .ui-menu,
+      .ui-select-content,
+      .ui-tooltip,
+      .ui-dialog-overlay,
+      .ui-dialog-content,
+      .ui-modal-scrim
+    ) {
+    animation: none;
+  }
+
+  .island-level-bar,
+  html[data-window="settings"]
+    :is(
+      .ui-sidebar-item,
+      .ui-icon-button,
+      .ui-segment,
+      .ui-choice,
+      .ui-chat__composer,
+      .b-table td
+    ),
+  html[data-window="settings"] .ui-toggle::before {
+    transition: none;
+  }
 }

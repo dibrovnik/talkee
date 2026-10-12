@@ -1,10 +1,6 @@
+import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-import { openUrl } from "@tauri-apps/plugin-opener";
-import type {
-  ReactElement,
-  FocusEvent as ReactFocusEvent,
-  PointerEvent as ReactPointerEvent,
-} from "react";
+import type { ReactElement } from "react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   HistoryAudioTrack,
@@ -35,8 +31,8 @@ import {
   IconAlertCircle,
   IconCheck,
   IconCopy,
-  IconHelpCircle,
   IconListCheck,
+  IconMicrophone,
   IconPencil,
   IconRotate2,
   IconSquare,
@@ -92,9 +88,6 @@ const HISTORY_TEXT_PREVIEW_LIMIT = 250;
 const HISTORY_INITIAL_RENDER_LIMIT = 80;
 const HISTORY_RENDER_INCREMENT = 80;
 const FULL_ENTRY_CACHE_LIMIT = 25;
-const SUPPORT_EMAIL = "david.perov60@gmail.com";
-const MAIN_HERO_FIRST_SLIDE_DELAY_MS = 30_000;
-const MAIN_HERO_SLIDE_DELAY_MS = 30_000;
 const HISTORY_FILTER_OPTIONS: { id: HistoryFilter; labelKey: MsgKey }[] = [
   { id: "all", labelKey: "mainTab.filter.all" },
   { id: "voice", labelKey: "mainTab.filter.voice" },
@@ -102,22 +95,6 @@ const HISTORY_FILTER_OPTIONS: { id: HistoryFilter; labelKey: MsgKey }[] = [
   { id: "call", labelKey: "mainTab.filter.call" },
   { id: "liveTranslation", labelKey: "mainTab.filter.liveTranslation" },
 ];
-const MAIN_HERO_SLIDES = [
-  {
-    id: "record",
-    titleKey: "mainTab.howToStart",
-    actionKey: "mainTab.howItWorks",
-  },
-  {
-    id: "support",
-    titleKey: "mainTab.hero.supportTitle",
-    actionKey: "mainTab.hero.supportAction",
-  },
-] as const satisfies readonly {
-  id: "record" | "support";
-  titleKey: MsgKey;
-  actionKey: MsgKey;
-}[];
 
 function getHistorySource(entry: { source?: HistoryEntry["source"] }): HistorySource {
   if (entry.source === "file" || entry.source === "call" || entry.source === "liveTranslation") {
@@ -302,10 +279,6 @@ export function MainTab({
   const [isClearArmed, setIsClearArmed] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
   const [visibleHistoryLimit, setVisibleHistoryLimit] = useState(HISTORY_INITIAL_RENDER_LIMIT);
-  const [hintHelpOpen, setHintHelpOpen] = useState(false);
-  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
-  const [heroHasAdvanced, setHeroHasAdvanced] = useState(false);
-  const [heroPaused, setHeroPaused] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [editingSpeakerEntryId, setEditingSpeakerEntryId] = useState<string | null>(null);
   const [summaryEntry, setSummaryEntry] = useState<HistoryEntry | null>(null);
@@ -313,7 +286,6 @@ export function MainTab({
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
   const [fullEntryCache, setFullEntryCache] = useState<Map<string, HistoryEntry>>(() => new Map());
   const [loadingFullEntryIds, setLoadingFullEntryIds] = useState<Set<string>>(() => new Set());
-  const heroPointerStartX = useRef<number | null>(null);
   const focusedRowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
   const expandedIdsRef = useRef(expandedIds);
   const summaryEntryRef = useRef(summaryEntry);
@@ -477,22 +449,6 @@ export function MainTab({
   }, []);
 
   useEffect(() => {
-    if (heroPaused || MAIN_HERO_SLIDES.length <= 1) {
-      return;
-    }
-
-    const timeout = window.setTimeout(
-      () => {
-        setHeroSlideIndex((current) => (current + 1) % MAIN_HERO_SLIDES.length);
-        setHeroHasAdvanced(true);
-      },
-      heroHasAdvanced ? MAIN_HERO_SLIDE_DELAY_MS : MAIN_HERO_FIRST_SLIDE_DELAY_MS,
-    );
-
-    return () => window.clearTimeout(timeout);
-  }, [heroHasAdvanced, heroPaused, heroSlideIndex]);
-
-  useEffect(() => {
     if (!focusedEntryId) return;
 
     if (historyFilter !== "all") {
@@ -564,29 +520,6 @@ export function MainTab({
     const text = entry ? historyVariantText(entry, textVariants.get(id) ?? "cleaned") : "";
     if (!text) return;
     await copyText(id, text);
-  };
-
-  const contactSupport = async (): Promise<void> => {
-    const subject = encodeURIComponent(t("settingsGeneralExtra.support.mailSubject"));
-    const body = encodeURIComponent(t("settingsGeneralExtra.support.mailBody"));
-    const mailto = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
-
-    try {
-      await openUrl(mailto);
-    } catch (error) {
-      void logError(
-        "MAIN",
-        `Failed to open support mail: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      try {
-        await navigator.clipboard.writeText(SUPPORT_EMAIL);
-      } catch (clipboardError) {
-        void logError(
-          "MAIN",
-          `Failed to copy support mail: ${clipboardError instanceof Error ? clipboardError.message : String(clipboardError)}`,
-        );
-      }
-    }
   };
 
   const editEntry = async (id: string): Promise<void> => {
@@ -795,114 +728,6 @@ export function MainTab({
 
   const hiddenHistoryCount = filteredHistory.length - visibleHistory.length;
 
-  const activeHeroSlide = MAIN_HERO_SLIDES[heroSlideIndex] ?? MAIN_HERO_SLIDES[0];
-  const isSupportHeroSlide = activeHeroSlide.id === "support";
-
-  const showAdjacentHeroSlide = (direction: 1 | -1): void => {
-    setHeroSlideIndex(
-      (current) => (current + direction + MAIN_HERO_SLIDES.length) % MAIN_HERO_SLIDES.length,
-    );
-    setHeroHasAdvanced(true);
-  };
-
-  const handleHeroAction = (): void => {
-    if (isSupportHeroSlide) {
-      void contactSupport();
-      return;
-    }
-
-    setHintHelpOpen((value) => !value);
-  };
-
-  const handleHeroPointerDown = (event: ReactPointerEvent<HTMLElement>): void => {
-    if (event.pointerType === "mouse" && event.button !== 0) {
-      return;
-    }
-
-    heroPointerStartX.current = event.clientX;
-  };
-
-  const handleHeroPointerUp = (event: ReactPointerEvent<HTMLElement>): void => {
-    const startX = heroPointerStartX.current;
-    heroPointerStartX.current = null;
-
-    if (startX === null) {
-      return;
-    }
-
-    const deltaX = event.clientX - startX;
-    if (Math.abs(deltaX) < 48) {
-      return;
-    }
-
-    showAdjacentHeroSlide(deltaX < 0 ? 1 : -1);
-  };
-
-  const handleHeroBlur = (event: ReactFocusEvent<HTMLElement>): void => {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-      setHeroPaused(false);
-    }
-  };
-
-  const heroHintFooter = (
-    // biome-ignore lint/a11y/noStaticElementInteractions: the handlers only pause/resume the hero carousel on hover, focus and pointer drag.
-    <div
-      className="ui-hero"
-      onMouseEnter={() => setHeroPaused(true)}
-      onMouseLeave={() => setHeroPaused(false)}
-      onFocus={() => setHeroPaused(true)}
-      onBlur={handleHeroBlur}
-      onPointerDown={handleHeroPointerDown}
-      onPointerUp={handleHeroPointerUp}
-      onPointerCancel={() => {
-        heroPointerStartX.current = null;
-      }}
-    >
-      <div key={activeHeroSlide.id} className="ui-hero__slide main-hero-slide">
-        <div className="ui-hero__lead">
-          <span className="ui-hero__title">{t(activeHeroSlide.titleKey)}</span>
-          {!isSupportHeroSlide && (
-            <button
-              type="button"
-              className="ui-icon-button"
-              onClick={handleHeroAction}
-              aria-expanded={hintHelpOpen}
-              aria-label={t(activeHeroSlide.actionKey)}
-              title={t(activeHeroSlide.actionKey)}
-            >
-              <IconHelpCircle size={16} stroke={2} />
-            </button>
-          )}
-        </div>
-
-        <div className="ui-hero__meta">
-          {isSupportHeroSlide && (
-            <button
-              type="button"
-              className="ui-link-button"
-              onClick={handleHeroAction}
-              aria-label={t(activeHeroSlide.actionKey)}
-              title={t(activeHeroSlide.actionKey)}
-            >
-              {t(activeHeroSlide.actionKey)}
-            </button>
-          )}
-
-          {!isSupportHeroSlide && (
-            <span className="ui-hero__hotkey">
-              <span>{t("mainTab.combination")}</span>
-              <span>{hotkeyLabel}</span>
-            </span>
-          )}
-        </div>
-      </div>
-
-      {!isSupportHeroSlide && hintHelpOpen && (
-        <div className="ui-hero__hint">{t("mainTab.howToStartHint")}</div>
-      )}
-    </div>
-  );
-
   return (
     <div className="ui-tab">
       <div className="ui-page-header">
@@ -912,7 +737,7 @@ export function MainTab({
         </div>
       </div>
 
-      <TranscriptionStatsPanel footer={heroHintFooter} />
+      <TranscriptionStatsPanel />
 
       <section className="ui-history">
         <div className="ui-history__header">
@@ -956,10 +781,8 @@ export function MainTab({
         <div className="ui-history__body">
           {history.length === 0 ? (
             <div className="ui-empty-state">
-              <div className="ui-empty-state__badge">
-                <span className="headline-accent" style={{ fontSize: 24 }}>
-                  ◎
-                </span>
+              <div className="ui-empty-state__badge" aria-hidden="true">
+                <IconMicrophone size={24} weight="regular" />
               </div>
               <div className="ui-empty-state__title">{t("mainTab.emptyTitle")}</div>
               <p className="ui-empty-state__hint">
@@ -1181,6 +1004,17 @@ export function MainTab({
                                             icon: <IconPencil size={14} stroke={2} />,
                                             onSelect: () => {
                                               void editEntry(item.id);
+                                            },
+                                          },
+                                          source === "voice" && {
+                                            key: "correction",
+                                            label: "Запомнить исправление…",
+                                            icon: <IconPencil size={14} />,
+                                            onSelect: () => {
+                                              void invoke("open_settings_tab", {
+                                                tab: "vocabulary",
+                                                resultId: item.id,
+                                              });
                                             },
                                           },
                                           {

@@ -27,6 +27,8 @@ pub struct LiveDictationStartRequest {
     pub streaming_enabled: bool,
     pub provider: Option<String>,
     pub api_key: Option<String>,
+    #[serde(default)]
+    pub vocabulary_hints: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -375,6 +377,7 @@ fn run_remote_live_dictation_client(
         voice_output: false,
         voice: None,
         voice_speed: None,
+        vocabulary_hints: req.vocabulary_hints,
     };
     let event_app = app.clone();
     let event_request_id = request_id.clone();
@@ -641,6 +644,7 @@ mod tests {
             endpoint: "http://127.0.0.1:15223/v1/audio/transcriptions".to_string(),
             streaming_enabled: true,
             provider: None,
+            vocabulary_hints: None,
             api_key: None,
         })
         .expect("endpoint");

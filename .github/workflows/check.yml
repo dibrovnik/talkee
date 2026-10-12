@@ -10,6 +10,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -17,7 +20,7 @@ concurrency:
 jobs:
   gate:
     name: gate (macos)
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
       - name: Checkout repository

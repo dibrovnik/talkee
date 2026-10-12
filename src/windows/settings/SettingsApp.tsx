@@ -1,5 +1,6 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { emit, listen } from "@tauri-apps/api/event";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactElement } from "react";
 import { useEffect, useState } from "react";
 import { OnboardingFlow } from "../../components/onboarding/OnboardingFlow";
 import {
@@ -23,6 +24,7 @@ import {
   IconHome,
   IconLanguage,
   IconMessage,
+  IconMicrophone,
   IconSparkles,
 } from "../../lib/icons";
 import { logError } from "../../lib/logger";
@@ -38,6 +40,7 @@ import {
 import { watchThemePreference } from "../../lib/theme";
 import { Gallery } from "../../ui/Gallery";
 import { SidebarItem } from "../../ui/SidebarItem";
+import { Spinner } from "../../ui/Spinner";
 import {
   isSettingsTab,
   resolveInitialSettingsTab,
@@ -177,13 +180,18 @@ function getCurrentDomSelectionText(): string {
   return window.getSelection()?.toString() ?? "";
 }
 
-export function SettingsApp() {
+export function SettingsApp(): ReactElement {
   const { t } = useI18n();
   const initialQuery = new URLSearchParams(window.location.search);
   const [devOnboardingRequestId, setDevOnboardingRequestId] = useState(
     import.meta.env.DEV && initialQuery.get("onboarding") === "1" ? 1 : 0,
   );
   const [activeTab, setActiveTab] = useState<Tab>(resolveInitialTab);
+  const [correctionSourceId, setCorrectionSourceId] = useState<string | null>(
+    new URLSearchParams(window.location.search).get("tab") === "vocabulary"
+      ? new URLSearchParams(window.location.search).get("resultId")
+      : null,
+  );
   const [focusedFileResultId, setFocusedFileResultId] = useState<string | null>(() =>
     new URLSearchParams(window.location.search).get("resultId"),
   );
@@ -193,6 +201,15 @@ export function SettingsApp() {
   const [navigationNonce, setNavigationNonce] = useState(0);
   const [showPermissions, setShowPermissions] = useState<boolean | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getVersion()
+      .then(setAppVersion)
+      .catch((error) => {
+        void logError("SETTINGS_APP", `Failed to read app version: ${String(error)}`);
+      });
+  }, []);
 
   useEffect(() => {
     const syncTheme = async (reload = false): Promise<void> => {
@@ -267,6 +284,7 @@ export function SettingsApp() {
       const nextTab = isSettingsTab(payload.tab) ? payload.tab : "main";
       setActiveTab(nextTab);
       setFocusedFileResultId(nextTab === "file" ? payload.resultId || null : null);
+      setCorrectionSourceId(nextTab === "vocabulary" ? payload.resultId || null : null);
       setNavigationNonce((current) => current + 1);
 
       requestAnimationFrame(() => {
@@ -312,6 +330,10 @@ export function SettingsApp() {
   // Tracked unconditionally: the shell renders before permissions resolve too.
   const viewportWidth = useViewportWidth();
 
+  useEffect(() => {
+    document.querySelector("main")?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [activeTab]);
+
   if (showPermissions === null) {
     return (
       <div
@@ -323,10 +345,11 @@ export function SettingsApp() {
         }}
       >
         <div
-          className="card"
-          style={{ width: "min(420px, calc(100vw - var(--space-8)))", textAlign: "center" }}
+          role="status"
+          style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--label-2)" }}
         >
-          <div style={{ fontSize: 14, color: "var(--text-mid)" }}>{t("settingsApp.loading")}</div>
+          <Spinner />
+          <span>{t("settingsApp.loading")}</span>
         </div>
       </div>
     );
@@ -364,18 +387,38 @@ export function SettingsApp() {
               flexShrink: 0,
             }}
           >
+            <div data-tauri-drag-region className="ui-sidebar-brand">
+              <IconMicrophone size={20} weight="regular" aria-hidden="true" />
+              <span data-tauri-drag-region>Talkee</span>
+            </div>
             {SIDEBAR_GROUPS.map((group, groupIndex) => (
               <nav
                 key={group[0]?.id ?? `group-${groupIndex}`}
+                aria-label={t(
+                  groupIndex === 0
+                    ? "settingsApp.group.workspace"
+                    : groupIndex === 1
+                      ? "settingsApp.group.processing"
+                      : "settingsApp.tab.settings",
+                )}
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: 2,
-                  paddingTop: groupIndex === 0 ? 0 : "var(--space-2)",
-                  marginTop: groupIndex === 0 ? 0 : 2,
-                  borderTop: groupIndex === 0 ? "none" : "1px solid var(--separator)",
+                  gap: 4,
+                  paddingTop: groupIndex === 0 ? 0 : "var(--space-3)",
+                  marginTop: groupIndex === 2 ? "auto" : 0,
+                  borderTop: groupIndex === 2 ? "1px solid var(--separator)" : "none",
                 }}
               >
+                {groupIndex < 2 && (
+                  <div className="ui-sidebar-group-label" aria-hidden="true">
+                    {t(
+                      groupIndex === 0
+                        ? "settingsApp.group.workspace"
+                        : "settingsApp.group.processing",
+                    )}
+                  </div>
+                )}
                 {group.map((tab) => (
                   <SidebarItem
                     key={tab.id}
@@ -387,6 +430,19 @@ export function SettingsApp() {
                 ))}
               </nav>
             ))}
+            {appVersion && (
+              <div
+                title={t("settingsApp.version", { version: appVersion })}
+                style={{
+                  padding: "0 12px",
+                  color: "var(--label-2)",
+                  fontSize: "var(--fs-caption)",
+                  flexShrink: 0,
+                }}
+              >
+                {t("settingsApp.version", { version: appVersion })}
+              </div>
+            )}
           </aside>
 
           <div
@@ -446,21 +502,27 @@ export function SettingsApp() {
                 <div
                   key={navigationNonce}
                   style={{
-                    animation: "slide-down 0.18s ease",
                     flex: isChatActive ? "1 1 auto" : undefined,
                     minHeight: isChatActive ? 0 : undefined,
                   }}
                 >
-                  <div style={{ display: activeTab === "main" ? "block" : "none" }}>
+                  <div
+                    className="ui-workspace-page"
+                    style={{ display: activeTab === "main" ? "block" : "none" }}
+                  >
                     <MainTab
                       focusedEntryId={focusedHistoryEntryId}
                       focusedEntryNonce={focusedHistoryEntryNonce}
                     />
                   </div>
-                  <div style={{ display: activeTab === "file" ? "block" : "none" }}>
+                  <div
+                    className="ui-workspace-page"
+                    style={{ display: activeTab === "file" ? "block" : "none" }}
+                  >
                     <FileTranscriptionTab focusedEntryId={focusedFileResultId} />
                   </div>
                   <div
+                    className="ui-workspace-page"
                     style={{
                       display: activeTab === "chat" ? "block" : "none",
                       height: "100%",
@@ -474,18 +536,46 @@ export function SettingsApp() {
                     />
                   </div>
                   <div
+                    className="ui-workspace-page"
                     style={{
                       display: activeTab === "settings" ? "block" : "none",
                     }}
                   >
                     <SettingsTab />
                   </div>
-                  {activeTab === "model" && <SettingsTabs type="model" />}
-                  {activeTab === "style" && <SettingsTabs type="style" />}
-                  {activeTab === "vocabulary" && <VocabularyTab />}
-                  {activeTab === "stats" && <StatsTab />}
-                  {activeTab === "interpreter" && <TranslationTab />}
-                  {import.meta.env.DEV && activeTab === "ui" && <Gallery />}
+                  {activeTab === "model" && (
+                    <div className="ui-workspace-page">
+                      <SettingsTabs type="model" />
+                    </div>
+                  )}
+                  {activeTab === "style" && (
+                    <div className="ui-workspace-page">
+                      <SettingsTabs type="style" />
+                    </div>
+                  )}
+                  {activeTab === "vocabulary" && (
+                    <div className="ui-workspace-page">
+                      <VocabularyTab
+                        correctionSourceId={correctionSourceId}
+                        onCorrectionClosed={() => setCorrectionSourceId(null)}
+                      />
+                    </div>
+                  )}
+                  {activeTab === "stats" && (
+                    <div className="ui-workspace-page">
+                      <StatsTab />
+                    </div>
+                  )}
+                  {activeTab === "interpreter" && (
+                    <div className="ui-workspace-page">
+                      <TranslationTab />
+                    </div>
+                  )}
+                  {import.meta.env.DEV && activeTab === "ui" && (
+                    <div className="ui-workspace-page">
+                      <Gallery />
+                    </div>
+                  )}
                 </div>
               </div>
             </main>

@@ -134,6 +134,31 @@ export const components = {
   "stats.wordsToday": { ru: "Слов за сегодня", en: "Words today" },
   "stats.wordsThisMonth": { ru: "Слов за месяц", en: "Words this month" },
   "stats.wordsPerMinute": { ru: "Слов в минуту", en: "Words per minute" },
+  "stats.home.summary": { ru: "Ваша продуктивность", en: "Your productivity" },
+  "stats.home.timeSaved": { ru: "Сэкономлено · всего", en: "Time saved · total" },
+  "stats.home.speedRatio": { ru: "Темп к печати", en: "Pace vs. typing" },
+  "stats.home.activeDays": { ru: "Активных дней за неделю", en: "Active days in last 7 days" },
+  "stats.home.hours": { ru: "ч", en: "h" },
+  "stats.home.minutes": { ru: "мин", en: "min" },
+  "stats.home.seconds": { ru: "с", en: "s" },
+  "stats.home.noSpeed": {
+    ru: "Измерьте скорость печати, чтобы увидеть экономию времени и сравнить темп.",
+    en: "Measure your typing speed to see time saved and compare your pace.",
+  },
+  "stats.home.noData": {
+    ru: "Экономия и темп появятся после диктовки с замером времени обработки.",
+    en: "Savings and pace appear after a dictation with measured processing time.",
+  },
+  "stats.home.estimate": {
+    ru: "Оценка за всё время: диктовка и обработка против печати {wpm} слов/мин. Без ручных правок.",
+    en: "All-time estimate: dictation and processing vs. typing at {wpm} wpm. Excludes manual edits.",
+  },
+  "stats.home.incomplete": {
+    ru: "Без полного замера: {count} записей — не учтены в сравнении.",
+    en: "Excluded from the comparison: {count} recordings with incomplete measurements.",
+  },
+  "stats.home.measureTyping": { ru: "Измерить скорость печати", en: "Measure typing speed" },
+  "stats.home.details": { ru: "Подробнее", en: "Details" },
   // A recording made before the model was captured at completion time.
   "stats.model.unknown": { ru: "Неизвестно", en: "Unknown" },
 

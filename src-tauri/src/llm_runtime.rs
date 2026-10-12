@@ -505,6 +505,41 @@ async fn health_ok(client: &reqwest::Client, port: u16) -> bool {
     )
 }
 
+#[tauri::command]
+pub async fn local_llm_analysis_capability(endpoint: String) -> Result<bool, String> {
+    let url = reqwest::Url::parse(&endpoint).map_err(|_| "Некорректный endpoint")?;
+    if !matches!(url.host_str(), Some("127.0.0.1" | "localhost")) {
+        return Ok(false);
+    }
+    let response = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| e.to_string())?
+        .get(format!(
+            "{}/health",
+            endpoint.trim_end_matches('/').trim_end_matches("/v1")
+        ))
+        .timeout(Duration::from_secs(2))
+        .send()
+        .await
+        .map_err(|_| "Локальная модель недоступна")?;
+    let health: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|_| "Некорректный health ответ")?;
+    Ok(
+        health.get("runtime").and_then(serde_json::Value::as_str) == Some("talkee-llm")
+            && health
+                .get("analysis_control_version")
+                .and_then(serde_json::Value::as_u64)
+                == Some(1)
+            && health
+                .get("context_size")
+                .and_then(serde_json::Value::as_u64)
+                .is_some_and(|size| size >= 4096),
+    )
+}
+
 async fn chat_completions_ready_with_timeout(
     client: &reqwest::Client,
     port: u16,

@@ -36,6 +36,10 @@ import {
   translateSelectedText,
 } from "../services/selectionTranslation";
 import {
+  installVocabularyAnalysisCoordinator,
+  setVocabularyForeground,
+} from "../services/vocabularyAnalysisCoordinator";
+import {
   initialWidgetMachineState,
   type WidgetAction,
   type WidgetEffect,
@@ -90,6 +94,7 @@ export function useWidgetController({
 }: WidgetControllerOptions = {}): WidgetControllerState {
   // Tauri returns a new Window each call; keep effect dependencies stable.
   const [widgetWindow] = useState(getCurrentWindow);
+  useEffect(() => installVocabularyAnalysisCoordinator(), []);
 
   // ── Centralized machine state ───────────────────────────────────────────
   const machineRef = useRef<WidgetMachineState>(initialWidgetMachineState);
@@ -129,6 +134,7 @@ export function useWidgetController({
   const dispatch = useCallback((action: WidgetAction) => {
     const { state: nextState, effects } = widgetReducer(machineRef.current, action);
     machineRef.current = nextState;
+    setVocabularyForeground(nextState.widgetState !== "idle");
 
     // Sync React render state
     setWidgetState(nextState.widgetState);

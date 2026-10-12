@@ -1,0 +1,17 @@
+name: Feature request / Предложение
+description: Suggest a focused improvement to Talkee.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What problem would this solve? / Какую задачу это решает?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed behavior / Предлагаемое поведение
+    validations:
+      required: true

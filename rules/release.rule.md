@@ -56,3 +56,11 @@ For each release, produce:
 - release commit `chore: release vX.Y.Z` and tag `vX.Y.Z`
 - green release preflight on the release commit
 - GitHub Release artifacts created by Actions
+
+## Public distribution
+
+- Canonical repository: https://github.com/dibrovnik/talkee.
+- GitHub Actions uses the Apple Silicon `macos-14` runner and `bun run build:release:macos`; this prepares real sidecars after the gate creates placeholders.
+- Manual Release dispatch checks out the requested tag in every job.
+- Stable downloads: `Talkee-macos.dmg`, `Talkee-macos.zip`, and `SHA256SUMS`.
+- CI uses ad-hoc signing (`TALKEE_DEV_SIGNING_IDENTITY=-`), without Apple notarization. Never describe it as Apple-verified signing. Local builds can use the configured stable identity.

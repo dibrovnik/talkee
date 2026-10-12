@@ -40,3 +40,6 @@ docs/demo/
 
 # Local-only Cargo config (contains absolute target-dir for external drive)
 .cargo/config.toml
+
+# Local verification snapshots and logs
+.tmp-verify/

@@ -4,7 +4,9 @@ import type { DictationStreamUpdatePayload } from "../../../lib/hotkeyEvents";
 import { logInfo } from "../../../lib/logger";
 import { canUseConfiguredRealtimeModel, STREAMING_STT_ADAPTERS } from "../../../lib/realtimeModels";
 import type { AppSettings } from "../../../lib/store";
+import { hintAdapterForRealtime, selectVocabularyHints } from "../../../lib/vocabularyHints";
 import type { WidgetTextOverlayState, WidgetTextOverlayStatus } from "../widgetConstants";
+import type { DictationVocabularyCapture } from "./dictationVocabulary";
 
 export interface NativeLiveDictationOptions {
   requestId: string;
@@ -14,6 +16,7 @@ export interface NativeLiveDictationOptions {
   streamingEnabled: boolean;
   provider?: string;
   apiKey?: string;
+  vocabularyHints?: string[];
 }
 
 export interface LiveTranscriptionResult {
@@ -172,6 +175,7 @@ export function isSttStreamingEnabled(settings: AppSettings): boolean {
 export function createNativeLiveDictationOptions(
   settings: AppSettings,
   requestId: string,
+  vocabulary?: DictationVocabularyCapture,
 ): NativeLiveDictationOptions | null {
   if (!isSttStreamingEnabled(settings)) {
     return null;
@@ -192,6 +196,18 @@ export function createNativeLiveDictationOptions(
         "",
     streamingEnabled: true,
     provider: isLocal ? "local" : settings.selectedApiAdapter,
+    ...(vocabulary
+      ? {
+          vocabularyHints: selectVocabularyHints(
+            vocabulary.hintTerms,
+            hintAdapterForRealtime(
+              isLocal ? "local" : settings.selectedApiAdapter,
+              "stt",
+              adapter?.model || "",
+            ),
+          ).terms,
+        }
+      : {}),
     apiKey: isLocal ? "" : adapter?.apiKey || "",
   };
 }

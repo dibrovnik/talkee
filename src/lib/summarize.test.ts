@@ -222,7 +222,7 @@ it("shared text runner forwards cleanup operation and correlation to native comm
   globalThis.window = {
     __TAURI_INTERNALS__: {
       invoke: async (command: string, args: { req: Record<string, unknown> }) => {
-        calls.push({ command, req: args.req });
+        if (command === "process_text") calls.push({ command, req: args.req });
         return { result: "Hello." };
       },
     },
@@ -263,6 +263,7 @@ it("local cleanup failure is not replayed, while the next take can recover", asy
   globalThis.window = {
     __TAURI_INTERNALS__: {
       invoke: async (command: string) => {
+        if (command === "plugin:event|emit") return;
         commands.push(command);
         if (command === "start_local_llm") return "http://127.0.0.1:8011/v1";
         if (command === "process_text") {
@@ -297,6 +298,7 @@ it("local summaries retain runtime recovery for safe native transport errors", a
   globalThis.window = {
     __TAURI_INTERNALS__: {
       invoke: async (command: string) => {
+        if (command === "plugin:event|emit") return;
         commands.push(command);
         if (command === "start_local_llm") return "http://127.0.0.1:8011/v1";
         if (command === "stop_local_llm") return;

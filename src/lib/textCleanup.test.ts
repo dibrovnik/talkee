@@ -190,3 +190,22 @@ test("cleanup logs correlated safe decisions, fallback categories and one end", 
       expect(outcome).toMatchObject({ text: raw, reason: "error", errorCode: "http_401" });
   }
 });
+
+test("approved glossary augments one custom request without rewriting its preset", async () => {
+  let requests = 0;
+  const logs: string[] = [];
+  const before = JSON.stringify(settings.prompts);
+  await cleanupDictation("Привет", settings, {
+    vocabularyHints: [{ id: "term", canonical: "PRIVATE_TERM", provenance: "manual" }],
+    log: (message) => logs.push(message),
+    run: async ({ prompt }) => {
+      requests += 1;
+      expect(prompt).toContain("Clean");
+      expect(prompt).toContain('["PRIVATE_TERM"]');
+      return "Привет.";
+    },
+  });
+  expect(requests).toBe(1);
+  expect(JSON.stringify(settings.prompts)).toBe(before);
+  expect(logs.join("\n")).not.toContain("PRIVATE_TERM");
+});

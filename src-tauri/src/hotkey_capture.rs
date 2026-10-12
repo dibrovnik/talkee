@@ -460,6 +460,7 @@ mod macos {
             && target != "selection"
             && target != "cleanup"
             && target != "dictationCleanup"
+            && target != "vocabularyCorrection"
         {
             return Err(format!("Unsupported hotkey target: {}", target));
         }

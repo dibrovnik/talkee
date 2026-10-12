@@ -1,5 +1,6 @@
 import type { DictationPersonalization } from "../../../lib/store";
 import { type VocabularyClient, vocabularyClient } from "../../../lib/vocabulary";
+import { collectHintTerms, type VocabularyHintTerm } from "../../../lib/vocabularyHints";
 import {
   compileVocabularySnapshot,
   DISABLED_SNAPSHOT,
@@ -11,11 +12,16 @@ import {
 /** Immutable vocabulary state captured when a dictation attempt starts. */
 export interface DictationVocabularyCapture {
   snapshot: VocabularySnapshot;
+  /** Approved canonicals frozen with the snapshot; the adapter budget is applied later. */
+  hintTerms: readonly VocabularyHintTerm[];
   /** Safe code when the vocabulary could not be read; dictation continues without it. */
   failure?: "corrupt" | "load_failed";
 }
 
-export const NO_VOCABULARY: DictationVocabularyCapture = { snapshot: DISABLED_SNAPSHOT };
+export const NO_VOCABULARY: DictationVocabularyCapture = {
+  snapshot: DISABLED_SNAPSHOT,
+  hintTerms: [],
+};
 
 /** Never rejects: a missing vocabulary must not fail an otherwise good dictation. */
 export async function captureDictationVocabulary(
@@ -24,10 +30,15 @@ export async function captureDictationVocabulary(
 ): Promise<DictationVocabularyCapture> {
   try {
     const view = await client.getView();
-    if (view.status === "corrupt") return { snapshot: DISABLED_SNAPSHOT, failure: "corrupt" };
-    return { snapshot: compileVocabularySnapshot(view.state, dictationLanguage) };
+    if (view.status === "corrupt") {
+      return { snapshot: DISABLED_SNAPSHOT, hintTerms: [], failure: "corrupt" };
+    }
+    return {
+      snapshot: compileVocabularySnapshot(view.state, dictationLanguage),
+      hintTerms: collectHintTerms(view.state, dictationLanguage),
+    };
   } catch {
-    return { snapshot: DISABLED_SNAPSHOT, failure: "load_failed" };
+    return { snapshot: DISABLED_SNAPSHOT, hintTerms: [], failure: "load_failed" };
   }
 }
 
@@ -40,10 +51,16 @@ export interface VocabularyStageResult {
 }
 
 /** The single final vocabulary pass, applied after cleanup and before translation. */
+export interface AppliedHintPlan {
+  mode: "none" | "prompt";
+  termIds: string[];
+}
+
 export function applyVocabularyStage(
   text: string,
   capture: DictationVocabularyCapture,
   options: NormalizeOptions = {},
+  hints: AppliedHintPlan = { mode: "none", termIds: [] },
 ): VocabularyStageResult {
   if (!capture.snapshot.enabled) {
     return { text, replacements: 0, failure: capture.failure };
@@ -56,8 +73,8 @@ export function applyVocabularyStage(
     personalization: {
       lexiconRevision: capture.snapshot.lexiconRevision,
       activeDomain: capture.snapshot.activeDomain,
-      hintMode: "none",
-      hintTermIds: [],
+      hintMode: hints.mode,
+      hintTermIds: hints.termIds,
       ruleIds: result.ruleIds,
       termIds: result.termIds,
       replacements: result.replacements,

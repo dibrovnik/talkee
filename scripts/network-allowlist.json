@@ -1,6 +1,10 @@
 {
   "hosts": [
     {
+      "host": "api.groq.com",
+      "reason": "User-configured Groq Whisper STT endpoint; vocabulary capability fixtures verify its documented prompt support"
+    },
+    {
       "host": "api.openai.com",
       "reason": "OpenAI provider preset (STT / LLM / embeddings); reachable only with a user-configured key"
     },

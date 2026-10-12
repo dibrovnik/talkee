@@ -1,14 +1,12 @@
-import { listen } from "@tauri-apps/api/event";
-import type { ReactElement, ReactNode } from "react";
+import { emit, listen } from "@tauri-apps/api/event";
+import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
+import { SETTINGS_NAVIGATE_EVENT, SETTINGS_UPDATED_EVENT } from "../lib/hotkeyEvents";
 import { useI18n } from "../lib/i18n";
 import { logError } from "../lib/logger";
-import {
-  getEmptyView,
-  getTranscriptionStatsView,
-  STATS_UPDATED_EVENT,
-  type TranscriptionStatsView,
-} from "../lib/stats";
+import { getTranscriptionStats, STATS_UPDATED_EVENT } from "../lib/stats";
+import { getSettings } from "../lib/store";
+import { transcriptionStatsView } from "./transcriptionStatsView";
 
 type TranslateFn = ReturnType<typeof useI18n>["t"];
 
@@ -36,116 +34,112 @@ interface StatItem {
   value: string;
 }
 
-interface TranscriptionStatsPanelProps {
-  footer?: ReactNode;
-}
+export function TranscriptionStatsPanel(): ReactElement {
+  const { t, lang } = useI18n();
+  const [view, setView] = useState<ReturnType<typeof transcriptionStatsView> | null>(null);
 
-function buildStats(view: TranscriptionStatsView, t: TranslateFn): StatItem[] {
-  return [
+  useEffect(() => {
+    let active = true;
+    const reportError = (error: unknown): void => {
+      void logError("STATS", `Failed to load home stats: ${String(error)}`);
+    };
+    const loadStats = async (): Promise<void> => {
+      try {
+        const [stats, settings] = await Promise.all([
+          getTranscriptionStats(),
+          getSettings({ reload: true }).catch((error) => {
+            reportError(error);
+            return null;
+          }),
+        ]);
+        if (active) setView(transcriptionStatsView(stats, settings?.typingWpm));
+      } catch (error) {
+        reportError(error);
+      }
+    };
+    void loadStats();
+    const listeners = [STATS_UPDATED_EVENT, SETTINGS_UPDATED_EVENT].map((event) =>
+      listen(event, () => void loadStats()),
+    );
+    window.addEventListener("focus", loadStats);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", loadStats);
+      for (const listener of listeners)
+        void listener.then((dispose) => dispose()).catch(reportError);
+    };
+  }, []);
+
+  const number = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 });
+  const hasComparison = view?.savings.status === "ok" || view?.savings.status === "incomplete";
+  const seconds = view?.savings.savingsSec ?? 0;
+  const savedTime =
+    seconds >= 3600
+      ? `${number.format(seconds / 3600)} ${t("stats.home.hours")}`
+      : seconds >= 60
+        ? `${number.format(seconds / 60)} ${t("stats.home.minutes")}`
+        : `${number.format(seconds)} ${t("stats.home.seconds")}`;
+  const stats: StatItem[] = [
     {
       key: "today",
       label: t("stats.wordsToday"),
-      value: formatStatValue(view.todayWords, t),
+      value: view ? formatStatValue(view.todayWords, t) : "—",
     },
     {
       key: "month",
       label: t("stats.wordsThisMonth"),
-      value: formatStatValue(view.monthWords, t),
+      value: view ? formatStatValue(view.monthWords, t) : "—",
     },
     {
       key: "speed",
       label: t("stats.wordsPerMinute"),
-      value: view.hasSpeed ? formatStatValue(view.averageWpm, t) : "—",
+      value: view?.hasSpeed ? formatStatValue(view.averageWpm, t) : "—",
+    },
+    { key: "saved", label: t("stats.home.timeSaved"), value: hasComparison ? savedTime : "—" },
+    {
+      key: "ratio",
+      label: t("stats.home.speedRatio"),
+      value: view?.speedRatio !== undefined ? `${number.format(view.speedRatio)}×` : "—",
+    },
+    {
+      key: "days",
+      label: t("stats.home.activeDays"),
+      value: view ? `${view.activeDays} / 7` : "—",
     },
   ];
-}
-
-export function TranscriptionStatsPanel({ footer }: TranscriptionStatsPanelProps): ReactElement {
-  const { t } = useI18n();
-  const [view, setView] = useState<TranscriptionStatsView>(() => getEmptyView());
-
-  useEffect(() => {
-    let active = true;
-
-    const loadStats = async (): Promise<void> => {
-      try {
-        const next = await getTranscriptionStatsView();
-        if (active) {
-          setView(next);
-        }
-      } catch (error) {
-        void logError(
-          "STATS",
-          `Failed to load stats view: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    };
-
-    void loadStats();
-    const unlisten = listen(STATS_UPDATED_EVENT, () => {
-      void loadStats();
+  const openStats = (): void => {
+    void emit(SETTINGS_NAVIGATE_EVENT, { tab: "stats" }).catch((error) => {
+      void logError("STATS", `Failed to open statistics: ${String(error)}`);
     });
-
-    return () => {
-      active = false;
-      unlisten.then((fn) => fn());
-    };
-  }, []);
-
-  const stats = buildStats(view, t);
+  };
 
   return (
-    <section
-      className="stats-glass-card"
-      style={{
-        display: "grid",
-        gap: 14,
-        padding: "16px 18px 14px",
-        borderRadius: "var(--radius-lg)",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-          gap: 14,
-        }}
-      >
+    <section className="ui-stats-panel" aria-label={t("stats.home.summary")}>
+      <div className="ui-stats-panel__metrics">
         {stats.map(({ key, label, value }) => (
-          <div
-            key={key}
-            className="stats-glass-metric"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 4,
-              minWidth: 0,
-              minHeight: 72,
-              padding: "8px 10px",
-              textAlign: "center",
-            }}
-          >
-            <span className="headline-accent" style={{ fontSize: 28, color: "var(--text-hi)" }}>
-              {value}
-            </span>
-            <span className="label">{label}</span>
+          <div key={key} className="ui-stats-metric">
+            <span className="ui-stats-metric__value">{value}</span>
+            <span className="ui-stats-metric__label">{label}</span>
           </div>
         ))}
       </div>
-
-      {footer ? (
-        <div
-          style={{
-            borderTop: "1px solid var(--border-subtle)",
-            paddingTop: 12,
-          }}
-        >
-          {footer}
-        </div>
-      ) : null}
+      <div className="ui-stats-panel__footer">
+        <span style={{ flex: "1 1 240px" }}>
+          {view?.savings.status === "no-speed"
+            ? t("stats.home.noSpeed")
+            : hasComparison
+              ? t("stats.home.estimate", { wpm: view?.savings.typingWpm ?? 0 })
+              : t("stats.home.noData")}
+          {view?.savings.status === "incomplete" && (
+            <> {t("stats.home.incomplete", { count: view.savings.incompleteCount })}</>
+          )}
+        </span>
+        <button type="button" className="ui-link-button" onClick={openStats}>
+          {view?.savings.status === "no-speed"
+            ? t("stats.home.measureTyping")
+            : t("stats.home.details")}
+        </button>
+      </div>
     </section>
   );
 }

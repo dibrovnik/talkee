@@ -23,6 +23,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
           fetch-depth: 0
 
       - name: Require successful release preflight
@@ -61,7 +62,7 @@ jobs:
   build:
     name: Build macos
     needs: verify-preflight
-    runs-on: macos-latest
+    runs-on: macos-14
 
     env:
       MACOSX_DEPLOYMENT_TARGET: "14.0"
@@ -69,10 +70,13 @@ jobs:
       TALKEE_SKIP_BEFORE_BUILD: "1"
       TALKEE_TARGET_CPU: "apple-m1"
       RUSTFLAGS: "-C target-cpu=apple-m1"
+      TALKEE_DEV_SIGNING_IDENTITY: "-"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -81,6 +85,8 @@ jobs:
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Cache Bun dependencies
         uses: actions/cache@v4
@@ -108,13 +114,14 @@ jobs:
         run: bun run check:release
 
       - name: Build bundles
-        run: bun run tauri build --bundles app
-
-      - name: Postprocess macOS release
-        run: bun run postprocess:macos-release
+        run: bun run build:release:macos
 
       - name: Archive macOS app bundle
-        run: ditto -c -k --sequesterRsrc --keepParent "src-tauri/target/release/bundle/macos/Talkee.app" "Talkee-${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}-macos.zip"
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]
+          ditto -c -k --sequesterRsrc --keepParent "src-tauri/target/release/bundle/macos/Talkee.app" "Talkee-${RELEASE_TAG}-macos.zip"
 
       - name: Upload release bundle
         uses: actions/upload-artifact@v4
@@ -135,6 +142,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
 
       - name: Download release bundles
         uses: actions/download-artifact@v4
@@ -164,27 +173,39 @@ jobs:
           }
 
           copy_first "*.dmg" "Talkee-macos.dmg"
+          copy_first "*.zip" "Talkee-macos.zip"
+          cd "$STABLE_DIR"
+          sha256sum Talkee-macos.dmg Talkee-macos.zip > SHA256SUMS
 
       - name: Publish GitHub release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: Talkee ${{ env.RELEASE_TAG }}
+          generate_release_notes: true
           body: |
-            Automated release for ${{ env.RELEASE_TAG }}.
+            ## Download / Скачать
 
-            This release publishes the native macOS (Apple Silicon) Tauri bundles built on the macOS runner.
+            **macOS 14+ · Apple Silicon (M1 or later)**
+
+            - **Talkee-macos.dmg** — recommended installer; open it and drag Talkee into Applications.
+            - **Talkee-macos.zip** — app archive.
+            - **SHA256SUMS** — verify with `shasum -a 256 -c SHA256SUMS`.
+
+            Voice input in your MacBook notch, text cleanup, audio/video transcription, call recording, and translation. Use your own API endpoints or managed local models. No Talkee account or subscription.
 
             ### Первый запуск / First launch
 
-            Сборки пока без платной подписи кода — это **не вирус** (исходники открыты, AGPL-3.0). Если macOS блокирует запуск:
-            The builds are not code-signed yet — this is **not malware** (open source, AGPL-3.0). If macOS blocks it:
+            The app is ad-hoc signed, without Apple notarization. macOS may block the first launch: open System Settings → Privacy & Security → Open Anyway after attempting to launch Talkee.
 
-            - **macOS** — «не удалось проверить» / "could not verify": нажмите **Готово/Done**, затем **Системные настройки → Конфиденциальность и безопасность → Всё равно открыть** (System Settings → Privacy & Security → Open Anyway). Или: `xattr -dr com.apple.quarantine /Applications/Talkee.app`
+            Приложение без нотарификации Apple. После первой попытки запуска откройте Системные настройки → Конфиденциальность и безопасность → Всё равно открыть.
+
+            Grant Microphone and Accessibility permissions; call recording also needs System Audio Recording. See README for setup and troubleshooting.
           draft: false
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           files: |
             release-artifacts/**/*.dmg
             release-artifacts/**/*.zip
+            release-artifacts/**/SHA256SUMS
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

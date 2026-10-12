@@ -78,7 +78,7 @@ Import from `src/ui` (`src/ui/index.ts`). A dev-only gallery (`src/ui/Gallery.ts
 | `TextField`, `SecureField` | Text and secret input | 36 px workspace / 22 px HUD, accent focus ring |
 | `FormSection` | Grouping settings | Title above, rounded `--control-bg` group, optional footer below |
 | `FormRow` | One setting in a group | Label left, control right, separators between rows |
-| `SidebarItem` | Settings sidebar navigation | 40 px in the workspace, 16 px icon, `--selected-bg` when active |
+| `SidebarItem` | Settings sidebar navigation | 40 px in the workspace, regular 16 px icon; neutral `--control-muted-strong` selection with `--label` text |
 | `Badge` | Short status labels | `variant`: `neutral`, `success`, `danger` |
 | `ProgressBar` | Determinate progress | `value` from 0 to 1 |
 | `Spinner` | Indeterminate progress | 12-stroke NSProgressIndicator look |
@@ -104,6 +104,10 @@ Shared CSS classes in `src/index.css` cover layouts that are not components: `ui
 ## Motion and Accessibility
 
 - Motion is short and functional: state changes, reveals, progress. No decorative animation.
+- Workspace pages reveal in 180 ms without remounting persistent tabs; menus and dialogs fade
+  in 140 ms. Section headings use `--fs-title3`, subordinate to the large page title.
+- The notch keeps its geometry and five bars. Audio levels interpolate with 90 ms `scaleY`
+  transitions on fixed-height bars; ear-slot widths follow the same spring as the shell.
 - Every animation or transition must be turned off under `@media (prefers-reduced-motion:
   reduce)`.
 - Reduce Transparency: the sidebar switches to `--window-bg` through

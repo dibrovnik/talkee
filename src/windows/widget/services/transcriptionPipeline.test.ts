@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { AppSettings } from "../../../lib/store";
 import type { CleanupOutcome } from "../../../lib/textCleanup";
 import { createEmptyVocabularyState, type VocabularyState } from "../../../lib/vocabulary";
+import { hintAdapterForBatch, selectVocabularyHints } from "../../../lib/vocabularyHints";
 import { captureDictationVocabulary } from "./dictationVocabulary";
 import {
   applyDictationTranslation,
@@ -203,6 +204,27 @@ describe("personal vocabulary in the dictation pipeline", () => {
     };
     return { calls, clean: clean as never };
   }
+
+  test("the captured list offers PIM to Whisper and nothing to Nemotron", async () => {
+    const captured = await capture(vocabularyState());
+    expect(captured.hintTerms.map((item) => item.canonical)).toEqual(["PIM"]);
+    const endpoint = "http://127.0.0.1:8000";
+    expect(
+      selectVocabularyHints(
+        captured.hintTerms,
+        hintAdapterForBatch(endpoint, "nvidia/nemotron-3.5-asr-streaming-0.6b"),
+      ).terms,
+    ).toEqual([]);
+    expect(
+      selectVocabularyHints(
+        captured.hintTerms,
+        hintAdapterForBatch(endpoint, "whisper-large-v3-turbo"),
+      ).terms,
+    ).toEqual(["PIM"]);
+    const disabled = vocabularyState();
+    disabled.terms[0].enabled = false;
+    expect((await capture(disabled)).hintTerms).toEqual([]);
+  });
 
   test("cleanup off: approved rule applies without any LLM call and raw stays the real STT", async () => {
     const result = await processDictationText(

@@ -25,6 +25,7 @@ mod prompt_config;
 pub mod realtime;
 mod settings_store;
 mod shutdown;
+mod stt_hints;
 mod tray;
 mod vocabulary;
 
@@ -115,6 +116,14 @@ pub fn run() {
             if let Err(err) = vocabulary::VocabularyManager::init(app.handle()) {
                 logger::log_error("VOCABULARY", &format!("event=init_failed error={err}"));
             }
+            let vocabulary_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Ok(history) = history_storage::read_history_file(vocabulary_app.clone(), String::new()).await {
+                    if let Some(manager) = vocabulary_app.try_state::<vocabulary::VocabularyManager>() {
+                        let _ = manager.reconcile(&history);
+                    }
+                }
+            });
 
             if let Err(err) = native_voice_recorder::init() {
                 logger::log_error(
@@ -210,6 +219,8 @@ pub fn run() {
             ai::transcribe_file_path,
             ai::file_jobs::cancel_file_job,
             ai::process_text,
+            llm_runtime::local_llm_analysis_capability,
+            ai::text_requests::cancel_text_request,
             ai::embed_text,
             history_storage::migrate_app_data_layout,
             history_storage::read_history_file,
@@ -275,6 +286,13 @@ pub fn run() {
             app_nap::begin_work_activity,
             app_nap::end_work_activity,
             vocabulary::vocabulary_get_state,
+            vocabulary::vocabulary_save_correction,
+            vocabulary::analysis_jobs::vocabulary_analysis_start,
+            vocabulary::analysis_jobs::vocabulary_analysis_commit,
+            vocabulary::analysis_jobs::vocabulary_analysis_finish,
+            vocabulary::analysis_jobs::vocabulary_set_consent,
+            vocabulary::analysis_jobs::vocabulary_clear_learning,
+            vocabulary::vocabulary_review_suggestion,
             vocabulary::vocabulary_save_term,
             vocabulary::vocabulary_delete_term,
             vocabulary::vocabulary_update_config,

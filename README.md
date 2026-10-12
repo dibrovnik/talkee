@@ -11,8 +11,40 @@
 <p align="center">
   <a href="README.ru.md">Read in Russian</a>
   ·
-  <a href="https://github.com/SerTimBerrners-Lee/talkee/releases/latest">Latest release</a>
+  <a href="https://github.com/dibrovnik/talkee/releases/latest">Latest release</a>
 </p>
+
+<p align="center">
+  <a href="https://github.com/dibrovnik/talkee/releases/latest"><img src="https://img.shields.io/github/v/release/dibrovnik/talkee?color=blue" alt="Latest release"></a>
+  <a href="https://github.com/dibrovnik/talkee/actions/workflows/check.yml"><img src="https://github.com/dibrovnik/talkee/actions/workflows/check.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License: AGPL-3.0-or-later"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B%20%C2%B7%20Apple%20Silicon-black" alt="macOS 14 or later, Apple Silicon">
+</p>
+
+<p align="center"><strong>Speak. Talkee transcribes, refines, and pastes.</strong><br>Dictation · audio & video · calls · translation · local models</p>
+
+<p align="center">
+  <a href="https://github.com/dibrovnik/talkee/releases/latest/download/Talkee-macos.dmg"><strong>Download for macOS ↓</strong></a> ·
+  <a href="docs/privacy.md">Privacy</a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="https://github.com/dibrovnik/talkee/issues/new/choose">Report a bug</a>
+</p>
+
+![Talkee notch island: dictation, live text, and paste in a MacBook mockup](docs/screenshots/notch-demo.gif)
+
+*Notch demo using Talkee’s widget component and sample text in a MacBook mockup.*
+
+**Notch island.** Talkee wraps around your MacBook’s camera notch: recording timer, live levels, transcription ticker, and completion — without moving focus away from your work. Switch to the floating pill on any display.
+
+## Screenshots
+
+| Text cleanup | Settings & hotkeys |
+| --- | --- |
+| ![Text cleanup styles](docs/screenshots/text-cleanup.png) | ![Talkee settings](docs/screenshots/settings.png) |
+
+![Audio and video transcription](docs/screenshots/transcription.png)
+
+Real screenshots from the macOS app. The interface supports Russian and English.
 
 ## What Is Talkee?
 
@@ -90,7 +122,7 @@ If a default port is busy, Talkee starts the managed runtime on a fallback port 
 
 Download the latest build from GitHub Releases:
 
-- [macOS DMG](https://github.com/SerTimBerrners-Lee/talkee/releases/latest/download/Talkee-macos.dmg)
+- [macOS DMG](https://github.com/dibrovnik/talkee/releases/latest/download/Talkee-macos.dmg)
 
 ### If macOS blocks the first launch
 
@@ -168,7 +200,7 @@ The live text overlay keeps consecutive chunks from the same source together and
 - In local mode, transcription stays on your machine.
 - API keys are stored locally in app settings.
 - Voice history and file transcription history are stored locally.
-- Talkee does not keep audio on its own servers beyond the API call.
+- Talkee has no cloud account, telemetry, or subscription; it does not operate transcription servers.
 
 ## Troubleshooting
 
@@ -190,6 +222,8 @@ The live text overlay keeps consecutive chunks from the same source together and
 
 Requirements:
 
+- macOS 14+ on Apple Silicon (M1 or later)
+
 - Bun `1.2.x`
 - Rust stable
 - Tauri v2 system dependencies
@@ -210,6 +244,9 @@ cargo check --manifest-path src-tauri/Cargo.toml
 bun run check:release
 bun run tauri build
 bun run build:release:macos
+
+# Local update: quality gate, signed build, backup, replace /Applications/Talkee.app, relaunch
+bun run update:local
 bun run logs
 ```
 
@@ -245,7 +282,7 @@ Issues and pull requests are welcome. Before changing audio behavior, read the a
 
 Project conventions:
 
-- UI text is Russian.
+- UI supports Russian and English.
 - Code and comments are English.
 - Package manager is Bun.
 - Settings are persisted immediately after change.

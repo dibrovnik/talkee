@@ -1,0 +1,29 @@
+name: Bug report / Ошибка
+description: Report a reproducible problem in Talkee.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened? / Что произошло?
+      description: Include steps, expected behavior, and actual behavior. Russian or English is welcome.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Talkee version, macOS version, and Mac model
+      placeholder: Talkee 0.4.10, macOS 15, MacBook Pro M1
+    validations:
+      required: true
+  - type: textarea
+    id: processing
+    attributes:
+      label: Processing mode and model / Режим и модель
+      description: API or Local, model name, and whether cleanup is enabled. Never share API keys.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or logs / Скриншоты или логи
+      description: Remove keys, private transcripts, and personal paths before attaching logs.

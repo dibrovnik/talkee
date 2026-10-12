@@ -136,7 +136,8 @@ export function useHotkeyCapture({
       const requestId = captureRequestIdRef.current ?? createRequestId(target);
       await stop();
 
-      const allowsEmpty = target === "cleanup" || target === "dictationCleanup";
+      const allowsEmpty =
+        target === "cleanup" || target === "dictationCleanup" || target === "vocabularyCorrection";
       if (candidate === null || (!candidate && !allowsEmpty)) {
         setDraft(null);
         setTone("error");

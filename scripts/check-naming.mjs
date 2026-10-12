@@ -8,7 +8,14 @@ const NEEDLE = "talkis"; // legacy product name, compared case-insensitively
 const ALLOWLIST_PATH = ["scripts", "naming-allowlist.json"];
 
 // Directory names that never contain shipped source (build output, VCS, deps).
-const IGNORED_SEGMENTS = new Set(["node_modules", ".git", "target", "dist", "dist-ssr"]);
+const IGNORED_SEGMENTS = new Set([
+  "node_modules",
+  ".git",
+  "target",
+  "dist",
+  "dist-ssr",
+  ".tmp-verify",
+]);
 
 // Paths that are excluded outright: sidecar build artifacts, the regenerated
 // lockfile, and the OpenSpec planning workspace (each active change is renamed

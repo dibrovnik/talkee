@@ -756,6 +756,22 @@ pub async fn write_history_file(
     let dir = resolve_storage_dir(Some(&app), &storage_dir)?;
     fs::create_dir_all(&dir)
         .map_err(|err| format!("Не удалось подготовить папку истории: {}", err))?;
+    let previous = read_history_json(&dir.join(HISTORY_FILE_NAME))?;
+    let invalidated = previous
+        .iter()
+        .filter_map(|entry| {
+            let id = entry.get("id")?.as_str()?;
+            let next = history
+                .iter()
+                .find(|next| next.get("id").and_then(Value::as_str) == Some(id));
+            let old_source = crate::vocabulary::learning::source_text(entry);
+            let new_source = next.and_then(crate::vocabulary::learning::source_text);
+            (old_source != new_source).then(|| id.to_owned())
+        })
+        .collect();
+    use tauri::Manager;
+    app.state::<crate::vocabulary::VocabularyManager>()
+        .invalidate(invalidated)?;
     write_history_json(&dir.join(HISTORY_FILE_NAME), &history)
 }
 

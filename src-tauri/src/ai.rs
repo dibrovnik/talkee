@@ -1,6 +1,7 @@
 mod errors;
 pub mod file_jobs;
 mod routing;
+pub mod text_requests;
 
 use self::routing::{
     is_likely_local_url, local_runtime_kind_from_endpoint, port_from_url,
@@ -12,6 +13,7 @@ use crate::local_stt;
 use crate::logger;
 use crate::media;
 use crate::prompt_config;
+use crate::stt_hints;
 use base64::Engine;
 use reqwest::multipart;
 use serde::{Deserialize, Serialize};
@@ -133,6 +135,8 @@ struct SttRequestOptions {
     segment_offset_seconds: f64,
     /// Which HTTP client family may serve this request.
     client_profile: SttClientProfile,
+    /// Ordinary dictation only; file jobs never send vocabulary hints.
+    allow_vocabulary_hints: bool,
 }
 
 /// Dictation keeps the bounded budget; file chunks get the long one.
@@ -170,6 +174,9 @@ pub struct TranscribeRequest {
     pub mode: Option<String>,
     pub streaming_enabled: Option<bool>,
     pub streaming_request_id: Option<String>,
+    /// Ordinary dictation only: terms selected from the vocabulary snapshot.
+    #[serde(default)]
+    pub vocabulary_hints: Option<Vec<String>>,
 }
 
 #[derive(Clone, Serialize)]
@@ -224,6 +231,9 @@ pub struct TranscribeResponse {
     pub speakers: Option<Vec<Speaker>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub segments: Option<Vec<SpeakerTranscriptSegment>>,
+    /// True only when vocabulary hints actually reached the recognizer.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub hints_applied: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
@@ -353,6 +363,7 @@ struct AudioTranscriptionResult {
     raw: String,
     cleaned: String,
     segments: Vec<SttTranscriptSegment>,
+    hints_applied: bool,
 }
 
 fn plain_transcribe_response(raw: String, cleaned: String) -> TranscribeResponse {
@@ -362,6 +373,7 @@ fn plain_transcribe_response(raw: String, cleaned: String) -> TranscribeResponse
         mode: TranscriptionMode::Plain,
         speakers: None,
         segments: None,
+        hints_applied: false,
     }
 }
 
@@ -400,6 +412,18 @@ struct WhisperMultipartParams<'a> {
     audio_bytes: Vec<u8>,
     file_name: &'a str,
     mime_type: &'a str,
+    fields: &'a WhisperFormFields,
+}
+
+/// Text fields of one STT request; built once and reused by the streaming
+/// attempt and its JSON fallback so both carry the same prompt.
+#[derive(Debug, Clone, PartialEq)]
+struct WhisperFormFields {
+    fields: Vec<(&'static str, String)>,
+    hints_applied: bool,
+}
+
+struct WhisperFieldParams<'a> {
     whisper_model: &'a str,
     is_transcribe_model: bool,
     is_local_endpoint: bool,
@@ -407,15 +431,13 @@ struct WhisperMultipartParams<'a> {
     use_streaming: bool,
     language: &'a str,
     lang_param: &'a str,
+    base_prompt: Option<String>,
+    hint_adapter: Option<stt_hints::SttHintAdapter>,
+    vocabulary_hints: Option<&'a [String]>,
 }
 
-fn build_whisper_multipart_form(
-    params: WhisperMultipartParams<'_>,
-) -> Result<multipart::Form, String> {
-    let WhisperMultipartParams {
-        audio_bytes,
-        file_name,
-        mime_type,
+fn whisper_form_fields(params: WhisperFieldParams<'_>) -> WhisperFormFields {
+    let WhisperFieldParams {
         whisper_model,
         is_transcribe_model,
         is_local_endpoint,
@@ -423,70 +445,81 @@ fn build_whisper_multipart_form(
         use_streaming,
         language,
         lang_param,
+        base_prompt,
+        hint_adapter,
+        vocabulary_hints,
     } = params;
 
-    let file_part = multipart::Part::bytes(audio_bytes)
-        .file_name(file_name.to_string())
-        .mime_str(mime_type)
-        .map_err(|e| format!("MIME error: {}", e))?;
-
-    let mut form = multipart::Form::new()
-        .part("file", file_part)
-        .text("model", whisper_model.to_string());
+    // The managed runtime ignored `prompt` before it reached Whisper inference,
+    // so it is sent there only together with vocabulary hints.
+    let plan = stt_hints::plan_prompt(
+        base_prompt,
+        vocabulary_hints,
+        hint_adapter,
+        !is_local_endpoint,
+    );
+    let mut fields: Vec<(&'static str, String)> = vec![("model", whisper_model.to_string())];
 
     if is_transcribe_model {
-        // gpt-4o-transcribe / gpt-4o-mini-transcribe:
-        // - Only support "json" or "text" response_format (not verbose_json)
-        // - Don't support "language" or "prompt" params
-        // - Use "instructions" instead of "prompt" for hints
-        form = form.text("response_format", "json");
-
-        if let Some(hint) = build_whisper_prompt(language, "classic") {
-            form = form.text("instructions", hint);
-        }
+        // gpt-4o-transcribe / gpt-4o-mini-transcribe accept only "json" or
+        // "text" and take context through the documented `prompt` field.
+        fields.push(("response_format", "json".to_string()));
     } else if is_local_endpoint {
-        // Local faster-whisper: use the most compatible response format.
-        form = form.text(
+        // Local runtime: use the most compatible response format.
+        fields.push((
             "response_format",
             if require_segments {
                 "verbose_json"
             } else {
                 "json"
-            },
-        );
+            }
+            .to_string(),
+        ));
 
         if !lang_param.is_empty() || (use_streaming && language == "auto") {
-            form = form.text(
+            fields.push((
                 "language",
                 if use_streaming && language == "auto" {
                     "auto".to_string()
                 } else {
                     lang_param.to_string()
                 },
-            );
+            ));
         }
 
         if use_streaming {
-            form = form.text("streaming", "true");
-        }
-
-        if let Some(prompt) = build_whisper_prompt(language, "classic") {
-            form = form.text("prompt", prompt.to_string());
+            fields.push(("streaming", "true".to_string()));
         }
     } else {
         // Classic Whisper API (OpenAI / compatible): support verbose_json, language, prompt
-        form = form.text("response_format", "verbose_json");
-
-        if let Some(prompt) = build_whisper_prompt(language, "classic") {
-            form = form.text("prompt", prompt.to_string());
-        }
-
-        if !lang_param.is_empty() {
-            form = form.text("language", lang_param.to_string());
-        }
+        fields.push(("response_format", "verbose_json".to_string()));
     }
 
-    Ok(form)
+    if let Some(prompt) = plan.prompt {
+        fields.push(("prompt", prompt));
+    }
+    if !is_transcribe_model && !is_local_endpoint && !lang_param.is_empty() {
+        fields.push(("language", lang_param.to_string()));
+    }
+
+    WhisperFormFields {
+        fields,
+        hints_applied: plan.hints_applied,
+    }
+}
+
+fn build_whisper_multipart_form(
+    params: WhisperMultipartParams<'_>,
+) -> Result<multipart::Form, String> {
+    let file_part = multipart::Part::bytes(params.audio_bytes)
+        .file_name(params.file_name.to_string())
+        .mime_str(params.mime_type)
+        .map_err(|e| format!("MIME error: {}", e))?;
+
+    Ok(params.fields.fields.iter().fold(
+        multipart::Form::new().part("file", file_part),
+        |form, (name, value)| form.text(*name, value.clone()),
+    ))
 }
 
 async fn send_local_streaming_transcription_request(
@@ -849,10 +882,13 @@ async fn transcribe_audio_bytes(
             segment_offset_seconds: 0.0,
             // Dictation is short: never the long file budget.
             client_profile: stt_client_profile(false),
+            allow_vocabulary_hints: true,
         },
     )
     .await?;
-    Ok(plain_transcribe_response(result.raw, result.cleaned))
+    let mut response = plain_transcribe_response(result.raw, result.cleaned);
+    response.hints_applied = result.hints_applied;
+    Ok(response)
 }
 
 async fn transcribe_audio_bytes_internal(
@@ -867,6 +903,7 @@ async fn transcribe_audio_bytes_internal(
         require_segments,
         segment_offset_seconds,
         client_profile,
+        allow_vocabulary_hints,
     } = options;
     // Runtime startup talks to the local managed endpoint only.
     let client = local_http_client();
@@ -977,6 +1014,31 @@ async fn transcribe_audio_bytes_internal(
     };
 
     let stt_client = client_profile.client(is_local_endpoint);
+    let hint_adapter = allow_vocabulary_hints
+        .then(|| stt_hints::batch_adapter(&whisper_url, &whisper_model))
+        .flatten();
+    let form_fields = whisper_form_fields(WhisperFieldParams {
+        whisper_model: &whisper_model,
+        is_transcribe_model,
+        is_local_endpoint,
+        require_segments,
+        use_streaming,
+        language: &req.language,
+        lang_param: &lang_param,
+        base_prompt: build_whisper_prompt(&req.language, "classic"),
+        hint_adapter,
+        vocabulary_hints: req.vocabulary_hints.as_deref(),
+    });
+    let hints_applied = form_fields.hints_applied;
+    if hints_applied {
+        logger::log_info(
+            "VOCABULARY",
+            &format!(
+                "event=stt_hints terms={}",
+                req.vocabulary_hints.as_deref().map_or(0, <[String]>::len)
+            ),
+        );
+    }
 
     let mut streaming_body: Option<WhisperResp> = None;
     if let Some(request_id) = live_streaming_request_id {
@@ -984,13 +1046,7 @@ async fn transcribe_audio_bytes_internal(
             audio_bytes: audio_bytes.clone(),
             file_name: &file_name,
             mime_type: &mime_type,
-            whisper_model: &whisper_model,
-            is_transcribe_model,
-            is_local_endpoint,
-            require_segments,
-            use_streaming,
-            language: &req.language,
-            lang_param: &lang_param,
+            fields: &form_fields,
         })?;
 
         match send_local_streaming_transcription_request(
@@ -1031,13 +1087,7 @@ async fn transcribe_audio_bytes_internal(
             audio_bytes,
             file_name: &file_name,
             mime_type: &mime_type,
-            whisper_model: &whisper_model,
-            is_transcribe_model,
-            is_local_endpoint,
-            require_segments,
-            use_streaming,
-            language: &req.language,
-            lang_param: &lang_param,
+            fields: &form_fields,
         })?;
 
         let mut whisper_request = stt_client.post(&whisper_url).multipart(form);
@@ -1088,6 +1138,7 @@ async fn transcribe_audio_bytes_internal(
             raw: String::new(),
             cleaned: String::new(),
             segments: Vec::new(),
+            hints_applied: false,
         });
     }
 
@@ -1115,6 +1166,7 @@ async fn transcribe_audio_bytes_internal(
             raw: String::new(),
             cleaned: String::new(),
             segments: Vec::new(),
+            hints_applied: false,
         });
     }
 
@@ -1130,6 +1182,7 @@ async fn transcribe_audio_bytes_internal(
             raw: String::new(),
             cleaned: String::new(),
             segments: Vec::new(),
+            hints_applied: false,
         });
     }
 
@@ -1152,6 +1205,7 @@ async fn transcribe_audio_bytes_internal(
             raw: String::new(),
             cleaned: String::new(),
             segments: Vec::new(),
+            hints_applied: false,
         });
     }
 
@@ -1197,6 +1251,7 @@ async fn transcribe_audio_bytes_internal(
             raw: String::new(),
             cleaned: String::new(),
             segments: Vec::new(),
+            hints_applied: false,
         });
     }
 
@@ -1215,6 +1270,7 @@ async fn transcribe_audio_bytes_internal(
         raw: cleaned_raw.clone(),
         cleaned: cleaned_raw,
         segments,
+        hints_applied,
     })
 }
 
@@ -1224,6 +1280,7 @@ pub async fn transcribe_only(
     mut req: TranscribeRequest,
 ) -> Result<TranscribeResponse, String> {
     req.mode = Some("transcribe_only".to_string());
+    req.vocabulary_hints = None;
     transcribe_and_clean(app, req).await
 }
 
@@ -1737,6 +1794,7 @@ pub async fn transcribe_file_path(
         mode: Some("transcribe_only".to_string()),
         streaming_enabled: Some(file_streaming),
         streaming_request_id: file_streaming.then(|| req.request_id.clone()),
+        vocabulary_hints: None,
     };
 
     let transcription_started = std::time::Instant::now();
@@ -1790,6 +1848,7 @@ pub async fn transcribe_file_path(
                         segment_offset_seconds: chunk.start_offset_seconds,
                         // File chunks are long: never the dictation budget.
                         client_profile: stt_client_profile(true),
+                        allow_vocabulary_hints: false,
                     },
                 )
                 .await
@@ -1877,6 +1936,7 @@ pub async fn transcribe_file_path(
             mode: TranscriptionMode::Speakers,
             speakers: Some(speakers),
             segments: Some(segments),
+            hints_applied: false,
         });
     }
 
@@ -1931,6 +1991,8 @@ struct ModelListItem {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ProcessTextRequest {
+    #[serde(default)]
+    pub managed_analysis: bool,
     #[serde(default)]
     pub request_id: Option<String>,
     #[serde(default)]
@@ -2046,7 +2108,9 @@ pub async fn process_text(req: ProcessTextRequest) -> Result<ProcessTextResponse
     );
     let request_id = logger::safe_field(req.request_id.as_deref().unwrap_or(&generated));
     let entry_id = logger::safe_field(req.entry_id.as_deref().unwrap_or("none"));
-    let operation = if req.operation.as_deref() == Some("cleanup") {
+    let operation = if req.operation.as_deref() == Some("vocabulary-analysis") {
+        "vocabulary-analysis"
+    } else if req.operation.as_deref() == Some("cleanup") {
         "cleanup"
     } else {
         "text"
@@ -2057,7 +2121,29 @@ pub async fn process_text(req: ProcessTextRequest) -> Result<ProcessTextResponse
         request_id, entry_id, operation, logger::safe_url(&url), logger::safe_field(req.model.as_deref().unwrap_or("gpt-4o-mini")),
         is_likely_local_url(&url), req.text.chars().count(), req.deadline_ms.map(|v| v.to_string()).unwrap_or_else(|| "none".into())
     ));
-    let result = process_text_inner(&req, &url, &request_id).await;
+    let result = if operation == "vocabulary-analysis" {
+        let id = req
+            .request_id
+            .as_deref()
+            .ok_or("[text:request_id] Не указан идентификатор анализа")?;
+        let (_guard, mut receiver) = text_requests::begin(id)?;
+        let limit = if is_likely_local_url(&url) { 60 } else { 30 };
+        tokio::select! {
+            biased;
+            _ = text_requests::cancelled(&mut receiver) => {
+                cancel_managed_analysis(&req, &url, id).await;
+                Err("[text:cancelled] Анализ отменён".into())
+            },
+            outcome = tokio::time::timeout(Duration::from_secs(limit), process_text_inner(&req, &url, &request_id)) => {
+                match outcome {
+                    Ok(result) => result,
+                    Err(_) => { cancel_managed_analysis(&req, &url, id).await; Err("[text:timeout] Таймаут анализа".into()) }
+                }
+            }
+        }
+    } else {
+        process_text_inner(&req, &url, &request_id).await
+    };
     let (outcome, code, output_chars) = match &result {
         Ok(response) => (
             "success",
@@ -2071,6 +2157,19 @@ pub async fn process_text(req: ProcessTextRequest) -> Result<ProcessTextResponse
         request_id, entry_id, operation, outcome, code, started.elapsed().as_millis(), output_chars
     ));
     result
+}
+
+async fn cancel_managed_analysis(req: &ProcessTextRequest, url: &str, id: &str) {
+    if req.managed_analysis && is_likely_local_url(url) {
+        if let Some(base) = url.strip_suffix("/v1/chat/completions") {
+            let _ = text_http_client(true)
+                .post(format!("{base}/v1/requests/cancel"))
+                .json(&serde_json::json!({"request_id":id}))
+                .timeout(Duration::from_secs(2))
+                .send()
+                .await;
+        }
+    }
 }
 
 fn text_error_code(error: &str) -> String {
@@ -2158,7 +2257,7 @@ async fn process_text_inner(
     if api_key.is_none() && !is_local {
         return Err("[text:missing_key] Не указан API-ключ для текстовой модели".into());
     }
-    let payload = chat_completion_payload(&ChatCompletionRequest {
+    let mut payload = chat_completion_payload(&ChatCompletionRequest {
         model,
         prompt,
         user_text: text,
@@ -2167,6 +2266,12 @@ async fn process_text_inner(
         is_local,
         thinking: chat_thinking_mode(url, model),
     });
+    if req.managed_analysis && req.operation.as_deref() == Some("vocabulary-analysis") && is_local {
+        payload["request_id"] = serde_json::json!(req.request_id);
+    }
+    if req.operation.as_deref() == Some("vocabulary-analysis") {
+        payload["max_tokens"] = serde_json::json!(req.max_tokens.unwrap_or(1024).clamp(64, 1024));
+    }
     let mut request = text_http_client(is_local).post(url).json(&payload);
     if let Some(key) = api_key {
         request = request.bearer_auth(key);
@@ -2239,7 +2344,11 @@ async fn process_text_inner(
             usage
         ),
     );
-    if req.operation.as_deref() == Some("cleanup") && finish_reason == Some("length") {
+    if matches!(
+        req.operation.as_deref(),
+        Some("cleanup" | "vocabulary-analysis")
+    ) && finish_reason == Some("length")
+    {
         return Err("[text:truncated] Модель обрезала результат очистки".into());
     }
     let result = choice
@@ -3154,6 +3263,38 @@ pub async fn delete_stt_model(
 #[cfg(test)]
 mod tests {
     #[test]
+    fn vocabulary_batch_fields_use_documented_prompt() {
+        for (endpoint, model) in [
+            ("https://api.openai.com/v1", "gpt-4o-transcribe"),
+            ("https://api.groq.com/openai/v1", "whisper-large-v3"),
+        ] {
+            let hints = vec!["PIM".to_owned()];
+            let plan = whisper_form_fields(WhisperFieldParams {
+                whisper_model: model,
+                is_transcribe_model: model.contains("transcribe"),
+                is_local_endpoint: false,
+                require_segments: false,
+                use_streaming: false,
+                language: "ru",
+                lang_param: "ru",
+                base_prompt: Some("Language.".into()),
+                hint_adapter: stt_hints::batch_adapter(endpoint, model),
+                vocabulary_hints: Some(&hints),
+            });
+            assert!(plan.hints_applied);
+            assert!(plan
+                .fields
+                .iter()
+                .any(|(key, value)| *key == "prompt" && value.ends_with("PIM.")));
+            assert!(!plan.fields.iter().any(|(key, _)| *key == "instructions"));
+            assert!(plan
+                .fields
+                .iter()
+                .any(|(key, value)| *key == "model" && value == model));
+        }
+    }
+
+    #[test]
     fn streaming_parse_error_never_echoes_transcript_or_response_body() {
         let error = super::parse_local_streaming_event("{PRIVATE_TRANSCRIPT_BODY")
             .err()
@@ -3184,6 +3325,7 @@ mod tests {
 
     fn text_request(endpoint: String) -> ProcessTextRequest {
         ProcessTextRequest {
+            managed_analysis: false,
             text: "Hello".into(),
             prompt: "Clean".into(),
             endpoint: Some(endpoint),
@@ -3828,6 +3970,7 @@ mod cleanup_deadline_tests {
             .as_millis() as u64
             + 200;
         let result = process_text(ProcessTextRequest {
+            managed_analysis: false,
             request_id: None,
             entry_id: None,
             operation: Some("cleanup".into()),

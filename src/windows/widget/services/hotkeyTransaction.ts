@@ -38,6 +38,8 @@ export interface HotkeyTransactionDependencies {
 
 function configuredHotkey(settings: AppSettings, target: HotkeyTarget): string {
   switch (target) {
+    case "vocabularyCorrection":
+      return settings.vocabularyCorrectionHotkey || "";
     case "cleanup":
       return settings.cleanupToggleHotkey;
     case "dictationCleanup":
@@ -51,6 +53,8 @@ function configuredHotkey(settings: AppSettings, target: HotkeyTarget): string {
 
 function settingsPatch(target: HotkeyTarget, hotkey: string): AppSettingsPatch {
   switch (target) {
+    case "vocabularyCorrection":
+      return { vocabularyCorrectionHotkey: hotkey };
     case "cleanup":
       return { cleanupToggleHotkey: hotkey };
     case "dictationCleanup":
@@ -69,6 +73,8 @@ function settingsPatch(target: HotkeyTarget, hotkey: string): AppSettingsPatch {
 
 function rollbackPatch(settings: AppSettings, target: HotkeyTarget): AppSettingsPatch {
   switch (target) {
+    case "vocabularyCorrection":
+      return { vocabularyCorrectionHotkey: settings.vocabularyCorrectionHotkey };
     case "cleanup":
       return { cleanupToggleHotkey: settings.cleanupToggleHotkey };
     case "dictationCleanup":
@@ -119,7 +125,10 @@ export async function applyHotkeyTransaction(
   dependencies: HotkeyTransactionDependencies,
 ): Promise<HotkeyRegistrationResultPayload> {
   dependencies.log("validate", request, `candidate=${request.hotkey}`);
-  const allowsEmpty = request.target === "cleanup" || request.target === "dictationCleanup";
+  const allowsEmpty =
+    request.target === "cleanup" ||
+    request.target === "dictationCleanup" ||
+    request.target === "vocabularyCorrection";
   const normalized =
     allowsEmpty && !request.hotkey
       ? { valid: true, normalized: "" }
@@ -141,7 +150,13 @@ export async function applyHotkeyTransaction(
     return result(request, false, nextHotkey, activeCurrent, dependencies.messages.stale);
   }
 
-  for (const otherTarget of ["dictation", "selection", "cleanup", "dictationCleanup"] as const) {
+  for (const otherTarget of [
+    "dictation",
+    "selection",
+    "cleanup",
+    "dictationCleanup",
+    "vocabularyCorrection",
+  ] as const) {
     if (otherTarget === request.target || !nextHotkey) continue;
     const configuredOther = normalizeHotkey(
       configuredHotkey(initialSettings, otherTarget) || "",

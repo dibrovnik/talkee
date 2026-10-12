@@ -93,3 +93,12 @@ POST /v1/audio/transcriptions
   "text": "Recognized text"
 }
 ```
+
+### Подсказки словаря
+
+В managed Whisper поле HTTP prompt подключено к WhisperRunOptions.initial_prompt.
+Словарная часть ограничена 200 UTF-8 байт и идёт после существующей подсказки языка.
+condition_on_prev_tokens=false, max_prev_context_tokens=0 и порог no_speech=0.6
+сохранены; низкоуровневая проверка тишины выполняется до inference.
+Nemotron, GigaAM, Parakeet и Moonshine игнорируют Whisper-параметры и не получают
+словарного prompt от приложения. На них словарь работает через точные замены финала.

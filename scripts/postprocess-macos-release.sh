@@ -4,7 +4,7 @@ set -euo pipefail
 
 VERSION="${1:?usage: postprocess-macos-release.sh <version>}"
 APP_NAME="Talkee"
-APP_IDENTIFIER="com.trixter.talkee"
+APP_IDENTIFIER="com.talkee.app"
 BUILD_ROOT="${BUILD_ROOT:-/tmp/talkee-target/release/bundle}"
 APP_PATH="${BUILD_ROOT}/macos/${APP_NAME}.app"
 DMG_PATH="${BUILD_ROOT}/dmg/${APP_NAME}_${VERSION}_aarch64.dmg"

@@ -11,7 +11,12 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::num::NonZeroU32;
 use std::path::PathBuf;
-use std::sync::{Mutex, OnceLock};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{sync_channel, SyncSender};
+use std::sync::{Arc, OnceLock};
+use std::time::{Duration, Instant};
+mod request_control;
+use request_control::RequestControl;
 
 use llama_cpp_2::context::params::LlamaContextParams;
 use llama_cpp_2::llama_backend::LlamaBackend;
@@ -77,57 +82,91 @@ struct HttpRequest {
     body: Vec<u8>,
 }
 
+struct Work {
+    stream: TcpStream,
+    body: Vec<u8>,
+    id: Option<String>,
+    cancelled: Arc<AtomicBool>,
+    deadline: Option<Instant>,
+}
+
 fn main() {
-    let config = parse_args();
-
-    let backend = match LlamaBackend::init() {
-        Ok(backend) => backend,
-        Err(err) => {
-            eprintln!("failed to init llama backend: {}", err);
-            std::process::exit(1);
-        }
-    };
-
-    let mut model_params = LlamaModelParams::default();
-    // Offload everything to the GPU where available (Metal on macOS).
-    model_params = model_params.with_n_gpu_layers(999);
-
-    let model = match LlamaModel::load_from_file(&backend, &config.model_path, &model_params) {
-        Ok(model) => model,
-        Err(err) => {
-            eprintln!(
-                "failed to load model {}: {}",
-                config.model_path.display(),
-                err
-            );
-            std::process::exit(1);
-        }
-    };
-
-    // llama contexts are not Sync; the server is single-threaded like talkee-stt,
-    // and the Mutex keeps the model usable from the connection loop.
-    let model = Mutex::new(model);
-
+    let config = Arc::new(parse_args());
     let bind_addr = format!("{}:{}", config.host, config.port);
-    let listener = TcpListener::bind(&bind_addr).unwrap_or_else(|err| {
-        eprintln!("failed to bind {}: {}", bind_addr, err);
-        std::process::exit(1);
+    let control = Arc::new(RequestControl::default());
+    let (sender, receiver) = sync_channel::<Work>(1);
+    let (ready_sender, ready_receiver) = sync_channel(1);
+    let worker_config = config.clone();
+    let worker_control = control.clone();
+    std::thread::spawn(move || {
+        let backend = LlamaBackend::init().expect("llama backend initialization");
+        let params = LlamaModelParams::default().with_n_gpu_layers(999);
+        let model = LlamaModel::load_from_file(&backend, &worker_config.model_path, &params)
+            .expect("llama model loading");
+        let _ = ready_sender.send(());
+        for mut work in receiver {
+            let done = Arc::new(AtomicBool::new(false));
+            if let Ok(mut socket) = work.stream.try_clone() {
+                let cancelled = work.cancelled.clone();
+                let done = done.clone();
+                std::thread::spawn(move || {
+                    let _ = socket.set_read_timeout(Some(Duration::from_millis(100)));
+                    let mut byte = [0u8; 1];
+                    while !done.load(Ordering::Acquire) {
+                        match socket.read(&mut byte) {
+                            Ok(0) => {
+                                cancelled.store(true, Ordering::Release);
+                                break;
+                            }
+                            Ok(_) => {}
+                            Err(e)
+                                if matches!(
+                                    e.kind(),
+                                    std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                                ) => {}
+                            Err(_) => {
+                                cancelled.store(true, Ordering::Release);
+                                break;
+                            }
+                        }
+                    }
+                });
+            }
+            let result = chat_completion(
+                &work.body,
+                &backend,
+                &model,
+                &worker_config,
+                &work.cancelled,
+                work.deadline,
+            );
+            let (status, body) = match result {
+                Ok(body) => (200, body),
+                Err(message) => (
+                    if message == "cancelled" { 409 } else { 500 },
+                    json!({"error":message}),
+                ),
+            };
+            let _ = write_json(&mut work.stream, status, &body);
+            done.store(true, Ordering::Release);
+            if let Some(id) = work.id {
+                worker_control.finish(&id);
+            }
+        }
     });
-
-    eprintln!(
-        "{} backend={} threads={}",
-        SERVER_NAME,
-        if backend.supports_gpu_offload() {
-            "metal"
-        } else {
-            "cpu"
-        },
-        perf_core_count()
-    );
+    if ready_receiver.recv().is_err() {
+        std::process::exit(1);
+    }
+    let listener = TcpListener::bind(&bind_addr).expect("bind local LLM listener");
     eprintln!("{} listening on {}", SERVER_NAME, bind_addr);
     for stream in listener.incoming() {
         match stream {
-            Ok(stream) => handle_connection(stream, &backend, &model, &config),
+            Ok(stream) => {
+                let sender = sender.clone();
+                let control = control.clone();
+                let config = config.clone();
+                std::thread::spawn(move || handle_connection(stream, &sender, &control, &config));
+            }
             Err(err) => eprintln!("connection error: {}", err),
         }
     }
@@ -182,20 +221,94 @@ fn parse_args() -> Config {
 
 fn handle_connection(
     mut stream: TcpStream,
-    backend: &LlamaBackend,
-    model: &Mutex<LlamaModel>,
+    sender: &SyncSender<Work>,
+    control: &RequestControl,
     config: &Config,
 ) {
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
     let request = match read_request(&mut stream) {
         Ok(request) => request,
         Err(message) => {
-            let _ = write_json(&mut stream, 400, &json!({ "error": message }));
+            let _ = write_json(&mut stream, 400, &json!({"error":message}));
             return;
         }
     };
-
-    let (status, body) = route_request(&request, backend, model, config);
-    let _ = write_json(&mut stream, status, &body);
+    match (request.method.as_str(), request.path.as_str()) {
+        ("GET", "/health") => {
+            let _ = write_json(
+                &mut stream,
+                200,
+                &json!({
+                    "status":"ok", "runtime":SERVER_NAME, "engine":ENGINE_NAME,
+                    "analysis_control_version":1, "context_size":config.ctx_size
+                }),
+            );
+        }
+        ("GET", "/v1/models") => {
+            let _ = write_json(
+                &mut stream,
+                200,
+                &json!({
+                    "object":"list", "data":[{"id":SERVER_NAME,"object":"model","owned_by":"talkee"}]
+                }),
+            );
+        }
+        ("POST", "/v1/requests/cancel") => {
+            let body: Value = serde_json::from_slice(&request.body).unwrap_or(Value::Null);
+            if let Some(id) = body.get("request_id").and_then(Value::as_str) {
+                control.cancel(id);
+                let _ = write_json(&mut stream, 200, &json!({"cancelled":true}));
+            } else {
+                let _ = write_json(&mut stream, 400, &json!({"error":"missing request_id"}));
+            }
+        }
+        ("POST", "/v1/chat/completions") => {
+            let body: Value = match serde_json::from_slice(&request.body) {
+                Ok(body) => body,
+                Err(_) => {
+                    let _ = write_json(&mut stream, 400, &json!({"error":"invalid json"}));
+                    return;
+                }
+            };
+            let id = body
+                .get("request_id")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
+            let cancelled = match id.as_ref() {
+                Some(id) => match control.register(id) {
+                    Ok(flag) => flag,
+                    Err(error) => {
+                        let _ = write_json(&mut stream, 409, &json!({"error":error}));
+                        return;
+                    }
+                },
+                None => Arc::new(AtomicBool::new(false)),
+            };
+            let work = Work {
+                stream,
+                body: request.body,
+                deadline: id
+                    .as_ref()
+                    .map(|_| Instant::now() + Duration::from_secs(60)),
+                id,
+                cancelled,
+            };
+            if let Err(error) = sender.try_send(work) {
+                let mut work = match error {
+                    std::sync::mpsc::TrySendError::Full(work)
+                    | std::sync::mpsc::TrySendError::Disconnected(work) => work,
+                };
+                if let Some(id) = work.id {
+                    control.finish(&id);
+                }
+                let _ = write_json(&mut work.stream, 503, &json!({"error":"busy"}));
+            }
+        }
+        _ => {
+            let _ = write_json(&mut stream, 404, &json!({"error":"not found"}));
+        }
+    }
 }
 
 fn read_request(stream: &mut TcpStream) -> Result<HttpRequest, String> {
@@ -255,39 +368,13 @@ fn read_request(stream: &mut TcpStream) -> Result<HttpRequest, String> {
     Ok(HttpRequest { method, path, body })
 }
 
-fn route_request(
-    request: &HttpRequest,
-    backend: &LlamaBackend,
-    model: &Mutex<LlamaModel>,
-    config: &Config,
-) -> (u16, Value) {
-    match (request.method.as_str(), request.path.as_str()) {
-        ("GET", "/health") => (
-            200,
-            json!({ "status": "ok", "runtime": SERVER_NAME, "engine": ENGINE_NAME }),
-        ),
-        ("GET", "/v1/models") => (
-            200,
-            json!({
-                "object": "list",
-                "data": [{ "id": SERVER_NAME, "object": "model", "owned_by": "talkee" }]
-            }),
-        ),
-        ("POST", "/v1/chat/completions") => {
-            match chat_completion(&request.body, backend, model, config) {
-                Ok(value) => (200, value),
-                Err(message) => (500, json!({ "error": message })),
-            }
-        }
-        _ => (404, json!({ "error": "not found" })),
-    }
-}
-
 fn chat_completion(
     body: &[u8],
     backend: &LlamaBackend,
-    model: &Mutex<LlamaModel>,
+    model: &LlamaModel,
     config: &Config,
+    cancelled: &AtomicBool,
+    deadline: Option<Instant>,
 ) -> Result<Value, String> {
     let payload: Value =
         serde_json::from_slice(body).map_err(|err| format!("invalid json: {}", err))?;
@@ -305,15 +392,16 @@ fn chat_completion(
         .map(|value| value as i32)
         .unwrap_or(DEFAULT_MAX_TOKENS);
 
-    let model = model.lock().unwrap_or_else(|err| err.into_inner());
-    let prompt = build_prompt(&model, messages);
+    let prompt = build_prompt(model, messages);
     let content = generate(
         backend,
-        &model,
+        model,
         &prompt,
         temperature,
         max_tokens,
         config.ctx_size,
+        cancelled,
+        deadline,
     )?;
 
     Ok(json!({
@@ -424,6 +512,8 @@ fn build_chatml(messages: &[Value]) -> String {
     prompt
 }
 
+// Keep inference parameters explicit alongside cancellation and deadline controls.
+#[allow(clippy::too_many_arguments)]
 fn generate(
     backend: &LlamaBackend,
     model: &LlamaModel,
@@ -431,7 +521,10 @@ fn generate(
     temperature: f32,
     max_tokens: i32,
     ctx_size: u32,
+    cancelled: &AtomicBool,
+    deadline: Option<Instant>,
 ) -> Result<String, String> {
+    check_cancelled(cancelled, deadline)?;
     let threads = perf_core_count() as i32;
     let ctx_params = LlamaContextParams::default()
         .with_n_ctx(NonZeroU32::new(ctx_size))
@@ -458,6 +551,7 @@ fn generate(
     let mut batch = LlamaBatch::new(prompt_batch_size, 1);
     let last_index = tokens.len() as i32 - 1;
     for (chunk_index, chunk) in tokens.chunks(prompt_batch_size).enumerate() {
+        check_cancelled(cancelled, deadline)?;
         batch.clear();
         let offset = chunk_index * prompt_batch_size;
         for (index, token) in chunk.iter().enumerate() {
@@ -468,6 +562,7 @@ fn generate(
         }
         ctx.decode(&mut batch)
             .map_err(|err| format!("decode error: {}", err))?;
+        check_cancelled(cancelled, deadline)?;
     }
 
     let mut sampler = if temperature <= 0.0 {
@@ -486,6 +581,7 @@ fn generate(
     let mut pending: Vec<u8> = Vec::new();
 
     while n_cur < limit {
+        check_cancelled(cancelled, deadline)?;
         let token = sampler.sample(&ctx, batch.n_tokens() - 1);
         sampler.accept(token);
 
@@ -556,7 +652,15 @@ fn generate(
         ),
     }
 
+    check_cancelled(cancelled, deadline)?;
     Ok(output)
+}
+
+fn check_cancelled(flag: &AtomicBool, deadline: Option<Instant>) -> Result<(), String> {
+    if flag.load(Ordering::Acquire) || deadline.is_some_and(|d| Instant::now() >= d) {
+        return Err("cancelled".into());
+    }
+    Ok(())
 }
 
 fn write_json(stream: &mut TcpStream, status: u16, body: &Value) -> std::io::Result<()> {

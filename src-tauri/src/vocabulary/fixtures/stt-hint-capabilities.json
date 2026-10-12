@@ -1,0 +1,17 @@
+[
+  { "endpoint": "http://127.0.0.1:8000", "model": "whisper-large-v3-turbo", "adapter": "whisper" },
+  { "endpoint": "http://127.0.0.1:18010", "model": "whisper-small", "adapter": "whisper" },
+  { "endpoint": "http://127.0.0.1:8000", "model": "nvidia/nemotron-3.5-asr-streaming-0.6b", "adapter": null },
+  { "endpoint": "http://127.0.0.1:18060", "model": "ai-sage/GigaAM-v3", "adapter": null },
+  { "endpoint": "http://127.0.0.1:8000", "model": "nvidia/parakeet-tdt-0.6b-v3", "adapter": null },
+  { "endpoint": "http://localhost:9999", "model": "whisper-large-v3", "adapter": null },
+  { "endpoint": "https://api.groq.com/openai/v1", "model": "whisper-large-v3-turbo", "adapter": "whisper" },
+  { "endpoint": "https://api.groq.com/openai/v1", "model": "llama-3.1-8b-instant", "adapter": null },
+  { "endpoint": "", "model": "whisper-1", "adapter": "whisper" },
+  { "endpoint": "https://api.openai.com", "model": "whisper-1", "adapter": "whisper" },
+  { "endpoint": "https://api.openai.com/v1", "model": "gpt-4o-transcribe", "adapter": "gpt4o" },
+  { "endpoint": "https://api.openai.com/v1", "model": "gpt-4o-mini-transcribe", "adapter": "gpt4o" },
+  { "endpoint": "https://api.openai.com/v1", "model": "gpt-4o-transcribe-diarize", "adapter": null },
+  { "endpoint": "https://api.example.com/v1", "model": "whisper-1", "adapter": null },
+  { "endpoint": "https://api.example.com/v1", "model": "gpt-4o-transcribe", "adapter": null }
+]

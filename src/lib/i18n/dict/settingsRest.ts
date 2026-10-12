@@ -1,4 +1,5 @@
 export const settingsRest = {
+  "settingsApp.version": { ru: "Версия {version}", en: "Version {version}" },
   // ===== MainTab (windows/settings/tabs/MainTab.tsx) =====
   "mainTab.filter.all": { ru: "Все", en: "All" },
   "mainTab.filter.voice": { ru: "Голос", en: "Voice" },
@@ -28,21 +29,6 @@ export const settingsRest = {
     ru: "Обработка остановлена. Можно запустить повторно.",
     en: "Processing stopped. You can run it again.",
   },
-  "mainTab.howToStart": {
-    ru: "Как начать запись",
-    en: "How to start recording",
-  },
-  "mainTab.howItWorks": { ru: "Как это работает", en: "How it works" },
-  "mainTab.howToStartHint": {
-    ru: "Начните запись горячей клавишей. После обработки текст вставится в активное приложение и останется в буфере обмена.",
-    en: "Start a recording with the hotkey. After processing, the text is pasted into the active app and stays on the clipboard.",
-  },
-  "mainTab.hero.supportTitle": {
-    ru: "Нашли ошибку или есть вопрос?",
-    en: "Found a bug or have a question?",
-  },
-  "mainTab.hero.supportAction": { ru: "Написать", en: "Write" },
-  "mainTab.combination": { ru: "Комбинация", en: "Combination" },
   "mainTab.historyTitle": { ru: "История записей", en: "Recording history" },
   "mainTab.historyDescFilled": {
     ru: "Последние записи доступны для копирования и удаления.",
@@ -120,8 +106,10 @@ export const settingsRest = {
   "settingsApp.tab.chat": { ru: "Чат", en: "Chat" },
   "settingsApp.tab.settings": { ru: "Настройки", en: "Settings" },
   "settingsApp.tab.model": { ru: "Модели", en: "Models" },
-  "settingsApp.tab.style": { ru: "Стиль и Промпты", en: "Style and Prompts" },
+  "settingsApp.tab.style": { ru: "Стиль и промпты", en: "Style and prompts" },
   "settingsApp.tab.ui": { ru: "Примитивы (DEV)", en: "Primitives (DEV)" },
+  "settingsApp.group.workspace": { ru: "Рабочее пространство", en: "Workspace" },
+  "settingsApp.group.processing": { ru: "Обработка", en: "Processing" },
   "settingsApp.loadError": {
     ru: "Не удалось загрузить состояние приложения. Некоторые данные могут быть недоступны.",
     en: "Failed to load the app state. Some data may be unavailable.",

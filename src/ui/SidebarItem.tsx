@@ -35,7 +35,7 @@ export function SidebarItem({
       aria-current={active ? "page" : undefined}
       className={classes}
     >
-      {IconComponent ? <IconComponent size={16} weight={active ? "fill" : "regular"} /> : null}
+      {IconComponent ? <IconComponent size={16} weight="regular" aria-hidden="true" /> : null}
       <span>{label}</span>
     </button>
   );

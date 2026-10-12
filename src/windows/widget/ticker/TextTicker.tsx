@@ -29,8 +29,18 @@ export function TextTicker({ text, live }: { text: string; live: boolean }): Rea
     if (!host || !copy) {
       return;
     }
-    setCopyWidth(copy.offsetWidth);
-    setOverflow(Math.max(0, copy.offsetWidth - host.clientWidth));
+    const measure = (): void => {
+      // The repeated copy includes a loop gap; never count it as text width.
+      const width =
+        copy.offsetWidth - Number.parseFloat(getComputedStyle(copy).paddingRight || "0");
+      setCopyWidth(width);
+      setOverflow(Math.max(0, width - host.clientWidth));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(host);
+    observer.observe(copy);
+    return () => observer.disconnect();
   }, [text]);
 
   const looping = !live && overflow > 0 && !reduced;

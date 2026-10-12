@@ -692,11 +692,9 @@ pub async fn migrate_app_data_layout(
         }
     }
 
-    for old_default_file in [app_data.join(HISTORY_FILE_NAME)] {
-        match read_history_json(&old_default_file) {
-            Ok(items) => merge_history(&mut history, items),
-            Err(err) => errors.push(err),
-        }
+    match read_history_json(&app_data.join(HISTORY_FILE_NAME)) {
+        Ok(items) => merge_history(&mut history, items),
+        Err(err) => errors.push(err),
     }
 
     if let Err(err) = migrate_history_audio_paths(&mut history, &history_dir) {

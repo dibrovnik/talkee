@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Installation and troubleshooting / Установка и помощь
-    url: https://github.com/dibrovnik/talkee/blob/main/README.ru.md
+    url: https://github.com/dibrovnik/talkee/blob/main/README.md
     about: Check permissions and first-launch instructions before reporting an issue.

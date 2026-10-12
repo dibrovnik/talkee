@@ -109,7 +109,12 @@ try {
     stdio: "inherit",
   });
   execFileSync("cargo", llmCargoArgs, {
-    env: toolchainEnv,
+    // llama-cpp-sys maps Rust target-cpu to -march, which rejects Apple CPU names.
+    // Keep the LLM sidecar on the portable ARM baseline while preserving other flags.
+    env: {
+      ...toolchainEnv,
+      RUSTFLAGS: (toolchainEnv.RUSTFLAGS || "").replace(/-C\s*target-cpu=\S+/g, ""),
+    },
     stdio: "inherit",
   });
 } catch (error) {

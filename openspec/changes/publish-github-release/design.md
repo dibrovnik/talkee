@@ -12,7 +12,7 @@
 
 ## Decisions
 
-- README.md и README.ru.md: сохранить подробную документацию, добавить компактную витрину и исправить ссылки.
+- README.md и README.en.md: сохранить подробную документацию, добавить компактную витрину и исправить ссылки.
 - docs/screenshots/: GIF демонстрации реального компонента IslandPresentation в мокапе MacBook;  снимать безопасные вкладки текущего нативного приложения; не публиковать историю, ключи и приватные записи.
 - .github/workflows/release.yml и release-preflight.yml: macos-14 (Apple Silicon), bun run build:release:macos, точный checkout тега при ручном выпуске, clippy/rustfmt для gate. Preflight остаётся обязательным перед тегом.
 - .github/workflows/check.yml: тот же ARM runner и read-only permissions.
@@ -27,3 +27,7 @@
 - [Расхождение проверенного SHA и релиза] → preflight и checkout точного тега.
 - [Публикация секретов/временных файлов] → проверка индекса и истории до push, скриншоты безопасных вкладок.
 - [Рабочие изменения ещё не проходили gate] → проверка и необходимые минимальные исправления до релиза.
+
+## CI discovery
+
+На чистом runner отсутствует openspec: добавить @fission-ai/openspec 1.14.0 в devDependencies и bun.lock. В scripts/prepare-stt-sidecar.mjs убрать только target-cpu из RUSTFLAGS процесса сборки LLM: llama-cpp-sys ошибочно преобразует apple-m1 в неподдерживаемый Clang -march. Остальные флаги сохраняются; LLM остаётся на переносимой ARM-базе. Проверка — настоящая release-сборка.

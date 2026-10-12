@@ -1,17 +1,17 @@
 <p align="center">
-  <img src="src-tauri/icons/128x128.png" width="96" height="96" alt="Talkee app icon">
+  <img src="src-tauri/icons/128x128.png" width="96" height="96" alt="Иконка приложения Talkee">
 </p>
 
 <h1 align="center">Talkee</h1>
 
 <p align="center">
-  Open desktop voice input for people who write in real apps all day.
+  Голосовой ввод в чёлке MacBook. Полностью локально с локальными моделями. Без телеметрии.
 </p>
 
 <p align="center">
-  <a href="README.ru.md">Read in Russian</a>
+  <a href="README.en.md">Read in English</a>
   ·
-  <a href="https://github.com/dibrovnik/talkee/releases/latest">Latest release</a>
+  <a href="https://github.com/dibrovnik/talkee/releases/latest">Последний релиз</a>
 </p>
 
 <p align="center">
@@ -21,214 +21,197 @@
   <img src="https://img.shields.io/badge/macOS-14%2B%20%C2%B7%20Apple%20Silicon-black" alt="macOS 14 or later, Apple Silicon">
 </p>
 
-<p align="center"><strong>Speak. Talkee transcribes, refines, and pastes.</strong><br>Dictation · audio & video · calls · translation · local models</p>
+<p align="center"><strong>Говорите. Talkee распознает, обработает и вставит текст.</strong><br>Диктовка · аудио и видео · созвоны · перевод · локальные модели</p>
 
 <p align="center">
-  <a href="https://github.com/dibrovnik/talkee/releases/latest/download/Talkee-macos.dmg"><strong>Download for macOS ↓</strong></a> ·
-  <a href="docs/privacy.md">Privacy</a> ·
-  <a href="CHANGELOG.md">Changelog</a> ·
-  <a href="https://github.com/dibrovnik/talkee/issues/new/choose">Report a bug</a>
+  <a href="https://github.com/dibrovnik/talkee/releases/latest/download/Talkee-macos.dmg"><strong>Скачать для macOS ↓</strong></a> ·
+  <a href="docs/privacy.md">Приватность</a> ·
+  <a href="CHANGELOG.md">Что нового</a> ·
+  <a href="https://github.com/dibrovnik/talkee/issues/new/choose">Сообщить о проблеме</a>
 </p>
 
-![Talkee notch island: dictation, live text, and paste in a MacBook mockup](docs/screenshots/notch-demo.gif)
+![Виджет Talkee в чёлке MacBook: диктовка, живой текст и вставка](docs/screenshots/notch-demo.gif)
 
-*Notch demo using Talkee’s widget component and sample text in a MacBook mockup.*
+*Демонстрация компонента виджета Talkee с примером текста в мокапе MacBook.*
 
-**Notch island.** Talkee wraps around your MacBook’s camera notch: recording timer, live levels, transcription ticker, and completion — without moving focus away from your work. Switch to the floating pill on any display.
+**Остров в чёлке.** Talkee встраивает запись вокруг выреза камеры MacBook: таймер, уровень голоса, живой текст и завершение — прямо над рабочим приложением. Для любого экрана доступна плавающая пилюля.
 
-## Screenshots
+## Скриншоты
 
-| Text cleanup | Settings & hotkeys |
+| Обработка текста | Настройки и горячие клавиши |
 | --- | --- |
-| ![Text cleanup styles](docs/screenshots/text-cleanup.png) | ![Talkee settings](docs/screenshots/settings.png) |
+| ![Стили очистки текста](docs/screenshots/text-cleanup.png) | ![Настройки Talkee](docs/screenshots/settings.png) |
 
-![Audio and video transcription](docs/screenshots/transcription.png)
+![Транскрибация аудио и видео](docs/screenshots/transcription.png)
 
-Real screenshots from the macOS app. The interface supports Russian and English.
+Настоящие скриншоты приложения на macOS. Интерфейс доступен на русском и английском.
 
-## What Is Talkee?
+## Что такое Talkee?
 
-Talkee is a desktop voice-to-text app built with Tauri, React, TypeScript, and Rust. It stays as a small floating widget, records while you hold a hotkey, transcribes your speech, optionally cleans the text with an LLM, and pastes the final result into the app you were using.
+Talkee - десктопное приложение для преобразования речи в текст на Tauri, React, TypeScript и Rust. Оно работает как маленький плавающий виджет: записывает голос по горячей клавише, распознает речь, при необходимости улучшает текст через LLM и вставляет результат в активное приложение.
 
-It is designed for practical daily work: IDEs, chats, notes, CRM fields, email, files, and meeting transcripts.
+Talkee сделан для повседневной работы: IDE, чаты, заметки, CRM-поля, письма, файлы и транскрипты созвонов.
 
-## Highlights
+## Главное
 
-- Dictate into any active text field with a global hotkey.
-- Use locked recording mode for longer speech without holding the keys.
-- Paste cleaned text automatically after transcription.
-- Choose your own API key or local STT and text LLM models.
-- Translate system audio in real time through a verified Realtime API connection, with optional spoken translation on macOS.
-- Translate selected text with a separate configurable global hotkey.
-- Transcribe audio and video files from the Files tab or by dropping files onto the widget.
-- Record calls with separate microphone and system-audio tracks on macOS.
-- Keep local history for voice recordings, file transcriptions, calls, and live translations.
-- Chat with the configured text model to search and analyze Talkee records, summarize calls, find tasks, and translate text.
-- Run managed local STT through one native `transcribe.cpp` runtime for Whisper, GigaAM, Qwen ASR, NVIDIA Parakeet, plus local text summaries through a managed GGUF LLM runtime.
-- Build a native macOS (Apple Silicon) bundle.
+- Диктовка в любое активное текстовое поле через глобальную горячую клавишу.
+- Режим закрепленной записи для длинной речи без удержания клавиш.
+- Автоматическая вставка очищенного текста после распознавания.
+- Работа через собственный API-ключ или локальные STT- и текстовые LLM-модели.
+- Синхронный перевод системного звука через проверенное Realtime API-подключение, с опциональной озвучкой перевода на macOS.
+- Перевод выделенного текста по отдельной настраиваемой глобальной горячей клавише.
+- Транскрибация аудио и видео из вкладки `Файлы` или через перетаскивание файла на виджет.
+- Запись созвонов на macOS с отдельными дорожками микрофона и системного аудио.
+- Локальная история голосовых записей, файловых транскрибаций, созвонов и синхронных переводов.
+- Чат с настроенной текстовой моделью для поиска и анализа записей Talkee, саммари созвонов, поиска задач и перевода текста.
+- Единый управляемый локальный STT runtime `transcribe.cpp` для Whisper, GigaAM, Qwen ASR, NVIDIA Parakeet и локальные summary через управляемый GGUF LLM runtime.
+- Нативная сборка для macOS (Apple Silicon).
 
-## Changelog
+## Список изменений
 
-See [CHANGELOG.md](CHANGELOG.md) for the full version history.
+Полная история версий — в [CHANGELOG.md](CHANGELOG.md).
 
-## How It Works
+## Как это работает
 
-1. Focus the text field where you want the result to appear.
-2. Hold `Shift + Command + Space` on macOS.
-3. Speak naturally.
-4. Release the hotkey.
-5. Talkee transcribes, cleans, and pastes the text.
+1. Поставьте фокус в поле, куда нужно вставить текст.
+2. Удерживайте `Shift + Command + Space` на macOS.
+3. Говорите естественно.
+4. Отпустите горячую клавишу.
+5. Talkee распознает, очистит и вставит текст.
 
-The hotkey, microphone, language, model source, cleanup style, and app appearance are configurable in Settings.
+Горячая клавиша, микрофон, язык, источник моделей, стиль обработки текста и тема приложения настраиваются в настройках.
 
-## Access Modes
+## Режимы работы
 
-| Capability | API | Local |
+| Возможность | API | Локально |
 | --- | --- | --- |
-| Dictation, files, and local history | Yes | Yes |
-| Streaming dictation | Verified models | Streaming-capable models |
-| Selected-text translation | Yes | Yes |
-| Speaker diarization | Local diarization kit | Local diarization kit |
-| Synchronous translation | Verified Realtime API | No |
-| Summaries and prompt processing | With a configured LLM | With a selected local LLM |
+| Диктовка, файлы и история | Да | Да |
+| Потоковая диктовка | Для проверенных моделей | Для streaming-моделей |
+| Перевод выделенного текста | Да | Да |
+| Разделение по говорящим | Через локальный diarization комплект | Через локальный diarization комплект |
+| Синхронный перевод | Проверенное Realtime API | Нет |
+| Summary и обработка промптом | При настроенной LLM | При выбранной локальной LLM |
 
-The complete data routing, runtime processes, limitations, and failure boundaries are documented in the Russian-language [API/Local mode architecture](docs/architecture/processing-modes.md). Verifiable user behavior is collected in the [product business requirements](docs/business-requirements.md).
+Полная маршрутизация данных, runtime-процессы, ограничения и точки отказа описаны в [архитектуре режимов API/Локально](docs/architecture/processing-modes.md). Проверяемое пользовательское поведение собрано в [общих бизнес-требованиях](docs/business-requirements.md).
 
-### Own API Key
+### Собственный API-ключ
 
-Use an OpenAI-compatible STT endpoint and a separate LLM endpoint for text cleanup. The Models tab also contains API adapter cards for supported providers.
+Можно использовать OpenAI-совместимый STT endpoint и отдельный LLM endpoint для очистки текста. Во вкладке `Модели` также есть карточки API-адаптеров для поддерживаемых провайдеров.
 
-Realtime dictation and synchronous translation are enabled only after the exact provider, model, endpoint, and key configuration passes its connection check.
+Потоковая диктовка и синхронный перевод включаются только после успешной проверки точной конфигурации провайдера, модели, endpoint и ключа.
 
-Supported STT model names include:
+Поддерживаемые имена STT-моделей:
 
 - `whisper-1`
 - `gpt-4o-transcribe`
 - `gpt-4o-mini-transcribe`
 
-### Local Models
+### Локальные модели
 
-Install and run Talkee-managed local models from Settings. Local mode can keep both transcription and transcript summaries on your machine: STT models handle audio, and a separate local text LLM handles summary and prompt-based processing.
+Установите и запустите управляемые Talkee локальные модели из настроек. Локальный режим может держать на компьютере и транскрибацию, и summary транскриптов: STT-модели обрабатывают аудио, а отдельная локальная текстовая LLM отвечает за summary и обработку промптом.
 
-Managed local runtimes:
+Управляемые локальные рантаймы:
 
-- Whisper, GigaAM GGUF, NVIDIA Parakeet GGUF, and Qwen ASR GGUF through the unified `transcribe.cpp` runtime, default endpoint `http://127.0.0.1:8000`
-- Text LLM summaries through the bundled OpenAI-compatible `talkee-llm` runtime backed by GGUF models such as Qwen2.5 Instruct
-- Speaker diarization, default endpoint `http://127.0.0.1:8003`
+- Whisper, GigaAM GGUF, NVIDIA Parakeet GGUF и Qwen ASR GGUF через единый `transcribe.cpp` runtime, endpoint по умолчанию `http://127.0.0.1:8000`
+- Summary через встроенный OpenAI-совместимый `talkee-llm` runtime с GGUF-моделями, например Qwen2.5 Instruct
+- Speaker diarization, endpoint по умолчанию `http://127.0.0.1:8003`
 
-If a default port is busy, Talkee starts the managed runtime on a fallback port and saves the actual endpoint in settings.
+Если порт по умолчанию занят, Talkee запускает управляемый рантайм на свободном fallback-порту и сохраняет фактический endpoint в настройках.
 
-## Installation
+## Установка
 
-Download the latest build from GitHub Releases:
+Скачайте последнюю сборку из GitHub Releases:
 
 - [macOS DMG](https://github.com/dibrovnik/talkee/releases/latest/download/Talkee-macos.dmg)
 
-### If macOS blocks the first launch
+### Если macOS блокирует первый запуск
 
-Talkee is currently distributed **without paid code signing**, so Gatekeeper shows an "unverified app" warning. This is **not malware**: the source is open (AGPL-3.0) and the builds are produced by the public GitHub Actions workflow in this repo. How to open it:
+Сборка GitHub имеет ad-hoc подпись без нотарификации Apple, поэтому Gatekeeper может заблокировать первый запуск. Как открыть приложение:
 
-**macOS** — "Apple could not verify Talkee is free of malware":
+**macOS** — «Не удалось проверить, что приложение Talkee не содержит вредоносного ПО»:
 
-1. In the dialog click **Done** (not "Move to Trash").
-2. Open **System Settings → Privacy & Security**, scroll down to *"Talkee was blocked…"* and click **Open Anyway**.
-3. Confirm with your password or Touch ID and click **Open** again.
+1. В диалоге нажмите **«Готово»** (не «Переместить в Корзину»).
+2. Откройте **Системные настройки → Конфиденциальность и безопасность**, пролистайте вниз до строки *«Talkee заблокирован…»* и нажмите **«Всё равно открыть»**.
+3. Подтвердите паролем или Touch ID и ещё раз нажмите **«Открыть»**.
 
-Or, in one command in Terminal (after moving it to Applications):
+Либо одной командой в Терминале (после переноса в «Программы»):
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Talkee.app
 ```
 
-On first launch, grant the permissions Talkee needs:
+При первом запуске выдайте нужные разрешения:
 
-- Microphone access for recording.
-- Accessibility permission for automatic paste.
-- Screen and System Audio Recording permission for call recording.
+- доступ к микрофону для записи;
+- Accessibility для автоматической вставки текста;
+- Screen and System Audio Recording для записи созвонов.
 
-After permissions are granted, Talkee stores the completed onboarding state and
-does not reopen native permission prompts on every launch. If an OS permission is
-reset or denied later, Talkee asks again only when that access is needed.
 
-## Migrating from Talkis
+## Транскрибация файлов
 
-Talkee was previously released under the name **Talkis**. On first launch Talkee automatically migrates your data from the old app-data directory, so settings, history, audio, and downloaded models are preserved.
+Вкладка `Файлы` поддерживает транскрибацию аудио и видео до 8 ГБ. Файлы обрабатываются через нативный path-based pipeline, поэтому большие файлы не загружаются в память WebView.
 
-- **Migrated automatically:** settings (`talkis.json` → `talkee.json`), transcription history and audio, downloaded local models, and the saved path settings. The migration runs once and never overwrites files already present in the new directory.
-- **Grant permissions again:** the bundle identifier changed to `com.talkee.app`, so macOS treats Talkee as a new app. Grant Microphone, Accessibility, and Screen & System Audio Recording again on first launch.
-- **Old directory:** `~/Library/Application Support/com.trixter.talkis/`. Talkee copies the data but leaves this directory in place. After you verify that everything works, you can delete it manually to reclaim the space used by models:
+Talkee использует встроенный ffmpeg sidecar для видео, неподдерживаемых аудиоформатов, чанкинга и подготовки diarization. Готовые `16 kHz` mono PCM WAV файлы могут пропускать конвертацию для локального STT.
 
-  ```bash
-  rm -rf ~/Library/Application\ Support/com.trixter.talkis
-  ```
+Разделение по говорящим доступно через локальный Whisper плюс локальный diarization runtime.
 
-  Old logs live in `~/.talkis/` and can be removed the same way.
+## Запись созвонов
 
-## File Transcription
+Запись созвона собирает две дорожки:
 
-The Files tab supports audio and video transcription up to 8 GB. Files are processed through a native path-based pipeline, so large files do not need to be loaded into WebView memory.
+- `Вы` из микрофона.
+- `Созвон` из системного аудио.
 
-Talkee uses the bundled ffmpeg sidecar for video, unsupported audio formats, chunking, and diarization preparation. Ready `16 kHz` mono PCM WAV files can skip conversion for local STT.
+Системный звук захватывается через macOS Core Audio (process/system tap).
 
-Speaker diarization is available through local Whisper plus the local diarization runtime.
+Запись появляется в истории сразу после запуска, а аудиодорожки и черновик
+текста регулярно сохраняются во время разговора. При streaming-модели текущий
+текст виден во вкладке `Транскрибация`; после остановки Talkee уточняет его по
+сохранённым дорожкам. Если приложение было аварийно закрыто, при следующем
+запуске оно восстанавливает доступное аудио и последнюю сохранённую версию
+текста. GigaAM и другие batch-модели распознают разговор после остановки записи.
 
-## Call Recording
+## Синхронный перевод
 
-Call recording captures two tracks:
+Включите кнопку во вкладке `Перевод`, выберите целевой язык и запускайте перевод из плавающего виджета. В режиме API используется проверенный [OI] или Gemini Realtime adapter. Локальный режим не предоставляет синхронный перевод, но локальная диктовка, перевод выделенного текста, транскрибация файлов, summary и остальные локальные функции продолжают работать.
 
-- `You` from the microphone.
-- `Call` from system audio.
+Потоковая плашка объединяет последовательные части одной реплики и сохраняет завершённую сессию в локальной истории. На macOS OpenAI-backed сессия также может озвучивать перевод, приглушая оригинальный звук.
 
-System-audio capture uses the macOS Core Audio process/system tap.
+## Приватность
 
-The call appears in history as soon as recording starts. Talkee checkpoints
-both audio tracks and the transcript draft while the call is active. Streaming
-STT models show live text in the Transcription tab, then the saved tracks refine
-the result after stop. After an unexpected shutdown, Talkee restores available
-audio and the latest durable draft on the next launch. GigaAM and other
-batch-only models transcribe the call after recording stops.
+**Никакой телеметрии, аналитики, трекинга, аккаунтов Talkee и подписки.** Приложение не отправляет разработчикам статистику использования, записи, расшифровки или отчёты о сбоях.
 
-## Synchronous Translation
+**Полностью локальная обработка:** выберите локальные модели распознавания речи и обработки текста. Запись, диктовка, транскрибация файлов, очистка текста, саммари и перевод выделенного текста выполняются на вашем Mac. После первоначальной загрузки моделей эти возможности работают без интернета; аудио и текст остаются на компьютере. Настройки, словарь и история тоже хранятся локально.
 
-Enable the translation button in Settings -> Translation, choose the target language, and start it from the floating widget. API mode uses a verified [OI] or Gemini Realtime adapter. Local mode does not provide synchronous translation, but local dictation, selected-text translation, file transcription, summaries, and other local features remain available.
+Собственный API-ключ — дополнительная возможность по вашему выбору. В API-режиме нужные для операции аудио или текст отправляются напрямую на настроенный вами endpoint. Синхронный перевод сейчас требует поддерживаемого Realtime API и подключения к интернету. Подробнее — [приватность и маршрутизация данных](docs/privacy.md).
 
-The live text overlay keeps consecutive chunks from the same source together and stores the finished session in local history. On macOS, OpenAI-backed sessions can also play translated speech while reducing the original source volume.
+## Диагностика
 
-## Privacy
+- Текст не вставляется: проверьте macOS System Settings -> Privacy & Security -> Accessibility и убедитесь, что Talkee включен.
+- В распознавании появляются неожиданные иностранные символы: выберите фиксированный язык, например `ru` или `en`, вместо auto.
+- Локальный STT возвращает ошибки модели: откройте `Модели` -> `Локально`, убедитесь, что модель установлена и выбрана, затем переустановите ее, если runtime сообщает о потерянных файлах.
+- Запись созвона не стартует на macOS: выдайте разрешения Microphone и Screen and System Audio Recording, затем перезапустите Talkee.
+- После обновления Dock или Finder показывает старую иконку Talkee: macOS кеширует иконки. Выполните `killall Dock` или перерегистрируйте приложение через `lsregister -f /Applications/Talkee.app`, чтобы обновить её.
+- Нужна подробная диагностика: откройте `~/.talkee/talkee.log` или запустите `bun run logs` во время разработки.
 
-- In own-key mode, requests go directly to the endpoints you configure.
-- In local mode, transcription stays on your machine.
-- API keys are stored locally in app settings.
-- Voice history and file transcription history are stored locally.
-- Talkee has no cloud account, telemetry, or subscription; it does not operate transcription servers.
+## Документация продукта и архитектуры
 
-## Troubleshooting
+- [Архитектура режимов API/Локально](docs/architecture/processing-modes.md) — технический маршрут диктовки, файлов, созвонов, переводов, LLM и истории.
+- [Бизнес-требования Talkee](docs/business-requirements.md) — возможности пользователя, ожидаемое поведение, ограничения и критерии готовности.
+- [Принципы аудиопайплайна](docs/audio-pipeline-principles.md) — обязательные инженерные правила для записи, STT, файлов и call-capture.
+- [Локальный STT runtime](docs/local-stt-runtime.md) — устройство и контракт управляемого локального распознавания.
 
-- Nothing is pasted: check macOS System Settings -> Privacy & Security -> Accessibility and make sure Talkee is enabled.
-- Transcription contains unexpected foreign characters: choose a fixed recognition language such as `ru` or `en` instead of auto.
-- Local STT returns model errors: open `Модели` -> `Локально`, make sure the model is installed and selected, then reinstall it if the runtime reports missing files.
-- Call recording cannot start: grant Microphone and the System Audio Recording permission, then start the call recording again.
-- The Dock or Finder still shows the old Talkee icon after an update: macOS caches icons. Run `killall Dock` or re-register the app with `lsregister -f /Applications/Talkee.app` to refresh it.
-- Need deeper diagnostics: open `~/.talkee/talkee.log` or run `bun run logs` during development.
+## Разработка
 
-## Product And Architecture Documentation
+Требования:
 
-- [API/Local mode architecture](docs/architecture/processing-modes.md) — technical routing for dictation, files, calls, translation, LLM processing, and history.
-- [Talkee business requirements](docs/business-requirements.md) — user capabilities, expected behavior, limitations, and acceptance criteria.
-- [Audio pipeline principles](docs/audio-pipeline-principles.md) — mandatory engineering rules for recording, STT, files, and call capture.
-- [Local STT runtime](docs/local-stt-runtime.md) — managed local recognition architecture and contract.
-
-## Development
-
-Requirements:
-
-- macOS 14+ on Apple Silicon (M1 or later)
+- macOS 14+ на Apple Silicon (M1 и новее)
 
 - Bun `1.2.x`
 - Rust stable
-- Tauri v2 system dependencies
+- системные зависимости Tauri v2
 
-Install dependencies and start the app:
+Установка зависимостей и запуск:
 
 ```bash
 bun install
@@ -236,7 +219,7 @@ bun run prepare:sidecars
 bun run tauri dev
 ```
 
-Useful commands:
+Полезные команды:
 
 ```bash
 bun x tsc --noEmit
@@ -244,52 +227,49 @@ cargo check --manifest-path src-tauri/Cargo.toml
 bun run check:release
 bun run tauri build
 bun run build:release:macos
-
-# Local update: quality gate, signed build, backup, replace /Applications/Talkee.app, relaunch
-bun run update:local
 bun run logs
 ```
 
-## Project Structure
+## Структура проекта
 
 ```text
-src/                  React and TypeScript frontend
-src/windows/widget/   Floating widget window
-src/windows/settings/ Settings window and tabs
+src/                  React и TypeScript frontend
+src/windows/widget/   Плавающий widget window
+src/windows/settings/ Окно настроек и вкладки
 src/lib/              Store, auth, permissions, logging, shared clients
 src-tauri/src/        Rust backend, Tauri commands, audio, paste, STT
-src-tauri/icons/      App icons
-docs/                 Architecture, business requirements, release docs, audio rules
-scripts/              Release and sidecar preparation scripts
+src-tauri/icons/      Иконки приложения
+docs/                 Архитектура, бизнес-требования, release docs, audio rules
+scripts/              Release и sidecar preparation scripts
 ```
 
-For audio, transcription, local STT, file transcription, or call-capture changes, read [docs/audio-pipeline-principles.md](docs/audio-pipeline-principles.md) before editing code.
+Перед изменениями в аудио, транскрибации, локальном STT, файловой обработке или call-capture прочитайте [docs/audio-pipeline-principles.md](docs/audio-pipeline-principles.md).
 
-## Tech Stack
+## Технологии
 
 - Tauri v2
 - React 19
 - TypeScript
 - Rust
 - cpal native microphone recording
-- OpenAI-compatible STT and LLM APIs
+- OpenAI-compatible STT и LLM APIs
 - Managed local STT sidecars
 - Bundled ffmpeg sidecar
 
-## Contributing
+## Как помочь проекту
 
-Issues and pull requests are welcome. Before changing audio behavior, read the audio pipeline document and keep enough logging to debug recorder stats, ffmpeg timing, STT endpoint selection, chunk progress, and call-capture levels.
+Issues и pull requests приветствуются. Перед изменением аудио-поведения прочитайте документ про audio pipeline и сохраняйте достаточно логов для отладки recorder stats, ffmpeg timing, выбора STT endpoint, прогресса чанков и уровней call-capture.
 
-Project conventions:
+Конвенции проекта:
 
-- UI supports Russian and English.
-- Code and comments are English.
-- Package manager is Bun.
-- Settings are persisted immediately after change.
-- Release workflow is documented in [rules/release.rule.md](rules/release.rule.md).
+- Интерфейс доступен на русском и английском.
+- Код и комментарии - на английском.
+- Package manager - Bun.
+- Настройки сохраняются сразу после изменения.
+- Release workflow описан в [rules/release.rule.md](rules/release.rule.md).
 
-## License
+## Лицензия
 
-Talkee is licensed under the [GNU Affero General Public License v3.0 or later](LICENSE) (`AGPL-3.0-or-later`).
+Talkee распространяется по лицензии [GNU Affero General Public License v3.0 or later](LICENSE) (`AGPL-3.0-or-later`).
 
-This license keeps the desktop app open-source and also requires source availability for modified versions that are offered to users over a network.
+Эта лицензия сохраняет десктопное приложение open-source и также требует доступности исходного кода для измененных версий, которые предоставляются пользователям по сети.

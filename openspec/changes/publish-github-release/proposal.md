@@ -23,4 +23,4 @@ Talkee нужно опубликовать в GitHub пользователя di
 
 ## Impact
 
-README.md, README.ru.md, docs/screenshots/, .github/, .gitignore, scripts/postprocess-macos-release.sh, rules/release.rule.md и GitHub metadata. Существующие изменения приложения сохраняются; локальные временные файлы и настройки не публикуются. Зависимостей приложения не добавляется. Depends on: отсутствуют.
+README.md, README.en.md, docs/screenshots/, .github/, .gitignore, scripts/postprocess-macos-release.sh, rules/release.rule.md и GitHub metadata. Существующие изменения приложения сохраняются; локальные временные файлы и настройки не публикуются. Зависимостей приложения не добавляется. Depends on: отсутствуют.

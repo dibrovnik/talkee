@@ -2,8 +2,6 @@
   "allow": [
     "src-tauri/src/legacy_migration.rs",
     "CHANGELOG.md",
-    "README.md",
-    "README.ru.md",
     "scripts/check-naming.mjs",
     "scripts/check-naming.test.mjs",
     "openspec/specs/app-identity/spec.md"

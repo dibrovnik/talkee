@@ -64,3 +64,5 @@ For each release, produce:
 - Manual Release dispatch checks out the requested tag in every job.
 - Stable downloads: `Talkee-macos.dmg`, `Talkee-macos.zip`, and `SHA256SUMS`.
 - CI uses ad-hoc signing (`TALKEE_DEV_SIGNING_IDENTITY=-`), without Apple notarization. Never describe it as Apple-verified signing. Local builds can use the configured stable identity.
+
+- The LLM sidecar strips Rust `target-cpu` flags when building llama.cpp: upstream maps them to Clang `-march`, which does not accept Apple CPU names. It uses the portable ARM baseline and retains unrelated Rust flags.

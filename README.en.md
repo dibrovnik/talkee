@@ -211,7 +211,7 @@ Requirements:
 
 - macOS 14+ on Apple Silicon (M1 or later)
 
-- Bun `1.2.x`
+- Bun `1.3.14`
 - Rust stable
 - Tauri v2 system dependencies
 

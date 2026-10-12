@@ -31,3 +31,5 @@
 ## CI discovery
 
 На чистом runner отсутствует openspec: добавить @fission-ai/openspec 1.14.0 в devDependencies и bun.lock. В scripts/prepare-stt-sidecar.mjs убрать только target-cpu из RUSTFLAGS процесса сборки LLM: llama-cpp-sys ошибочно преобразует apple-m1 в неподдерживаемый Clang -march. Остальные флаги сохраняются; LLM остаётся на переносимой ARM-базе. Проверка — настоящая release-сборка.
+
+Bun 1.2.13 исчерпывает лимит файловых дескрипторов при поиске тестов после восстановления полного Rust-кэша. Закрепить проверенную локально версию Bun 1.3.14 в packageManager и всех workflow. Для первого выпуска запускать исправленный Release workflow с release branch, сохраняя checkout уже опубликованного тега без его перезаписи.

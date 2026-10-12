@@ -207,7 +207,7 @@ Talkee использует встроенный ffmpeg sidecar для виде�
 
 - macOS 14+ на Apple Silicon (M1 и новее)
 
-- Bun `1.2.x`
+- Bun `1.3.14`
 - Rust stable
 - системные зависимости Tauri v2
 

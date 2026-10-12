@@ -33,6 +33,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          [[ "$RELEASE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]
+          [[ "$RELEASE_REF" == "v$(jq -r .version package.json)" ]]
           git fetch --tags --force
           target_sha="$(git rev-list -n 1 "$RELEASE_REF")"
           echo "Checking Release Preflight checks for ${RELEASE_REF} (${target_sha})"
